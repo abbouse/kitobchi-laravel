@@ -117,8 +117,13 @@
             <svg class="w-5 h-5 text-neutral-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/></svg>
           </NuxtLink>
 
-          <!-- Menu guruhlari (Piyola 1:1) -->
-          <div v-for="(group, gi) in menuGroups" :key="'auth-group-' + gi" class="py-1 sm:py-2 bg-white rounded-[20px] px-4">
+          <!-- Menu guruhlari (Piyola 1:1) — MUHIM: faqat mobil/planshetda
+               ko'rinadi (lg:hidden). Piyola desktopida /profile darhol
+               /profile/orders'ga yo'naltiriladi (pastdagi onMounted'ga
+               qarang) va o'rniga chap tomonda ProfileSidebar + o'ng
+               tomonda buyurtmalar kontenti ko'rsatiladi — bu menyu ro'yxati
+               chalkash/ortiqcha bo'lib qolardi. -->
+          <div v-for="(group, gi) in menuGroups" :key="'auth-group-' + gi" class="lg:hidden py-1 sm:py-2 bg-white rounded-[20px] px-4">
             <template v-for="item in group" :key="item.key">
               <NuxtLink
                 v-if="item.to"
@@ -250,9 +255,16 @@ function handleLogout() {
 }
 
 onMounted(() => {
+  // MUHIM: piyola'da /profile (desktop) darhol /profile/orders'ga
+  // yo'naltiriladi — jonli tekshirilgan (piyolamarket.uz/profile ochilganda
+  // URL avtomatik /profile/orders'ga o'zgaradi). `lg:` breakpoint
+  // ProfileSidebar'ning `max-lg:hidden` klassi bilan mos keladi.
+  const isDesktop = window.matchMedia('(min-width: 1024px)').matches
   if (!authStore.isAuthenticated && window.matchMedia('(min-width: 768px)').matches) {
     router.replace('/')
     authStore.openAuthModal()
+  } else if (authStore.isAuthenticated && isDesktop) {
+    router.replace('/profile/orders')
   }
 })
 

@@ -55,6 +55,28 @@
         <div class="flex-1 min-w-0">
           <h1 class="text-xl font-bold text-neutral-900 mb-4 max-md:hidden">Buyurtmalarim</h1>
 
+          <!-- MUHIM: piyola'dagi "Faol"/"Tugallangan" tab'lariga funksional
+               parallellik uchun qo'shildi — oldin bu sahifada UMUMAN tab
+               yo'q edi, barcha buyurtmalar (statusidan qat'iy nazar) bitta
+               ro'yxatda chiqardi. Backendda status bo'yicha filtrlash
+               parametri yo'qligi (jonli tasdiqlangan) sababli, filtrlash
+               allaqachon yuklab olingan sahifalar ustida CLIENT tomonda
+               amalga oshiriladi. -->
+          <div class="inline-flex bg-secondary-100 rounded-2xl p-1 mb-4">
+            <button
+              v-for="tab in ORDER_TABS"
+              :key="tab.value"
+              type="button"
+              @click="activeTab = tab.value"
+              :class="[
+                'px-5 py-2 rounded-xl text-sm font-semibold transition-colors border-none cursor-pointer',
+                activeTab === tab.value ? 'bg-primary text-white shadow-xs' : 'bg-transparent text-neutral-500 hover:text-neutral-800'
+              ]"
+            >
+              {{ tab.label }}
+            </button>
+          </div>
+
           <!-- Loading skeleton -->
           <div v-if="pending" class="space-y-4">
             <div v-for="n in 4" :key="n" class="shimmer h-28 w-full rounded-2xl"></div>
@@ -69,11 +91,11 @@
           </div>
 
           <!-- Empty -->
-          <div v-else-if="!orders.length" class="text-center py-16">
+          <div v-else-if="!filteredOrders.length" class="text-center py-16">
             <div class="w-16 h-16 rounded-full bg-secondary-100 text-neutral-400 mx-auto flex items-center justify-center mb-4">
               <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m-.75 11.25h9a2.25 2.25 0 002.25-2.25l-.75-9a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25l-.75 9a2.25 2.25 0 002.25 2.25z"/></svg>
             </div>
-            <p class="text-sm text-neutral-500 mb-4">Hozircha hech qanday buyurtma mavjud emas</p>
+            <p class="text-sm text-neutral-500 mb-4">{{ orders.length ? "Bu bo'limda buyurtmalar mavjud emas" : "Hozircha hech qanday buyurtma mavjud emas" }}</p>
             <NuxtLink to="/catalog" class="inline-flex items-center px-6 py-3 rounded-2xl bg-primary text-white font-semibold text-sm hover:bg-primary/90 transition-colors">
               Katalogga o'tish
             </NuxtLink>
@@ -81,7 +103,7 @@
 
           <!-- Orders list -->
           <div v-else class="space-y-4">
-            <div v-for="order in orders" :key="order.id" class="bg-white border border-neutral-100 rounded-2xl p-4 sm:p-6 shadow-sm">
+            <div v-for="order in filteredOrders" :key="order.id" class="bg-white border border-neutral-100 rounded-2xl p-4 sm:p-6 shadow-sm">
               <div class="flex items-center justify-between gap-3 mb-3">
                 <div class="text-sm font-bold text-neutral-900">Buyurtma #{{ order.id }}</div>
                 <span :class="statusBadgeClass(order)" class="text-xs font-semibold px-2.5 py-1 rounded-full shrink-0">{{ statusLabel(order) }}</span>
@@ -205,6 +227,27 @@ function statusBadgeClass(order: any) {
   const code = statusCode(order)
   return STATUS_CLASSES[code] || 'bg-secondary-100 text-neutral-600'
 }
+
+// "Faol" (hali yakunlanmagan) vs "Tugallangan" (yakuniy holat) — piyola'dagi
+// Buyurtmalarim tab'lariga mos.
+const ACTIVE_STATUSES = ['pending', 'packing', 'in_delivery']
+const COMPLETED_STATUSES = ['delivered', 'customer_received', 'cancelled', 'returned']
+
+const ORDER_TABS = [
+  { value: 'active' as const, label: 'Faol' },
+  { value: 'completed' as const, label: 'Tugallangan' },
+]
+
+const activeTab = ref<'active' | 'completed'>('active')
+
+const filteredOrders = computed(() => {
+  return orders.value.filter((order) => {
+    const code = statusCode(order)
+    return activeTab.value === 'active'
+      ? ACTIVE_STATUSES.includes(code)
+      : COMPLETED_STATUSES.includes(code)
+  })
+})
 
 onMounted(() => {
   if (authStore.isAuthenticated) {

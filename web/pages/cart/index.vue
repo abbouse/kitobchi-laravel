@@ -77,38 +77,46 @@
         </div>
 
         <!-- If cart has items -->
-        <div v-if="cartStore.items.length > 0" class="flex flex-col gap-3 min-h-[calc(100dvh-140px)]">
-          <!-- Desktop Top Select Bar -->
-          <div class="hidden md:flex items-center justify-between p-4 bg-white rounded-2xl shadow-xs">
-            <button
-              type="button"
-              @click="cartStore.toggleSelectAll()"
-              class="flex items-center gap-2 text-sm font-semibold text-neutral-800 border-none bg-transparent cursor-pointer p-0"
-            >
-              <div
-                class="flex items-center justify-center w-5 h-5 rounded-sm transition-colors"
-                :class="cartStore.isAllSelected ? 'bg-primary text-white' : 'border-2 border-neutral-300 bg-white'"
-              >
-                <svg v-if="cartStore.isAllSelected" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M20 6L9 17l-5-5"/></svg>
-              </div>
-              <span>Barcha mahsulotlarni tanlash</span>
-            </button>
-            <div class="flex items-center gap-3">
-              <span class="text-xs text-neutral-400 font-medium">{{ cartStore.selectedCount }} ta mahsulot tanlandi</span>
+        <!-- MUHIM: piyola'dagi haqiqiy desktop savat sahifasi 2-USTUNLI
+             (chap: mahsulotlar ro'yxati, o'ng: promokod + buyurtma
+             xulosasi + muddatli to'lov + rasmiylashtirish tugmasi, sticky
+             sidebar sifatida) — jonli piyolamarket.uz/cart'da tasdiqlangan.
+             Ilgari bu yerda HAMMASI bitta ustunda tepadan-pastga
+             joylashgan edi (mahsulotlar, keyin xulosa/tugma pastda) —
+             desktopda piyoladan butunlay boshqacha ko'rinardi. -->
+        <div v-if="cartStore.items.length > 0" class="flex flex-col gap-3 md:grid md:grid-cols-[1fr_360px] md:gap-6 md:items-start min-h-[calc(100dvh-140px)]">
+          <div class="flex flex-col gap-3 min-w-0">
+            <!-- Desktop Top Select Bar -->
+            <div class="hidden md:flex items-center justify-between p-4 bg-white rounded-2xl shadow-xs">
               <button
                 type="button"
-                @click="cartStore.removeSelected()"
-                :disabled="cartStore.selectedCount === 0"
-                class="p-1.5 text-neutral-400 hover:text-red-500 disabled:opacity-40 transition-colors border-none bg-transparent cursor-pointer"
-                title="Tanlanganlarni o‘chirish"
+                @click="cartStore.toggleSelectAll()"
+                class="flex items-center gap-2 text-sm font-semibold text-neutral-800 border-none bg-transparent cursor-pointer p-0"
               >
-                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21q.512.078 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48 48 0 0 0-3.478-.397m-12 .562q.51-.088 1.022-.165m0 0a48 48 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a52 52 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a49 49 0 0 0-7.5 0"/></svg>
+                <div
+                  class="flex items-center justify-center w-5 h-5 rounded-sm transition-colors"
+                  :class="cartStore.isAllSelected ? 'bg-primary text-white' : 'border-2 border-neutral-300 bg-white'"
+                >
+                  <svg v-if="cartStore.isAllSelected" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M20 6L9 17l-5-5"/></svg>
+                </div>
+                <span>Barcha mahsulotlarni tanlash</span>
               </button>
+              <div class="flex items-center gap-3">
+                <span class="text-xs text-neutral-400 font-medium">{{ cartStore.selectedCount }} ta mahsulot tanlandi</span>
+                <button
+                  type="button"
+                  @click="cartStore.removeSelected()"
+                  :disabled="cartStore.selectedCount === 0"
+                  class="p-1.5 text-neutral-400 hover:text-red-500 disabled:opacity-40 transition-colors border-none bg-transparent cursor-pointer"
+                  title="Tanlanganlarni o‘chirish"
+                >
+                  <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21q.512.078 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48 48 0 0 0-3.478-.397m-12 .562q.51-.088 1.022-.165m0 0a48 48 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a52 52 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a49 49 0 0 0-7.5 0"/></svg>
+                </button>
+              </div>
             </div>
-          </div>
 
-          <!-- Items Cards List (Piyola 1:1) -->
-          <div class="space-y-2">
+            <!-- Items Cards List (Piyola 1:1) -->
+            <div class="space-y-2">
             <div
               v-for="item in cartStore.items"
               :key="item.id"
@@ -212,62 +220,104 @@
               </div>
             </div>
           </div>
+          </div>
+          <!-- ↑ chap ustun (mahsulotlar) yakuni -->
 
-          <!-- Bottom Summary Card & Muddatli to'lov (Piyola 1:1) -->
-          <div class="grow flex flex-col justify-end mt-4 max-md:sticky max-md:bottom-0 max-md:z-30 max-md:shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
-            <div class="p-4 sm:p-6 rounded-t-2xl md:rounded-2xl bg-white space-y-3 md:space-y-4 shadow-xs">
-              <!-- Muddatli to'lovga rasmiylashtirish Toggle Row -->
-              <div class="flex items-center justify-between">
-                <h3 class="text-base md:text-xl font-semibold leading-6 text-neutral-900 m-0">Muddatli to‘lovga rasmiylashtirish</h3>
-                <button
-                  type="button"
-                  @click="isInstallmentActive = !isInstallmentActive"
-                  class="relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none p-0"
-                  :class="isInstallmentActive ? 'bg-primary' : 'bg-neutral-200'"
-                  aria-label="Muddatli to'lovni yoqish"
-                >
-                  <span
-                    class="pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out"
-                    :class="isInstallmentActive ? 'translate-x-5' : 'translate-x-0'"
-                  />
-                </button>
+          <!-- ====== O'NG USTUN: Promokod + Buyurtma xulosasi + Muddatli
+               to'lov + Rasmiylashtirish (Piyola 1:1) — desktopda sticky
+               sidebar, mobileda oddiy oqim + pastki sticky panel ====== -->
+          <div class="flex flex-col gap-3 md:sticky md:top-6">
+            <!-- MUHIM: piyola'dagi "Promokod" maydoniga vizual parallellik
+                 uchun qo'shildi. Haqiqiy backendda promokodni tekshiruvchi
+                 endpoint bor (`GET purchase/checkPromo`), LEKIN u
+                 `selected_cart_ids` (haqiqiy DB `MyCart` qatorlari)ni talab
+                 qiladi — bizning savatcha esa hozircha FAQAT localStorage'da
+                 saqlanadi (backend bilan sinxronlanmagan, stores/cart.ts'ga
+                 qarang). Shu sababli hozircha faqat vizual maydon —
+                 haqiqiy tekshiruv savatcha backend bilan sinxronlangandan
+                 keyin ulanishi kerak (soxta natija ko'rsatmaslik uchun
+                 ataylab ulanmagan). -->
+            <div class="p-4 sm:p-5 bg-white rounded-2xl shadow-xs">
+              <input
+                v-model="promoCode"
+                type="text"
+                placeholder="Promokod"
+                class="w-full rounded-xl bg-secondary-50 px-4 py-3 border border-neutral-100 outline-none focus:border-primary focus:bg-white transition-all font-medium text-neutral-900 text-sm"
+              />
+            </div>
+
+            <!-- Buyurtma xulosasi (Piyola 1:1) -->
+            <div class="p-4 sm:p-5 bg-white rounded-2xl shadow-xs space-y-2.5">
+              <div class="flex items-center justify-between text-sm">
+                <span class="text-neutral-500">{{ cartStore.selectedCount }} ta mahsulot</span>
+                <span class="font-semibold text-neutral-900">{{ formatPrice(cartStore.totalAmount) }} so'm</span>
               </div>
+              <div class="flex items-center justify-between text-sm">
+                <span class="text-neutral-500">Yetkazib berish narxi</span>
+                <span class="font-semibold text-emerald-600">Bepul</span>
+              </div>
+              <div class="pt-2.5 border-t border-neutral-100 flex items-center justify-between">
+                <span class="text-base font-bold text-neutral-900">Jami</span>
+                <span class="text-base font-bold text-primary">{{ formatPrice(cartStore.totalAmount) }} so'm</span>
+              </div>
+            </div>
 
-              <!-- Agar muddatli to'lov yoqilgan bo'lsa: Tanlangan muddat va oylik to'lov -->
-              <div
-                v-if="isInstallmentActive"
-                @click="isDrawerOpen = true"
-                class="p-3.5 rounded-2xl bg-secondary-50 flex items-center justify-between cursor-pointer border border-secondary-200/60 hover:bg-secondary-100 transition-colors"
-              >
-                <div>
-                  <span class="text-xs text-neutral-500 block">Oylik to'lov</span>
-                  <span class="text-base font-bold text-primary">
-                    {{ formatPrice(monthlyPayment) }} so'm <span class="text-xs text-neutral-400 font-normal">× {{ selectedInstallmentMonths }} oy</span>
-                  </span>
+            <!-- Bottom Summary Card & Muddatli to'lov (Piyola 1:1) -->
+            <div class="grow flex flex-col justify-end max-md:mt-1 max-md:sticky max-md:bottom-0 max-md:z-30 max-md:shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
+              <div class="p-4 sm:p-6 rounded-t-2xl md:rounded-2xl bg-white space-y-3 md:space-y-4 shadow-xs">
+                <!-- Muddatli to'lovga rasmiylashtirish Toggle Row -->
+                <div class="flex items-center justify-between">
+                  <h3 class="text-base md:text-xl font-semibold leading-6 text-neutral-900 m-0">Muddatli to‘lovga rasmiylashtirish</h3>
+                  <button
+                    type="button"
+                    @click="isInstallmentActive = !isInstallmentActive"
+                    class="relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none p-0"
+                    :class="isInstallmentActive ? 'bg-primary' : 'bg-neutral-200'"
+                    aria-label="Muddatli to'lovni yoqish"
+                  >
+                    <span
+                      class="pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out"
+                      :class="isInstallmentActive ? 'translate-x-5' : 'translate-x-0'"
+                    />
+                  </button>
                 </div>
-                <button type="button" class="text-xs font-semibold text-primary flex items-center gap-1 border-none bg-transparent cursor-pointer p-0">
-                  O'zgartirish
-                  <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/></svg>
-                </button>
-              </div>
 
-              <!-- Rasmiylashtirishga o'tish Button -->
-              <div>
-                <button
-                  type="button"
-                  @click="handleCheckout"
-                  :disabled="cartStore.selectedCount === 0"
-                  class="w-full justify-center bg-primary! text-white rounded-2xl h-14 text-base font-medium flex items-center shadow-md hover:bg-primary/90 transition-colors border-none cursor-pointer disabled:opacity-50"
+                <!-- Agar muddatli to'lov yoqilgan bo'lsa: Tanlangan muddat va oylik to'lov -->
+                <div
+                  v-if="isInstallmentActive"
+                  @click="isDrawerOpen = true"
+                  class="p-3.5 rounded-2xl bg-secondary-50 flex items-center justify-between cursor-pointer border border-secondary-200/60 hover:bg-secondary-100 transition-colors"
                 >
-                  <div class="text-center">
-                    <h2 class="text-base font-semibold m-0 leading-tight">Rasmiylashtirishga o'tish</h2>
-                    <p class="text-xs font-light m-0 opacity-90">{{ cartStore.selectedCount }} ta mahsulot {{ formatPrice(cartStore.totalAmount) }} so'm</p>
+                  <div>
+                    <span class="text-xs text-neutral-500 block">Oylik to'lov</span>
+                    <span class="text-base font-bold text-primary">
+                      {{ formatPrice(monthlyPayment) }} so'm <span class="text-xs text-neutral-400 font-normal">× {{ selectedInstallmentMonths }} oy</span>
+                    </span>
                   </div>
-                </button>
-              </div>
+                  <button type="button" class="text-xs font-semibold text-primary flex items-center gap-1 border-none bg-transparent cursor-pointer p-0">
+                    O'zgartirish
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/></svg>
+                  </button>
+                </div>
 
-              <div class="text-neutral-400 text-sm max-md:hidden text-center">
-                Muddatli to'lovni yoqish orqali xaridingizni qismlarga bo'ling
+                <!-- Rasmiylashtirishga o'tish Button -->
+                <div>
+                  <button
+                    type="button"
+                    @click="handleCheckout"
+                    :disabled="cartStore.selectedCount === 0"
+                    class="w-full justify-center bg-primary! text-white rounded-2xl h-14 text-base font-medium flex items-center shadow-md hover:bg-primary/90 transition-colors border-none cursor-pointer disabled:opacity-50"
+                  >
+                    <div class="text-center">
+                      <h2 class="text-base font-semibold m-0 leading-tight">Rasmiylashtirishga o'tish</h2>
+                      <p class="text-xs font-light m-0 opacity-90">{{ cartStore.selectedCount }} ta mahsulot {{ formatPrice(cartStore.totalAmount) }} so'm</p>
+                    </div>
+                  </button>
+                </div>
+
+                <div class="text-neutral-400 text-sm max-md:hidden text-center">
+                  Muddatli to'lovni yoqish orqali xaridingizni qismlarga bo'ling
+                </div>
               </div>
             </div>
           </div>
@@ -381,6 +431,9 @@ const authStore = useAuthStore()
 const favStore = useFavoritesStore()
 
 const activeMenuId = ref<string | number | null>(null)
+// Piyola'dagi "Promokod" maydoniga vizual parallellik — yuqoridagi
+// shablon izohiga qarang (haqiqiy tekshiruv hali ulanmagan).
+const promoCode = ref('')
 const isInstallmentActive = ref(false)
 const isDrawerOpen = ref(false)
 const selectedInstallmentMonths = ref(12)

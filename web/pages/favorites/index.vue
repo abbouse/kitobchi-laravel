@@ -63,8 +63,14 @@
 
       <!-- Empty State -->
       <div v-else class="text-center py-20">
+        <!-- MUHIM (bug tuzatildi): bu yerda oldin `<i class="icon-heart">`
+             icon-font klassi ishlatilgan edi, lekin loyihada bunday icon
+             font UMUMAN ulanmagan (repo bo'ylab qidiruv tasdiqladi) —
+             natijada bo'sh doira ko'rinardi (ikonka butunlay yo'qolgan).
+             Boshqa barcha bo'sh-holat ikonkalari kabi inline SVG'ga
+             almashtirildi. -->
         <div class="w-24 h-24 rounded-full bg-secondary-100 text-neutral-400 mx-auto flex items-center justify-center mb-4">
-          <i class="icon-heart text-4xl"></i>
+          <svg class="w-12 h-12 text-primary" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
         </div>
         <h2 class="text-2xl font-bold text-neutral-800 mb-2">Sevimlilar ro‘yxati bo‘sh</h2>
         <p class="text-sm text-neutral-500 mb-6 max-w-sm mx-auto">

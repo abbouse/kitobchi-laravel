@@ -10,6 +10,12 @@ export interface User {
   phone_number: string
   username?: string | null
   sex?: string | null
+  // MUHIM: piyola'dagi "Ma'lumotlarim" sahifasiga funksional parallellik
+  // uchun qo'shildi — backend (AuthController::successUserResponse() va
+  // UserController::settings()) endi bu ikki maydonni ham qaytaradi
+  // (2026_08_18_130000 migratsiyasi, `birthdate` ustunini qo'shdi).
+  email?: string | null
+  birthdate?: string | null
   avatar?: string
   photo?: string | null
   role?: string

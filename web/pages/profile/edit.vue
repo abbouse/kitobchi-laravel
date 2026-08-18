@@ -81,14 +81,37 @@
                 />
               </div>
 
+              <!-- MUHIM: piyola'dagi kabi tab-tugma (Erkak/Ayol) — oldin
+                   <select> dropdown edi. -->
               <div>
                 <label class="block text-xs font-semibold text-neutral-600 mb-1.5">Jins</label>
-                <select
-                  v-model="form.sex"
+                <div class="inline-flex bg-secondary-50 rounded-2xl p-1 border border-neutral-100 w-full">
+                  <button
+                    v-for="opt in SEX_TOGGLE_OPTIONS"
+                    :key="opt.value"
+                    type="button"
+                    @click="form.sex = opt.value"
+                    :class="[
+                      'flex-1 text-sm font-medium py-2.5 rounded-xl transition-colors border-none cursor-pointer',
+                      form.sex === opt.value ? 'bg-primary text-white shadow-xs' : 'bg-transparent text-neutral-500 hover:text-neutral-800'
+                    ]"
+                  >
+                    {{ opt.label }}
+                  </button>
+                </div>
+              </div>
+
+              <!-- MUHIM: piyola'dagi "Ma'lumotlarim" formasi bilan
+                   funksional parallellik uchun qo'shildi — Tug'ilgan sana
+                   va Elektron pochta oldin bu formada UMUMAN yo'q edi. -->
+              <div>
+                <label class="block text-xs font-semibold text-neutral-600 mb-1.5">Tug'ilgan sana</label>
+                <input
+                  v-model="form.birthdate"
+                  type="date"
+                  :max="todayIso"
                   class="w-full rounded-2xl bg-secondary-50 px-4 py-3.5 border border-neutral-100 outline-none focus:border-primary focus:bg-white transition-all font-medium text-neutral-900 text-sm"
-                >
-                  <option v-for="opt in SEX_OPTIONS" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-                </select>
+                />
               </div>
 
               <div>
@@ -98,6 +121,16 @@
                   disabled
                   type="text"
                   class="w-full rounded-2xl bg-neutral-100 px-4 py-3.5 border border-neutral-200/60 text-neutral-400 font-medium cursor-not-allowed text-sm"
+                />
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-neutral-600 mb-1.5">Elektron pochta</label>
+                <input
+                  v-model="form.email"
+                  type="email"
+                  placeholder="Elektron pochta"
+                  class="w-full rounded-2xl bg-secondary-50 px-4 py-3.5 border border-neutral-100 outline-none focus:border-primary focus:bg-white transition-all font-medium text-neutral-900 text-sm"
                 />
               </div>
 
@@ -144,11 +177,15 @@ const SEX_OPTIONS = [
   { value: 'erkak', label: 'Erkak' },
   { value: 'ayol', label: 'Ayol' },
 ]
+const SEX_TOGGLE_OPTIONS = SEX_OPTIONS.filter(o => o.value)
+const todayIso = computed(() => new Date().toISOString().slice(0, 10))
 
 const form = reactive({
   name: '',
   lastname: '',
   sex: '',
+  birthdate: '',
+  email: '',
 })
 
 const saving = ref(false)
@@ -159,6 +196,8 @@ onMounted(() => {
     form.name = authStore.user?.name || ''
     form.lastname = userAny.value?.lastname || ''
     form.sex = userAny.value?.sex || ''
+    form.birthdate = userAny.value?.birthdate ? String(userAny.value.birthdate).slice(0, 10) : ''
+    form.email = userAny.value?.email || ''
   }
 })
 
@@ -173,9 +212,17 @@ async function handleSave() {
         name: form.name,
         lastname: form.lastname,
         sex: form.sex,
+        birthdate: form.birthdate || '',
+        email: form.email || '',
       }
     })
-    authStore.updateUser({ name: form.name, lastname: form.lastname, sex: form.sex })
+    authStore.updateUser({
+      name: form.name,
+      lastname: form.lastname,
+      sex: form.sex,
+      birthdate: form.birthdate || null,
+      email: form.email || null,
+    })
     router.push('/profile/info')
   } catch (e: any) {
     saveError.value = e?.data?.message || "Saqlashda xatolik yuz berdi"

@@ -93,9 +93,22 @@
                 <span class="text-xs text-neutral-400 font-medium">Jins</span>
                 <span class="text-sm font-semibold text-neutral-900 truncate">{{ sexLabel }}</span>
               </div>
+              <!-- MUHIM: piyola'dagi "Ma'lumotlarim" sahifasiga funksional
+                   parallellik uchun qo'shildi — Tug'ilgan sana va Elektron
+                   pochta maydonlari oldin bu sahifada UMUMAN ko'rsatilmas
+                   edi (backend'da ham `birthdate` ustuni yo'q edi, endi
+                   2026_08_18_130000 migratsiyasi bilan qo'shildi). -->
+              <div class="flex flex-col gap-1">
+                <span class="text-xs text-neutral-400 font-medium">Tug'ilgan sana</span>
+                <span class="text-sm font-semibold text-neutral-900 truncate">{{ birthdateLabel }}</span>
+              </div>
               <div class="flex flex-col gap-1">
                 <span class="text-xs text-neutral-400 font-medium">Telefon raqam</span>
                 <span class="text-sm font-semibold text-neutral-900 truncate">+{{ authStore.user?.phone_number || 'Kiritilmagan' }}</span>
+              </div>
+              <div class="flex flex-col gap-1">
+                <span class="text-xs text-neutral-400 font-medium">Elektron pochta</span>
+                <span class="text-sm font-semibold text-neutral-900 truncate">{{ userAny?.email || 'Kiritilmagan' }}</span>
               </div>
             </div>
           </div>
@@ -242,23 +255,56 @@
             />
           </div>
 
+          <!-- MUHIM: piyola'dagi "Ma'lumotlarni tahrirlash" oynasida Jins
+               tab-tugma (Erkak/Ayol) shaklida — oldin bu yerda <select>
+               dropdown edi, jonli piyola desktop modali bilan solishtirilib
+               moslashtirildi. -->
           <div>
             <label class="block text-xs font-semibold text-neutral-600 mb-1.5">Jins</label>
-            <select
-              v-model="editForm.sex"
-              class="w-full rounded-2xl bg-secondary-50 px-4 py-3 border border-neutral-100 outline-none focus:border-primary focus:bg-white transition-all font-medium text-neutral-900 text-sm"
-            >
-              <option v-for="opt in SEX_OPTIONS" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-            </select>
+            <div class="inline-flex bg-secondary-50 rounded-2xl p-1 border border-neutral-100 w-full">
+              <button
+                v-for="opt in SEX_TOGGLE_OPTIONS"
+                :key="opt.value"
+                type="button"
+                @click="editForm.sex = opt.value"
+                :class="[
+                  'flex-1 text-sm font-medium py-2.5 rounded-xl transition-colors border-none cursor-pointer',
+                  editForm.sex === opt.value ? 'bg-primary text-white shadow-xs' : 'bg-transparent text-neutral-500 hover:text-neutral-800'
+                ]"
+              >
+                {{ opt.label }}
+              </button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-neutral-600 mb-1.5">Tug'ilgan sana</label>
+              <input
+                v-model="editForm.birthdate"
+                type="date"
+                :max="todayIso"
+                class="w-full rounded-2xl bg-secondary-50 px-4 py-3 border border-neutral-100 outline-none focus:border-primary focus:bg-white transition-all font-medium text-neutral-900 text-sm"
+              />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-neutral-600 mb-1.5">Telefon raqam</label>
+              <input
+                :value="'+' + (authStore.user?.phone_number || '')"
+                disabled
+                type="text"
+                class="w-full rounded-2xl bg-neutral-100 px-4 py-3 border border-neutral-200/60 text-neutral-400 font-medium cursor-not-allowed text-sm"
+              />
+            </div>
           </div>
 
           <div>
-            <label class="block text-xs font-semibold text-neutral-600 mb-1.5">Telefon raqam</label>
+            <label class="block text-xs font-semibold text-neutral-600 mb-1.5">Elektron pochta</label>
             <input
-              :value="'+' + (authStore.user?.phone_number || '')"
-              disabled
-              type="text"
-              class="w-full rounded-2xl bg-neutral-100 px-4 py-3 border border-neutral-200/60 text-neutral-400 font-medium cursor-not-allowed text-sm"
+              v-model="editForm.email"
+              type="email"
+              placeholder="Elektron pochta"
+              class="w-full rounded-2xl bg-secondary-50 px-4 py-3 border border-neutral-100 outline-none focus:border-primary focus:bg-white transition-all font-medium text-neutral-900 text-sm"
             />
           </div>
 
@@ -387,10 +433,27 @@ const SEX_OPTIONS = [
   { value: 'ayol', label: 'Ayol' },
 ]
 
+// Desktop modaldagi tab-tugma uchun — piyoladagi kabi bo'sh variantsiz,
+// faqat Erkak/Ayol.
+const SEX_TOGGLE_OPTIONS = SEX_OPTIONS.filter(o => o.value)
+
 const sexLabel = computed(() => {
   const found = SEX_OPTIONS.find(o => o.value === (userAny.value?.sex || ''))
   return found && found.value ? found.label : 'Kiritilmagan'
 })
+
+// MUHIM: piyola'dagi kabi "DD.MM.YYYY" formatida ko'rsatiladi. Backend
+// `birthdate`ni "YYYY-MM-DD" (Laravel `date` ustuni) shaklida qaytaradi.
+const birthdateLabel = computed(() => {
+  const raw = userAny.value?.birthdate
+  if (!raw) return 'Kiritilmagan'
+  const datePart = String(raw).slice(0, 10)
+  const [y, m, d] = datePart.split('-')
+  if (!y || !m || !d) return 'Kiritilmagan'
+  return `${d}.${m}.${y}`
+})
+
+const todayIso = computed(() => new Date().toISOString().slice(0, 10))
 
 // ── Desktop Edit Modal Holatlari ────────────────────────────────────
 const isEditModalOpen = ref(false)
@@ -401,12 +464,16 @@ const editForm = reactive({
   name: '',
   lastname: '',
   sex: '',
+  birthdate: '',
+  email: '',
 })
 
 function openEditModal() {
   editForm.name = authStore.user?.name || ''
   editForm.lastname = userAny.value?.lastname || ''
   editForm.sex = userAny.value?.sex || ''
+  editForm.birthdate = userAny.value?.birthdate ? String(userAny.value.birthdate).slice(0, 10) : ''
+  editForm.email = userAny.value?.email || ''
   editModalError.value = ''
   isEditModalOpen.value = true
 }
@@ -422,9 +489,17 @@ async function handleSaveEditModal() {
         name: editForm.name,
         lastname: editForm.lastname,
         sex: editForm.sex,
+        birthdate: editForm.birthdate || '',
+        email: editForm.email || '',
       }
     })
-    authStore.updateUser({ name: editForm.name, lastname: editForm.lastname, sex: editForm.sex })
+    authStore.updateUser({
+      name: editForm.name,
+      lastname: editForm.lastname,
+      sex: editForm.sex,
+      birthdate: editForm.birthdate || null,
+      email: editForm.email || null,
+    })
     isEditModalOpen.value = false
   } catch (e: any) {
     editModalError.value = e?.data?.message || "Saqlashda xatolik yuz berdi"
