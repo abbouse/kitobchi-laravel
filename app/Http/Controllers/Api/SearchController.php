@@ -24,6 +24,14 @@ class SearchController extends Controller
 {
     use HasProductVisibility;
 
+    /**
+     * Tezlik (2026-08-20 audit): transliteratsiya + "loose" variant
+     * kengaytirish patologik uzun/g'alati so'rovlarda o'nlab pattern
+     * yaratishi mumkin — har biri indekslanmaydigan LIKE shart. Bu
+     * chegara har so'rovning eng yomon holatdagi og'irligini cheklaydi.
+     */
+    private const MAX_LIKE_PATTERNS = 20;
+
     // ─────────────────────────────────────────────
     // TRANSLITERATION
     // ─────────────────────────────────────────────
@@ -161,20 +169,28 @@ class SearchController extends Controller
     }
 
     /**
-     * LIKE pattern lar — teg qidirish uchun ham ishlatiladi
+     * LIKE pattern lar — teg qidirish uchun ham ishlatiladi.
+     *
+     * Tezlik (2026-08-20 audit): oldin har variant uchun 3 xil pattern
+     * ("x%", "% x%", "%x%") yaratilardi va OR shart sifatida qo'shilardi.
+     * Bu shart faqat "mos keldimi yo'qmi" uchun ishlatiladi (qaysi
+     * pattern mos kelgani ahamiyatsiz — reyting MATCH()...AGAINST() va
+     * sotuv ko'rsatkichlaridan hisoblanadi, pattern turidan emas).
+     * Matematik jihatdan "x%" va "% x%" ga mos keluvchi HAR QANDAY qator
+     * "%x%" ga ham albatta mos keladi — ular "%x%" ning qism to'plami.
+     * Demak faqat "%x%" saqlansa natija AYNAN bir xil qoladi, lekin har
+     * so'rovdagi LIKE shart soni (va ular ustidagi EXISTS subquery'lar)
+     * 3 baravar kamayadi.
+     *
+     * Patologik uzun/g'alati so'rovlarda transliteratsiya + loose-variant
+     * kengaytirish portlab ketmasligi uchun natija qattiq chegaralanadi.
      */
     private function buildLikePatterns(string $query): array
     {
         $variants = $this->buildSearchVariants($query);
-        $patterns = [];
+        $patterns = array_map(fn ($v) => '%' . $v . '%', $variants);
 
-        foreach ($variants as $v) {
-            $patterns[] = $v . '%';
-            $patterns[] = '% ' . $v . '%';
-            $patterns[] = '%' . $v . '%';
-        }
-
-        return array_unique($patterns);
+        return array_slice(array_values(array_unique($patterns)), 0, self::MAX_LIKE_PATTERNS);
     }
 
     private function canonicalFuzzyText(string $text): string
@@ -507,21 +523,97 @@ class SearchController extends Controller
     }
 
     /**
+     * Qidiruv so'rovi bir nechta pattern variantiga (transliteratsiya,
+     * xato-toleranti variantlar) bo'linadi va har biri OR bilan qo'shiladi.
+     * Bu shart-blok avval 12 joyda deyarli so'zma-so'z copy-paste qilingan
+     * edi (2026-08-20 audit) — endi yagona joyda: har chaqiruvchi faqat
+     * "pattern qaysi ustunlarga tegishli" ($columnMatcher) ni belgilaydi,
+     * takrorlanish (foreach + where/orWhere almashtirish) shu yerda.
+     *
+     * @param object   $builder       Query/Eloquent builder (yoki ichki $w)
+     * @param string[] $patterns      buildLikePatterns() natijasi
+     * @param \Closure $columnMatcher fn($innerBuilder, string $pattern): void
+     */
+    private function orWhereLikeAny(object $builder, array $patterns, \Closure $columnMatcher): void
+    {
+        foreach ($patterns as $i => $pattern) {
+            $method = $i === 0 ? 'where' : 'orWhere';
+            $builder->$method(fn ($inner) => $columnMatcher($inner, $pattern));
+        }
+    }
+
+    /**
+     * Bitta pattern uchun bir nechta ustunni OR bilan LIKE solishtiradi
+     * (masalan, tag_name_uz/ru/en/ja — 4 tilning barchasida qidirish).
+     */
+    private function likeAnyColumns(object $builder, string $pattern, array $columns): void
+    {
+        foreach ($columns as $i => $column) {
+            $method = $i === 0 ? 'where' : 'orWhere';
+            $builder->$method($column, 'LIKE', $pattern);
+        }
+    }
+
+    /**
+     * Tezlik (2026-08-20 audit): oldin FULLTEXT MATCH() qancha natija
+     * bersa ham, HAR doim qimmat LIKE OR-blok ham so'rovga qo'shilardi —
+     * har pattern uchun kamida bitta indekslanmaydigan scan. Aksariyat
+     * so'rovlarda FULLTEXT o'zi so'ralgan sahifani to'ldirish uchun
+     * yetarli — bunday holda LIKE filial umuman ishga tushirilmaydi.
+     * Bu arzon `COUNT()` (FULLTEXT indeksidan foydalanadi, tez) orqali
+     * oldindan tekshiriladi; faqat FULLTEXT kam natija bergandagina
+     * qimmat LIKE filial qo'shiladi. `search()` darajasidagi fuzzy/
+     * semantik fallback allaqachon "kam natija" holatini qamrab oladi,
+     * shuning uchun bu — xavfsiz, natijaga deyarli ta'sir qilmaydigan
+     * optimallashtirish (chegara atrofidagi kamdan-kam holatlarda LIKE
+     * orqali topilgan qo'shimcha satr sahifada ko'rinmasligi mumkin —
+     * lekin relevance saralashda ular baribir past pog'onada bo'lardi).
+     */
+    private function fulltextAloneSuffices(object $baseQuery, string $matchColumnsSql, string $bool, int $page, int $perPage): bool
+    {
+        try {
+            $count = (clone $baseQuery)
+                ->whereRaw("MATCH({$matchColumnsSql}) AGAINST(? IN BOOLEAN MODE)", [$bool])
+                ->count();
+
+            return $count >= ($perPage * $page);
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
+    /**
+     * Tezlik (2026-08-20 audit): muallif bo'yicha LIKE qidiruv oldin
+     * HAR bir pattern uchun `orWhereHas('authorProfile', ...)` — ya'ni
+     * alohida EXISTS(SELECT ... FROM authors WHERE ...) correlated
+     * subquery — ishlatardi. `books.author` ustuni yozish paytida
+     * authorProfile.name bilan sinxron saqlanadi (Seller/Admin
+     * ProductController: 'author' => $author?->name ?: ...) — xuddi
+     * FULLTEXT MATCH() qismi ham aynan shu ustunni ishlatadi. Shuning
+     * uchun ustun mavjud bo'lsa to'g'ridan-to'g'ri shu yerga LIKE
+     * qo'llanadi (subquery yo'q, ancha arzon). Ustun umuman bo'lmagan
+     * eski sxemalarda avvalgi xavfsiz (lekin sekinroq) yo'l saqlanadi.
+     */
+    private function orWhereAuthorLike(object $inner, string $pattern, bool $authorColumnAvailable): void
+    {
+        if ($authorColumnAvailable) {
+            $inner->orWhere('author', 'LIKE', $pattern);
+            return;
+        }
+
+        $inner->orWhereHas('authorProfile', fn ($authorQuery) => $authorQuery->where('name', 'LIKE', $pattern));
+    }
+
+    /**
      * Book teglar: book_tags.tag_name_uz / tag_name_ru / tag_name_en / tag_name_ja
      */
     private function applyBookTagFilter($query, array $patterns): object
     {
         return $query->whereHas('tags', function ($t) use ($patterns) {
             $t->where(function ($w) use ($patterns) {
-                foreach ($patterns as $i => $p) {
-                    $method = $i === 0 ? 'where' : 'orWhere';
-                    $w->$method(function ($inner) use ($p) {
-                        $inner->where('tag_name_uz', 'LIKE', $p)
-                              ->orWhere('tag_name_ru', 'LIKE', $p)
-                              ->orWhere('tag_name_en', 'LIKE', $p)
-                              ->orWhere('tag_name_ja', 'LIKE', $p);
-                    });
-                }
+                $this->orWhereLikeAny($w, $patterns, fn ($inner, $p) => $this->likeAnyColumns(
+                    $inner, $p, ['tag_name_uz', 'tag_name_ru', 'tag_name_en', 'tag_name_ja']
+                ));
             });
         });
     }
@@ -533,15 +625,9 @@ class SearchController extends Controller
     {
         return $query->whereHas('tags', function ($t) use ($patterns) {
             $t->where(function ($w) use ($patterns) {
-                foreach ($patterns as $i => $p) {
-                    $method = $i === 0 ? 'where' : 'orWhere';
-                    $w->$method(function ($inner) use ($p) {
-                        $inner->where('name_uz', 'LIKE', $p)
-                              ->orWhere('name_ru', 'LIKE', $p)
-                              ->orWhere('name_en', 'LIKE', $p)
-                              ->orWhere('name_ja', 'LIKE', $p);
-                    });
-                }
+                $this->orWhereLikeAny($w, $patterns, fn ($inner, $p) => $this->likeAnyColumns(
+                    $inner, $p, ['name_uz', 'name_ru', 'name_en', 'name_ja']
+                ));
             });
         });
     }
@@ -906,21 +992,23 @@ class SearchController extends Controller
             $matchColumnsSql = implode(', ', $fulltextColumns);
             $hasFulltext = $this->hasFulltextIndex('books', $fulltextColumns);
 
+            $likeMatcher = function ($inner, $pattern) use ($authorColumnAvailable) {
+                $inner->where('name', 'LIKE', $pattern)->orWhere('artikul', 'LIKE', $pattern);
+                $this->orWhereAuthorLike($inner, $pattern, $authorColumnAvailable);
+                $inner->orWhere('description', 'LIKE', $pattern);
+            };
+
             if ($hasFulltext) {
-                $q->where(function ($w) use ($bool, $searchPatterns, $matchColumnsSql) {
-                    $w->whereRaw(
-                        "MATCH({$matchColumnsSql}) AGAINST(? IN BOOLEAN MODE)", [$bool]
-                    )->orWhere(function ($or) use ($searchPatterns) {
-                        foreach ($searchPatterns as $i => $pattern) {
-                            $method = $i === 0 ? 'where' : 'orWhere';
-                            $or->$method(function ($inner) use ($pattern) {
-                                $inner->where('name', 'LIKE', $pattern)
-                                      ->orWhere('artikul', 'LIKE', $pattern)
-                                      ->orWhereHas('authorProfile', fn ($authorQuery) => $authorQuery->where('name', 'LIKE', $pattern))
-                                      ->orWhere('description', 'LIKE', $pattern);
-                            });
-                        }
-                    });
+                $skipLike = $this->fulltextAloneSuffices($q, $matchColumnsSql, $bool, $page, $perPage);
+
+                $q->where(function ($w) use ($bool, $searchPatterns, $matchColumnsSql, $likeMatcher, $skipLike) {
+                    $w->whereRaw("MATCH({$matchColumnsSql}) AGAINST(? IN BOOLEAN MODE)", [$bool]);
+
+                    if (! $skipLike) {
+                        $w->orWhere(function ($or) use ($searchPatterns, $likeMatcher) {
+                            $this->orWhereLikeAny($or, $searchPatterns, $likeMatcher);
+                        });
+                    }
                 })->selectRaw(
                     "books.*,
                      MATCH({$matchColumnsSql}) AGAINST(? IN BOOLEAN MODE) * 10 +
@@ -929,16 +1017,8 @@ class SearchController extends Controller
                     [$bool]
                 );
             } else {
-                $q->where(function ($w) use ($searchPatterns) {
-                    foreach ($searchPatterns as $i => $pattern) {
-                        $method = $i === 0 ? 'where' : 'orWhere';
-                        $w->$method(function ($inner) use ($pattern) {
-                            $inner->where('name', 'LIKE', $pattern)
-                                  ->orWhere('artikul', 'LIKE', $pattern)
-                                  ->orWhereHas('authorProfile', fn ($authorQuery) => $authorQuery->where('name', 'LIKE', $pattern))
-                                  ->orWhere('description', 'LIKE', $pattern);
-                        });
-                    }
+                $q->where(function ($w) use ($searchPatterns, $likeMatcher) {
+                    $this->orWhereLikeAny($w, $searchPatterns, $likeMatcher);
                 })->selectRaw(
                     "books.*,
                      LEAST(totalSalesWeek * 3, 300) +
@@ -996,23 +1076,26 @@ class SearchController extends Controller
 
             // FULLTEXT index mavjudligini tekshiramiz
             // Agar yo'q bo'lsa — faqat LIKE bilan ishlaymiz
+            $matchColumnsSql = 'name, description, material';
             $hasFulltext = $this->hasFulltextIndex('stationeries', ['name', 'description', 'material']);
 
+            $likeMatcher = fn ($inner, $pattern) => $inner
+                ->where('name', 'LIKE', $pattern)
+                ->orWhere('artikul', 'LIKE', $pattern)
+                ->orWhere('description', 'LIKE', $pattern)
+                ->orWhere('material', 'LIKE', $pattern);
+
             if ($hasFulltext) {
-                $q->where(function ($w) use ($bool, $searchPatterns) {
-                    $w->whereRaw(
-                        "MATCH(name, description, material) AGAINST(? IN BOOLEAN MODE)", [$bool]
-                    )->orWhere(function ($or) use ($searchPatterns) {
-                        foreach ($searchPatterns as $i => $pattern) {
-                            $method = $i === 0 ? 'where' : 'orWhere';
-                            $or->$method(function ($inner) use ($pattern) {
-                                $inner->where('name', 'LIKE', $pattern)
-                                      ->orWhere('artikul', 'LIKE', $pattern)
-                                      ->orWhere('description', 'LIKE', $pattern)
-                                      ->orWhere('material', 'LIKE', $pattern);
-                            });
-                        }
-                    });
+                $skipLike = $this->fulltextAloneSuffices($q, $matchColumnsSql, $bool, $page, $perPage);
+
+                $q->where(function ($w) use ($bool, $searchPatterns, $likeMatcher, $skipLike) {
+                    $w->whereRaw("MATCH(name, description, material) AGAINST(? IN BOOLEAN MODE)", [$bool]);
+
+                    if (! $skipLike) {
+                        $w->orWhere(function ($or) use ($searchPatterns, $likeMatcher) {
+                            $this->orWhereLikeAny($or, $searchPatterns, $likeMatcher);
+                        });
+                    }
                 })->selectRaw(
                     "stationeries.*,
                      MATCH(name, description, material) AGAINST(? IN BOOLEAN MODE) * 10 +
@@ -1021,16 +1104,8 @@ class SearchController extends Controller
                 );
             } else {
                 // FULLTEXT yo'q — faqat LIKE
-                $q->where(function ($w) use ($searchPatterns) {
-                    foreach ($searchPatterns as $i => $pattern) {
-                        $method = $i === 0 ? 'where' : 'orWhere';
-                        $w->$method(function ($inner) use ($pattern) {
-                            $inner->where('name', 'LIKE', $pattern)
-                                  ->orWhere('artikul', 'LIKE', $pattern)
-                                  ->orWhere('description', 'LIKE', $pattern)
-                                  ->orWhere('material', 'LIKE', $pattern);
-                        });
-                    }
+                $q->where(function ($w) use ($searchPatterns, $likeMatcher) {
+                    $this->orWhereLikeAny($w, $searchPatterns, $likeMatcher);
                 })->selectRaw(
                     "stationeries.*,
                      LEAST(totalSalesWeek * 3, 300) AS relevance_score"
@@ -1212,34 +1287,25 @@ class SearchController extends Controller
         $patterns = $this->buildLikePatterns($query);
         $sugg     = [];
         $seen     = [];
+        $authorColumnAvailable = Books::hasAuthorColumn();
 
         // ── Kitoblar: nom + muallif + teglar ─────────────────────────
         $bookQuery = $this->visibleBooks(['tags'])
             ->with('authorProfile:id,name')
             ->when($sellerId, fn($q) => $q->where('seller_id', $sellerId))
-            ->where(function ($w) use ($patterns) {
-                $w->where(function ($nameAuthor) use ($patterns) {
+            ->where(function ($w) use ($patterns, $authorColumnAvailable) {
+                $w->where(function ($nameAuthor) use ($patterns, $authorColumnAvailable) {
                     // Nom va muallif bo'yicha
-                    foreach ($patterns as $i => $p) {
-                        $method = $i === 0 ? 'where' : 'orWhere';
-                        $nameAuthor->$method(function ($inner) use ($p) {
-                            $inner->where('name', 'LIKE', $p)
-                                  ->orWhere('artikul', 'LIKE', $p)
-                                  ->orWhereHas('authorProfile', fn ($authorQuery) => $authorQuery->where('name', 'LIKE', $p));
-                        });
-                    }
+                    $this->orWhereLikeAny($nameAuthor, $patterns, function ($inner, $p) use ($authorColumnAvailable) {
+                        $inner->where('name', 'LIKE', $p)->orWhere('artikul', 'LIKE', $p);
+                        $this->orWhereAuthorLike($inner, $p, $authorColumnAvailable);
+                    });
                 })->orWhereHas('tags', function ($t) use ($patterns) {
                     // Teg bo'yicha — book_tags: tag_name_uz/ru/en/ja
                     $t->where(function ($tw) use ($patterns) {
-                        foreach ($patterns as $i => $p) {
-                            $method = $i === 0 ? 'where' : 'orWhere';
-                            $tw->$method(function ($inner) use ($p) {
-                                $inner->where('tag_name_uz', 'LIKE', $p)
-                                      ->orWhere('tag_name_ru', 'LIKE', $p)
-                                      ->orWhere('tag_name_en', 'LIKE', $p)
-                                      ->orWhere('tag_name_ja', 'LIKE', $p);
-                            });
-                        }
+                        $this->orWhereLikeAny($tw, $patterns, fn ($inner, $p) => $this->likeAnyColumns(
+                            $inner, $p, ['tag_name_uz', 'tag_name_ru', 'tag_name_en', 'tag_name_ja']
+                        ));
                     });
                 });
             })
@@ -1269,15 +1335,9 @@ class SearchController extends Controller
         // Ikkalasini UNION qilamiz
         $tagResults = DB::table('book_tags')
             ->where(function ($w) use ($patterns) {
-                foreach ($patterns as $i => $p) {
-                    $method = $i === 0 ? 'where' : 'orWhere';
-                    $w->$method(function ($inner) use ($p) {
-                        $inner->where('tag_name_uz', 'LIKE', $p)
-                              ->orWhere('tag_name_ru', 'LIKE', $p)
-                              ->orWhere('tag_name_en', 'LIKE', $p)
-                              ->orWhere('tag_name_ja', 'LIKE', $p);
-                    });
-                }
+                $this->orWhereLikeAny($w, $patterns, fn ($inner, $p) => $this->likeAnyColumns(
+                    $inner, $p, ['tag_name_uz', 'tag_name_ru', 'tag_name_en', 'tag_name_ja']
+                ));
             })
             ->select(
                 'tag_name_uz as name_uz',
@@ -1292,15 +1352,9 @@ class SearchController extends Controller
         // Stationery teglarini ham qo'shamiz
         $statTagResults = DB::table('stationery_tags')
             ->where(function ($w) use ($patterns) {
-                foreach ($patterns as $i => $p) {
-                    $method = $i === 0 ? 'where' : 'orWhere';
-                    $w->$method(function ($inner) use ($p) {
-                        $inner->where('name_uz', 'LIKE', $p)
-                              ->orWhere('name_ru', 'LIKE', $p)
-                              ->orWhere('name_en', 'LIKE', $p)
-                              ->orWhere('name_ja', 'LIKE', $p);
-                    });
-                }
+                $this->orWhereLikeAny($w, $patterns, fn ($inner, $p) => $this->likeAnyColumns(
+                    $inner, $p, ['name_uz', 'name_ru', 'name_en', 'name_ja']
+                ));
             })
             ->select('name_uz', 'name_ru', 'name_en', 'name_ja')
             ->distinct()
@@ -1328,24 +1382,14 @@ class SearchController extends Controller
             ->when($sellerId, fn($q) => $q->where('seller_id', $sellerId))
             ->where(function ($w) use ($patterns) {
                 $w->where(function ($namePart) use ($patterns) {
-                    foreach ($patterns as $i => $p) {
-                        $method = $i === 0 ? 'where' : 'orWhere';
-                        $namePart->$method(function ($inner) use ($p) {
-                            $inner->where('name', 'LIKE', $p)
-                                ->orWhere('artikul', 'LIKE', $p);
-                        });
-                    }
+                    $this->orWhereLikeAny($namePart, $patterns, fn ($inner, $p) => $inner
+                        ->where('name', 'LIKE', $p)
+                        ->orWhere('artikul', 'LIKE', $p));
                 })->orWhereHas('tags', function ($t) use ($patterns) {
                     $t->where(function ($tw) use ($patterns) {
-                        foreach ($patterns as $i => $p) {
-                            $method = $i === 0 ? 'where' : 'orWhere';
-                            $tw->$method(function ($inner) use ($p) {
-                                $inner->where('name_uz', 'LIKE', $p)
-                                      ->orWhere('name_ru', 'LIKE', $p)
-                                      ->orWhere('name_en', 'LIKE', $p)
-                                      ->orWhere('name_ja', 'LIKE', $p);
-                            });
-                        }
+                        $this->orWhereLikeAny($tw, $patterns, fn ($inner, $p) => $this->likeAnyColumns(
+                            $inner, $p, ['name_uz', 'name_ru', 'name_en', 'name_ja']
+                        ));
                     });
                 });
             })

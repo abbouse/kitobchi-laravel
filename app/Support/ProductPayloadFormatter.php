@@ -36,6 +36,7 @@ class ProductPayloadFormatter
             'material' => $isBook ? null : ($product->material ?? null),
             'category_id' => $product->category_id ?? null,
             'images' => $normalizedImages,
+            'image' => $imageUrls['medium'][0] ?? $imageUrls['original'][0] ?? $imageUrls['thumb'][0] ?? null,
             'image_urls' => $imageUrls['original'],
             'medium_images' => $imageUrls['medium'],
             'thumb_images' => $imageUrls['thumb'],

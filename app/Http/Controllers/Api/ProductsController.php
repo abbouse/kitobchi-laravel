@@ -312,10 +312,15 @@ class ProductsController extends Controller
     public function index(Request $request, string $col)
     {
         $user  = $request->user('user') ?? auth('sanctum')->user() ?? Auth::guard('user')->user();
+        $limit = is_numeric($col) && (int)$col > 0 ? (int)$col : (int)$request->input('limit', 20);
+        if ($limit <= 0) {
+            $limit = 20;
+        }
+
         $books = $this->bookScope()
             ->with(['seller', 'category', 'tags'])
             ->orderBy('created_at', 'DESC')
-            ->limit((int)$col)
+            ->limit($limit)
             ->get();
 
         return response()->json([
@@ -338,7 +343,11 @@ class ProductsController extends Controller
     public function recommendation(Request $request, string $col)
     {
         $user  = $request->user('user') ?? auth('sanctum')->user() ?? Auth::guard('user')->user();
-        $limit = (int)$col;
+        $limit = is_numeric($col) && (int)$col > 0 ? (int)$col : (int)$request->input('limit', 10);
+        if ($limit <= 0) {
+            $limit = 10;
+        }
+
         $personalized = $this->personalizedRecommendations($request, $user, $limit);
         $result = collect($personalized);
 

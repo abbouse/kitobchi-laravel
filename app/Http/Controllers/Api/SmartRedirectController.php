@@ -7,9 +7,10 @@ use Illuminate\Http\Request;
 
 class SmartRedirectController extends Controller
 {
-    public function redirect(Request $request, string $type, int $id)
+    public function redirect(Request $request, string $type, int|string $id)
     {
-        $type = strtolower($type);
+        $type = strtolower(trim((string) $type));
+        $id = trim((string) $id);
         $userAgent = strtolower((string) $request->userAgent());
         $isAndroid = str_contains($userAgent, 'android');
         $isIos = str_contains($userAgent, 'iphone') || str_contains($userAgent, 'ipad');
@@ -21,8 +22,11 @@ class SmartRedirectController extends Controller
             default           => "book/{$id}",
         };
 
-        $baseUrl = config('app.url', 'https://kitobchi.com');
-        $baseUrl = rtrim($baseUrl, '/');
+        $baseUrl = config('app.url') ?: 'https://kitobchi.com';
+        $baseUrl = rtrim((string) $baseUrl, '/');
+        if (! str_starts_with($baseUrl, 'http')) {
+            $baseUrl = 'https://kitobchi.com';
+        }
 
         $queryString = $request->getQueryString();
         $querySuffix = $queryString ? "?{$queryString}" : '';

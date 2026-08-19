@@ -91,7 +91,12 @@ class VectorSearchService
             ? Books::query()->activeForVector()->vectorReady()->select(['id', 'vectorData'])
             : Stationery::query()->activeForVector()->vectorReady()->select(['id', 'vectorData']);
 
-        $query->orderBy('id')->chunk(500, function ($products) use (&$index) {
+        // Tezlik (2026-08-20 audit): oldingi ->chunk(500) OFFSET/LIMIT bilan
+        // sahifalardi — har keyingi sahifa uchun MySQL avvalgi barcha
+        // qatorlarni skan qilib tashlab yuborishi kerak edi (O(n^2) ga
+        // yaqinlashadi). ->chunkById() esa "WHERE id > oxirgi_id" kursor
+        // bilan ishlaydi — har chunk bir xil arzon indeks lookup.
+        $query->orderBy('id')->chunkById(500, function ($products) use (&$index) {
             foreach ($products as $product) {
                 $vec = $product->vectorData;
 

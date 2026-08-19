@@ -20,7 +20,7 @@ class Stationery extends Model
      * Og'ir/ichki maydonlar JSON'ga chiqmasin (vectorData = 1536 float embedding).
      * API kontrakt buzilmaydi — bu maydonlar app'ga kerak emas.
      */
-    protected $hidden = ['vectorData', 'vector_text_hash', 'branch_available_total'];
+    protected $hidden = ['vectorData', 'vector_text_hash', 'has_vector', 'branch_available_total'];
 
     public function branchStockType(): string
     {
@@ -75,6 +75,7 @@ class Stationery extends Model
         'totalRevenueWeek',
         'vectorData',
         'vector_text_hash',
+        'has_vector',
         'ofd_ikpu_code',
         'ofd_package_code',
         'recommended',
@@ -91,6 +92,7 @@ class Stationery extends Model
         'status' => 'boolean',
         'recommended' => 'boolean',
         'vectorData' => 'json',
+        'has_vector' => 'boolean',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'ai_moderation_checked_at' => 'datetime',
@@ -150,11 +152,18 @@ class Stationery extends Model
                 ->where('is_hidden', 0));
     }
 
+    /**
+     * Tezlik (2026-08-20 audit): oldin `whereRaw('JSON_LENGTH(vectorData) = 1536')`
+     * ishlatilardi — funksiya ustunga qo'llanganda MySQL indeksdan foydalana
+     * olmaydi, har so'rovda butun jadval skan qilinardi. `has_vector` —
+     * yozish paytida (ProductVectorService) hisoblab qo'yiladigan indekslangan
+     * boolean ustun, shu tekshiruvni bitta arzon indeks lookup'ga aylantiradi.
+     */
     public function scopeVectorReady(Builder $query): Builder
     {
         return $query
             ->whereNotNull('vectorData')
-            ->whereRaw('JSON_LENGTH(vectorData) = 1536');
+            ->where('has_vector', true);
     }
 
     public function scopeVectorNeedsSync(Builder $query): Builder
@@ -162,7 +171,7 @@ class Stationery extends Model
         return $query->where(function (Builder $innerQuery) {
             $innerQuery
                 ->whereNull('vectorData')
-                ->orWhereRaw('JSON_LENGTH(vectorData) <> 1536')
+                ->orWhere('has_vector', false)
                 // Bulk yangilanishlar hash ni null qiladi — scheduler qayta embed qiladi
                 ->orWhereNull('vector_text_hash');
         });

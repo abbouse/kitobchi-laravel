@@ -113,6 +113,7 @@ class ProductVectorService
         $product->updateQuietly([
             'vectorData'       => $vector,
             'vector_text_hash' => $hash,
+            'has_vector'       => true,
         ]);
 
         $this->invalidateSearchIndex($product instanceof Books ? 'book' : 'stationery');
@@ -199,9 +200,9 @@ class ProductVectorService
 
             $cleared = $this->queryForType($type)
                 ->whereIn('id', $ids)
-                ->update(['vectorData' => null, 'vector_text_hash' => null]);
+                ->update(['vectorData' => null, 'vector_text_hash' => null, 'has_vector' => false]);
         } else {
-            $cleared = $query->update(['vectorData' => null, 'vector_text_hash' => null]);
+            $cleared = $query->update(['vectorData' => null, 'vector_text_hash' => null, 'has_vector' => false]);
         }
 
         if ($cleared > 0) {
@@ -324,6 +325,7 @@ class ProductVectorService
         $product->updateQuietly([
             'vectorData'       => null,
             'vector_text_hash' => null,
+            'has_vector'       => false,
         ]);
 
         $this->invalidateSearchIndex($product instanceof Books ? 'book' : 'stationery');

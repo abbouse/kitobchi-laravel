@@ -80,8 +80,12 @@ class VerifyApiClient
         // Route::middleware('api.client:read,write') deb belgilanadi
         if (!empty($abilities)) {
             $clientAbilities = $this->clientAbilities($client->abilities);
+            // Agar client abilities bo'sh bo'lsa, 'read' default ruxsat hisoblanadi
+            if (empty($clientAbilities)) {
+                $clientAbilities = ['read'];
+            }
             foreach ($abilities as $ability) {
-                if (!in_array($ability, $clientAbilities, true)) {
+                if (!in_array('*', $clientAbilities, true) && !in_array($ability, $clientAbilities, true)) {
                     return response()->json([
                         'status'  => 'error',
                         'message' => "Missing ability: {$ability}",
