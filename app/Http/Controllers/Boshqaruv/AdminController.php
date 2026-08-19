@@ -9909,7 +9909,7 @@ PROMPT;
             return [];
         }
 
-        return Cache::remember('boshqaruv:api-clients:payload:v4', now()->addMinutes(5), function () {
+        return Cache::remember('boshqaruv:api-clients:payload:v5', now()->addMinutes(5), function () {
             $hasRequestLogs = Schema::hasTable('api_client_request_logs');
             $hasRateLimitPerSecond = Schema::hasColumn('api_clients', 'rate_limit_per_second');
             $hasRateLimitPerMinute = Schema::hasColumn('api_clients', 'rate_limit_per_minute');
@@ -9927,6 +9927,7 @@ PROMPT;
                     'id' => $client->id,
                     'name' => $client->name,
                     'key' => $client->app_id ?: '—',
+                    'secret' => (string) ($client->app_secret ?: ''),
                     'sellerId' => $hasSeller ? $client->seller_id : null,
                     'sellerName' => $hasSeller ? ($client->seller?->shop_name) : null,
                     'allowedIps' => $hasAllowedIps && is_array($client->allowed_ips) ? implode(', ', $client->allowed_ips) : '',

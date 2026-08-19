@@ -15,7 +15,11 @@ require __DIR__.'/boshqaruv.php';
 Route::get('/locale/{locale}', [LocaleController::class, 'switch'])->name('locale.switch');
 
 Route::get('/developers/api/openapi.json', [ApiDocsController::class, 'openapi'])->name('developers.api-openapi');
+Route::get('/developers/api/postman.json', [ApiDocsController::class, 'postman'])->name('developers.api-postman');
 Route::get('/developers/api/{page?}', ApiDocsController::class)->name('developers.api-docs');
+
+// Smart Deep Link Redirection for Mobile & Web Ads
+Route::get('/r/{type}/{id}', [\App\Http\Controllers\Api\SmartRedirectController::class, 'redirect'])->name('smart-redirect');
 
 Route::get('/', function () {
     try {

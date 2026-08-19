@@ -33,6 +33,7 @@ class ApiDocsController extends Controller
             'toc' => $this->toc($currentSlug),
             'pageEndpoints' => $this->endpointsForPage($currentSlug, $base),
             'openapiUrl' => route('developers.api-openapi'),
+            'postmanUrl' => route('developers.api-postman'),
             'defaultLimits' => [
                 'per_second' => self::DEFAULT_LIMIT_PER_SECOND,
                 'per_minute' => self::DEFAULT_LIMIT_PER_MINUTE,
@@ -50,6 +51,79 @@ class ApiDocsController extends Controller
             ->json($this->buildOpenApi(url('/api/v1/client')), 200, [
                 'Access-Control-Allow-Origin' => '*',
             ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+    }
+
+    /**
+     * Postman Collection (v2.1.0) formati — 1-klikda Postman/Insomnia'ga import qilish uchun.
+     */
+    public function postman(): JsonResponse
+    {
+        $base = url('/api/v1/client');
+        $items = [];
+
+        foreach ($this->registry() as $groupKey => $endpoints) {
+            $groupItems = [];
+            foreach ($endpoints as $ep) {
+                $path = ltrim($ep['path'], '/');
+                $urlParts = explode('/', $path);
+
+                $headers = [
+                    ['key' => 'X-App-ID', 'value' => '{{APP_ID}}', 'type' => 'text'],
+                    ['key' => 'X-App-Secret', 'value' => '{{APP_SECRET}}', 'type' => 'text'],
+                    ['key' => 'Accept', 'value' => 'application/json', 'type' => 'text'],
+                ];
+
+                $request = [
+                    'method' => strtoupper($ep['method']),
+                    'header' => $headers,
+                    'url' => [
+                        'raw' => "{{BASE_URL}}/{$path}",
+                        'host' => ['{{BASE_URL}}'],
+                        'path' => $urlParts,
+                    ],
+                    'description' => $ep['summary'] ?? $ep['title'],
+                ];
+
+                if (isset($ep['body'])) {
+                    $request['body'] = [
+                        'mode' => 'raw',
+                        'raw' => json_encode($ep['body'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES),
+                        'options' => ['raw' => ['language' => 'json']],
+                    ];
+                }
+
+                $groupItems[] = [
+                    'name' => $ep['title'],
+                    'request' => $request,
+                    'response' => [],
+                ];
+            }
+
+            $items[] = [
+                'name' => ucfirst($groupKey),
+                'item' => $groupItems,
+            ];
+        }
+
+        $collection = [
+            'info' => [
+                '_postman_id' => 'kitobchi-client-api-v1',
+                'name' => 'Kitobchi Client API',
+                'description' => 'Kitobchi Client & Affiliate API Postman Collection',
+                'schema' => 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json',
+            ],
+            'variable' => [
+                ['key' => 'BASE_URL', 'value' => $base, 'type' => 'string'],
+                ['key' => 'APP_ID', 'value' => 'app_xxxxxxxxxxxxxxxx', 'type' => 'string'],
+                ['key' => 'APP_SECRET', 'value' => 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', 'type' => 'string'],
+            ],
+            'item' => $items,
+        ];
+
+        return response()->json($collection, 200, [
+            'Content-Disposition' => 'attachment; filename="kitobchi-client-api.postman_collection.json"',
+            'Access-Control-Allow-Origin' => '*',
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -183,6 +257,106 @@ class ApiDocsController extends Controller
     {
         return [
             'products' => [
+                [
+                    'id' => 'products-book-detail',
+                    'method' => 'GET',
+                    'path' => '/products/book/{id}',
+                    'title' => 'Bitta kitob tafsiloti',
+                    'summary' => 'Kitobning to‘liq tavsifi, muallifi, nashriyoti, narxi, qoldig‘i va rasmlarini qaytaradi.',
+                    'ability' => 'read',
+                    'cache' => true,
+                    'path_params' => [
+                        ['name' => 'id', 'type' => 'integer', 'required' => true, 'desc' => 'Kitob ID raqami.', 'example' => 128],
+                    ],
+                    'query_params' => [],
+                    'response' => [
+                        'status' => 'success',
+                        'data' => [
+                            'id' => 128,
+                            'name' => 'Atomic Habits',
+                            'price' => 89000,
+                            'old_price' => 99000,
+                            'image' => 'https://kitobchi.com/storage/books/128.jpg',
+                            'type' => 'book',
+                            'in_stock' => true,
+                            'description' => 'Kichik o‘zgarishlar, ulkan natijalar...',
+                            'pages' => 320,
+                            'isbn' => '9781847941831',
+                            'author' => ['id' => 45, 'name' => 'James Clear'],
+                            'seller' => ['id' => 12, 'name' => 'Asaxiy Books'],
+                        ],
+                    ],
+                ],
+                [
+                    'id' => 'products-stationery-detail',
+                    'method' => 'GET',
+                    'path' => '/products/stationery/{id}',
+                    'title' => 'Kanselyariya mahsuloti tafsiloti',
+                    'summary' => 'Kanselyariya tovarining to‘liq ma’lumoti va variantlarini qaytaradi.',
+                    'ability' => 'read',
+                    'cache' => true,
+                    'path_params' => [
+                        ['name' => 'id', 'type' => 'integer', 'required' => true, 'desc' => 'Mahsulot ID si.', 'example' => 54],
+                    ],
+                    'query_params' => [],
+                    'response' => [
+                        'status' => 'success',
+                        'data' => [
+                            'id' => 54,
+                            'name' => 'ErichKrause Qalam to‘plami',
+                            'price' => 25000,
+                            'type' => 'stationery',
+                            'in_stock' => true,
+                            'seller' => ['id' => 12, 'name' => 'Kanselyariya Dunyosi'],
+                        ],
+                    ],
+                ],
+                [
+                    'id' => 'products-by-author',
+                    'method' => 'GET',
+                    'path' => '/products/by-author/{authorId}',
+                    'title' => 'Muallif bo‘yicha kitoblar',
+                    'summary' => 'Muayyan muallifning barcha faol kitoblari ro‘yxatini sahifalab qaytaradi.',
+                    'ability' => 'read',
+                    'cache' => true,
+                    'path_params' => [
+                        ['name' => 'authorId', 'type' => 'integer', 'required' => true, 'desc' => 'Muallif ID raqami.', 'example' => 45],
+                    ],
+                    'query_params' => [
+                        ['name' => 'page', 'type' => 'integer', 'required' => false, 'desc' => 'Sahifa raqami.', 'example' => 1],
+                        ['name' => 'per_page', 'type' => 'integer', 'required' => false, 'desc' => 'Sahifadagi elementlar soni.', 'example' => 20],
+                    ],
+                    'response' => [
+                        'status' => 'success',
+                        'data' => [
+                            ['id' => 128, 'name' => 'Atomic Habits', 'price' => 89000, 'type' => 'book'],
+                        ],
+                        'meta' => ['current_page' => 1, 'per_page' => 20, 'total' => 4, 'last_page' => 1],
+                    ],
+                ],
+                [
+                    'id' => 'products-by-publisher',
+                    'method' => 'GET',
+                    'path' => '/products/by-publisher/{publisherId}',
+                    'title' => 'Nashriyot bo‘yicha kitoblar',
+                    'summary' => 'Muayyan nashriyotning barcha faol kitoblari ro‘yxatini sahifalab qaytaradi.',
+                    'ability' => 'read',
+                    'cache' => true,
+                    'path_params' => [
+                        ['name' => 'publisherId', 'type' => 'integer', 'required' => true, 'desc' => 'Nashriyot ID raqami.', 'example' => 8],
+                    ],
+                    'query_params' => [
+                        ['name' => 'page', 'type' => 'integer', 'required' => false, 'desc' => 'Sahifa raqami.', 'example' => 1],
+                        ['name' => 'per_page', 'type' => 'integer', 'required' => false, 'desc' => 'Sahifadagi elementlar soni.', 'example' => 20],
+                    ],
+                    'response' => [
+                        'status' => 'success',
+                        'data' => [
+                            ['id' => 128, 'name' => 'Atomic Habits', 'price' => 89000, 'type' => 'book'],
+                        ],
+                        'meta' => ['current_page' => 1, 'per_page' => 20, 'total' => 12, 'last_page' => 1],
+                    ],
+                ],
                 [
                     'id' => 'products-list',
                     'method' => 'GET',
@@ -443,6 +617,34 @@ class ApiDocsController extends Controller
                             ['id' => 128, 'type' => 'book', 'name' => 'Atomic Habits', 'code' => '9781847941831', 'price' => 89000, 'stock' => 25, 'in_stock' => true],
                         ],
                         'meta' => ['page' => 1, 'per_page' => 50, 'total' => 240],
+                    ],
+                ],
+            ],
+            'deeplink' => [
+                [
+                    'id' => 'deeplink-helper',
+                    'method' => 'GET',
+                    'path' => '/deeplink',
+                    'title' => 'Deep Link generator',
+                    'summary' => 'Ilova URL schemelari (kitobchi://...), Web, Play Market va App Store havolalarini avtomatik generatsiya qiladi.',
+                    'ability' => 'read',
+                    'cache' => true,
+                    'path_params' => [],
+                    'query_params' => [
+                        ['name' => 'type', 'type' => 'string', 'required' => false, 'desc' => 'Turi: book, stationery, seller, category.', 'example' => 'book'],
+                        ['name' => 'id', 'type' => 'integer', 'required' => true, 'desc' => 'Mahsulot yoki do‘kon ID raqami.', 'example' => 128],
+                    ],
+                    'response' => [
+                        'status' => 'success',
+                        'data' => [
+                            'type' => 'book',
+                            'id' => 128,
+                            'web_url' => 'https://kitobchi.com/book/128',
+                            'app_scheme_url' => 'kitobchi://book/128',
+                            'play_store_url' => 'https://play.google.com/store/apps/details?id=com.kitobchi.app',
+                            'app_store_url' => 'https://apps.apple.com/app/kitobchi/id6470000000',
+                            'smart_redirect_url' => 'https://kitobchi.com/r/book/128',
+                        ],
                     ],
                 ],
             ],

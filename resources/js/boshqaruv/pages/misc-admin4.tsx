@@ -166,13 +166,21 @@ export function Adminlar() {
 // ===== API MIJOZLAR =====
 export function ApiClients() {
   const { apiClients = [], apiLogs = [], apiClientsMeta } = usePage<{
-    apiClients?: Array<{ id: number; name: string; key: string; abilities?: string; sellerId?: number | null; sellerName?: string | null; allowedIps?: string; active: boolean; requests: number; rateLimitSecond?: number; rateLimitMinute?: number; createUrl?: string; updateUrl?: string; toggleUrl?: string; regenerateUrl?: string; destroyUrl?: string; webhooks?: Array<{ id: number; url: string; events: string[]; active: boolean; failures: number; toggleUrl: string; destroyUrl: string }>; availableEvents?: string[]; webhookStoreUrl?: string }>;
+    apiClients?: Array<{ id: number; name: string; key: string; secret?: string; abilities?: string; sellerId?: number | null; sellerName?: string | null; allowedIps?: string; active: boolean; requests: number; rateLimitSecond?: number; rateLimitMinute?: number; createUrl?: string; updateUrl?: string; toggleUrl?: string; regenerateUrl?: string; destroyUrl?: string; webhooks?: Array<{ id: number; url: string; events: string[]; active: boolean; failures: number; toggleUrl: string; destroyUrl: string }>; availableEvents?: string[]; webhookStoreUrl?: string }>;
     apiLogs?: Array<{ id: number; client?: string; method?: string; path?: string; status: number; date?: string }>;
     apiClientsMeta?: { warnings?: string[] };
   }>().props;
   const [showLogs, setShowLogs] = useState(false);
   const [editing, setEditing] = useState<(typeof apiClients)[0] | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [showSecret, setShowSecret] = useState<Record<number, boolean>>({});
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedKey(label);
+    setTimeout(() => setCopiedKey(null), 2000);
+  };
 
   const createUrl = apiClients[0]?.createUrl || '/boshqaruv/api-clients';
   const patch = (url?: string) => url && router.patch(url, {}, { preserveScroll: true });
@@ -229,12 +237,51 @@ export function ApiClients() {
       ) : null}
       <div className="card-panel">
         <div className="table-responsive"><table className="data-table">
-          <thead><tr><th>ID</th><th>Nomi</th><th>App ID</th><th>So'rovlar</th><th>Limit</th><th>Holat</th><th>Amallar</th></tr></thead>
+          <thead><tr><th>ID</th><th>Nomi</th><th>Credentials (App ID & Secret)</th><th>So'rovlar</th><th>Limit</th><th>Holat</th><th>Amallar</th></tr></thead>
           <tbody>{apiClients.map(client => (
             <tr key={client.id}>
               <td className="fw-semibold" style={{ color: '#4f46e5' }}>#{client.id}</td>
               <td className="fw-semibold">{client.name}{client.sellerName ? <div className="text-muted small"><i className="bi bi-shop me-1"></i>{client.sellerName}</div> : (client.sellerId ? <div className="text-muted small"><i className="bi bi-shop me-1"></i>#{client.sellerId}</div> : null)}</td>
-              <td><code style={{ fontSize: 11, background: '#f3f4f6', padding: '2px 6px', borderRadius: 4 }}>{client.key}</code></td>
+              <td>
+                <div className="d-flex flex-column gap-1" style={{ minWidth: 260 }}>
+                  <div className="d-flex align-items-center gap-1">
+                    <span className="badge bg-secondary-subtle text-dark border px-1" style={{ fontSize: 9 }}>ID</span>
+                    <code style={{ fontSize: 11, background: '#f3f4f6', padding: '2px 6px', borderRadius: 4 }}>{client.key}</code>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-link p-0 text-muted"
+                      title="App ID nusxalash"
+                      onClick={() => copyToClipboard(client.key, `id-${client.id}`)}
+                    >
+                      <i className={`bi ${copiedKey === `id-${client.id}` ? 'bi-check2 text-success' : 'bi-clipboard'}`}></i>
+                    </button>
+                  </div>
+                  {client.secret ? (
+                    <div className="d-flex align-items-center gap-1">
+                      <span className="badge bg-secondary-subtle text-dark border px-1" style={{ fontSize: 9 }}>Secret</span>
+                      <code style={{ fontSize: 11, background: '#f3f4f6', padding: '2px 6px', borderRadius: 4, letterSpacing: showSecret[client.id] ? 'normal' : '2px' }}>
+                        {showSecret[client.id] ? client.secret : '••••••••••••••••'}
+                      </code>
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-link p-0 text-muted ms-1"
+                        title={showSecret[client.id] ? "Yashirish" : "Ko'rish"}
+                        onClick={() => setShowSecret(prev => ({ ...prev, [client.id]: !prev[client.id] }))}
+                      >
+                        <i className={`bi ${showSecret[client.id] ? 'bi-eye-slash' : 'bi-eye'}`}></i>
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-link p-0 text-muted"
+                        title="App Secret nusxalash"
+                        onClick={() => copyToClipboard(client.secret || '', `sec-${client.id}`)}
+                      >
+                        <i className={`bi ${copiedKey === `sec-${client.id}` ? 'bi-check2 text-success' : 'bi-clipboard'}`}></i>
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+              </td>
               <td>{client.requests.toLocaleString()}</td>
               <td>{client.rateLimitSecond != null || client.rateLimitMinute != null ? `${client.rateLimitSecond ?? 0}/s · ${client.rateLimitMinute ?? 0}/m` : 'Limitlar sozlanmagan'}</td>
               <td><div className="form-check form-switch"><input type="checkbox" className="form-check-input" checked={client.active} onChange={() => patch(client.toggleUrl)} /></div></td>
@@ -244,7 +291,7 @@ export function ApiClients() {
                   <i className="bi bi-broadcast"></i>
                   {(client.webhooks?.length || 0) > 0 ? <span className="badge bg-secondary ms-1" style={{ fontSize: 9 }}>{client.webhooks!.length}</span> : null}
                 </button>
-                <button className="btn btn-sm btn-light me-1" title="Kalitni yangilash" onClick={() => { if (confirm(`${client.name} uchun API kalit qayta yaratilsinmi? Eski kalit darhol ishlamay qoladi.`)) patch(client.regenerateUrl); }}><i className="bi bi-arrow-repeat"></i></button>
+                <button className="btn btn-sm btn-light me-1" title="Secret kalitni qayta yaratish" onClick={() => { if (confirm(`${client.name} uchun API kalit qayta yaratilsinmi? Eski kalit darhol ishlamay qoladi.`)) patch(client.regenerateUrl); }}><i className="bi bi-arrow-repeat"></i></button>
                 <button className="btn btn-sm btn-light text-danger" onClick={() => destroy(client)}><i className="bi bi-trash"></i></button>
               </td>
             </tr>

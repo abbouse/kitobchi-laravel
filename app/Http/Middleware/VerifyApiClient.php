@@ -31,6 +31,10 @@ class VerifyApiClient
 
     public function handle(Request $request, Closure $next, string ...$abilities): Response
     {
+        if ($request->isMethod('OPTIONS')) {
+            return $next($request);
+        }
+
         $startedAt = microtime(true);
         $appId     = $request->header('X-App-ID');
         $appSecret = $request->header('X-App-Secret');

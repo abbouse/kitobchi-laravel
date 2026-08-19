@@ -1680,4 +1680,141 @@ class ProductsController extends Controller
 
         return response()->json(['status' => 'success', 'data' => $result]);
     }
+
+    // =========================================================================
+    //  7. CLIENT PUBLIC APIS (Single Item, Author, Publisher & Deep Link)
+    // =========================================================================
+    public function showBook(Request $request, int $id)
+    {
+        $user = Auth::guard('user')->user();
+
+        $book = Books::where('id', $id)
+            ->where('status', true)
+            ->where('is_hidden', 0)
+            ->where('is_approved', 1)
+            ->whereHas('seller', fn($q) => $q->where('is_hidden', 0)->where('status', 'approved'))
+            ->with(['seller', 'tags', 'authorProfile', 'publisherProfile', 'category', 'authors'])
+            ->first();
+
+        if (! $book) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Kitob topilmadi yoki faol emas',
+            ], 404);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'data'   => $this->formatProductDetail($book, $user, 'book'),
+        ]);
+    }
+
+    public function showStationery(Request $request, int $id)
+    {
+        $user = Auth::guard('user')->user();
+
+        $stationery = Stationery::where('id', $id)
+            ->where('status', true)
+            ->where('is_hidden', 0)
+            ->where('is_approved', 1)
+            ->whereHas('seller', fn($q) => $q->where('is_hidden', 0)->where('status', 'approved'))
+            ->with(['seller', 'tags', 'variants', 'category'])
+            ->first();
+
+        if (! $stationery) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Kanselyariya mahsuloti topilmadi yoki faol emas',
+            ], 404);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'data'   => $this->formatProductDetail($stationery, $user, 'stationery'),
+        ]);
+    }
+
+    public function booksByAuthor(Request $request, int $authorId)
+    {
+        $user = Auth::guard('user')->user();
+        $perPage = max(1, min(50, (int) $request->input('per_page', 20)));
+
+        $books = Books::where('status', true)
+            ->where('is_hidden', 0)
+            ->where('is_approved', 1)
+            ->where(function ($q) use ($authorId) {
+                $q->where('author_id', $authorId)
+                    ->orWhereHas('authors', fn($sub) => $sub->where('author_id', $authorId));
+            })
+            ->whereHas('seller', fn($q) => $q->where('is_hidden', 0)->where('status', 'approved'))
+            ->with(['seller', 'tags', 'category', 'authorProfile', 'publisherProfile'])
+            ->latest('id')
+            ->paginate($perPage);
+
+        return response()->json([
+            'status' => 'success',
+            'data'   => collect($books->items())->map(fn($b) => $this->formatProduct($b, $user, 'book')),
+            'meta'   => [
+                'current_page' => $books->currentPage(),
+                'per_page'     => $books->perPage(),
+                'total'        => $books->total(),
+                'last_page'    => $books->lastPage(),
+            ],
+        ]);
+    }
+
+    public function booksByPublisher(Request $request, int $publisherId)
+    {
+        $user = Auth::guard('user')->user();
+        $perPage = max(1, min(50, (int) $request->input('per_page', 20)));
+
+        $books = Books::where('status', true)
+            ->where('is_hidden', 0)
+            ->where('is_approved', 1)
+            ->where('publisher_id', $publisherId)
+            ->whereHas('seller', fn($q) => $q->where('is_hidden', 0)->where('status', 'approved'))
+            ->with(['seller', 'tags', 'category', 'authorProfile', 'publisherProfile'])
+            ->latest('id')
+            ->paginate($perPage);
+
+        return response()->json([
+            'status' => 'success',
+            'data'   => collect($books->items())->map(fn($b) => $this->formatProduct($b, $user, 'book')),
+            'meta'   => [
+                'current_page' => $books->currentPage(),
+                'per_page'     => $books->perPage(),
+                'total'        => $books->total(),
+                'last_page'    => $books->lastPage(),
+            ],
+        ]);
+    }
+
+    public function deeplink(Request $request)
+    {
+        $type = strtolower((string) $request->input('type', 'book'));
+        $id = (int) $request->input('id', 1);
+
+        $path = match ($type) {
+            'stationery' => "stationery/{$id}",
+            'seller'     => "seller/{$id}",
+            'category'   => "category/{$id}",
+            default      => "book/{$id}",
+        };
+
+        $baseUrl = config('app.url', 'https://kitobchi.com');
+        $baseUrl = rtrim($baseUrl, '/');
+
+        return response()->json([
+            'status' => 'success',
+            'data'   => [
+                'type'               => $type,
+                'id'                 => $id,
+                'web_url'            => "{$baseUrl}/{$path}",
+                'app_scheme_url'     => "kitobchi://{$path}",
+                'play_store_url'     => 'https://play.google.com/store/apps/details?id=com.kitobchi.app',
+                'app_store_url'      => 'https://apps.apple.com/app/kitobchi/id6470000000',
+                'smart_redirect_url' => "{$baseUrl}/r/{$path}",
+            ],
+        ]);
+    }
 }

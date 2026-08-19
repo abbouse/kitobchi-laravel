@@ -688,6 +688,9 @@
       <a class="docs-btn" href="{{ $openapiUrl }}" target="_blank" rel="noopener" title="OpenAPI (JSON) Spec">
         <span>OpenAPI</span>
       </a>
+      <a class="docs-btn" href="{{ $postmanUrl }}" target="_blank" rel="noopener" title="Postman Collection (v2.1) yuklab olish">
+        <span>Postman</span>
+      </a>
       <button class="docs-btn" id="copyMdButton" type="button" title="Sahifani LLM uchun Markdown ko'rinishida nusxalash">
         <span>Markdown</span>
       </button>
