@@ -1,72 +1,92 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, router, usePage } from '@inertiajs/react';
 
+// `perm` — App\Models\Admin::MODULES dagi modul kaliti bilan bir xil bo'lishi
+// SHART (backendda ham xuddi shu kalit bilan panel.permission:<kalit>
+// middleware qo'llangan). `perm: null` — hech qanday ruxsat talab qilinmaydi,
+// tizimga kirgan har bir admin ko'radi (faqat Dashboard/Live Dashboard).
 const nav = [
   { group: 'Asosiy', items: [
-    { to: '/boshqaruv', match: '/boshqaruv', label: 'Dashboard', icon: 'bi-speedometer2' },
-    { to: '/boshqaruv/live', match: '/boshqaruv/live', label: 'Live Dashboard', icon: 'bi-broadcast', badge: 'LIVE' },
+    { to: '/boshqaruv', match: '/boshqaruv', label: 'Dashboard', icon: 'bi-speedometer2', perm: null as string | null },
+    { to: '/boshqaruv/live', match: '/boshqaruv/live', label: 'Live Dashboard', icon: 'bi-broadcast', badge: 'LIVE', perm: null as string | null },
   ]},
   { group: 'Katalog', items: [
-    { to: '/boshqaruv/books', match: '/boshqaruv/books', label: 'Kitoblar', icon: 'bi-book' },
-    { to: '/boshqaruv/book-categories', match: '/boshqaruv/book-categories', label: 'Kitob kategoriyalari', icon: 'bi-bookmarks' },
-    { to: '/boshqaruv/stationeries', match: '/boshqaruv/stationeries', label: 'Kanselyariya', icon: 'bi-pencil-square' },
-    { to: '/boshqaruv/stationery-categories', match: '/boshqaruv/stationery-categories', label: 'Kanstovar kategoriyalari', icon: 'bi-tags' },
-    { to: '/boshqaruv/authors', match: '/boshqaruv/authors', label: 'Mualliflar', icon: 'bi-person-vcard' },
-    { to: '/boshqaruv/publishers', match: '/boshqaruv/publishers', label: 'Nashriyotlar', icon: 'bi-building' },
+    { to: '/boshqaruv/books', match: '/boshqaruv/books', label: 'Kitoblar', icon: 'bi-book', perm: 'catalog' },
+    { to: '/boshqaruv/book-categories', match: '/boshqaruv/book-categories', label: 'Kitob kategoriyalari', icon: 'bi-bookmarks', perm: 'catalog' },
+    { to: '/boshqaruv/stationeries', match: '/boshqaruv/stationeries', label: 'Kanselyariya', icon: 'bi-pencil-square', perm: 'catalog' },
+    { to: '/boshqaruv/stationery-categories', match: '/boshqaruv/stationery-categories', label: 'Kanstovar kategoriyalari', icon: 'bi-tags', perm: 'catalog' },
+    { to: '/boshqaruv/authors', match: '/boshqaruv/authors', label: 'Mualliflar', icon: 'bi-person-vcard', perm: 'catalog' },
+    { to: '/boshqaruv/publishers', match: '/boshqaruv/publishers', label: 'Nashriyotlar', icon: 'bi-building', perm: 'catalog' },
   ]},
   { group: 'Buyurtmalar va Foydalanuvchilar', items: [
-    { to: '/boshqaruv/orders', match: '/boshqaruv/orders', label: 'Buyurtmalar', icon: 'bi-receipt' },
-    { to: '/boshqaruv/users', match: '/boshqaruv/users', label: 'Foydalanuvchilar', icon: 'bi-people' },
-    { to: '/boshqaruv/split', match: '/boshqaruv/split', label: 'Split nazorati', icon: 'bi-wallet2' },
-    { to: '/boshqaruv/search-history', match: '/boshqaruv/search-history', label: 'Qidiruv tarixi', icon: 'bi-clock-history' },
+    { to: '/boshqaruv/orders', match: '/boshqaruv/orders', label: 'Buyurtmalar', icon: 'bi-receipt', perm: 'orders' },
+    { to: '/boshqaruv/users', match: '/boshqaruv/users', label: 'Foydalanuvchilar', icon: 'bi-people', perm: 'users' },
+    { to: '/boshqaruv/split', match: '/boshqaruv/split', label: 'Split nazorati', icon: 'bi-wallet2', perm: 'split' },
+    { to: '/boshqaruv/search-history', match: '/boshqaruv/search-history', label: 'Qidiruv tarixi', icon: 'bi-clock-history', perm: 'search-history' },
   ]},
   { group: 'Savdo va Logistika', items: [
-    { to: '/boshqaruv/sellers', match: '/boshqaruv/sellers', label: 'Sotuvchilar', icon: 'bi-shop-window' },
-    { to: '/boshqaruv/seller-orders', match: '/boshqaruv/seller-orders', label: 'Seller buyurtmalari', icon: 'bi-shop' },
-    { to: '/boshqaruv/couriers', match: '/boshqaruv/couriers', label: 'Kuryerlar', icon: 'bi-bicycle' },
-    { to: '/boshqaruv/courier-orders', match: '/boshqaruv/courier-orders', label: 'Kuryer buyurtmalari', icon: 'bi-truck' },
-    { to: '/boshqaruv/hubs', match: '/boshqaruv/hubs', label: 'Hub fulfillment', icon: 'bi-building' },
-    { to: '/boshqaruv/transactions', match: '/boshqaruv/transactions', label: 'Tranzaksiyalar', icon: 'bi-cash-coin' },
-    { to: '/boshqaruv/fiscalization', match: '/boshqaruv/fiscalization', label: 'Fiskalizatsiya', icon: 'bi-qr-code' },
-    { to: '/boshqaruv/commission-audit', match: '/boshqaruv/commission-audit', label: 'Komissiya audit', icon: 'bi-percent' },
-    { to: '/boshqaruv/audit-logs', match: '/boshqaruv/audit-logs', label: 'Audit log', icon: 'bi-clipboard-data' },
-    { to: '/boshqaruv/seller-ai-actions', match: '/boshqaruv/seller-ai-actions', label: 'Seller AI audit', icon: 'bi-robot' },
-    { to: '/boshqaruv/expenses', match: '/boshqaruv/expenses', label: 'Chiqimlar', icon: 'bi-wallet2' },
-    { to: '/boshqaruv/logistika', match: '/boshqaruv/logistika', label: 'Logistika', icon: 'bi-geo-alt' },
+    { to: '/boshqaruv/sellers', match: '/boshqaruv/sellers', label: 'Sotuvchilar', icon: 'bi-shop-window', perm: 'sellers' },
+    { to: '/boshqaruv/seller-orders', match: '/boshqaruv/seller-orders', label: 'Seller buyurtmalari', icon: 'bi-shop', perm: 'sellers' },
+    { to: '/boshqaruv/couriers', match: '/boshqaruv/couriers', label: 'Kuryerlar', icon: 'bi-bicycle', perm: 'couriers' },
+    { to: '/boshqaruv/courier-orders', match: '/boshqaruv/courier-orders', label: 'Kuryer buyurtmalari', icon: 'bi-truck', perm: 'couriers' },
+    { to: '/boshqaruv/hubs', match: '/boshqaruv/hubs', label: 'Hub fulfillment', icon: 'bi-building', perm: 'hubs' },
+    { to: '/boshqaruv/transactions', match: '/boshqaruv/transactions', label: 'Tranzaksiyalar', icon: 'bi-cash-coin', perm: 'finance' },
+    { to: '/boshqaruv/fiscalization', match: '/boshqaruv/fiscalization', label: 'Fiskalizatsiya', icon: 'bi-qr-code', perm: 'finance' },
+    { to: '/boshqaruv/commission-audit', match: '/boshqaruv/commission-audit', label: 'Komissiya audit', icon: 'bi-percent', perm: 'finance' },
+    { to: '/boshqaruv/audit-logs', match: '/boshqaruv/audit-logs', label: 'Audit log', icon: 'bi-clipboard-data', perm: 'audit-logs' },
+    { to: '/boshqaruv/seller-ai-actions', match: '/boshqaruv/seller-ai-actions', label: 'Seller AI audit', icon: 'bi-robot', perm: 'seller-ai' },
+    { to: '/boshqaruv/expenses', match: '/boshqaruv/expenses', label: 'Chiqimlar', icon: 'bi-wallet2', perm: 'finance' },
+    { to: '/boshqaruv/logistika', match: '/boshqaruv/logistika', label: 'Logistika', icon: 'bi-geo-alt', perm: 'logistika' },
   ]},
   { group: 'Marketing va Hamjamiyat', items: [
-    { to: '/boshqaruv/reklamalar', match: '/boshqaruv/reklamalar', label: 'Reklamalar', icon: 'bi-megaphone' },
-    { to: '/boshqaruv/promokodlar', match: '/boshqaruv/promokodlar', label: 'Promokodlar', icon: 'bi-ticket-perforated' },
-    { to: '/boshqaruv/blogerlar', match: '/boshqaruv/blogerlar', label: 'Blogerlar', icon: 'bi-people' },
-    { to: '/boshqaruv/gift-sertifikatlar', match: '/boshqaruv/gift-sertifikatlar', label: 'Gift sertifikatlar', icon: 'bi-gift' },
-    { to: '/boshqaruv/market-news', match: '/boshqaruv/market-news', label: 'Market yangiliklari', icon: 'bi-newspaper' },
-    { to: '/boshqaruv/collections', match: '/boshqaruv/collections', label: "To'plamlar", icon: 'bi-collection' },
-    { to: '/boshqaruv/reels', match: '/boshqaruv/reels', label: 'Reels / Shorts', icon: 'bi-camera-reels' },
-    { to: '/boshqaruv/book-club', match: '/boshqaruv/book-club', label: 'Book Club', icon: 'bi-journal-bookmark' },
+    { to: '/boshqaruv/reklamalar', match: '/boshqaruv/reklamalar', label: 'Reklamalar', icon: 'bi-megaphone', perm: 'marketing' },
+    { to: '/boshqaruv/promokodlar', match: '/boshqaruv/promokodlar', label: 'Promokodlar', icon: 'bi-ticket-perforated', perm: 'marketing' },
+    { to: '/boshqaruv/blogerlar', match: '/boshqaruv/blogerlar', label: 'Blogerlar', icon: 'bi-people', perm: 'marketing' },
+    { to: '/boshqaruv/gift-sertifikatlar', match: '/boshqaruv/gift-sertifikatlar', label: 'Gift sertifikatlar', icon: 'bi-gift', perm: 'marketing' },
+    { to: '/boshqaruv/market-news', match: '/boshqaruv/market-news', label: 'Market yangiliklari', icon: 'bi-newspaper', perm: 'marketing' },
+    { to: '/boshqaruv/collections', match: '/boshqaruv/collections', label: "To'plamlar", icon: 'bi-collection', perm: 'marketing' },
+    { to: '/boshqaruv/reels', match: '/boshqaruv/reels', label: 'Reels / Shorts', icon: 'bi-camera-reels', perm: 'marketing' },
+    { to: '/boshqaruv/book-club', match: '/boshqaruv/book-club', label: 'Book Club', icon: 'bi-journal-bookmark', perm: 'book-club' },
   ]},
   { group: 'Mijozlarga xizmat', items: [
-    { to: '/boshqaruv/tickets', match: '/boshqaruv/tickets', label: 'Support', icon: 'bi-headset' },
-    { to: '/boshqaruv/tickets?tickets_source=seller', match: '/boshqaruv/tickets?tickets_source=seller', label: 'Seller tiketlari', icon: 'bi-chat-left-text' },
-    { to: '/boshqaruv/shikoyatlar', match: '/boshqaruv/shikoyatlar', label: 'Shikoyatlar', icon: 'bi-exclamation-triangle' },
-    { to: '/boshqaruv/chat', match: '/boshqaruv/chat', label: 'Chat kuzatuv', icon: 'bi-chat-dots' },
-    { to: '/boshqaruv/push', match: '/boshqaruv/push', label: 'Push bildirishnomalar', icon: 'bi-bell' },
+    { to: '/boshqaruv/tickets', match: '/boshqaruv/tickets', label: 'Support', icon: 'bi-headset', perm: 'support' },
+    { to: '/boshqaruv/tickets?tickets_source=seller', match: '/boshqaruv/tickets?tickets_source=seller', label: 'Seller tiketlari', icon: 'bi-chat-left-text', perm: 'support' },
+    { to: '/boshqaruv/shikoyatlar', match: '/boshqaruv/shikoyatlar', label: 'Shikoyatlar', icon: 'bi-exclamation-triangle', perm: 'support' },
+    { to: '/boshqaruv/chat', match: '/boshqaruv/chat', label: 'Chat kuzatuv', icon: 'bi-chat-dots', perm: 'support' },
+    { to: '/boshqaruv/push', match: '/boshqaruv/push', label: 'Push bildirishnomalar', icon: 'bi-bell', perm: 'push' },
   ]},
   { group: 'HR va Tashkilot', items: [
-    { to: '/boshqaruv/vakansiyalar', match: '/boshqaruv/vakansiyalar', label: 'Vakansiyalar', icon: 'bi-person-badge' },
-    { to: '/boshqaruv/karyera-arizalari', match: '/boshqaruv/karyera-arizalari', label: 'Karyera arizalari', icon: 'bi-file-earmark-person' },
-    { to: '/boshqaruv/hub-arizalari', match: '/boshqaruv/hub-arizalari', label: 'Hub arizalari', icon: 'bi-building-add' },
-    { to: '/boshqaruv/adminlar', match: '/boshqaruv/adminlar', label: 'Adminlar', icon: 'bi-shield-lock' },
+    { to: '/boshqaruv/vakansiyalar', match: '/boshqaruv/vakansiyalar', label: 'Vakansiyalar', icon: 'bi-person-badge', perm: 'hr' },
+    { to: '/boshqaruv/karyera-arizalari', match: '/boshqaruv/karyera-arizalari', label: 'Karyera arizalari', icon: 'bi-file-earmark-person', perm: 'hr' },
+    { to: '/boshqaruv/hub-arizalari', match: '/boshqaruv/hub-arizalari', label: 'Hub arizalari', icon: 'bi-building-add', perm: 'hubs' },
+    { to: '/boshqaruv/adminlar', match: '/boshqaruv/adminlar', label: 'Adminlar', icon: 'bi-shield-lock', perm: 'admins' },
   ]},
   { group: 'Premium', items: [
-    { to: '/boshqaruv/mystery-box', match: '/boshqaruv/mystery-box', label: 'Mystery Box', icon: 'bi-box-seam' },
-    { to: '/boshqaruv/sovgalar', match: '/boshqaruv/sovgalar', label: "Sovg'alar", icon: 'bi-gift-fill' },
+    { to: '/boshqaruv/mystery-box', match: '/boshqaruv/mystery-box', label: 'Mystery Box', icon: 'bi-box-seam', perm: 'premium' },
+    { to: '/boshqaruv/sovgalar', match: '/boshqaruv/sovgalar', label: "Sovg'alar", icon: 'bi-gift-fill', perm: 'premium' },
   ]},
   { group: 'Tizim', items: [
-    { to: '/boshqaruv/siyosatlar', match: '/boshqaruv/siyosatlar', label: 'Siyosatlar', icon: 'bi-file-earmark-text' },
-    { to: '/boshqaruv/api-clients', match: '/boshqaruv/api-clients', label: 'API mijozlar', icon: 'bi-code-slash' },
-    { to: '/boshqaruv/settings', match: '/boshqaruv/settings', label: 'Sozlamalar', icon: 'bi-gear' },
+    { to: '/boshqaruv/siyosatlar', match: '/boshqaruv/siyosatlar', label: 'Siyosatlar', icon: 'bi-file-earmark-text', perm: 'settings' },
+    { to: '/boshqaruv/api-clients', match: '/boshqaruv/api-clients', label: 'API mijozlar', icon: 'bi-code-slash', perm: 'settings' },
+    { to: '/boshqaruv/settings', match: '/boshqaruv/settings', label: 'Sozlamalar', icon: 'bi-gear', perm: 'settings' },
   ]},
 ];
+
+type PanelAdmin = { name?: string; email?: string; role?: string; roleKey?: string; isSuperAdmin?: boolean; isReadOnly?: boolean; permissions?: string[] };
+
+// Adminning ruxsatlariga qarab sidebar'ni filtrlaydi: superadmin — hammasini
+// ko'radi; boshqalar — faqat `permissions` massivida bor modullarni. Bo'sh
+// qolgan guruhlar butunlay yashiriladi (masalan, hech qaysi marketing
+// ruxsati yo'q admin uchun "Marketing va Hamjamiyat" guruhi umuman ko'rinmaydi).
+function filterNavByPermissions(admin?: PanelAdmin) {
+  const isSuper = !!admin?.isSuperAdmin;
+  const perms = new Set(admin?.permissions || []);
+  const allowed = (perm: string | null) => perm === null || isSuper || perms.has(perm);
+
+  return nav
+    .map((g) => ({ ...g, items: g.items.filter((it) => allowed(it.perm)) }))
+    .filter((g) => g.items.length > 0);
+}
 
 // ── Global qidiruv: bo'lim nomi bo'yicha sakrash + asosiy ro'yxatlarda qidirish ──
 const searchTargets = [
@@ -79,14 +99,15 @@ const searchTargets = [
 
 type QuickResult = { key: string; label: string; icon: string; hint?: string; go: () => void };
 
-function QuickSearch() {
+function QuickSearch({ visibleNav }: { visibleNav: typeof nav }) {
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
   const [focused, setFocused] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const navItems = useMemo(() => nav.flatMap((g) => g.items.map((it) => ({ ...it, group: g.group }))), []);
+  // Faqat adminga ko'rinadigan (ruxsat berilgan) bo'limlar tezkor qidiruvda chiqadi.
+  const navItems = useMemo(() => visibleNav.flatMap((g) => g.items.map((it) => ({ ...it, group: g.group }))), [visibleNav]);
 
   const results = useMemo<QuickResult[]>(() => {
     const q = query.trim().toLowerCase();
@@ -225,11 +246,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     return localStorage.getItem('boshqaruv-theme') === 'dark';
   });
   const { url, props } = usePage<{
-    auth?: { admin?: { name?: string; email?: string; role?: string } };
+    auth?: { admin?: PanelAdmin };
   }>();
   const admin = props.auth?.admin;
   const initials = initialsOf(admin?.name);
   const { toasts, dismiss } = useFlashToasts();
+  const visibleNav = useMemo(() => filterNavByPermissions(admin), [admin]);
 
   useEffect(() => { setOpen(false); }, [url]);
   useEffect(() => {
@@ -268,7 +290,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </div>
 
         <nav className="nav-group">
-          {nav.map((g) => (
+          {visibleNav.map((g) => (
             <div key={g.group}>
               <div className="nav-title">{g.group}</div>
               {g.items.map((it) => (
@@ -294,7 +316,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <div className="avatar">{initials}</div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ color: 'white', fontWeight: 600, fontSize: 14 }}>{admin?.name || 'Admin'}</div>
-            <div style={{ color: '#a5b4fc', fontSize: 12 }}>{admin?.role || 'Administrator'}</div>
+            <div style={{ color: '#a5b4fc', fontSize: 12 }}>
+              {admin?.role || 'Administrator'}
+              {admin?.isReadOnly && <span className="badge bg-secondary ms-1" style={{ fontSize: 9 }}>faqat ko'rish</span>}
+            </div>
           </div>
           <button className="btn btn-sm" style={{ color: '#c7d2fe' }} title="Chiqish" onClick={() => router.post('/boshqaruv/logout')}>
             <i className="bi bi-box-arrow-right" style={{ fontSize: 18 }}></i>
@@ -318,7 +343,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             )}
           </div>
 
-          <QuickSearch />
+          <QuickSearch visibleNav={visibleNav} />
           
           <div style={{ flex: 1 }}></div>
 

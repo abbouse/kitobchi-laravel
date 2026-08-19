@@ -17,9 +17,12 @@ class AuthenticatePanel
     public function handle(Request $request, Closure $next): Response
     {
         // Panel guard orqali tekshirish
+        // ESLATMA: eski /a122 paneli chiqarib tashlangan (routes/web.php'da
+        // a122.php endi ulanmaydi), shuning uchun bu yerda faqat boshqaruv.login'ga
+        // yo'naltiramiz — 'admin.login' route'i endi mavjud emas.
         if (! Auth::guard('panel')->check()) {
             return redirect()
-                ->route($request->is('boshqaruv*') ? 'boshqaruv.login' : 'admin.login')
+                ->route('boshqaruv.login')
                 ->with('error', "Iltimos, tizimga kiring.");
         }
 
@@ -29,7 +32,7 @@ class AuthenticatePanel
         if (! $admin->is_active) {
             Auth::guard('panel')->logout();
             return redirect()
-                ->route($request->is('boshqaruv*') ? 'boshqaruv.login' : 'admin.login')
+                ->route('boshqaruv.login')
                 ->with('error', "Akkauntingiz bloklangan. Aloqa uchun: admin@kitob.uz");
         }
 

@@ -201,7 +201,11 @@ class MysteryBoxController extends Controller
             'sort_order' => $data['sort_order'] ?? 0,
         ]);
 
-        return redirect()->route('admin.mystery-box.plans')->with('success', 'Tarif yaratildi.');
+        // ESLATMA: bu controller endi faqat /boshqaruv/mystery-box orqali
+        // ishlatiladi (eski /a122 paneli o'chirilgan), shuning uchun eski
+        // 'admin.mystery-box.plans' route nomiga emas, yangi
+        // 'boshqaruv.mystery-box' route'iga qaytaramiz.
+        return redirect()->route('boshqaruv.mystery-box')->with('success', 'Tarif yaratildi.');
     }
 
     public function updatePlan(Request $request, MysteryBoxPlan $plan)

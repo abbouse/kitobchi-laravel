@@ -25,6 +25,7 @@ interface FeedRow {
 interface Snapshot {
   generated_at: string;
   endpoint?: string;
+  financialRestricted?: boolean;
   kpis: {
     total_revenue: number;
     today_revenue: number;
@@ -242,6 +243,13 @@ export default function LiveDashboard() {
         <span className="fw-bold small" style={{ color: lastError ? '#fcd34d' : '#6ee7b7' }}>{lastError ? 'Live ogohlantirish:' : 'Snapshot:'}</span>
         <span style={{ color: '#e2e8f0', fontSize: 13 }}>{lastError || `So'nggi yangilanish ${snapshot.generated_at}. Aktiv oqim: ${mainActive + sellerActive + courierActive} ta.`}</span>
       </div>
+
+      {snapshot.financialRestricted ? (
+        <div className="mb-3 p-2 rounded d-flex align-items-center gap-2" style={{ background: 'rgba(100,116,139,0.18)', border: '1px solid rgba(148,163,184,0.35)' }}>
+          <i className="bi bi-lock-fill" style={{ fontSize: 16, color: '#cbd5e1' }}></i>
+          <span style={{ color: '#e2e8f0', fontSize: 13 }}>Sizning rolingizda moliyaviy ko'rsatkichlar (daromad, tushum, foyda) 0 qilib ko'rsatiladi — faqat operatsion sonlar (order, mijoz, hudud bo'yicha oqim) ochiq. Kerak bo'lsa, "Moliya" ruxsatiga ega admindan so'rang.</span>
+        </div>
+      ) : null}
 
       <div className="row g-2 mb-3">
         {[

@@ -117,9 +117,20 @@ export function KaryeraArizalari() {
   }>().props;
   const [showDetail, setShowDetail] = useState(false);
   const [selected, setSelected] = useState<(typeof applications)[0] | null>(null);
+  const [replyText, setReplyText] = useState('');
+  const [sendingReply, setSendingReply] = useState(false);
   const updateStatus = (status: string) => {
     if (!selected?.statusUrl) return;
     router.patch(selected.statusUrl, { status }, { preserveScroll: true });
+  };
+  const sendReply = () => {
+    if (!selected?.replyUrl || replyText.trim().length < 5) return;
+    setSendingReply(true);
+    router.post(selected.replyUrl, { body: replyText }, {
+      preserveScroll: true,
+      onSuccess: () => setReplyText(''),
+      onFinish: () => setSendingReply(false),
+    });
   };
 
   return (
@@ -137,7 +148,7 @@ export function KaryeraArizalari() {
               <td className="text-muted">{application.date || '—'}</td>
               <td><span className={`chip ${application.status === 'new' ? 'chip-info' : application.status === 'reviewed' ? 'chip-warning' : 'chip-success'}`} style={{ fontSize: 9 }}>{application.status}</span></td>
               <td>
-                <button className="btn btn-sm btn-light me-1" onClick={() => { setSelected(application); setShowDetail(true); }}><i className="bi bi-eye"></i></button>
+                <button className="btn btn-sm btn-light me-1" onClick={() => { setSelected(application); setReplyText(''); setShowDetail(true); }}><i className="bi bi-eye"></i></button>
                 {application.cvUrl ? <a className="btn btn-sm btn-light" href={application.cvUrl}><i className="bi bi-download"></i></a> : null}
               </td>
             </tr>
@@ -160,6 +171,28 @@ export function KaryeraArizalari() {
                 ))}
               </div>
             </div>
+            {selected?.replyUrl ? (
+              <div className="col-12 mt-3">
+                <label className="form-label small text-muted fw-semibold">Nomzodga javob yozish</label>
+                <textarea
+                  className="form-control"
+                  rows={4}
+                  placeholder="Javob matnini kiriting (kamida 5 ta belgi)..."
+                  value={replyText}
+                  onChange={(event) => setReplyText(event.target.value)}
+                ></textarea>
+                <div className="form-text">Javob nomzodning email manziliga ({selected?.email}) yuboriladi.</div>
+                <div className="d-flex justify-content-end mt-2">
+                  <button
+                    className="btn btn-primary-gradient btn-sm"
+                    disabled={sendingReply || replyText.trim().length < 5}
+                    onClick={sendReply}
+                  >
+                    <i className="bi bi-send me-1"></i>{sendingReply ? 'Yuborilmoqda...' : 'Yuborish'}
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </div>
         </Modal.Body>
         <Modal.Footer>

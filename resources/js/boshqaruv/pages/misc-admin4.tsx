@@ -1,24 +1,77 @@
-import { FormEvent, useState } from 'react';
+import { FormEvent, useMemo, useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Modal, Button, Form } from 'react-bootstrap';
 
+type PanelModule = { key: string; label: string; superOnly: boolean };
+type PanelRolePreset = { key: string; label: string; permissions: string[]; readOnly: boolean };
+type AdminRow = {
+  id: number; name: string; email: string; role: string; roleKey?: string; active: boolean;
+  lastLogin?: string; permissions?: string[]; isReadOnly?: boolean; isSuperAdmin?: boolean;
+  createUrl?: string; updateUrl?: string; toggleUrl?: string; destroyUrl?: string;
+};
+
 // ===== ADMINLAR =====
+// Rol/ruxsat (RBAC) boshqaruvi: har bir admin uchun rol (tayyor shablon) va
+// alohida modul ruxsatlari (checkbox) tanlanadi. Rol tanlanganda checkbox'lar
+// avtomatik to'ldiriladi, lekin keyin qo'lda ham o'zgartirish mumkin — yakuniy
+// natija har doim `permissions[]` massivi sifatida saqlanadi. Bu sahifaning
+// o'ziga faqat Super Admin kira oladi (backend: panel.permission:admins,
+// 'admins' moduli superOnly), shuning uchun barcha modul checkbox'lari
+// (jumladan 'admins'ning o'zi) hech qanday cheklovsiz ko'rsatiladi.
 export function Adminlar() {
-  const { admins = [] } = usePage<{
-    admins?: Array<{ id: number; name: string; email: string; role: string; roleKey?: string; active: boolean; lastLogin?: string; createUrl?: string; updateUrl?: string; toggleUrl?: string; destroyUrl?: string }>;
+  const { admins = [], roleMeta } = usePage<{
+    admins?: AdminRow[];
+    roleMeta?: { modules: PanelModule[]; roles: PanelRolePreset[] };
   }>().props;
-  const [editing, setEditing] = useState<(typeof admins)[0] | null>(null);
+  const modules = roleMeta?.modules || [];
+  const roles = roleMeta?.roles || [];
+  const roleByKey = useMemo(() => Object.fromEntries(roles.map((r) => [r.key, r])), [roles]);
+
+  const [editing, setEditing] = useState<AdminRow | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [selectedRole, setSelectedRole] = useState('admin');
+  const [selectedPerms, setSelectedPerms] = useState<string[]>([]);
+  const [isReadOnly, setIsReadOnly] = useState(false);
   const createUrl = admins[0]?.createUrl || '/boshqaruv/adminlar';
 
-  const toggle = (admin: (typeof admins)[0]) => admin.toggleUrl && router.patch(admin.toggleUrl, {}, { preserveScroll: true });
-  const destroy = (admin: (typeof admins)[0]) => {
+  const openForm = (admin: AdminRow | null) => {
+    setEditing(admin);
+    setSelectedRole(admin?.roleKey || 'admin');
+    setSelectedPerms(admin?.permissions || roleByKey['admin']?.permissions || []);
+    setIsReadOnly(admin?.isReadOnly || false);
+    setShowForm(true);
+  };
+
+  const applyRolePreset = (roleKey: string) => {
+    setSelectedRole(roleKey);
+    const preset = roleByKey[roleKey];
+    if (preset) {
+      setSelectedPerms(preset.permissions);
+      setIsReadOnly(preset.readOnly);
+    }
+  };
+
+  const togglePerm = (key: string) =>
+    setSelectedPerms((current) => (current.includes(key) ? current.filter((p) => p !== key) : [...current, key]));
+
+  const toggle = (admin: AdminRow) => admin.toggleUrl && router.patch(admin.toggleUrl, {}, { preserveScroll: true });
+  const destroy = (admin: AdminRow) => {
     if (!admin.destroyUrl || !confirm(`${admin.name} admini o'chirilsinmi?`)) return;
     router.delete(admin.destroyUrl, { preserveScroll: true });
   };
+
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const data = Object.fromEntries(new FormData(event.currentTarget).entries());
+    const form = new FormData(event.currentTarget);
+    const data = {
+      name: String(form.get('name') || ''),
+      email: String(form.get('email') || ''),
+      password: String(form.get('password') || ''),
+      role: selectedRole,
+      permissions: selectedPerms,
+      is_active: form.get('is_active') ? '1' : '0',
+      is_read_only: isReadOnly ? '1' : '0',
+    };
     const options = { preserveScroll: true, onSuccess: () => { setEditing(null); setShowForm(false); } };
     editing?.updateUrl ? router.put(editing.updateUrl, data, options) : router.post(createUrl, data, options);
   };
@@ -26,36 +79,81 @@ export function Adminlar() {
   return (
     <div>
       <div className="page-head">
-        <div><h1 className="page-title">Adminlar</h1><p className="page-subtitle">Jami {admins.length} ta admin</p></div>
-        <button className="btn btn-primary-gradient" onClick={() => { setEditing(null); setShowForm(true); }}><i className="bi bi-plus-lg me-1"></i>Admin qo'shish</button>
+        <div><h1 className="page-title">Adminlar</h1><p className="page-subtitle">Jami {admins.length} ta admin — rol va ruxsatlar shu yerda boshqariladi</p></div>
+        <button className="btn btn-primary-gradient" onClick={() => openForm(null)}><i className="bi bi-plus-lg me-1"></i>Admin qo'shish</button>
       </div>
       <div className="card-panel">
         <div className="table-responsive"><table className="data-table">
-          <thead><tr><th>ID</th><th>Ism</th><th>Email</th><th>Rol</th><th>Oxirgi kirish</th><th>Holat</th><th>Amallar</th></tr></thead>
+          <thead><tr><th>ID</th><th>Ism</th><th>Email</th><th>Rol</th><th>Ruxsatlar</th><th>Oxirgi kirish</th><th>Holat</th><th>Amallar</th></tr></thead>
           <tbody>{admins.map(admin => (
             <tr key={admin.id}>
               <td className="fw-semibold" style={{ color: '#4f46e5' }}>#{admin.id}</td>
               <td className="fw-semibold">{admin.name}</td>
               <td className="text-muted">{admin.email}</td>
-              <td><span className="chip chip-purple" style={{ fontSize: 9 }}>{admin.role}</span></td>
+              <td>
+                <span className="chip chip-purple" style={{ fontSize: 9 }}>{admin.role}</span>
+                {admin.isReadOnly && <span className="chip chip-gray ms-1" style={{ fontSize: 9 }}>faqat ko'rish</span>}
+              </td>
+              <td>
+                {admin.isSuperAdmin ? (
+                  <span className="text-muted small">hammasi</span>
+                ) : (
+                  <span className="text-muted small">{(admin.permissions || []).length} ta modul</span>
+                )}
+              </td>
               <td className="text-muted">{admin.lastLogin || '—'}</td>
               <td><div className="form-check form-switch"><input type="checkbox" className="form-check-input" checked={admin.active} onChange={() => toggle(admin)} /></div></td>
               <td>
-                <button className="btn btn-sm btn-light me-1" onClick={() => { setEditing(admin); setShowForm(true); }}><i className="bi bi-pencil"></i></button>
+                <button className="btn btn-sm btn-light me-1" onClick={() => openForm(admin)}><i className="bi bi-pencil"></i></button>
                 <button className="btn btn-sm btn-light text-danger" onClick={() => destroy(admin)}><i className="bi bi-trash"></i></button>
               </td>
             </tr>
           ))}</tbody>
         </table></div>
       </div>
-      <Modal show={showForm} onHide={() => setShowForm(false)} centered>
+      <Modal show={showForm} onHide={() => setShowForm(false)} centered size="lg">
         <Form onSubmit={submit}>
           <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">{editing ? 'Adminni tahrirlash' : "Admin qo'shish"}</Modal.Title></Modal.Header>
           <Modal.Body>
             <Form.Label>Ism</Form.Label><Form.Control name="name" required defaultValue={editing?.name || ''} className="mb-3" />
             <Form.Label>Email</Form.Label><Form.Control name="email" type="email" required defaultValue={editing?.email || ''} className="mb-3" />
-            <Form.Label>Rol</Form.Label><Form.Select name="role" defaultValue={editing?.roleKey || 'admin'} className="mb-3"><option value="superadmin">Super Admin</option><option value="admin">Admin</option><option value="moderator">Moderator</option></Form.Select>
-            <Form.Label>Parol {editing ? <span className="text-muted">(bo'sh qoldirilsa o'zgarmaydi)</span> : null}</Form.Label><Form.Control name="password" type="password" minLength={8} required={!editing} className="mb-3" />
+            <Form.Label>Rol (tayyor shablon — tanlanganda ruxsatlar avtomatik to'ldiriladi)</Form.Label>
+            <Form.Select value={selectedRole} onChange={(e) => applyRolePreset(e.target.value)} className="mb-3">
+              {roles.map((r) => <option key={r.key} value={r.key}>{r.label}</option>)}
+            </Form.Select>
+
+            {selectedRole !== 'superadmin' && (
+              <>
+                <Form.Label>Ruxsat berilgan bo'limlar</Form.Label>
+                <div className="row g-1 mb-2 p-2" style={{ background: '#f9fafb', borderRadius: 8, maxHeight: 220, overflowY: 'auto' }}>
+                  {modules.map((m) => (
+                    <div className="col-6" key={m.key}>
+                      <Form.Check
+                        type="checkbox"
+                        id={`perm-${m.key}`}
+                        label={m.label}
+                        checked={selectedPerms.includes(m.key)}
+                        onChange={() => togglePerm(m.key)}
+                      />
+                    </div>
+                  ))}
+                </div>
+                <Form.Check
+                  type="switch"
+                  id="is_read_only_switch"
+                  label="Faqat ko'rish (Auditor) — hech narsani o'zgartira olmaydi"
+                  checked={isReadOnly}
+                  onChange={(e) => setIsReadOnly(e.target.checked)}
+                  className="mb-3"
+                />
+              </>
+            )}
+            {selectedRole === 'superadmin' && (
+              <div className="text-muted small mb-3"><i className="bi bi-info-circle me-1"></i>Super Admin barcha bo'limga to'liq kirish huquqiga ega — ruxsatlarni alohida belgilash shart emas.</div>
+            )}
+
+            <Form.Label>Parol {editing ? <span className="text-muted">(bo'sh qoldirilsa o'zgarmaydi)</span> : null}</Form.Label>
+            <Form.Control name="password" type="password" minLength={8} required={!editing} className="mb-3" />
             <Form.Check type="switch" name="is_active" value="1" label="Faol" defaultChecked={editing ? editing.active : true} />
           </Modal.Body>
           <Modal.Footer><Button variant="light" onClick={() => setShowForm(false)}>Bekor qilish</Button><Button type="submit" className="btn-primary-gradient border-0">Saqlash</Button></Modal.Footer>

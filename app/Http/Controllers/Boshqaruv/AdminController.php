@@ -231,7 +231,8 @@ class AdminController extends Controller
     {
         $snapshot = $this->liveSnapshot();
 
-        if (Auth::guard('panel')->user()?->isSuperAdmin()) {
+        $admin = Auth::guard('panel')->user();
+        if ($admin?->isSuperAdmin() || $admin?->hasPermission('finance')) {
             return $snapshot;
         }
 
@@ -245,6 +246,23 @@ class AdminController extends Controller
                 $snapshot['kpis'][$moneyKey] = 0;
             }
         }
+
+        // Hududlar, top mahsulotlar va yetkazish kesimi bo'yicha daromad ham
+        // moliyaviy ko'rsatkich — avval faqat yuqoridagi kpis[] bloki yopilar,
+        // bularning ichidagi revenue/profit ochiq qolar edi (audit vaqtida
+        // topilgan bo'shliq).
+        foreach (['regions', 'top_products', 'delivery_split'] as $listKey) {
+            if (isset($snapshot[$listKey]) && is_array($snapshot[$listKey])) {
+                foreach ($snapshot[$listKey] as $i => $row) {
+                    foreach (['revenue', 'profit'] as $moneyKey) {
+                        if (is_array($row) && array_key_exists($moneyKey, $row)) {
+                            $snapshot[$listKey][$i][$moneyKey] = 0;
+                        }
+                    }
+                }
+            }
+        }
+
         $snapshot['financialRestricted'] = true;
 
         return $snapshot;
@@ -3001,17 +3019,54 @@ class AdminController extends Controller
         return back()->with('success', "Vakansiya o'chirildi.");
     }
 
+    /**
+     * So'rovdan kelgan permissions massivini tozalaydi: faqat Admin::MODULES'da
+     * mavjud kalitlarga ruxsat beradi, va 'superOnly' (masalan 'admins')
+     * kalitlarni — so'rovni yuborayotgan admin superadmin bo'lmasa — olib
+     * tashlaydi. Bu route darajasidagi himoyaga (panel.permission:admins,
+     * faqat superadmin kira oladi) qo'shimcha ikkinchi qatlam: kelajakda
+     * kimdir route middleware'ni bo'shashtirsa ham, bu yerda baribir
+     * imtiyozni oshirib yuborish (privilege escalation) mumkin bo'lmaydi.
+     */
+    private function sanitizePanelAdminPermissions(array $permissions, bool $requesterIsSuperAdmin): array
+    {
+        $valid = array_keys(Admin::MODULES);
+        $permissions = array_values(array_intersect($permissions, $valid));
+
+        if (! $requesterIsSuperAdmin) {
+            $permissions = array_values(array_filter(
+                $permissions,
+                fn (string $perm) => (Admin::MODULES[$perm]['superOnly'] ?? false) === false
+            ));
+        }
+
+        return $permissions;
+    }
+
     public function storePanelAdmin(Request $request): \Illuminate\Http\RedirectResponse
     {
+        $roleKeys = array_keys(Admin::rolePresets());
         $data = $request->validate([
             'name' => ['required', 'string', 'max:100'],
             'email' => ['required', 'email', 'max:255', Rule::unique('admins', 'email')],
             'password' => ['required', 'string', 'min:8'],
-            'role' => ['required', Rule::in(['superadmin', 'admin', 'moderator'])],
+            'role' => ['required', Rule::in($roleKeys)],
+            'permissions' => ['nullable', 'array'],
+            'permissions.*' => ['string'],
             'is_active' => ['nullable', 'boolean'],
+            'is_read_only' => ['nullable', 'boolean'],
         ]);
+
+        $requester = Auth::guard('panel')->user();
+        $preset = Admin::rolePresets()[$data['role']] ?? null;
+
         $data['password'] = Hash::make($data['password']);
         $data['is_active'] = $request->boolean('is_active', true);
+        // Rol tanlanganda uning tayyor shabloni asos qilib olinadi, lekin
+        // forma orqali qo'lda belgilangan checkbox'lar bo'lsa ular ustun turadi.
+        $permissions = $request->has('permissions') ? ($data['permissions'] ?? []) : ($preset['permissions'] ?? []);
+        $data['permissions'] = $this->sanitizePanelAdminPermissions($permissions, $requester?->isSuperAdmin() ?? false);
+        $data['is_read_only'] = $request->boolean('is_read_only', (bool) ($preset['readOnly'] ?? false));
 
         Admin::create($data);
 
@@ -3020,19 +3075,43 @@ class AdminController extends Controller
 
     public function updatePanelAdmin(Request $request, Admin $admin): \Illuminate\Http\RedirectResponse
     {
+        $roleKeys = array_keys(Admin::rolePresets());
         $data = $request->validate([
             'name' => ['required', 'string', 'max:100'],
             'email' => ['required', 'email', 'max:255', Rule::unique('admins', 'email')->ignore($admin->id)],
             'password' => ['nullable', 'string', 'min:8'],
-            'role' => ['required', Rule::in(['superadmin', 'admin', 'moderator'])],
+            'role' => ['required', Rule::in($roleKeys)],
+            'permissions' => ['nullable', 'array'],
+            'permissions.*' => ['string'],
             'is_active' => ['nullable', 'boolean'],
+            'is_read_only' => ['nullable', 'boolean'],
         ]);
+
+        $requester = Auth::guard('panel')->user();
+
+        // Oxirgi faol superadminni o'zgartirib qo'yishning oldini olamiz —
+        // aks holda panelga umuman kirib bo'lmay qolishi mumkin.
+        if ($admin->isSuperAdmin() && ($data['role'] !== 'superadmin' || ! $request->boolean('is_active'))) {
+            $otherActiveSuperAdmins = Admin::query()
+                ->where('role', 'superadmin')
+                ->where('is_active', true)
+                ->where('id', '!=', $admin->id)
+                ->exists();
+
+            abort_if(! $otherActiveSuperAdmins, 422, "Tizimda kamida bitta faol Super Admin qolishi shart.");
+        }
+
         if (! empty($data['password'])) {
             $data['password'] = Hash::make($data['password']);
         } else {
             unset($data['password']);
         }
+
         $data['is_active'] = $request->boolean('is_active');
+        $permissions = $request->has('permissions') ? ($data['permissions'] ?? []) : [];
+        $data['permissions'] = $this->sanitizePanelAdminPermissions($permissions, $requester?->isSuperAdmin() ?? false);
+        $data['is_read_only'] = $request->boolean('is_read_only');
+
         $admin->update($data);
 
         return back()->with('success', 'Admin yangilandi.');
@@ -3040,6 +3119,16 @@ class AdminController extends Controller
 
     public function togglePanelAdmin(Admin $admin): \Illuminate\Http\RedirectResponse
     {
+        if ($admin->isSuperAdmin() && $admin->is_active) {
+            $otherActiveSuperAdmins = Admin::query()
+                ->where('role', 'superadmin')
+                ->where('is_active', true)
+                ->where('id', '!=', $admin->id)
+                ->exists();
+
+            abort_if(! $otherActiveSuperAdmins, 422, "Tizimda kamida bitta faol Super Admin qolishi shart.");
+        }
+
         $admin->update(['is_active' => ! $admin->is_active]);
 
         return back()->with('success', $admin->is_active ? 'Admin faollashtirildi.' : 'Admin bloklandi.');
@@ -3048,6 +3137,17 @@ class AdminController extends Controller
     public function destroyPanelAdmin(Admin $admin): \Illuminate\Http\RedirectResponse
     {
         abort_if(Auth::guard('panel')->id() === $admin->id, 422, "O'zingizni o'chira olmaysiz.");
+
+        if ($admin->isSuperAdmin()) {
+            $otherActiveSuperAdmins = Admin::query()
+                ->where('role', 'superadmin')
+                ->where('is_active', true)
+                ->where('id', '!=', $admin->id)
+                ->exists();
+
+            abort_if(! $otherActiveSuperAdmins, 422, "Tizimda kamida bitta faol Super Admin qolishi shart.");
+        }
+
         $admin->delete();
 
         return back()->with('success', "Admin o'chirildi.");
@@ -4136,7 +4236,10 @@ PROMPT;
             'Vakansiyalar' => ['vacancies' => $this->vacanciesPayload()],
             'KaryeraArizalari' => ['applications' => $this->careerApplicationsPayload()],
             'HubApplications' => ['hubApplications' => $this->hubApplicationsPayload()],
-            'Adminlar' => ['admins' => $this->adminsPayload()],
+            'Adminlar' => [
+                'admins' => $this->adminsPayload(),
+                'roleMeta' => $this->panelRoleMeta(),
+            ],
             'ApiClients' => [
                 'apiClients' => $this->apiClientsPayload(),
                 'apiLogs' => $this->apiLogsPayload(),
@@ -4261,24 +4364,61 @@ PROMPT;
 
     /**
      * Daromad, komissiya, profit va h.k. moliyaviy ko'rsatkichlarni faqat
-     * superadmin ko'rishi kerak — operatsion son-sanoqlar (buyurtmalar,
-     * statuslar, foydalanuvchilar) esa admin/moderator uchun ham ochiq
-     * qoladi. Kalitlar saqlanadi (0 ga tenglashtiriladi), shunda frontend
-     * hech qanday qo'shimcha null-tekshiruvsiz ishlayveradi.
+     * superadmin va 'finance' ruxsatiga ega adminlar ko'rishi kerak —
+     * operatsion son-sanoqlar (buyurtmalar, statuslar, foydalanuvchilar)
+     * esa boshqa barcha rollar uchun ham ochiq qoladi. Kalitlar saqlanadi
+     * (0 ga tenglashtiriladi), shunda frontend hech qanday qo'shimcha
+     * null-tekshiruvsiz ishlayveradi.
      *
-     * ESLATMA: bu birinchi bosqich — `financial`, `business.avgRevenuePerBuyer`
-     * va `unitEconomics` ichidagi pul maydonlari yopiladi. `sellerScorecard`
-     * kabi boshqa joylarda ham pul raqami bo'lishi mumkin — keyingi bosqichda
-     * kengaytirilishi kerak.
+     * 2026-08-19: to'liq audit vaqtida topilgan bo'shliq yopildi — avval
+     * faqat `financial`/`unitEconomics`/`unitEconomicsMonthly`/`partnerEconomics`
+     * yopilar edi, `periods.current/previous.revenue`, `salesByMonth`,
+     * `hourlySales`, `categoryShare`, `topProducts`, `deliverySplit`,
+     * `regions`, `platformAnalysis`, `sellerScorecard` ichidagi revenue
+     * maydonlari va `exportUrl` (Excel eksport tugmasi) ochiq qolar edi —
+     * ya'ni moliyaviy ruxsati yo'q admin baribir daromad raqamlarining
+     * katta qismini ko'ra olardi. Endi hammasi yopiladi.
      *
      * @param  array<string, mixed>  $payload
      * @return array<string, mixed>
      */
     private function redactFinancialsForNonSuperAdmin(array $payload): array
     {
-        if (Auth::guard('panel')->user()?->isSuperAdmin()) {
+        $admin = Auth::guard('panel')->user();
+        if ($admin?->isSuperAdmin() || $admin?->hasPermission('finance')) {
             return $payload;
         }
+
+        foreach (['current', 'previous'] as $periodKey) {
+            if (isset($payload['periods'][$periodKey]) && is_array($payload['periods'][$periodKey])) {
+                foreach (['revenue', 'aov'] as $moneyKey) {
+                    if (array_key_exists($moneyKey, $payload['periods'][$periodKey])) {
+                        $payload['periods'][$periodKey][$moneyKey] = 0;
+                    }
+                }
+            }
+        }
+
+        foreach (['salesByMonth', 'hourlySales', 'categoryShare', 'topProducts', 'deliverySplit', 'regions', 'platformAnalysis', 'sellerScorecard'] as $listKey) {
+            if (isset($payload[$listKey]) && is_array($payload[$listKey])) {
+                foreach ($payload[$listKey] as $i => $row) {
+                    if (! is_array($row)) {
+                        continue;
+                    }
+                    foreach (['revenue', 'profit'] as $moneyKey) {
+                        if (array_key_exists($moneyKey, $row)) {
+                            $payload[$listKey][$i][$moneyKey] = 0;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Excel/investor eksporti — moliyaviy ruxsati yo'q admin uchun tugma
+        // umuman ko'rinmasin (frontend `dashboard.exportUrl` bo'lsagina
+        // tugmani chizadi). Backend route ham alohida 'finance' ruxsati
+        // bilan himoyalangan (routes/boshqaruv.php) — bu ikkinchi qatlam.
+        unset($payload['exportUrl']);
 
         if (isset($payload['financial']) && is_array($payload['financial'])) {
             $payload['financial'] = array_map(
@@ -5329,7 +5469,6 @@ PROMPT;
                 'price' => (int) $subscription->price_uzs,
                 'progress' => $subscription->progress_pct,
                 'nextDeliveryAt' => optional($subscription->next_delivery_at)->format('Y-m-d'),
-                'showUrl' => route('admin.mystery-box.show', $subscription),
                 'indexUrl' => route('boshqaruv.mystery-box'),
             ])->values(),
             'splitProfile' => $splitProfile ? [
@@ -8391,9 +8530,8 @@ PROMPT;
                 'statusLabel' => $certificate->status_label,
                 'expires' => optional($certificate->expires_at)->format('Y-m-d'),
                 'paidAt' => optional($certificate->paid_at)->format('Y-m-d H:i'),
-                'showUrl' => route('admin.gift-certificates.show', $certificate),
-                'statusUrl' => route('admin.gift-certificates.status', $certificate),
-                'cancelUrl' => route('admin.gift-certificates.cancel', $certificate),
+                'statusUrl' => route('boshqaruv.gift-sertifikatlar.status', $certificate),
+                'cancelUrl' => route('boshqaruv.gift-sertifikatlar.cancel', $certificate),
             ])
             ->values()
             ->all();
@@ -8888,7 +9026,6 @@ PROMPT;
                 'sold' => (int) ($gift->totalSales ?? 0),
                 'revenue' => (float) ($gift->totalRevenue ?? 0),
                 'image' => $this->assetFromStorage(collect($gift->images ?? [])->first()),
-                'indexUrl' => route('admin.gifts.index'),
             ])
             ->values()
             ->all();
@@ -9643,10 +9780,9 @@ PROMPT;
                 'status' => $application->status,
                 'message' => $application->cover_message,
                 'date' => optional($application->created_at)->format('Y-m-d H:i'),
-                'showUrl' => route('admin.job-applications.show', $application),
-                'cvUrl' => route('admin.job-applications.cv', $application),
-                'replyUrl' => route('admin.job-applications.reply', $application),
-                'statusUrl' => route('admin.job-applications.status', $application),
+                'cvUrl' => $application->cv_path ? route('boshqaruv.karyera-arizalari.cv', $application) : null,
+                'replyUrl' => route('boshqaruv.karyera-arizalari.reply', $application),
+                'statusUrl' => route('boshqaruv.karyera-arizalari.status', $application),
             ])
             ->values()
             ->all();
@@ -9716,6 +9852,9 @@ PROMPT;
                 'active' => (bool) $admin->is_active,
                 'lastLogin' => optional($admin->last_login_at)->format('Y-m-d H:i'),
                 'roleKey' => $admin->role,
+                'permissions' => $admin->isSuperAdmin() ? array_keys(Admin::MODULES) : ($admin->permissions ?? []),
+                'isReadOnly' => (bool) $admin->is_read_only,
+                'isSuperAdmin' => $admin->isSuperAdmin(),
                 'createUrl' => route('boshqaruv.admins.store'),
                 'updateUrl' => route('boshqaruv.admins.update', $admin),
                 'toggleUrl' => route('boshqaruv.admins.toggle', $admin),
@@ -9723,6 +9862,28 @@ PROMPT;
             ])
             ->values()
             ->all();
+    }
+
+    /**
+     * Adminlar sahifasidagi rol/ruxsat tanlash UI'si uchun metadata:
+     * mavjud modullar (checkbox ro'yxati) va tayyor rol shablonlari
+     * (rol tanlanganda checkbox'lar avtomatik to'ldiriladi).
+     */
+    private function panelRoleMeta(): array
+    {
+        return [
+            'modules' => collect(Admin::MODULES)->map(fn (array $meta, string $key) => [
+                'key' => $key,
+                'label' => $meta['label'],
+                'superOnly' => (bool) ($meta['superOnly'] ?? false),
+            ])->values()->all(),
+            'roles' => collect(Admin::rolePresets())->map(fn (array $preset, string $key) => [
+                'key' => $key,
+                'label' => $preset['label'],
+                'permissions' => $preset['permissions'],
+                'readOnly' => (bool) ($preset['readOnly'] ?? false),
+            ])->values()->all(),
+        ];
     }
 
     private function apiClientsPayload(): array
@@ -10549,8 +10710,9 @@ PROMPT;
                     'booksPerMonth' => (int) ($plan->books_per_month ?? 0),
                     'active' => (bool) $plan->is_active,
                     'subscribers' => (int) ($plan->subscriptions_count ?? 0),
-                    'plansUrl' => route('admin.mystery-box.plans'),
-                    'destroyUrl' => route('admin.mystery-box.plans.destroy', $plan),
+                    'description' => $plan->description_uz,
+                    'updateUrl' => route('boshqaruv.mystery-box.plans.update', $plan),
+                    'destroyUrl' => route('boshqaruv.mystery-box.plans.destroy', $plan),
                 ])
                 ->values()
                 ->all();
@@ -10570,10 +10732,9 @@ PROMPT;
                     'statusLabel' => $subscription->status_label,
                     'nextDelivery' => optional($subscription->next_delivery_at)->format('Y-m-d'),
                     'progress' => $subscription->progress_pct,
-                    'showUrl' => route('admin.mystery-box.show', $subscription),
-                    'pauseUrl' => route('admin.mystery-box.pause', $subscription),
-                    'resumeUrl' => route('admin.mystery-box.resume', $subscription),
-                    'cancelUrl' => route('admin.mystery-box.cancel', $subscription),
+                    'pauseUrl' => route('boshqaruv.mystery-box.pause', $subscription),
+                    'resumeUrl' => route('boshqaruv.mystery-box.resume', $subscription),
+                    'cancelUrl' => route('boshqaruv.mystery-box.cancel', $subscription),
                 ])
                 ->values()
                 ->all();
@@ -10582,8 +10743,8 @@ PROMPT;
         return [
             'plans' => $plans,
             'subscriptions' => $subscriptions,
-            'indexUrl' => route('admin.mystery-box.index'),
-            'plansUrl' => route('admin.mystery-box.plans'),
+            'indexUrl' => route('boshqaruv.mystery-box'),
+            'createPlanUrl' => route('boshqaruv.mystery-box.plans.store'),
         ];
     }
 
@@ -13470,7 +13631,7 @@ PROMPT;
             'Reklamalar' => route('boshqaruv.reklamalar'),
             'Promokodlar' => route('boshqaruv.promokodlar'),
             'Blogerlar' => route('boshqaruv.blogerlar'),
-            'GiftSertifikatlar' => route('admin.gift-certificates.index'),
+            'GiftSertifikatlar' => route('boshqaruv.gift-sertifikatlar'),
             'MarketNewsPage' => route('boshqaruv.market-news'),
             'CollectionsPage' => route('boshqaruv.collections'),
             'ReelsPage' => route('boshqaruv.reels'),
@@ -13480,10 +13641,10 @@ PROMPT;
             'ChatKuzatuv' => route('boshqaruv.chat'),
             'PushNotifications' => route('boshqaruv.push'),
             'Vakansiyalar' => route('boshqaruv.vakansiyalar'),
-            'KaryeraArizalari' => route('admin.job-applications.index'),
+            'KaryeraArizalari' => route('boshqaruv.karyera-arizalari'),
             'Adminlar' => route('boshqaruv.adminlar'),
-            'MysteryBoxPage' => route('admin.mystery-box.index'),
-            'Sovgalar' => route('admin.gifts.index'),
+            'MysteryBoxPage' => route('boshqaruv.mystery-box'),
+            'Sovgalar' => route('boshqaruv.sovgalar'),
             'Siyosatlar' => route('boshqaruv.siyosatlar'),
             'ApiClients' => route('boshqaruv.api-clients'),
             'SearchHistory' => route('boshqaruv.search-history'),

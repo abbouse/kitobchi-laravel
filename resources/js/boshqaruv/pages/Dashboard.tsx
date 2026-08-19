@@ -22,6 +22,8 @@ const compact = (n: number) => new Intl.NumberFormat('uz-UZ', { notation: 'compa
 
 interface DashboardPayload {
   generatedAt: string;
+  exportUrl?: string;
+  financialRestricted?: boolean;
   metrics: Record<string, number>;
   periods: {
     current?: { revenue: number; orders: number; users: number; aov: number };
@@ -276,6 +278,13 @@ export default function Dashboard() {
           <Link href="/boshqaruv/live" className="btn btn-outline-secondary btn-sm"><i className="bi bi-broadcast me-1"></i>Live</Link>
         </div>
       </div>
+
+      {dashboard.financialRestricted ? (
+        <div className="alert alert-secondary border-0 shadow-sm rounded-4 d-flex align-items-center gap-2 mb-3">
+          <i className="bi bi-lock-fill"></i>
+          <div>Sizning rolingizda moliyaviy ko'rsatkichlar (daromad, marja, komissiya, CAC/LTV va h.k.) ko'rsatilmaydi — faqat operatsion sonlar (buyurtma, foydalanuvchi soni va h.k.) ochiq. Kerak bo'lsa, "Moliya" ruxsatiga ega admindan so'rang.</div>
+        </div>
+      ) : null}
 
       {showCustomRange ? (
         <div className="card-panel mb-3 py-2 px-3">

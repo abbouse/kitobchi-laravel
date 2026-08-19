@@ -1,7 +1,26 @@
 <?php
 
 use App\Http\Controllers\Boshqaruv\AdminController;
+use App\Http\Controllers\A122\CareerApplicationController;
+use App\Http\Controllers\A122\GiftCertificateController;
+use App\Http\Controllers\A122\MysteryBoxController;
 use Illuminate\Support\Facades\Route;
+
+/*
+|--------------------------------------------------------------------------
+| Boshqaruv route'lari — rol/ruxsat (RBAC) bilan guruhlangan
+|--------------------------------------------------------------------------
+|
+| Har bir ichki guruh `panel.permission:<modul>` middleware bilan himoyalangan.
+| Modul kalitlari va ularning ma'nosi: App\Models\Admin::MODULES.
+| Superadmin har doim hamma guruhga kiradi (PanelPermission ichida tekshiriladi).
+| "Faqat ko'rish" (auditor) adminlar GET so'rovlaridan boshqasini bajara olmaydi.
+|
+| Dashboard/Live Dashboard (va logout) ataylab hech qanday modul ruxsatisiz —
+| tizimga kirgan har bir admin uchun umumiy old sahifa hisoblanadi; nozik
+| moliyaviy ko'rsatkichlar sahifa ichida (backend darajasida) cheklanadi.
+|
+*/
 
 Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
     Route::middleware('guest:panel')->group(function () {
@@ -12,246 +31,348 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
     Route::middleware(['auth.panel', 'admin.audit'])->group(function () {
         Route::post('/logout', [AdminController::class, 'logout'])->name('logout');
 
+        // ── Dashboard: barcha autentifikatsiyalangan adminlarga ochiq ──
         Route::get('/', [AdminController::class, 'dashboard'])->name('dashboard');
         Route::get('/dashboard/export', [AdminController::class, 'exportReport'])->name('dashboard.export');
         Route::get('/live', [AdminController::class, 'live'])->name('live');
         Route::get('/live/data', [AdminController::class, 'liveData'])->name('live.data');
 
-        Route::get('/books', fn (AdminController $controller) => $controller->page('Books'))->name('books');
-        Route::get('/book-categories', fn (AdminController $controller) => $controller->page('BookCategories'))->name('book-categories');
-        Route::get('/stationeries', fn (AdminController $controller) => $controller->page('Stationeries'))->name('stationeries');
-        Route::get('/stationery-categories', fn (AdminController $controller) => $controller->page('stationery-categories'))->name('stationery-categories');
-        Route::get('/authors', fn (AdminController $controller) => $controller->page('Authors'))->name('authors');
-        Route::get('/publishers', fn (AdminController $controller) => $controller->page('Publishers'))->name('publishers');
-        Route::get('/users', fn (AdminController $controller) => $controller->page('Users'))->name('users');
-        Route::get('/split', fn (AdminController $controller) => $controller->page('Split'))->name('split');
-        Route::get('/users/{user}/data', [AdminController::class, 'userData'])->name('users.data');
-        Route::post('/users/{user}/block', [\App\Http\Controllers\A122\UserController::class, 'block'])->name('users.block');
-        Route::post('/users/{user}/unblock', [\App\Http\Controllers\A122\UserController::class, 'unblock'])->name('users.unblock');
-        Route::post('/users/{user}/split-block', [AdminController::class, 'blockUserSplit'])->name('users.split.block');
-        Route::post('/users/{user}/split-unblock', [AdminController::class, 'unblockUserSplit'])->name('users.split.unblock');
-        Route::post('/users/{user}/split-manual-limit', [AdminController::class, 'setUserSplitManualLimit'])->name('users.split.manual-limit');
-        Route::patch('/users/{user}/verify', [\App\Http\Controllers\A122\UserController::class, 'toggleVerify'])->name('users.verify');
-        Route::patch('/users/{user}/premium', [\App\Http\Controllers\A122\UserController::class, 'togglePremium'])->name('users.premium');
-        Route::delete('/users/{user}/cards/{card}', [\App\Http\Controllers\A122\UserController::class, 'destroyCard'])->name('users.cards.destroy');
-        Route::post('/split/refresh', [AdminController::class, 'refreshSplitProfiles'])->name('split.refresh');
-        Route::put('/split/settings', [AdminController::class, 'updateSplitSettings'])->name('split.settings.update');
-        Route::post('/split/category-rules', [AdminController::class, 'storeSplitCategoryRule'])->name('split.category-rules.store');
-        Route::delete('/split/category-rules/{splitCategoryRule}', [AdminController::class, 'destroySplitCategoryRule'])->name('split.category-rules.destroy');
-        Route::post('/split/plans', [AdminController::class, 'storeSplitPlan'])->name('split.plans.store');
-        Route::delete('/split/plans/{splitPlan}', [AdminController::class, 'destroySplitPlan'])->name('split.plans.destroy');
-        Route::get('/split/plans/preview', [AdminController::class, 'previewSplitPlan'])->name('split.plans.preview');
-        Route::post('/split/contracts', [AdminController::class, 'storeSplitContract'])->name('split.contracts.store');
-        Route::get('/split/contracts/{splitContract}/contract-pdf', [AdminController::class, 'splitContractPdf'])->name('split.contracts.pdf');
-        Route::get('/split/contracts/{splitContract}/demand-letter', [AdminController::class, 'splitDemandLetterPdf'])->name('split.contracts.demand-letter');
-        Route::post('/split/contracts/{splitContract}/settle', [AdminController::class, 'settleSplitContract'])->name('split.contracts.settle');
-        Route::post('/split/contracts/{splitContract}/credit', [AdminController::class, 'creditSplitContract'])->name('split.contracts.credit');
-        Route::post('/split/installments/{splitInstallment}/charge', [AdminController::class, 'chargeSplitInstallment'])->name('split.installments.charge');
-        Route::get('/orders', fn (AdminController $controller) => $controller->page('Orders'))->name('orders');
-        Route::get('/sellers', fn (AdminController $controller) => $controller->page('SellerOrders'))->name('sellers');
-        Route::get('/sellers/{seller}/edit', [AdminController::class, 'sellerEdit'])->name('sellers.edit');
-        Route::get('/sellers/{seller}', [AdminController::class, 'sellerDetail'])->name('sellers.detail');
-        Route::get('/seller-orders', fn (AdminController $controller) => $controller->page('SellerOrders'))->name('seller-orders');
-        Route::get('/couriers', fn (AdminController $controller) => $controller->page('CourierOrders'))->name('couriers');
-        Route::get('/courier-orders', fn (AdminController $controller) => $controller->page('CourierOrders'))->name('courier-orders');
-        Route::get('/hubs', fn (AdminController $controller) => $controller->page('Hubs'))->name('hubs');
-        Route::get('/transactions', fn (AdminController $controller) => $controller->page('Transaksiyalar'))->name('transactions');
-        Route::get('/fiscalization', fn (AdminController $controller) => $controller->page('Fiscalization'))->name('fiscalization');
-        Route::post('/fiscalization/orders/{order}/register', [AdminController::class, 'registerFiscalReceipt'])->name('fiscalization.register');
-        Route::post('/fiscalization/orders/{order}/sync', [AdminController::class, 'syncFiscalReceipt'])->name('fiscalization.sync');
-        Route::post('/fiscalization/retry-pending', [AdminController::class, 'retryPendingFiscalReceipts'])->name('fiscalization.retry-pending');
-        Route::get('/commission-audit', fn (AdminController $controller) => $controller->page('CommissionAudit'))->name('commission-audit');
-        Route::get('/audit-logs', fn (AdminController $controller) => $controller->page('AuditLogs'))->name('audit-logs');
-        Route::get('/seller-ai-actions', fn (AdminController $controller) => $controller->page('SellerAiActions'))->name('seller-ai-actions');
-        Route::get('/expenses', fn (AdminController $controller) => $controller->page('Expenses'))->name('expenses');
-        Route::get('/logistika', fn (AdminController $controller) => $controller->page('LogistikaPage'))->name('logistika');
-        Route::get('/reklamalar', fn (AdminController $controller) => $controller->page('Reklamalar'))->name('reklamalar');
-        Route::get('/promokodlar', fn (AdminController $controller) => $controller->page('Promokodlar'))->name('promokodlar');
-        Route::get('/blogerlar', fn (AdminController $controller) => $controller->page('Blogerlar'))->name('blogerlar');
-        Route::get('/gift-sertifikatlar', fn (AdminController $controller) => $controller->page('GiftSertifikatlar'))->name('gift-sertifikatlar');
-        Route::get('/market-news', fn (AdminController $controller) => $controller->page('MarketNewsPage'))->name('market-news');
-        Route::get('/collections', fn (AdminController $controller) => $controller->page('CollectionsPage'))->name('collections');
-        Route::get('/reels', fn (AdminController $controller) => $controller->page('ReelsPage'))->name('reels');
-        Route::get('/book-club', fn (AdminController $controller) => $controller->page('BookClub'))->name('book-club');
-        Route::get('/book-club/{bookClub}/data', [AdminController::class, 'bookClubData'])->name('book-club.data');
-        Route::get('/tickets', fn (AdminController $controller) => $controller->page('Tickets'))->name('tickets');
-        Route::get('/shikoyatlar', fn (AdminController $controller) => $controller->page('Shikoyatlar'))->name('shikoyatlar');
-        Route::get('/chat', fn (AdminController $controller) => $controller->page('ChatKuzatuv'))->name('chat');
-        Route::get('/push', fn (AdminController $controller) => $controller->page('PushNotifications'))->name('push');
-        Route::get('/vakansiyalar', fn (AdminController $controller) => $controller->page('Vakansiyalar'))->name('vakansiyalar');
-        Route::get('/karyera-arizalari', fn (AdminController $controller) => $controller->page('KaryeraArizalari'))->name('karyera-arizalari');
-        Route::get('/hub-arizalari', fn (AdminController $controller) => $controller->page('HubApplications'))->name('hub-applications');
-        Route::patch('/hub-arizalari/{hubApplication}/status', [AdminController::class, 'updateHubApplicationStatus'])->name('hub-applications.status');
-        Route::delete('/hub-arizalari/{hubApplication}', [AdminController::class, 'destroyHubApplication'])->name('hub-applications.destroy');
-        Route::get('/adminlar', fn (AdminController $controller) => $controller->page('Adminlar'))->name('adminlar');
-        Route::get('/mystery-box', fn (AdminController $controller) => $controller->page('MysteryBoxPage'))->name('mystery-box');
-        Route::get('/sovgalar', fn (AdminController $controller) => $controller->page('Sovgalar'))->name('sovgalar');
-        Route::get('/siyosatlar', fn (AdminController $controller) => $controller->page('Siyosatlar'))->name('siyosatlar');
-        Route::get('/api-clients', fn (AdminController $controller) => $controller->page('ApiClients'))->name('api-clients');
-        Route::get('/search-history', fn (AdminController $controller) => $controller->page('SearchHistory'))->name('search-history');
-        Route::get('/settings', fn (AdminController $controller) => $controller->page('Settings'))->name('settings');
+        // ══════════════════════════ KATALOG ══════════════════════════
+        Route::middleware('panel.permission:catalog')->group(function () {
+            Route::get('/books', fn (AdminController $controller) => $controller->page('Books'))->name('books');
+            Route::get('/book-categories', fn (AdminController $controller) => $controller->page('BookCategories'))->name('book-categories');
+            Route::get('/stationeries', fn (AdminController $controller) => $controller->page('Stationeries'))->name('stationeries');
+            Route::get('/stationery-categories', fn (AdminController $controller) => $controller->page('stationery-categories'))->name('stationery-categories');
+            Route::get('/authors', fn (AdminController $controller) => $controller->page('Authors'))->name('authors');
+            Route::get('/publishers', fn (AdminController $controller) => $controller->page('Publishers'))->name('publishers');
 
-        Route::patch('/books/{book}/moderate', [\App\Http\Controllers\A122\BookController::class, 'moderate'])->name('books.moderate');
-        Route::put('/books/{book}', [AdminController::class, 'updateBook'])->name('books.update');
-        Route::patch('/stationery/{id}/moderate', [\App\Http\Controllers\A122\StationeryController::class, 'moderate'])->name('stationery.moderate');
-        Route::put('/stationery/{stationery}', [AdminController::class, 'updateStationery'])->name('stationery.update');
-        Route::get('/authors/{author}/data', [AdminController::class, 'authorData'])->name('authors.data');
-        Route::post('/authors', [AdminController::class, 'storeAuthor'])->name('authors.store');
-        Route::post('/authors/{author}/generate-image-prompt', [AdminController::class, 'generateAuthorImagePrompt'])->name('authors.generate-image-prompt');
-        Route::put('/authors/{author}', [AdminController::class, 'updateAuthor'])->name('authors.update');
-        Route::delete('/authors/{author}', [AdminController::class, 'destroyAuthor'])->name('authors.destroy');
-        Route::get('/publishers/{publisher}/data', [AdminController::class, 'publisherData'])->name('publishers.data');
-        Route::post('/publishers', [AdminController::class, 'storePublisher'])->name('publishers.store');
-        Route::put('/publishers/{publisher}', [AdminController::class, 'updatePublisher'])->name('publishers.update');
-        Route::delete('/publishers/{publisher}', [AdminController::class, 'destroyPublisher'])->name('publishers.destroy');
-        Route::post('/book-categories', [AdminController::class, 'storeBookCategory'])->name('book-categories.store');
-        Route::put('/book-categories/{bookCategory}', [AdminController::class, 'updateBookCategory'])->name('book-categories.update');
-        Route::patch('/book-categories/{bookCategory}/toggle', [\App\Http\Controllers\A122\BookCategoryController::class, 'toggle'])->name('book-categories.toggle');
-        Route::delete('/book-categories/{bookCategory}', [AdminController::class, 'destroyBookCategory'])->name('book-categories.destroy');
-        Route::post('/stationery-categories', [AdminController::class, 'storeStationeryCategory'])->name('stationery-categories.store');
-        Route::put('/stationery-categories/{stationeryCategory}', [AdminController::class, 'updateStationeryCategory'])->name('stationery-categories.update');
-        Route::patch('/stationery-categories/{stationeryCategory}/toggle', [\App\Http\Controllers\A122\StationeryCategoryController::class, 'toggle'])->name('stationery-categories.toggle');
-        Route::delete('/stationery-categories/{stationeryCategory}', [AdminController::class, 'destroyStationeryCategory'])->name('stationery-categories.destroy');
-        Route::patch('/orders/{order}/status', [\App\Http\Controllers\A122\OrderController::class, 'updateStatus'])->name('orders.status');
-        Route::post('/orders/{order}/cancel', [\App\Http\Controllers\A122\OrderController::class, 'adminCancel'])->name('orders.cancel');
-        Route::get('/orders/{order}/data', [AdminController::class, 'orderData'])->name('orders.data');
-        Route::get('/orders/{order}/print/label', [\App\Http\Controllers\A122\OrderController::class, 'printLabel'])->name('orders.print.label');
-        Route::get('/orders/{order}/print/receipt', [\App\Http\Controllers\A122\OrderController::class, 'printReceipt'])->name('orders.print.receipt');
-        Route::post('/orders/{order}/fulfillment/switch-mode', [\App\Http\Controllers\A122\OrderController::class, 'switchFulfillmentMode'])->name('orders.switch-mode');
-        Route::post('/orders/{order}/fulfillment/reroute-hub', [\App\Http\Controllers\A122\OrderController::class, 'rerouteHub'])->name('orders.reroute-hub');
-        Route::patch('/orders/{order}/postal-info', [AdminController::class, 'updateOrderPostalInfo'])->name('orders.postal-info');
-        Route::patch('/orders/{order}/postal-return', [\App\Http\Controllers\A122\OrderController::class, 'markPostalReturned'])->name('orders.postal-return');
-        Route::post('/orders/{order}/send-unreachable-push', [\App\Http\Controllers\A122\OrderController::class, 'sendUnreachablePush'])->name('orders.send-unreachable-push');
-        Route::post('/orders/{order}/refund-cancel', [\App\Http\Controllers\A122\OrderController::class, 'refundAndCancel'])->name('orders.refund-cancel');
-        Route::post('/seller-orders/{sellerOrder}/refund', [\App\Http\Controllers\A122\OrderController::class, 'refundSellerOrder'])->name('seller-orders.refund');
-        Route::post('/seller-order-items/{sellerOrderItem}/refund', [\App\Http\Controllers\A122\OrderController::class, 'refundSellerOrderItem'])->name('seller-order-items.refund');
-        Route::patch('/sellers/{seller}/approve', [\App\Http\Controllers\A122\SellerController::class, 'approve'])->name('sellers.approve');
-        Route::put('/sellers/{seller}', [AdminController::class, 'updateSeller'])->name('sellers.update');
-        Route::patch('/sellers/{seller}/reject', [\App\Http\Controllers\A122\SellerController::class, 'reject'])->name('sellers.reject');
-        Route::patch('/sellers/{seller}/unblock', [\App\Http\Controllers\A122\SellerController::class, 'unblock'])->name('sellers.unblock');
-        Route::post('/sellers/{seller}/warn', [\App\Http\Controllers\A122\SellerController::class, 'warn'])->name('sellers.warn');
-        Route::post('/sellers/{seller}/reset-password', [\App\Http\Controllers\A122\SellerController::class, 'resetPassword'])->name('sellers.reset-password');
-        Route::get('/sellers/{seller}/staff', [AdminController::class, 'sellerStaffData'])->name('sellers.staff.data');
-        Route::post('/sellers/{seller}/staff', [AdminController::class, 'storeSellerStaff'])->name('sellers.staff.store');
-        Route::post('/sellers/staff/{staff}/reset-password', [AdminController::class, 'resetSellerStaffPassword'])->name('sellers.staff.reset');
-        Route::patch('/sellers/staff/{staff}/toggle', [AdminController::class, 'toggleSellerStaff'])->name('sellers.staff.toggle');
-        Route::post('/sellers/{seller}/qr/rotate', [\App\Http\Controllers\A122\SellerController::class, 'rotateQr'])->name('sellers.qr.rotate');
-        Route::post('/sellers/{seller}/locations/{location}/qr/rotate', [\App\Http\Controllers\A122\SellerController::class, 'rotateLocationQr'])->name('sellers.locations.qr.rotate');
-        Route::patch('/sellers/{seller}/contract/extend', [\App\Http\Controllers\A122\SellerController::class, 'extendContract'])->name('sellers.contract.extend');
-        Route::post('/sellers/{seller}/documents', [\App\Http\Controllers\A122\SellerController::class, 'uploadDocument'])->name('sellers.documents.store');
-        Route::delete('/sellers/{seller}/documents/{document}', [\App\Http\Controllers\A122\SellerController::class, 'deleteDocument'])->name('sellers.documents.destroy');
-        Route::patch('/seller-orders/{sellerOrder}/status', [\App\Http\Controllers\A122\SellerOrderController::class, 'updateStatus'])->name('seller-orders.status');
-        Route::patch('/couriers/{courier}/approve', [\App\Http\Controllers\A122\CourierController::class, 'approve'])->name('couriers.approve');
-        Route::put('/couriers/{courier}', [AdminController::class, 'updateCourier'])->name('couriers.update');
-        Route::patch('/couriers/{courier}/reject', [\App\Http\Controllers\A122\CourierController::class, 'reject'])->name('couriers.reject');
-        Route::patch('/couriers/{courier}/unblock', [\App\Http\Controllers\A122\CourierController::class, 'unblock'])->name('couriers.unblock');
-        Route::post('/couriers/{courier}/warn', [\App\Http\Controllers\A122\CourierController::class, 'warn'])->name('couriers.warn');
-        Route::post('/couriers/{courier}/reset-password', [\App\Http\Controllers\A122\CourierController::class, 'resetPassword'])->name('couriers.reset-password');
-        Route::post('/couriers/{courier}/documents', [\App\Http\Controllers\A122\CourierController::class, 'uploadDocument'])->name('couriers.documents.store');
-        Route::delete('/couriers/{courier}/documents/{document}', [\App\Http\Controllers\A122\CourierController::class, 'deleteDocument'])->name('couriers.documents.destroy');
-        Route::patch('/courier-orders/{courierOrder}/status', [\App\Http\Controllers\A122\CourierOrderController::class, 'updateStatus'])->name('courier-orders.status');
-        Route::post('/courier-orders/{courierOrder}/penalty', [AdminController::class, 'applyCourierPenalty'])->name('courier-orders.penalty');
-        Route::patch('/transactions/{transaction}/approve', [\App\Http\Controllers\A122\TransactionController::class, 'approve'])->name('transactions.approve');
-        Route::patch('/transactions/{transaction}/reject', [\App\Http\Controllers\A122\TransactionController::class, 'reject'])->name('transactions.reject');
-        Route::get('/transactions/{transaction}/report.pdf', [AdminController::class, 'sellerTransactionReport'])->name('transactions.report');
-        Route::patch('/courier-transactions/{courierTransaction}/approve', [AdminController::class, 'approveCourierTransaction'])->name('courier-transactions.approve');
-        Route::patch('/courier-transactions/{courierTransaction}/reject', [AdminController::class, 'rejectCourierTransaction'])->name('courier-transactions.reject');
-        Route::get('/courier-transactions/{courierTransaction}/report.pdf', [AdminController::class, 'courierTransactionReport'])->name('courier-transactions.report');
-        Route::post('/expenses', [AdminController::class, 'storeExpense'])->name('expenses.store');
-        Route::put('/expenses/{expense}', [AdminController::class, 'updateExpense'])->name('expenses.update');
-        Route::delete('/expenses/{expense}', [AdminController::class, 'destroyExpense'])->name('expenses.destroy');
-        Route::post('/promokodlar', [AdminController::class, 'storePromocode'])->name('promokodlar.store');
-        Route::get('/promokodlar/generate', [AdminController::class, 'generatePromocode'])->name('promokodlar.generate');
-        Route::put('/promokodlar/{promocode}', [AdminController::class, 'updatePromocode'])->name('promokodlar.update');
-        Route::delete('/promokodlar/{promocode}', [AdminController::class, 'destroyPromocode'])->name('promokodlar.destroy');
-        Route::get('/blogerlar/{blogger}/data', [AdminController::class, 'bloggerData'])->name('blogerlar.data');
-        Route::post('/blogerlar', [AdminController::class, 'storeBlogger'])->name('blogerlar.store');
-        Route::put('/blogerlar/{blogger}', [AdminController::class, 'updateBlogger'])->name('blogerlar.update');
-        Route::delete('/blogerlar/{blogger}', [AdminController::class, 'destroyBlogger'])->name('blogerlar.destroy');
-        Route::post('/blogerlar/{blogger}/shipments', [AdminController::class, 'storeBloggerShipment'])->name('blogerlar.shipments.store');
-        Route::put('/blogerlar/{blogger}/shipments/{shipment}', [AdminController::class, 'updateBloggerShipment'])->name('blogerlar.shipments.update');
-        Route::delete('/blogerlar/{blogger}/shipments/{shipment}', [AdminController::class, 'destroyBloggerShipment'])->name('blogerlar.shipments.destroy');
-        Route::patch('/ads/{ad}/moderate', [AdminController::class, 'updateAdModeration'])->name('ads.moderate');
-        Route::delete('/ads/{ad}', [AdminController::class, 'destroyAd'])->name('ads.destroy');
-        Route::post('/market-news', [AdminController::class, 'storeMarketNews'])->name('market-news.store');
-        Route::put('/market-news/{news}', [AdminController::class, 'updateMarketNews'])->name('market-news.update');
-        Route::patch('/market-news/{news}/toggle', [AdminController::class, 'toggleMarketNews'])->name('market-news.toggle');
-        Route::delete('/market-news/{news}', [AdminController::class, 'destroyMarketNews'])->name('market-news.destroy');
-        Route::post('/content/translate', [AdminController::class, 'translateContent'])->name('content.translate');
-        Route::get('/collections/book-search', [AdminController::class, 'collectionBookSearch'])->name('collections.book-search');
-        Route::post('/collections/ai-recommend', [AdminController::class, 'collectionAiRecommendation'])->name('collections.ai-recommend');
-        Route::post('/collections', [AdminController::class, 'storeCollection'])->name('collections.store');
-        Route::put('/collections/{collection}', [AdminController::class, 'updateCollection'])->name('collections.update');
-        Route::patch('/collections/{collection}/toggle', [AdminController::class, 'toggleCollection'])->name('collections.toggle');
-        Route::post('/collections/{collection}/duplicate', [AdminController::class, 'duplicateCollection'])->name('collections.duplicate');
-        Route::delete('/collections/{collection}', [AdminController::class, 'destroyCollection'])->name('collections.destroy');
-        Route::post('/reels', [AdminController::class, 'storeReel'])->name('reels.store');
-        Route::put('/reels/{reel}', [AdminController::class, 'updateReel'])->name('reels.update');
-        Route::delete('/reels/{reel}', [AdminController::class, 'destroyReel'])->name('reels.destroy');
-        Route::post('/siyosatlar', [AdminController::class, 'storePolicy'])->name('policies.store');
-        Route::put('/siyosatlar/{policy}', [AdminController::class, 'updatePolicy'])->name('policies.update');
-        Route::patch('/siyosatlar/{policy}/toggle', [AdminController::class, 'togglePolicy'])->name('policies.toggle');
-        Route::delete('/siyosatlar/{policy}', [AdminController::class, 'destroyPolicy'])->name('policies.destroy');
-        Route::post('/push', [AdminController::class, 'storePushNotification'])->name('push.store');
-        Route::post('/push/{notification}/resend', [AdminController::class, 'resendPushNotification'])->name('push.resend');
-        Route::delete('/push/{notification}', [AdminController::class, 'destroyPushNotification'])->name('push.destroy');
-        Route::post('/vakansiyalar', [AdminController::class, 'storeVacancy'])->name('vacancies.store');
-        Route::put('/vakansiyalar/{vacancy}', [AdminController::class, 'updateVacancy'])->name('vacancies.update');
-        Route::patch('/vakansiyalar/{vacancy}/toggle', [AdminController::class, 'toggleVacancy'])->name('vacancies.toggle');
-        Route::delete('/vakansiyalar/{vacancy}', [AdminController::class, 'destroyVacancy'])->name('vacancies.destroy');
-        Route::post('/adminlar', [AdminController::class, 'storePanelAdmin'])->name('admins.store');
-        Route::put('/adminlar/{admin}', [AdminController::class, 'updatePanelAdmin'])->name('admins.update');
-        Route::patch('/adminlar/{admin}/toggle', [AdminController::class, 'togglePanelAdmin'])->name('admins.toggle');
-        Route::delete('/adminlar/{admin}', [AdminController::class, 'destroyPanelAdmin'])->name('admins.destroy');
-        Route::post('/api-clients', [AdminController::class, 'storeApiClient'])->name('api-clients.store');
-        Route::put('/api-clients/{apiClient}', [AdminController::class, 'updateApiClient'])->name('api-clients.update');
-        Route::patch('/api-clients/{apiClient}/toggle', [AdminController::class, 'toggleApiClient'])->name('api-clients.toggle');
-        Route::patch('/api-clients/{apiClient}/regenerate', [AdminController::class, 'regenerateApiClient'])->name('api-clients.regenerate');
-        Route::delete('/api-clients/{apiClient}', [AdminController::class, 'destroyApiClient'])->name('api-clients.destroy');
-        Route::post('/api-clients/{apiClient}/webhooks', [AdminController::class, 'storeApiWebhook'])->name('api-clients.webhooks.store');
-        Route::patch('/api-webhooks/{apiWebhook}/toggle', [AdminController::class, 'toggleApiWebhook'])->name('api-webhooks.toggle');
-        Route::delete('/api-webhooks/{apiWebhook}', [AdminController::class, 'destroyApiWebhook'])->name('api-webhooks.destroy');
-        Route::post('/book-club/{bookClub}/warn', [\App\Http\Controllers\A122\BookClubController::class, 'warn'])->name('book-club.warn');
-        Route::patch('/book-club/{bookClub}/moderation', [AdminController::class, 'updateBookClubModeration'])->name('book-club.moderation');
-        Route::delete('/book-club/{bookClub}', [AdminController::class, 'destroyBookClub'])->name('book-club.destroy');
-        Route::patch('/book-club/comments/{comment}', [\App\Http\Controllers\A122\BookClubController::class, 'updateComment'])->name('book-club.comment.update');
-        Route::patch('/book-club/comments/{comment}/moderation', [AdminController::class, 'updateBookClubCommentModeration'])->name('book-club.comment.moderation');
-        Route::delete('/book-club/comments/{comment}', [\App\Http\Controllers\A122\BookClubController::class, 'deleteComment'])->name('book-club.comment.delete');
-        Route::post('/hubs', [\App\Http\Controllers\A122\HubController::class, 'store'])->name('hubs.store');
-        Route::put('/hubs/{hub}', [\App\Http\Controllers\A122\HubController::class, 'update'])->name('hubs.update');
-        Route::delete('/hubs/{hub}', [\App\Http\Controllers\A122\HubController::class, 'destroy'])->name('hubs.destroy');
-        Route::post('/hubs/staff', [\App\Http\Controllers\A122\HubController::class, 'storeStaff'])->name('hubs.staff.store');
-        Route::put('/hubs/staff/{staff}', [\App\Http\Controllers\A122\HubController::class, 'updateStaff'])->name('hubs.staff.update');
-        Route::post('/hubs/staff/{staff}/reset-password', [\App\Http\Controllers\A122\HubController::class, 'resetStaffPassword'])->name('hubs.staff.reset-password');
-        Route::patch('/hubs/staff/{staff}/toggle', [\App\Http\Controllers\A122\HubController::class, 'toggleStaff'])->name('hubs.staff.toggle');
-        Route::post('/logistika/rules', [\App\Http\Controllers\A122\LogisticsController::class, 'store'])->name('logistika.store');
-        Route::put('/logistika/rules/{logistic}', [\App\Http\Controllers\A122\LogisticsController::class, 'update'])->name('logistika.update');
-        Route::delete('/logistika/rules/{logistic}', [\App\Http\Controllers\A122\LogisticsController::class, 'destroy'])->name('logistika.destroy');
-        Route::patch('/logistika/rules/{logistic}/toggle', [\App\Http\Controllers\A122\LogisticsController::class, 'toggleActive'])->name('logistika.toggle');
-        Route::post('/logistika/services', [\App\Http\Controllers\A122\SettingsController::class, 'storeDelivery'])->name('logistika.services.store');
-        Route::put('/logistika/services/{deliveryService}', [\App\Http\Controllers\A122\SettingsController::class, 'updateDelivery'])->name('logistika.services.update');
-        Route::delete('/logistika/services/{deliveryService}', [\App\Http\Controllers\A122\SettingsController::class, 'destroyDelivery'])->name('logistika.services.destroy');
-        Route::get('/support/{ticket}/data', [AdminController::class, 'ticketData'])->name('support.data');
-        Route::post('/support/{ticket}/reply', [\App\Http\Controllers\A122\SupportController::class, 'reply'])->name('support.reply');
-        Route::patch('/support/{ticket}/close', [\App\Http\Controllers\A122\SupportController::class, 'close'])->name('support.close');
-        Route::get('/seller-support/{ticket}/data', [AdminController::class, 'sellerSupportTicketData'])->name('seller-support.data');
-        Route::post('/seller-support/{ticket}/reply', [AdminController::class, 'replySellerSupportTicket'])->name('seller-support.reply');
-        Route::patch('/seller-support/{ticket}/close', [AdminController::class, 'closeSellerSupportTicket'])->name('seller-support.close');
-        Route::get('/chat/{conversation}/data', [AdminController::class, 'chatData'])->name('chat.data');
-        Route::patch('/complaints/{complaint}/status', [\App\Http\Controllers\A122\ComplaintController::class, 'updateStatus'])->name('complaints.status');
-        Route::delete('/complaints/{complaint}', [\App\Http\Controllers\A122\ComplaintController::class, 'destroy'])->name('complaints.destroy');
+            Route::patch('/books/{book}/moderate', [\App\Http\Controllers\A122\BookController::class, 'moderate'])->name('books.moderate');
+            Route::put('/books/{book}', [AdminController::class, 'updateBook'])->name('books.update');
+            Route::patch('/stationery/{id}/moderate', [\App\Http\Controllers\A122\StationeryController::class, 'moderate'])->name('stationery.moderate');
+            Route::put('/stationery/{stationery}', [AdminController::class, 'updateStationery'])->name('stationery.update');
+            Route::get('/authors/{author}/data', [AdminController::class, 'authorData'])->name('authors.data');
+            Route::post('/authors', [AdminController::class, 'storeAuthor'])->name('authors.store');
+            Route::post('/authors/{author}/generate-image-prompt', [AdminController::class, 'generateAuthorImagePrompt'])->name('authors.generate-image-prompt');
+            Route::put('/authors/{author}', [AdminController::class, 'updateAuthor'])->name('authors.update');
+            Route::delete('/authors/{author}', [AdminController::class, 'destroyAuthor'])->name('authors.destroy');
+            Route::get('/publishers/{publisher}/data', [AdminController::class, 'publisherData'])->name('publishers.data');
+            Route::post('/publishers', [AdminController::class, 'storePublisher'])->name('publishers.store');
+            Route::put('/publishers/{publisher}', [AdminController::class, 'updatePublisher'])->name('publishers.update');
+            Route::delete('/publishers/{publisher}', [AdminController::class, 'destroyPublisher'])->name('publishers.destroy');
+            Route::post('/book-categories', [AdminController::class, 'storeBookCategory'])->name('book-categories.store');
+            Route::put('/book-categories/{bookCategory}', [AdminController::class, 'updateBookCategory'])->name('book-categories.update');
+            Route::patch('/book-categories/{bookCategory}/toggle', [\App\Http\Controllers\A122\BookCategoryController::class, 'toggle'])->name('book-categories.toggle');
+            Route::delete('/book-categories/{bookCategory}', [AdminController::class, 'destroyBookCategory'])->name('book-categories.destroy');
+            Route::post('/stationery-categories', [AdminController::class, 'storeStationeryCategory'])->name('stationery-categories.store');
+            Route::put('/stationery-categories/{stationeryCategory}', [AdminController::class, 'updateStationeryCategory'])->name('stationery-categories.update');
+            Route::patch('/stationery-categories/{stationeryCategory}/toggle', [\App\Http\Controllers\A122\StationeryCategoryController::class, 'toggle'])->name('stationery-categories.toggle');
+            Route::delete('/stationery-categories/{stationeryCategory}', [AdminController::class, 'destroyStationeryCategory'])->name('stationery-categories.destroy');
+        });
 
-        Route::put('/settings/versions', [\App\Http\Controllers\A122\SettingsController::class, 'updateVersions'])->name('settings.versions');
-        Route::put('/settings/contacts', [\App\Http\Controllers\A122\SettingsController::class, 'updateContacts'])->name('settings.contacts');
-        Route::put('/settings/app-flags', [\App\Http\Controllers\A122\SettingsController::class, 'updateAppFlags'])->name('settings.app-flags');
-        Route::put('/settings/courier-bonus', [\App\Http\Controllers\A122\SettingsController::class, 'updateCourierBonus'])->name('settings.courier-bonus');
-        Route::put('/settings/finance', [\App\Http\Controllers\A122\SettingsController::class, 'updateFinance'])->name('settings.finance');
-        Route::put('/settings/telegram', [\App\Http\Controllers\A122\SettingsController::class, 'updateTelegram'])->name('settings.telegram');
-        Route::post('/settings/commission', [\App\Http\Controllers\A122\SettingsController::class, 'storeCommission'])->name('settings.commission.store');
-        Route::put('/settings/commission/{commissionSetting}', [\App\Http\Controllers\A122\SettingsController::class, 'updateCommission'])->name('settings.commission.update');
-        Route::delete('/settings/commission/{commissionSetting}', [\App\Http\Controllers\A122\SettingsController::class, 'destroyCommission'])->name('settings.commission.destroy');
-        Route::post('/settings/cashback', [\App\Http\Controllers\A122\SettingsController::class, 'storeCashback'])->name('settings.cashback.store');
-        Route::put('/settings/cashback/{cashbackSetting}', [\App\Http\Controllers\A122\SettingsController::class, 'updateCashback'])->name('settings.cashback.update');
-        Route::delete('/settings/cashback/{cashbackSetting}', [\App\Http\Controllers\A122\SettingsController::class, 'destroyCashback'])->name('settings.cashback.destroy');
+        // ══════════════════════════ BUYURTMALAR ══════════════════════════
+        Route::middleware('panel.permission:orders')->group(function () {
+            Route::get('/orders', fn (AdminController $controller) => $controller->page('Orders'))->name('orders');
+            Route::patch('/orders/{order}/status', [\App\Http\Controllers\A122\OrderController::class, 'updateStatus'])->name('orders.status');
+            Route::post('/orders/{order}/cancel', [\App\Http\Controllers\A122\OrderController::class, 'adminCancel'])->name('orders.cancel');
+            Route::get('/orders/{order}/data', [AdminController::class, 'orderData'])->name('orders.data');
+            Route::get('/orders/{order}/print/label', [\App\Http\Controllers\A122\OrderController::class, 'printLabel'])->name('orders.print.label');
+            Route::get('/orders/{order}/print/receipt', [\App\Http\Controllers\A122\OrderController::class, 'printReceipt'])->name('orders.print.receipt');
+            Route::post('/orders/{order}/fulfillment/switch-mode', [\App\Http\Controllers\A122\OrderController::class, 'switchFulfillmentMode'])->name('orders.switch-mode');
+            Route::post('/orders/{order}/fulfillment/reroute-hub', [\App\Http\Controllers\A122\OrderController::class, 'rerouteHub'])->name('orders.reroute-hub');
+            Route::patch('/orders/{order}/postal-info', [AdminController::class, 'updateOrderPostalInfo'])->name('orders.postal-info');
+            Route::patch('/orders/{order}/postal-return', [\App\Http\Controllers\A122\OrderController::class, 'markPostalReturned'])->name('orders.postal-return');
+            Route::post('/orders/{order}/send-unreachable-push', [\App\Http\Controllers\A122\OrderController::class, 'sendUnreachablePush'])->name('orders.send-unreachable-push');
+            Route::post('/orders/{order}/refund-cancel', [\App\Http\Controllers\A122\OrderController::class, 'refundAndCancel'])->name('orders.refund-cancel');
+        });
+
+        // ══════════════════════════ FOYDALANUVCHILAR ══════════════════════════
+        Route::middleware('panel.permission:users')->group(function () {
+            Route::get('/users', fn (AdminController $controller) => $controller->page('Users'))->name('users');
+            Route::get('/users/{user}/data', [AdminController::class, 'userData'])->name('users.data');
+            Route::post('/users/{user}/block', [\App\Http\Controllers\A122\UserController::class, 'block'])->name('users.block');
+            Route::post('/users/{user}/unblock', [\App\Http\Controllers\A122\UserController::class, 'unblock'])->name('users.unblock');
+            Route::patch('/users/{user}/verify', [\App\Http\Controllers\A122\UserController::class, 'toggleVerify'])->name('users.verify');
+            Route::patch('/users/{user}/premium', [\App\Http\Controllers\A122\UserController::class, 'togglePremium'])->name('users.premium');
+            Route::delete('/users/{user}/cards/{card}', [\App\Http\Controllers\A122\UserController::class, 'destroyCard'])->name('users.cards.destroy');
+        });
+
+        // ══════════════════════════ SPLIT (BO'LIB TO'LASH) ══════════════════════════
+        Route::middleware('panel.permission:split')->group(function () {
+            Route::get('/split', fn (AdminController $controller) => $controller->page('Split'))->name('split');
+            Route::post('/users/{user}/split-block', [AdminController::class, 'blockUserSplit'])->name('users.split.block');
+            Route::post('/users/{user}/split-unblock', [AdminController::class, 'unblockUserSplit'])->name('users.split.unblock');
+            Route::post('/users/{user}/split-manual-limit', [AdminController::class, 'setUserSplitManualLimit'])->name('users.split.manual-limit');
+            Route::post('/split/refresh', [AdminController::class, 'refreshSplitProfiles'])->name('split.refresh');
+            Route::put('/split/settings', [AdminController::class, 'updateSplitSettings'])->name('split.settings.update');
+            Route::post('/split/category-rules', [AdminController::class, 'storeSplitCategoryRule'])->name('split.category-rules.store');
+            Route::delete('/split/category-rules/{splitCategoryRule}', [AdminController::class, 'destroySplitCategoryRule'])->name('split.category-rules.destroy');
+            Route::post('/split/plans', [AdminController::class, 'storeSplitPlan'])->name('split.plans.store');
+            Route::delete('/split/plans/{splitPlan}', [AdminController::class, 'destroySplitPlan'])->name('split.plans.destroy');
+            Route::get('/split/plans/preview', [AdminController::class, 'previewSplitPlan'])->name('split.plans.preview');
+            Route::post('/split/contracts', [AdminController::class, 'storeSplitContract'])->name('split.contracts.store');
+            Route::get('/split/contracts/{splitContract}/contract-pdf', [AdminController::class, 'splitContractPdf'])->name('split.contracts.pdf');
+            Route::get('/split/contracts/{splitContract}/demand-letter', [AdminController::class, 'splitDemandLetterPdf'])->name('split.contracts.demand-letter');
+            Route::post('/split/contracts/{splitContract}/settle', [AdminController::class, 'settleSplitContract'])->name('split.contracts.settle');
+            Route::post('/split/contracts/{splitContract}/credit', [AdminController::class, 'creditSplitContract'])->name('split.contracts.credit');
+            Route::post('/split/installments/{splitInstallment}/charge', [AdminController::class, 'chargeSplitInstallment'])->name('split.installments.charge');
+        });
+
+        // ══════════════════════════ QIDIRUV TARIXI ══════════════════════════
+        Route::middleware('panel.permission:search-history')->group(function () {
+            Route::get('/search-history', fn (AdminController $controller) => $controller->page('SearchHistory'))->name('search-history');
+        });
+
+        // ══════════════════════════ SOTUVCHILAR / SELLER BUYURTMALARI ══════════════════════════
+        Route::middleware('panel.permission:sellers')->group(function () {
+            Route::get('/sellers', fn (AdminController $controller) => $controller->page('SellerOrders'))->name('sellers');
+            Route::get('/sellers/{seller}/edit', [AdminController::class, 'sellerEdit'])->name('sellers.edit');
+            Route::get('/sellers/{seller}', [AdminController::class, 'sellerDetail'])->name('sellers.detail');
+            Route::get('/seller-orders', fn (AdminController $controller) => $controller->page('SellerOrders'))->name('seller-orders');
+            Route::patch('/sellers/{seller}/approve', [\App\Http\Controllers\A122\SellerController::class, 'approve'])->name('sellers.approve');
+            Route::put('/sellers/{seller}', [AdminController::class, 'updateSeller'])->name('sellers.update');
+            Route::patch('/sellers/{seller}/reject', [\App\Http\Controllers\A122\SellerController::class, 'reject'])->name('sellers.reject');
+            Route::patch('/sellers/{seller}/unblock', [\App\Http\Controllers\A122\SellerController::class, 'unblock'])->name('sellers.unblock');
+            Route::post('/sellers/{seller}/warn', [\App\Http\Controllers\A122\SellerController::class, 'warn'])->name('sellers.warn');
+            Route::post('/sellers/{seller}/reset-password', [\App\Http\Controllers\A122\SellerController::class, 'resetPassword'])->name('sellers.reset-password');
+            Route::get('/sellers/{seller}/staff', [AdminController::class, 'sellerStaffData'])->name('sellers.staff.data');
+            Route::post('/sellers/{seller}/staff', [AdminController::class, 'storeSellerStaff'])->name('sellers.staff.store');
+            Route::post('/sellers/staff/{staff}/reset-password', [AdminController::class, 'resetSellerStaffPassword'])->name('sellers.staff.reset');
+            Route::patch('/sellers/staff/{staff}/toggle', [AdminController::class, 'toggleSellerStaff'])->name('sellers.staff.toggle');
+            Route::post('/sellers/{seller}/qr/rotate', [\App\Http\Controllers\A122\SellerController::class, 'rotateQr'])->name('sellers.qr.rotate');
+            Route::post('/sellers/{seller}/locations/{location}/qr/rotate', [\App\Http\Controllers\A122\SellerController::class, 'rotateLocationQr'])->name('sellers.locations.qr.rotate');
+            Route::patch('/sellers/{seller}/contract/extend', [\App\Http\Controllers\A122\SellerController::class, 'extendContract'])->name('sellers.contract.extend');
+            Route::post('/sellers/{seller}/documents', [\App\Http\Controllers\A122\SellerController::class, 'uploadDocument'])->name('sellers.documents.store');
+            Route::delete('/sellers/{seller}/documents/{document}', [\App\Http\Controllers\A122\SellerController::class, 'deleteDocument'])->name('sellers.documents.destroy');
+            Route::patch('/seller-orders/{sellerOrder}/status', [\App\Http\Controllers\A122\SellerOrderController::class, 'updateStatus'])->name('seller-orders.status');
+            Route::post('/seller-orders/{sellerOrder}/refund', [\App\Http\Controllers\A122\OrderController::class, 'refundSellerOrder'])->name('seller-orders.refund');
+            Route::post('/seller-order-items/{sellerOrderItem}/refund', [\App\Http\Controllers\A122\OrderController::class, 'refundSellerOrderItem'])->name('seller-order-items.refund');
+        });
+
+        // ══════════════════════════ KURYERLAR ══════════════════════════
+        Route::middleware('panel.permission:couriers')->group(function () {
+            Route::get('/couriers', fn (AdminController $controller) => $controller->page('CourierOrders'))->name('couriers');
+            Route::get('/courier-orders', fn (AdminController $controller) => $controller->page('CourierOrders'))->name('courier-orders');
+            Route::patch('/couriers/{courier}/approve', [\App\Http\Controllers\A122\CourierController::class, 'approve'])->name('couriers.approve');
+            Route::put('/couriers/{courier}', [AdminController::class, 'updateCourier'])->name('couriers.update');
+            Route::patch('/couriers/{courier}/reject', [\App\Http\Controllers\A122\CourierController::class, 'reject'])->name('couriers.reject');
+            Route::patch('/couriers/{courier}/unblock', [\App\Http\Controllers\A122\CourierController::class, 'unblock'])->name('couriers.unblock');
+            Route::post('/couriers/{courier}/warn', [\App\Http\Controllers\A122\CourierController::class, 'warn'])->name('couriers.warn');
+            Route::post('/couriers/{courier}/reset-password', [\App\Http\Controllers\A122\CourierController::class, 'resetPassword'])->name('couriers.reset-password');
+            Route::post('/couriers/{courier}/documents', [\App\Http\Controllers\A122\CourierController::class, 'uploadDocument'])->name('couriers.documents.store');
+            Route::delete('/couriers/{courier}/documents/{document}', [\App\Http\Controllers\A122\CourierController::class, 'deleteDocument'])->name('couriers.documents.destroy');
+            Route::patch('/courier-orders/{courierOrder}/status', [\App\Http\Controllers\A122\CourierOrderController::class, 'updateStatus'])->name('courier-orders.status');
+            Route::post('/courier-orders/{courierOrder}/penalty', [AdminController::class, 'applyCourierPenalty'])->name('courier-orders.penalty');
+        });
+
+        // ══════════════════════════ HUB FULFILLMENT ══════════════════════════
+        Route::middleware('panel.permission:hubs')->group(function () {
+            Route::get('/hubs', fn (AdminController $controller) => $controller->page('Hubs'))->name('hubs');
+            Route::post('/hubs', [\App\Http\Controllers\A122\HubController::class, 'store'])->name('hubs.store');
+            Route::put('/hubs/{hub}', [\App\Http\Controllers\A122\HubController::class, 'update'])->name('hubs.update');
+            Route::delete('/hubs/{hub}', [\App\Http\Controllers\A122\HubController::class, 'destroy'])->name('hubs.destroy');
+            Route::post('/hubs/staff', [\App\Http\Controllers\A122\HubController::class, 'storeStaff'])->name('hubs.staff.store');
+            Route::put('/hubs/staff/{staff}', [\App\Http\Controllers\A122\HubController::class, 'updateStaff'])->name('hubs.staff.update');
+            Route::post('/hubs/staff/{staff}/reset-password', [\App\Http\Controllers\A122\HubController::class, 'resetStaffPassword'])->name('hubs.staff.reset-password');
+            Route::patch('/hubs/staff/{staff}/toggle', [\App\Http\Controllers\A122\HubController::class, 'toggleStaff'])->name('hubs.staff.toggle');
+            Route::get('/hub-arizalari', fn (AdminController $controller) => $controller->page('HubApplications'))->name('hub-applications');
+            Route::patch('/hub-arizalari/{hubApplication}/status', [AdminController::class, 'updateHubApplicationStatus'])->name('hub-applications.status');
+            Route::delete('/hub-arizalari/{hubApplication}', [AdminController::class, 'destroyHubApplication'])->name('hub-applications.destroy');
+        });
+
+        // ══════════════════════════ MOLIYA ══════════════════════════
+        Route::middleware('panel.permission:finance')->group(function () {
+            Route::get('/transactions', fn (AdminController $controller) => $controller->page('Transaksiyalar'))->name('transactions');
+            Route::get('/fiscalization', fn (AdminController $controller) => $controller->page('Fiscalization'))->name('fiscalization');
+            Route::post('/fiscalization/orders/{order}/register', [AdminController::class, 'registerFiscalReceipt'])->name('fiscalization.register');
+            Route::post('/fiscalization/orders/{order}/sync', [AdminController::class, 'syncFiscalReceipt'])->name('fiscalization.sync');
+            Route::post('/fiscalization/retry-pending', [AdminController::class, 'retryPendingFiscalReceipts'])->name('fiscalization.retry-pending');
+            Route::get('/commission-audit', fn (AdminController $controller) => $controller->page('CommissionAudit'))->name('commission-audit');
+            Route::get('/expenses', fn (AdminController $controller) => $controller->page('Expenses'))->name('expenses');
+            Route::post('/expenses', [AdminController::class, 'storeExpense'])->name('expenses.store');
+            Route::put('/expenses/{expense}', [AdminController::class, 'updateExpense'])->name('expenses.update');
+            Route::delete('/expenses/{expense}', [AdminController::class, 'destroyExpense'])->name('expenses.destroy');
+            Route::patch('/transactions/{transaction}/approve', [\App\Http\Controllers\A122\TransactionController::class, 'approve'])->name('transactions.approve');
+            Route::patch('/transactions/{transaction}/reject', [\App\Http\Controllers\A122\TransactionController::class, 'reject'])->name('transactions.reject');
+            Route::get('/transactions/{transaction}/report.pdf', [AdminController::class, 'sellerTransactionReport'])->name('transactions.report');
+            Route::patch('/courier-transactions/{courierTransaction}/approve', [AdminController::class, 'approveCourierTransaction'])->name('courier-transactions.approve');
+            Route::patch('/courier-transactions/{courierTransaction}/reject', [AdminController::class, 'rejectCourierTransaction'])->name('courier-transactions.reject');
+            Route::get('/courier-transactions/{courierTransaction}/report.pdf', [AdminController::class, 'courierTransactionReport'])->name('courier-transactions.report');
+        });
+
+        // ══════════════════════════ AUDIT LOG ══════════════════════════
+        Route::middleware('panel.permission:audit-logs')->group(function () {
+            Route::get('/audit-logs', fn (AdminController $controller) => $controller->page('AuditLogs'))->name('audit-logs');
+        });
+
+        // ══════════════════════════ SELLER AI AUDIT ══════════════════════════
+        Route::middleware('panel.permission:seller-ai')->group(function () {
+            Route::get('/seller-ai-actions', fn (AdminController $controller) => $controller->page('SellerAiActions'))->name('seller-ai-actions');
+        });
+
+        // ══════════════════════════ LOGISTIKA ══════════════════════════
+        Route::middleware('panel.permission:logistika')->group(function () {
+            Route::get('/logistika', fn (AdminController $controller) => $controller->page('LogistikaPage'))->name('logistika');
+            Route::post('/logistika/rules', [\App\Http\Controllers\A122\LogisticsController::class, 'store'])->name('logistika.store');
+            Route::put('/logistika/rules/{logistic}', [\App\Http\Controllers\A122\LogisticsController::class, 'update'])->name('logistika.update');
+            Route::delete('/logistika/rules/{logistic}', [\App\Http\Controllers\A122\LogisticsController::class, 'destroy'])->name('logistika.destroy');
+            Route::patch('/logistika/rules/{logistic}/toggle', [\App\Http\Controllers\A122\LogisticsController::class, 'toggleActive'])->name('logistika.toggle');
+            Route::post('/logistika/services', [\App\Http\Controllers\A122\SettingsController::class, 'storeDelivery'])->name('logistika.services.store');
+            Route::put('/logistika/services/{deliveryService}', [\App\Http\Controllers\A122\SettingsController::class, 'updateDelivery'])->name('logistika.services.update');
+            Route::delete('/logistika/services/{deliveryService}', [\App\Http\Controllers\A122\SettingsController::class, 'destroyDelivery'])->name('logistika.services.destroy');
+        });
+
+        // ══════════════════════════ MARKETING VA HAMJAMIYAT ══════════════════════════
+        Route::middleware('panel.permission:marketing')->group(function () {
+            Route::get('/reklamalar', fn (AdminController $controller) => $controller->page('Reklamalar'))->name('reklamalar');
+            Route::get('/promokodlar', fn (AdminController $controller) => $controller->page('Promokodlar'))->name('promokodlar');
+            Route::post('/promokodlar', [AdminController::class, 'storePromocode'])->name('promokodlar.store');
+            Route::get('/promokodlar/generate', [AdminController::class, 'generatePromocode'])->name('promokodlar.generate');
+            Route::put('/promokodlar/{promocode}', [AdminController::class, 'updatePromocode'])->name('promokodlar.update');
+            Route::delete('/promokodlar/{promocode}', [AdminController::class, 'destroyPromocode'])->name('promokodlar.destroy');
+            Route::get('/blogerlar', fn (AdminController $controller) => $controller->page('Blogerlar'))->name('blogerlar');
+            Route::get('/blogerlar/{blogger}/data', [AdminController::class, 'bloggerData'])->name('blogerlar.data');
+            Route::post('/blogerlar', [AdminController::class, 'storeBlogger'])->name('blogerlar.store');
+            Route::put('/blogerlar/{blogger}', [AdminController::class, 'updateBlogger'])->name('blogerlar.update');
+            Route::delete('/blogerlar/{blogger}', [AdminController::class, 'destroyBlogger'])->name('blogerlar.destroy');
+            Route::post('/blogerlar/{blogger}/shipments', [AdminController::class, 'storeBloggerShipment'])->name('blogerlar.shipments.store');
+            Route::put('/blogerlar/{blogger}/shipments/{shipment}', [AdminController::class, 'updateBloggerShipment'])->name('blogerlar.shipments.update');
+            Route::delete('/blogerlar/{blogger}/shipments/{shipment}', [AdminController::class, 'destroyBloggerShipment'])->name('blogerlar.shipments.destroy');
+            Route::patch('/ads/{ad}/moderate', [AdminController::class, 'updateAdModeration'])->name('ads.moderate');
+            Route::delete('/ads/{ad}', [AdminController::class, 'destroyAd'])->name('ads.destroy');
+            Route::get('/gift-sertifikatlar', fn (AdminController $controller) => $controller->page('GiftSertifikatlar'))->name('gift-sertifikatlar');
+            // Eski /a122 panelidan ko'chirilgan (back()-safe, Blade'ga bog'liq emas).
+            Route::patch('/gift-sertifikatlar/{giftCertificate}/status', [GiftCertificateController::class, 'updateStatus'])->name('gift-sertifikatlar.status');
+            Route::post('/gift-sertifikatlar/{giftCertificate}/cancel', [GiftCertificateController::class, 'cancel'])->name('gift-sertifikatlar.cancel');
+            Route::get('/market-news', fn (AdminController $controller) => $controller->page('MarketNewsPage'))->name('market-news');
+            Route::post('/market-news', [AdminController::class, 'storeMarketNews'])->name('market-news.store');
+            Route::put('/market-news/{news}', [AdminController::class, 'updateMarketNews'])->name('market-news.update');
+            Route::patch('/market-news/{news}/toggle', [AdminController::class, 'toggleMarketNews'])->name('market-news.toggle');
+            Route::delete('/market-news/{news}', [AdminController::class, 'destroyMarketNews'])->name('market-news.destroy');
+            Route::get('/collections', fn (AdminController $controller) => $controller->page('CollectionsPage'))->name('collections');
+            Route::get('/collections/book-search', [AdminController::class, 'collectionBookSearch'])->name('collections.book-search');
+            Route::post('/collections/ai-recommend', [AdminController::class, 'collectionAiRecommendation'])->name('collections.ai-recommend');
+            Route::post('/collections', [AdminController::class, 'storeCollection'])->name('collections.store');
+            Route::put('/collections/{collection}', [AdminController::class, 'updateCollection'])->name('collections.update');
+            Route::patch('/collections/{collection}/toggle', [AdminController::class, 'toggleCollection'])->name('collections.toggle');
+            Route::post('/collections/{collection}/duplicate', [AdminController::class, 'duplicateCollection'])->name('collections.duplicate');
+            Route::delete('/collections/{collection}', [AdminController::class, 'destroyCollection'])->name('collections.destroy');
+            Route::get('/reels', fn (AdminController $controller) => $controller->page('ReelsPage'))->name('reels');
+            Route::post('/reels', [AdminController::class, 'storeReel'])->name('reels.store');
+            Route::put('/reels/{reel}', [AdminController::class, 'updateReel'])->name('reels.update');
+            Route::delete('/reels/{reel}', [AdminController::class, 'destroyReel'])->name('reels.destroy');
+        });
+
+        // ── Bir nechta marketing/kontent sahifasi ishlatadigan umumiy tarjima yordamchisi ──
+        Route::middleware('panel.permission:marketing,push')->group(function () {
+            Route::post('/content/translate', [AdminController::class, 'translateContent'])->name('content.translate');
+        });
+
+        // ══════════════════════════ BOOK CLUB ══════════════════════════
+        Route::middleware('panel.permission:book-club')->group(function () {
+            Route::get('/book-club', fn (AdminController $controller) => $controller->page('BookClub'))->name('book-club');
+            Route::get('/book-club/{bookClub}/data', [AdminController::class, 'bookClubData'])->name('book-club.data');
+            Route::post('/book-club/{bookClub}/warn', [\App\Http\Controllers\A122\BookClubController::class, 'warn'])->name('book-club.warn');
+            Route::patch('/book-club/{bookClub}/moderation', [AdminController::class, 'updateBookClubModeration'])->name('book-club.moderation');
+            Route::delete('/book-club/{bookClub}', [AdminController::class, 'destroyBookClub'])->name('book-club.destroy');
+            Route::patch('/book-club/comments/{comment}', [\App\Http\Controllers\A122\BookClubController::class, 'updateComment'])->name('book-club.comment.update');
+            Route::patch('/book-club/comments/{comment}/moderation', [AdminController::class, 'updateBookClubCommentModeration'])->name('book-club.comment.moderation');
+            Route::delete('/book-club/comments/{comment}', [\App\Http\Controllers\A122\BookClubController::class, 'deleteComment'])->name('book-club.comment.delete');
+        });
+
+        // ══════════════════════════ MIJOZLARGA XIZMAT ══════════════════════════
+        Route::middleware('panel.permission:support')->group(function () {
+            Route::get('/tickets', fn (AdminController $controller) => $controller->page('Tickets'))->name('tickets');
+            Route::get('/shikoyatlar', fn (AdminController $controller) => $controller->page('Shikoyatlar'))->name('shikoyatlar');
+            Route::get('/chat', fn (AdminController $controller) => $controller->page('ChatKuzatuv'))->name('chat');
+            Route::get('/support/{ticket}/data', [AdminController::class, 'ticketData'])->name('support.data');
+            Route::post('/support/{ticket}/reply', [\App\Http\Controllers\A122\SupportController::class, 'reply'])->name('support.reply');
+            Route::patch('/support/{ticket}/close', [\App\Http\Controllers\A122\SupportController::class, 'close'])->name('support.close');
+            Route::get('/seller-support/{ticket}/data', [AdminController::class, 'sellerSupportTicketData'])->name('seller-support.data');
+            Route::post('/seller-support/{ticket}/reply', [AdminController::class, 'replySellerSupportTicket'])->name('seller-support.reply');
+            Route::patch('/seller-support/{ticket}/close', [AdminController::class, 'closeSellerSupportTicket'])->name('seller-support.close');
+            Route::get('/chat/{conversation}/data', [AdminController::class, 'chatData'])->name('chat.data');
+            Route::patch('/complaints/{complaint}/status', [\App\Http\Controllers\A122\ComplaintController::class, 'updateStatus'])->name('complaints.status');
+            Route::delete('/complaints/{complaint}', [\App\Http\Controllers\A122\ComplaintController::class, 'destroy'])->name('complaints.destroy');
+        });
+
+        // ══════════════════════════ PUSH BILDIRISHNOMALAR ══════════════════════════
+        Route::middleware('panel.permission:push')->group(function () {
+            Route::get('/push', fn (AdminController $controller) => $controller->page('PushNotifications'))->name('push');
+            Route::post('/push', [AdminController::class, 'storePushNotification'])->name('push.store');
+            Route::post('/push/{notification}/resend', [AdminController::class, 'resendPushNotification'])->name('push.resend');
+            Route::delete('/push/{notification}', [AdminController::class, 'destroyPushNotification'])->name('push.destroy');
+        });
+
+        // ══════════════════════════ HR VA TASHKILOT ══════════════════════════
+        Route::middleware('panel.permission:hr')->group(function () {
+            Route::get('/vakansiyalar', fn (AdminController $controller) => $controller->page('Vakansiyalar'))->name('vakansiyalar');
+            Route::post('/vakansiyalar', [AdminController::class, 'storeVacancy'])->name('vacancies.store');
+            Route::put('/vakansiyalar/{vacancy}', [AdminController::class, 'updateVacancy'])->name('vacancies.update');
+            Route::patch('/vakansiyalar/{vacancy}/toggle', [AdminController::class, 'toggleVacancy'])->name('vacancies.toggle');
+            Route::delete('/vakansiyalar/{vacancy}', [AdminController::class, 'destroyVacancy'])->name('vacancies.destroy');
+
+            Route::get('/karyera-arizalari', fn (AdminController $controller) => $controller->page('KaryeraArizalari'))->name('karyera-arizalari');
+            // Eski /a122 panelidan ko'chirilgan: A122\CareerApplicationController
+            // metodlari back()/faylni to'g'ridan-to'g'ri qaytaradi (Blade view'ga
+            // bog'liq emas), shuning uchun xavfsiz qayta ishlatiladi.
+            Route::patch('/karyera-arizalari/{application}/status', [CareerApplicationController::class, 'updateStatus'])->name('karyera-arizalari.status');
+            Route::post('/karyera-arizalari/{application}/reply', [CareerApplicationController::class, 'sendReply'])->name('karyera-arizalari.reply');
+            Route::get('/karyera-arizalari/{application}/cv', [CareerApplicationController::class, 'downloadCv'])->name('karyera-arizalari.cv');
+        });
+
+        // ══════════════════════════ ADMINLAR (faqat superadmin) ══════════════════════════
+        Route::middleware('panel.permission:admins')->group(function () {
+            Route::get('/adminlar', fn (AdminController $controller) => $controller->page('Adminlar'))->name('adminlar');
+            Route::post('/adminlar', [AdminController::class, 'storePanelAdmin'])->name('admins.store');
+            Route::put('/adminlar/{admin}', [AdminController::class, 'updatePanelAdmin'])->name('admins.update');
+            Route::patch('/adminlar/{admin}/toggle', [AdminController::class, 'togglePanelAdmin'])->name('admins.toggle');
+            Route::delete('/adminlar/{admin}', [AdminController::class, 'destroyPanelAdmin'])->name('admins.destroy');
+        });
+
+        // ══════════════════════════ PREMIUM (MYSTERY BOX / SOVG'ALAR) ══════════════════════════
+        Route::middleware('panel.permission:premium')->group(function () {
+            Route::get('/mystery-box', fn (AdminController $controller) => $controller->page('MysteryBoxPage'))->name('mystery-box');
+            Route::post('/mystery-box/plans', [MysteryBoxController::class, 'storePlan'])->name('mystery-box.plans.store');
+            Route::put('/mystery-box/plans/{plan}', [MysteryBoxController::class, 'updatePlan'])->name('mystery-box.plans.update');
+            Route::delete('/mystery-box/plans/{plan}', [MysteryBoxController::class, 'destroyPlan'])->name('mystery-box.plans.destroy');
+            Route::patch('/mystery-box/subscriptions/{subscription}/pause', [MysteryBoxController::class, 'pauseSubscription'])->name('mystery-box.pause');
+            Route::patch('/mystery-box/subscriptions/{subscription}/resume', [MysteryBoxController::class, 'resumeSubscription'])->name('mystery-box.resume');
+            Route::patch('/mystery-box/subscriptions/{subscription}/cancel', [MysteryBoxController::class, 'cancelSubscription'])->name('mystery-box.cancel');
+
+            Route::get('/sovgalar', fn (AdminController $controller) => $controller->page('Sovgalar'))->name('sovgalar');
+        });
+
+        // ══════════════════════════ SOZLAMALAR / SIYOSATLAR / API MIJOZLAR ══════════════════════════
+        Route::middleware('panel.permission:settings')->group(function () {
+            Route::get('/siyosatlar', fn (AdminController $controller) => $controller->page('Siyosatlar'))->name('siyosatlar');
+            Route::post('/siyosatlar', [AdminController::class, 'storePolicy'])->name('policies.store');
+            Route::put('/siyosatlar/{policy}', [AdminController::class, 'updatePolicy'])->name('policies.update');
+            Route::patch('/siyosatlar/{policy}/toggle', [AdminController::class, 'togglePolicy'])->name('policies.toggle');
+            Route::delete('/siyosatlar/{policy}', [AdminController::class, 'destroyPolicy'])->name('policies.destroy');
+
+            Route::get('/api-clients', fn (AdminController $controller) => $controller->page('ApiClients'))->name('api-clients');
+            Route::post('/api-clients', [AdminController::class, 'storeApiClient'])->name('api-clients.store');
+            Route::put('/api-clients/{apiClient}', [AdminController::class, 'updateApiClient'])->name('api-clients.update');
+            Route::patch('/api-clients/{apiClient}/toggle', [AdminController::class, 'toggleApiClient'])->name('api-clients.toggle');
+            Route::patch('/api-clients/{apiClient}/regenerate', [AdminController::class, 'regenerateApiClient'])->name('api-clients.regenerate');
+            Route::delete('/api-clients/{apiClient}', [AdminController::class, 'destroyApiClient'])->name('api-clients.destroy');
+            Route::post('/api-clients/{apiClient}/webhooks', [AdminController::class, 'storeApiWebhook'])->name('api-clients.webhooks.store');
+            Route::patch('/api-webhooks/{apiWebhook}/toggle', [AdminController::class, 'toggleApiWebhook'])->name('api-webhooks.toggle');
+            Route::delete('/api-webhooks/{apiWebhook}', [AdminController::class, 'destroyApiWebhook'])->name('api-webhooks.destroy');
+
+            Route::get('/settings', fn (AdminController $controller) => $controller->page('Settings'))->name('settings');
+            Route::put('/settings/versions', [\App\Http\Controllers\A122\SettingsController::class, 'updateVersions'])->name('settings.versions');
+            Route::put('/settings/contacts', [\App\Http\Controllers\A122\SettingsController::class, 'updateContacts'])->name('settings.contacts');
+            Route::put('/settings/app-flags', [\App\Http\Controllers\A122\SettingsController::class, 'updateAppFlags'])->name('settings.app-flags');
+            Route::put('/settings/courier-bonus', [\App\Http\Controllers\A122\SettingsController::class, 'updateCourierBonus'])->name('settings.courier-bonus');
+            Route::put('/settings/finance', [\App\Http\Controllers\A122\SettingsController::class, 'updateFinance'])->name('settings.finance');
+            Route::put('/settings/telegram', [\App\Http\Controllers\A122\SettingsController::class, 'updateTelegram'])->name('settings.telegram');
+            Route::post('/settings/commission', [\App\Http\Controllers\A122\SettingsController::class, 'storeCommission'])->name('settings.commission.store');
+            Route::put('/settings/commission/{commissionSetting}', [\App\Http\Controllers\A122\SettingsController::class, 'updateCommission'])->name('settings.commission.update');
+            Route::delete('/settings/commission/{commissionSetting}', [\App\Http\Controllers\A122\SettingsController::class, 'destroyCommission'])->name('settings.commission.destroy');
+            Route::post('/settings/cashback', [\App\Http\Controllers\A122\SettingsController::class, 'storeCashback'])->name('settings.cashback.store');
+            Route::put('/settings/cashback/{cashbackSetting}', [\App\Http\Controllers\A122\SettingsController::class, 'updateCashback'])->name('settings.cashback.update');
+            Route::delete('/settings/cashback/{cashbackSetting}', [\App\Http\Controllers\A122\SettingsController::class, 'destroyCashback'])->name('settings.cashback.destroy');
+        });
     });
 });

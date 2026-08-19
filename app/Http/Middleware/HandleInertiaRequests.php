@@ -26,6 +26,15 @@ class HandleInertiaRequests extends Middleware
                     'name' => $admin->name,
                     'email' => $admin->email,
                     'role' => $admin->role_label ?? 'Administrator',
+                    'roleKey' => $admin->role,
+                    'isSuperAdmin' => $admin->isSuperAdmin(),
+                    'isReadOnly' => (bool) ($admin->is_read_only ?? false),
+                    // Frontend sidebar/sahifa ko'rinishini shu ro'yxatga qarab
+                    // filtrlaydi (Layout.tsx). Superadmin uchun barcha modul
+                    // kalitlari yuboriladi, chunki u har doim hammasiga kira oladi.
+                    'permissions' => $admin->isSuperAdmin()
+                        ? array_keys(\App\Models\Admin::MODULES)
+                        : ($admin->permissions ?? []),
                 ] : null,
             ],
             'flash' => [

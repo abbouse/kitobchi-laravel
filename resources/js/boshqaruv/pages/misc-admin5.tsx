@@ -4,23 +4,31 @@ import { Modal, Button, Form } from 'react-bootstrap';
 import { YandexZoneEditor, YandexPreviewMap, resolveZonesForPoint, Ring, ZoneLike, LatLon } from '../components/YandexMap';
 
 // ===== MYSTERY BOX =====
+type MysteryBoxPlan = { id: number; name: string; months: number; price: number; booksPerMonth: number; active: boolean; subscribers: number; description?: string; plansUrl?: string; updateUrl?: string; destroyUrl?: string };
+
 export function MysteryBox() {
-  const { mysteryBox = { plans: [], subscriptions: [], indexUrl: '/boshqaruv/mystery-box', plansUrl: '/boshqaruv/mystery-box' } } = usePage<{
+  const { mysteryBox = { plans: [], subscriptions: [], indexUrl: '/boshqaruv/mystery-box', plansUrl: '/boshqaruv/mystery-box', createPlanUrl: '' } } = usePage<{
     mysteryBox?: {
-      plans: Array<{ id: number; name: string; months: number; price: number; booksPerMonth: number; active: boolean; subscribers: number; plansUrl?: string; destroyUrl?: string }>;
+      plans: MysteryBoxPlan[];
       subscriptions: Array<{ id: number; user: string; phone?: string; plan: string; status: string; statusLabel?: string; nextDelivery?: string; progress?: number; showUrl?: string; pauseUrl?: string; resumeUrl?: string; cancelUrl?: string }>;
       indexUrl: string;
       plansUrl: string;
+      createPlanUrl?: string;
     };
   }>().props;
   const [selected, setSelected] = useState<(typeof mysteryBox.subscriptions)[0] | null>(null);
+  const [planModal, setPlanModal] = useState<'create' | MysteryBoxPlan | null>(null);
 
   const patch = (url?: string) => url && router.patch(url, {}, { preserveScroll: true });
+  const cancelSubscription = (url?: string) => {
+    if (url && confirm("Obuna bekor qilinsinmi? Bu amalni qaytarib bo'lmaydi.")) router.patch(url, {}, { preserveScroll: true });
+  };
 
   return (
     <div>
       <div className="page-head">
         <div><h1 className="page-title">Mystery Box</h1><p className="page-subtitle">{mysteryBox.plans.length} ta plan · {mysteryBox.subscriptions.filter(s => s.status === 'active').length} ta faol obuna</p></div>
+        <div className="d-flex gap-2"><button className="btn btn-primary-gradient" onClick={() => setPlanModal('create')}><i className="bi bi-plus-lg me-1"></i>Yangi tarif</button></div>
       </div>
 
       <div className="row g-3 mb-3">
@@ -34,7 +42,8 @@ export function MysteryBox() {
               <div className="fw-bold text-primary fs-4">{p.price.toLocaleString()} so'm<small className="text-muted fs-6">/oy</small></div>
               <div className="text-muted mb-2">{p.months} oy · {p.booksPerMonth} kitob/oy · {p.subscribers} obunachi</div>
               <div className="d-flex gap-2">
-                {p.destroyUrl ? <button className="btn btn-sm btn-light text-danger" onClick={() => router.delete(p.destroyUrl!, { preserveScroll: true })}><i className="bi bi-trash"></i></button> : null}
+                {p.updateUrl ? <button className="btn btn-sm btn-light" onClick={() => setPlanModal(p)}><i className="bi bi-pencil"></i></button> : null}
+                {p.destroyUrl ? <button className="btn btn-sm btn-light text-danger" onClick={() => { if (confirm(`"${p.name}" tarifi o'chirilsinmi?`)) router.delete(p.destroyUrl!, { preserveScroll: true }); }}><i className="bi bi-trash"></i></button> : null}
               </div>
             </div>
           </div>
@@ -54,7 +63,9 @@ export function MysteryBox() {
               <td className="text-muted">{s.nextDelivery}</td>
               <td>
                 <button className="btn btn-sm btn-light me-1" onClick={() => setSelected(s)}><i className="bi bi-eye"></i></button>
-                {s.status === 'active' ? <button className="btn btn-sm btn-warning" onClick={() => patch(s.pauseUrl)}><i className="bi bi-pause-fill"></i></button> : <button className="btn btn-sm btn-success" onClick={() => patch(s.resumeUrl)}><i className="bi bi-play-fill"></i></button>}
+                {s.status === 'active' ? <button className="btn btn-sm btn-warning me-1" onClick={() => patch(s.pauseUrl)}><i className="bi bi-pause-fill"></i></button> : null}
+                {s.status === 'paused' ? <button className="btn btn-sm btn-success me-1" onClick={() => patch(s.resumeUrl)}><i className="bi bi-play-fill"></i></button> : null}
+                {s.status === 'active' || s.status === 'paused' ? <button className="btn btn-sm btn-light text-danger" onClick={() => cancelSubscription(s.cancelUrl)}><i className="bi bi-x-lg"></i></button> : null}
               </td>
             </tr>
           ))}</tbody>
@@ -72,10 +83,70 @@ export function MysteryBox() {
           </div>
         </Modal.Body>
         <Modal.Footer>
+          {selected?.status === 'active' || selected?.status === 'paused' ? (
+            <Button variant="outline-danger" onClick={() => { cancelSubscription(selected?.cancelUrl); setSelected(null); }}>Obunani bekor qilish</Button>
+          ) : null}
           <Button variant="light" onClick={() => setSelected(null)}>Yopish</Button>
         </Modal.Footer>
       </Modal>
+
+      <Modal show={!!planModal} onHide={() => setPlanModal(null)} centered>
+        <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">{planModal === 'create' ? "Yangi Mystery Box tarifi" : `"${(planModal as MysteryBoxPlan)?.name}" tarifini tahrirlash`}</Modal.Title></Modal.Header>
+        {planModal ? (
+          <MysteryBoxPlanForm
+            plan={planModal === 'create' ? null : planModal}
+            action={planModal === 'create' ? (mysteryBox.createPlanUrl || '') : (planModal.updateUrl || '')}
+            onDone={() => setPlanModal(null)}
+          />
+        ) : null}
+      </Modal>
     </div>
+  );
+}
+
+function MysteryBoxPlanForm({ plan, action, onDone }: { plan: MysteryBoxPlan | null; action: string; onDone: () => void }) {
+  return (
+    <form onSubmit={(event) => submitLogistics(event, plan ? 'put' : 'post', action, onDone)}>
+      <Modal.Body>
+        <div className="row g-3">
+          <div className="col-12">
+            <LogisticsInput name="name_uz" label="Tarif nomi" defaultValue={plan?.name} required />
+          </div>
+          <div className="col-6">
+            <label className="form-label small text-muted fw-semibold">Muddat (oy)</label>
+            <select className="form-select" name="months" defaultValue={plan?.months ?? 1} disabled={!!plan}>
+              <option value={1}>1 oy</option>
+              <option value={3}>3 oy</option>
+              <option value={6}>6 oy</option>
+              <option value={12}>12 oy</option>
+            </select>
+            {plan ? <div className="form-text">Mavjud tarifda muddat o'zgartirilmaydi.</div> : null}
+          </div>
+          <div className="col-6">
+            <LogisticsInput name="books_per_month" label="Oyiga kitob soni" type="number" min={1} max={10} defaultValue={plan?.booksPerMonth ?? 1} required />
+          </div>
+          <div className="col-6">
+            <LogisticsInput name="price_uzs" label="Narx (so'm/oy)" type="number" min={1000} step="1000" defaultValue={plan?.price ?? ''} required />
+          </div>
+          <div className="col-6">
+            <LogisticsInput name="sort_order" label="Tartib raqami" type="number" min={0} defaultValue={0} help="Kichik raqam avval ko'rsatiladi." />
+          </div>
+          <div className="col-12">
+            <label className="form-label small text-muted fw-semibold">Tavsif</label>
+            <textarea className="form-control" name="description_uz" rows={3} defaultValue={plan?.description ?? ''}></textarea>
+          </div>
+          {plan ? (
+            <div className="col-12">
+              <LogisticsToggle name="is_active" label="Tarif faol" defaultChecked={plan.active} />
+            </div>
+          ) : null}
+        </div>
+      </Modal.Body>
+      <Modal.Footer>
+        <Button variant="light" onClick={onDone}>Bekor qilish</Button>
+        <button type="submit" className="btn btn-primary-gradient"><i className="bi bi-check2 me-1"></i>{plan ? 'Saqlash' : "Tarif qo'shish"}</button>
+      </Modal.Footer>
+    </form>
   );
 }
 

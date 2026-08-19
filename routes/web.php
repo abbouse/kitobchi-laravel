@@ -235,4 +235,13 @@ Route::prefix('hub-desk')->name('hubdesk.')->group(function () {
     });
 });
 
-require __DIR__.'/a122.php';
+// ESLATMA (2026-08-19): eski /a122 admin paneli butunlay yangi /boshqaruv
+// paneliga migratsiya qilindi (RBAC/rol-ruxsat tizimi bilan birga). Bu route
+// fayli endi ATAYLAB ulanmaydi — /a122/* manzillari endi 404 qaytaradi.
+// A122\* controller klasslari (app/Http/Controllers/A122/) o'chirilmadi —
+// ular hali ham /boshqaruv/* route'lari orqali qayta ishlatiladi (masalan
+// OrderController, SellerController, CourierController va h.k.), faqat eski
+// login/blade panelining o'zi (routes/a122.php, resources/views/a122/*)
+// endi hech qayerdan chaqirilmaydi. Agar biror sabab bilan eski panelga
+// vaqtincha qaytish kerak bo'lsa, quyidagi qatorni qayta oching:
+// require __DIR__.'/a122.php';
