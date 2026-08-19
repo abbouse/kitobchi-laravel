@@ -246,6 +246,8 @@ interface Ord {
   receiptUrl?: string;
   statusUrl?: string;
   cancelUrl?: string;
+  sendUnreachablePushUrl?: string;
+  canSendUnreachablePush?: boolean;
   switchModeUrl?: string;
   rerouteHubUrl?: string;
   postalReturnUrl?: string;
@@ -652,6 +654,28 @@ export default function Orders() {
                       Bu buyurtma <strong>qaytgan</strong> holatda. {isCashPending(selectedOrd.paymentStatus || selectedOrd.payment)
                         ? "Naqd buyurtma bo'lgani uchun bu holat mijozning naqd buyurtma olish imkoniyatiga ta'sir qiladi."
                         : "Bu qaytish qayd etilgan, lekin u naqd jarima hisobiga kirmaydi."}
+                    </div>
+                  ) : null}
+                  {selectedOrd.canSendUnreachablePush ? (
+                    <div className="alert alert-info py-2 px-3 mb-3 border-0 rounded-3" style={{ background: '#eff6ff', border: '1px solid #bfdbfe' }}>
+                      <div className="d-flex justify-content-between align-items-center">
+                        <div>
+                          <div className="fw-bold small text-primary">
+                            <i className="bi bi-telephone-x me-1"></i>Bog'lanish kutilmoqda
+                          </div>
+                          <div className="text-muted" style={{ fontSize: 11 }}>
+                            Operator qo'ng'iroqqa tusha olmagan bo'lsa, eslatma push yuboring.
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-primary flex-shrink-0 ms-2"
+                          onClick={() => confirm("Mijozga «Operator siz bilan bog'lana olmadi» push xabarnomasi yuborilsinmi?") && postPrompt(selectedOrd.sendUnreachablePushUrl, {})}
+                          disabled={!selectedOrd.sendUnreachablePushUrl}
+                        >
+                          <i className="bi bi-bell-fill me-1"></i>Push yuborish
+                        </button>
+                      </div>
                     </div>
                   ) : null}
                   <div className="row g-3">
@@ -1205,6 +1229,15 @@ export default function Orders() {
           ) : null}
         </Modal.Body>
         <Modal.Footer>
+          {selectedOrd?.canSendUnreachablePush ? (
+            <Button
+              variant="outline-primary"
+              className="me-auto"
+              onClick={() => confirm("Mijozga «Operator siz bilan bog'lana olmadi» push xabarnomasi yuborilsinmi?") && postPrompt(selectedOrd.sendUnreachablePushUrl, {})}
+            >
+              <i className="bi bi-telephone-x me-1"></i>Bog'lana olmadik (Push)
+            </Button>
+          ) : null}
           {selectedOrd?.labelUrl ? <a className="btn btn-outline-secondary" href={selectedOrd.labelUrl} target="_blank">Label</a> : null}
           {selectedOrd?.receiptUrl ? <a className="btn btn-outline-secondary" href={selectedOrd.receiptUrl} target="_blank">Chek</a> : null}
           <Button variant="light" onClick={() => setShowView(false)}>Yopish</Button>

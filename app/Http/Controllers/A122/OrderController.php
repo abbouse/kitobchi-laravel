@@ -677,4 +677,22 @@ class OrderController extends Controller
     {
         return Excel::download(new OrdersExport($request->all()), 'orders_'.now()->format('Y-m-d').'.xlsx');
     }
+
+    public function sendUnreachablePush(Sold $order)
+    {
+        $res = $this->orderStatusPushService->sendCashOrderUnreachableNotice($order);
+
+        if (! $res['success']) {
+            if (request()->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $res['message']], 422);
+            }
+            return back()->with('error', $res['message']);
+        }
+
+        if (request()->wantsJson()) {
+            return response()->json(['success' => true, 'message' => $res['message']]);
+        }
+
+        return back()->with('success', $res['message']);
+    }
 }

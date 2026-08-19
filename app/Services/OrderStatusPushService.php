@@ -163,6 +163,44 @@ class OrderStatusPushService
         ],
     ];
 
+    private const CASH_ORDER_CREATED_MESSAGES = [
+        'uz' => [
+            'title' => 'Buyurtmangiz qabul qilindi 📦',
+            'body' => "Tez orada operatorimiz siz bilan bog'lanadi va buyurtmangizni tasdiqlaydi 😊",
+        ],
+        'ru' => [
+            'title' => 'Ваш заказ принят 📦',
+            'body' => 'Скоро наш оператор свяжется с вами для подтверждения заказа 😊',
+        ],
+        'en' => [
+            'title' => 'Order received 📦',
+            'body' => 'Our operator will contact you shortly to confirm your order 😊',
+        ],
+        'ja' => [
+            'title' => 'ご注文を受け付けました 📦',
+            'body' => 'まもなくオペレーターよりご注文確認のご連絡をいたします 😊',
+        ],
+    ];
+
+    private const CASH_ORDER_UNREACHABLE_MESSAGES = [
+        'uz' => [
+            'title' => "Qo'ng'iroqqa tusha olmadik 📞😅",
+            'body' => "Operatorimiz siz bilan bog'lana olmadi. Kitoblaringiz yo'lga chiqishga shay, faqat buyurtmani tasdiqlashimiz kerak edi! Iltimos, telefoningizni ochiq tuting yoki biz bilan bog'laning 😊",
+        ],
+        'ru' => [
+            'title' => 'Не смогли до вас дозвониться 📞😅',
+            'body' => 'Наш оператор не смог до вас дозвониться. Ваши книги уже готовы к отправке, нужно только подтвердить заказ! Пожалуйста, держите телефон рядом или свяжитесь с нами 😊',
+        ],
+        'en' => [
+            'title' => "We couldn't reach you 📞😅",
+            'body' => 'Our operator tried to call you to confirm your order. Your books are ready, we just need your confirmation! Please stay near your phone or reach out to us 😊',
+        ],
+        'ja' => [
+            'title' => 'お電話が繋がりませんでした 📞😅',
+            'body' => 'ご注文確認のためオペレーターがお電話いたしましたが繋がりませんでした。発送の準備は整っておりますので、お電話をお待ちいただくかご連絡をお願いいたします 😊',
+        ],
+    ];
+
     public function sendForTransition(Sold $order, ?string $previousStatus, string $newStatus): void
     {
         if ($previousStatus === $newStatus || $this->visibleStateKey($previousStatus) === $this->visibleStateKey($newStatus)) {
@@ -360,6 +398,94 @@ class OrderStatusPushService
             'tokens' => $tokens->count(),
             'result' => $result,
         ]);
+    }
+
+    public function sendCashOrderCreatedNotice(Sold $order): void
+    {
+        $user = $order->user()->first(['id', 'locale']);
+        if (!$user) {
+            return;
+        }
+
+        $tokens = $this->tokensForUser($user->id);
+        if ($tokens->isEmpty()) {
+            return;
+        }
+
+        $locale = $this->resolveLocale($user->locale ?? null);
+        $template = self::CASH_ORDER_CREATED_MESSAGES[$locale];
+
+        $payload = [
+            'type' => 'cash_order_created',
+            'order_id' => (string) $order->id,
+            'status' => (string) ($order->status_code ?? $order->status ?? 'A'),
+            'payment_status' => (string) ($order->payment_status_code ?? $order->paymentStatus ?? '0'),
+        ];
+
+        $result = (new FCMService('kitobchi'))->send(
+            $tokens->all(),
+            $template['title'],
+            $template['body'],
+            $payload,
+        );
+
+        Log::info('Cash order created push sent', [
+            'order_id' => $order->id,
+            'user_id' => $user->id,
+            'locale' => $locale,
+            'tokens' => $tokens->count(),
+            'result' => $result,
+        ]);
+    }
+
+    public function sendCashOrderUnreachableNotice(Sold $order): array
+    {
+        $user = $order->user()->first(['id', 'locale', 'name', 'phone_number']);
+        if (!$user) {
+            return [
+                'success' => false,
+                'message' => "Buyurtmaga biriktirilgan mijoz topilmadi.",
+            ];
+        }
+
+        $tokens = $this->tokensForUser($user->id);
+        if ($tokens->isEmpty()) {
+            return [
+                'success' => false,
+                'message' => "Mijozning faol ilova qurilmasi (FCM token) topilmadi. Qo'ng'iroq yoki SMS orqali bog'laning.",
+            ];
+        }
+
+        $locale = $this->resolveLocale($user->locale ?? null);
+        $template = self::CASH_ORDER_UNREACHABLE_MESSAGES[$locale];
+
+        $payload = [
+            'type' => 'order_unreachable_call',
+            'order_id' => (string) $order->id,
+            'status' => (string) ($order->status_code ?? $order->status ?? ''),
+            'action' => 'confirm_order',
+        ];
+
+        $result = (new FCMService('kitobchi'))->send(
+            $tokens->all(),
+            $template['title'],
+            $template['body'],
+            $payload,
+        );
+
+        Log::info('Cash order unreachable notice push sent by admin', [
+            'order_id' => $order->id,
+            'user_id' => $user->id,
+            'locale' => $locale,
+            'tokens' => $tokens->count(),
+            'result' => $result,
+        ]);
+
+        return [
+            'success' => true,
+            'message' => "Mijozga «Bog'lana olmadik» push xabarnomasi muvaffaqiyatli yuborildi!",
+            'tokens_count' => $tokens->count(),
+        ];
     }
 
     private function tokensForUser(int $userId): Collection

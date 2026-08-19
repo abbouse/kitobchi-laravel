@@ -13068,6 +13068,10 @@ PROMPT;
             'receiptUrl' => route('boshqaruv.orders.print.receipt', $order),
             'statusUrl' => route('boshqaruv.orders.status', $order),
             'cancelUrl' => route('boshqaruv.orders.cancel', $order),
+            'sendUnreachablePushUrl' => route('boshqaruv.orders.send-unreachable-push', $order),
+            'canSendUnreachablePush' => ((int) ($order->paymentStatus ?? $order->payment_status_code ?? 0) === 0 || in_array((string) ($order->paymentStatus ?? $order->payment_status_code ?? ''), ['0', 'cash', 'pending', 'unpaid'], true))
+                && OrderStatusCode::fromLegacy($order->status_code ?? $order->status) === OrderStatusCode::PENDING
+                && (bool) $order->user_id,
             'switchModeUrl' => route('boshqaruv.orders.switch-mode', $order),
             'rerouteHubUrl' => route('boshqaruv.orders.reroute-hub', $order),
             'postalReturnUrl' => route('boshqaruv.orders.postal-return', $order),

@@ -121,6 +121,7 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
         Route::post('/orders/{order}/fulfillment/reroute-hub', [\App\Http\Controllers\A122\OrderController::class, 'rerouteHub'])->name('orders.reroute-hub');
         Route::patch('/orders/{order}/postal-info', [AdminController::class, 'updateOrderPostalInfo'])->name('orders.postal-info');
         Route::patch('/orders/{order}/postal-return', [\App\Http\Controllers\A122\OrderController::class, 'markPostalReturned'])->name('orders.postal-return');
+        Route::post('/orders/{order}/send-unreachable-push', [\App\Http\Controllers\A122\OrderController::class, 'sendUnreachablePush'])->name('orders.send-unreachable-push');
         Route::post('/orders/{order}/refund-cancel', [\App\Http\Controllers\A122\OrderController::class, 'refundAndCancel'])->name('orders.refund-cancel');
         Route::post('/seller-orders/{sellerOrder}/refund', [\App\Http\Controllers\A122\OrderController::class, 'refundSellerOrder'])->name('seller-orders.refund');
         Route::post('/seller-order-items/{sellerOrderItem}/refund', [\App\Http\Controllers\A122\OrderController::class, 'refundSellerOrderItem'])->name('seller-order-items.refund');

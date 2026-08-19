@@ -32,6 +32,7 @@ use App\Services\FulfillmentRoutingService;
 use App\Services\OrderFinancialSnapshotService;
 use App\Services\OrderRealtimeService;
 use App\Services\OrderService;
+use App\Services\OrderStatusPushService;
 use App\Services\PaylovOrderPaymentService;
 use App\Services\PostalResendService;
 use App\Services\PostalTracking\PostalTrackingStatusCatalog;
@@ -68,6 +69,7 @@ class PurchaseController extends Controller
         private readonly ProductReviewPromptService $productReviewPromptService,
         private readonly OrderFinancialSnapshotService $orderFinancialSnapshotService,
         private readonly PostalTrackingService $postalTrackingService,
+        private readonly OrderStatusPushService $orderStatusPushService,
     ) {}
 
     // ── Xatolik response ──────────────────────────────────────
@@ -1910,6 +1912,17 @@ class PurchaseController extends Controller
                 array_keys($groupedBySeller),
                 $freshCourierOrder,
             );
+
+            if ((int) $request->paymentStatus === 0 && $freshPurchase) {
+                try {
+                    $this->orderStatusPushService->sendCashOrderCreatedNotice($freshPurchase);
+                } catch (\Throwable $e) {
+                    Log::warning('Cash order created push error', [
+                        'order_id' => $freshPurchase->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
 
             return response()->json([
                 'status' => 'success',
