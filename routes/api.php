@@ -37,6 +37,7 @@ Route::post('telegram/webhook', \App\Http\Controllers\TelegramWebhookController:
 Route::get('instagram/test', [\App\Http\Controllers\Api\InstagramWebhookController::class, 'test'])->middleware('throttle:30,1');
 Route::get('update_locale', [UserController::class, 'updateLocale']);
 Route::get('counts', [UserController::class, 'getGlobalCounts']);
+Route::get('r/{type}/{id}', [\App\Http\Controllers\Api\SmartRedirectController::class, 'redirect']);
 Route::prefix('v1')->group(function () {
     Route::prefix('client')->group(base_path('routes/api_client.php')); 
     Route::prefix('kitobchi')->group(base_path('routes/api_user.php')); 
