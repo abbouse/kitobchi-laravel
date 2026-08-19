@@ -975,10 +975,24 @@ class SearchController extends Controller
         if ($sellerId) $q->where('seller_id', $sellerId);
         if ($categoryId) $q->where('category_id', $categoryId);
         if ($minPrice !== null) $q->where('price', '>=', $minPrice);
-        if ($maxPrice !== null) $q->where('price', '<=', $maxPrice);
-
         $hasText = $analyzed !== null && !empty($analyzed['boolean']);
         $hasTag  = mb_strlen($tag) >= 2;
+
+        if ($hasText && config('scout.driver') === 'meilisearch') {
+            try {
+                $meiliQuery = Books::search($rawQuery);
+
+                if ($sellerId) $meiliQuery->where('seller_id', $sellerId);
+                if ($categoryId) $meiliQuery->where('category_id', $categoryId);
+
+                $meiliResults = $meiliQuery->paginate($perPage, 'page', $page);
+                if ($meiliResults->isNotEmpty()) {
+                    return $meiliResults;
+                }
+            } catch (\Throwable $e) {
+                Log::debug('Meilisearch books query fallback: ' . $e->getMessage());
+            }
+        }
 
         if ($hasText) {
             // ── Matnli qidiruv ────────────────────────────────────────
@@ -1069,6 +1083,22 @@ class SearchController extends Controller
 
         $hasText = $analyzed !== null && !empty($analyzed['boolean']);
         $hasTag  = mb_strlen($tag) >= 2;
+
+        if ($hasText && config('scout.driver') === 'meilisearch') {
+            try {
+                $meiliQuery = Stationery::search($rawQuery);
+
+                if ($sellerId) $meiliQuery->where('seller_id', $sellerId);
+                if ($categoryId) $meiliQuery->where('category_id', $categoryId);
+
+                $meiliResults = $meiliQuery->paginate($perPage, 'page', $page);
+                if ($meiliResults->isNotEmpty()) {
+                    return $meiliResults;
+                }
+            } catch (\Throwable $e) {
+                Log::debug('Meilisearch stationery query fallback: ' . $e->getMessage());
+            }
+        }
 
         if ($hasText) {
             $bool       = $analyzed['boolean'];
