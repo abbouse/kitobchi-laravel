@@ -8,10 +8,11 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
+use Laravel\Scout\Searchable;
 
 class Stationery extends Model
 {
-    use HasBranchStock, HasFactory;
+    use HasBranchStock, HasFactory, Searchable;
 
     /** Legacy API kontrakt: `stock` JSON javoblarda saqlanadi. */
     protected $appends = ['stock'];
@@ -175,6 +176,57 @@ class Stationery extends Model
                 // Bulk yangilanishlar hash ni null qiladi — scheduler qayta embed qiladi
                 ->orWhereNull('vector_text_hash');
         });
+    }
+
+    // ── Laravel Scout (Meilisearch) ─────────────────────────────────────────
+
+    public function searchableAs(): string
+    {
+        return 'stationery_index';
+    }
+
+    public function shouldBeSearchable(): bool
+    {
+        $seller = $this->seller;
+
+        if (! $seller || ($seller->status ?? null) !== 'approved' || (int) ($seller->is_hidden ?? 0) === 1) {
+            return false;
+        }
+
+        return (bool) $this->status
+            && (int) $this->is_hidden === 0
+            && (int) $this->is_approved === 1;
+    }
+
+    public function makeAllSearchableUsing(Builder $query): Builder
+    {
+        return $query->with(['category', 'seller', 'tags'])->withAvailableTotal();
+    }
+
+    public function toSearchableArray(): array
+    {
+        $tagNames = $this->relationLoaded('tags')
+            ? $this->tags->flatMap(fn ($tag) => [
+                $tag->tag_name_uz, $tag->tag_name_ru, $tag->tag_name_en, $tag->tag_name_ja,
+            ])->filter()->implode(' ')
+            : '';
+
+        return [
+            'id'             => (int) $this->id,
+            'name'           => (string) ($this->name ?? ''),
+            'artikul'        => (string) ($this->artikul ?? ''),
+            'tags'           => $tagNames,
+            'category_name'  => (string) ($this->category?->name_uz ?? $this->category?->title ?? ''),
+            'material'       => (string) ($this->material ?? ''),
+            'description'    => (string) ($this->description ?? ''),
+            'category_id'    => (int) ($this->category_id ?? 0),
+            'seller_id'      => (int) ($this->seller_id ?? 0),
+            'price'          => (float) ($this->discount_price ?: $this->price ?? 0),
+            'in_stock'       => $this->stock > 0,
+            'totalSalesWeek' => (int) ($this->totalSalesWeek ?? 0),
+            'totalSales'     => (int) ($this->totalSales ?? 0),
+            'created_at'     => $this->created_at?->timestamp ?? 0,
+        ];
     }
 
     // Helper: chegirma foizini hisoblash

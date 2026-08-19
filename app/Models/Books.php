@@ -9,10 +9,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Laravel\Scout\Searchable;
 
 class Books extends Model
 {
-    use HasBranchStock, HasFactory;
+    use HasBranchStock, HasFactory, Searchable;
 
     protected static ?bool $hasAuthorColumnCache = null;
 
@@ -176,7 +177,55 @@ class Books extends Model
 
     // ── Laravel Scout (Meilisearch) ─────────────────────────────────────────
 
+    public function searchableAs(): string
+    {
+        return 'books_index';
+    }
 
+    public function shouldBeSearchable(): bool
+    {
+        $seller = $this->seller;
+
+        if (! $seller || ($seller->status ?? null) !== 'approved' || (int) ($seller->is_hidden ?? 0) === 1) {
+            return false;
+        }
+
+        return (bool) $this->status
+            && (int) $this->is_hidden === 0
+            && (int) $this->is_approved === 1;
+    }
+
+    public function makeAllSearchableUsing(Builder $query): Builder
+    {
+        return $query->with(['category', 'seller', 'tags', 'authorProfile'])->withAvailableTotal();
+    }
+
+    public function toSearchableArray(): array
+    {
+        $tagNames = $this->relationLoaded('tags')
+            ? $this->tags->flatMap(fn ($tag) => [
+                $tag->tag_name_uz, $tag->tag_name_ru, $tag->tag_name_en, $tag->tag_name_ja,
+            ])->filter()->implode(' ')
+            : '';
+
+        return [
+            'id'             => (int) $this->id,
+            'name'           => (string) ($this->name ?? ''),
+            'author'         => (string) ($this->authorProfile?->name ?: $this->author ?? ''),
+            'artikul'        => (string) ($this->artikul ?? ''),
+            'tags'           => $tagNames,
+            'category_name'  => (string) ($this->category?->name_uz ?? $this->category?->title ?? ''),
+            'description'    => (string) ($this->description ?? ''),
+            'category_id'    => (int) ($this->category_id ?? 0),
+            'seller_id'      => (int) ($this->seller_id ?? 0),
+            'price'          => (float) ($this->discountPrice ?: $this->price ?? 0),
+            'lang'           => (string) ($this->lang ?? ''),
+            'in_stock'       => $this->totalAvailableStock() > 0,
+            'totalSalesWeek' => (int) ($this->totalSalesWeek ?? 0),
+            'totalSales'     => (int) ($this->totalSales ?? 0),
+            'created_at'     => $this->created_at?->timestamp ?? 0,
+        ];
+    }
 
     /**
      * Tezlik (2026-08-20 audit): oldin `whereRaw('JSON_LENGTH(vectorData) = 1536')`
