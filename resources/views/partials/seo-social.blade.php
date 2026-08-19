@@ -5,7 +5,7 @@
     $site = config('app.name', 'Kitobchi');
     $desc = \Illuminate\Support\Str::limit(trim(preg_replace('/\s+/u', ' ', strip_tags($description ?? 'Kitobchi — online kitoblar va kanselyariya marketpleysi.'))), 158, '…');
     $ogTitle = \Illuminate\Support\Str::limit($title ?? 'Kitobchi', 88, '…');
-    $ogImage = $ogImage ?? config('seo.og_image') ?: url('/images/logo/logo_blue.png');
+    $ogImage = $ogImage ?? config('seo.og_image') ?: url('/og-image.png');
     if ($ogImage !== '' && ! str_starts_with($ogImage, 'http')) {
         $ogImage = url($ogImage);
     }
