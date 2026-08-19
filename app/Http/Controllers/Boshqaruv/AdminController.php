@@ -3066,7 +3066,15 @@ class AdminController extends Controller
         // forma orqali qo'lda belgilangan checkbox'lar bo'lsa ular ustun turadi.
         $permissions = $request->has('permissions') ? ($data['permissions'] ?? []) : ($preset['permissions'] ?? []);
         $data['permissions'] = $this->sanitizePanelAdminPermissions($permissions, $requester?->isSuperAdmin() ?? false);
-        $data['is_read_only'] = $request->boolean('is_read_only', (bool) ($preset['readOnly'] ?? false));
+
+        // ESLATMA: `is_read_only` ustuni 2026_08_19_140000 migratsiyasi bilan
+        // qo'shiladi. Agar hali migrate qilinmagan bo'lsa, bu maydonni $data'ga
+        // qo'shmaymiz — aks holda Admin::create() "Unknown column" xatosi bilan
+        // 500 qaytaradi. Migratsiya qo'llanganidan keyin bu tekshiruv shart
+        // emas, lekin xavfsiz — hech qanday zarar keltirmaydi.
+        if (Schema::hasColumn('admins', 'is_read_only')) {
+            $data['is_read_only'] = $request->boolean('is_read_only', (bool) ($preset['readOnly'] ?? false));
+        }
 
         Admin::create($data);
 
@@ -3110,7 +3118,12 @@ class AdminController extends Controller
         $data['is_active'] = $request->boolean('is_active');
         $permissions = $request->has('permissions') ? ($data['permissions'] ?? []) : [];
         $data['permissions'] = $this->sanitizePanelAdminPermissions($permissions, $requester?->isSuperAdmin() ?? false);
-        $data['is_read_only'] = $request->boolean('is_read_only');
+
+        // Yuqoridagi storePanelAdmin'dagi izohga qarang — migratsiya hali
+        // qo'llanmagan bo'lishi mumkin.
+        if (Schema::hasColumn('admins', 'is_read_only')) {
+            $data['is_read_only'] = $request->boolean('is_read_only');
+        }
 
         $admin->update($data);
 
@@ -4914,7 +4927,10 @@ PROMPT;
     private function booksPagePayload(): array
     {
         $search = trim((string) request('books_search', ''));
-        $tab = (string) request('books_tab', 'pending');
+        // Standart tab 'active' — sahifa ochilganda odatda bo'sh
+        // "moderatsiyada" ro'yxati emas, balki hozir savdoda turgan
+        // kitoblar ko'rinsin (moderatsiya soni baribir kartochkada ko'rinadi).
+        $tab = (string) request('books_tab', 'active');
         $books = Books::query()
             ->with(['authorProfile:id,name', 'category:id,name_uz', 'publisher:id,name', 'seller:id,shop_name,firstname,lastname,phone_number,status,isVerified,is_hidden'])
             ->when($tab === 'pending', fn ($query) => $query->where('is_approved', 0))
@@ -6138,7 +6154,8 @@ PROMPT;
             return ['stationeries' => [], 'stationeryCounts' => [], 'stationeryPagination' => $this->emptyPagination()];
         }
 
-        $tab = (string) request('stationeries_tab', 'pending');
+        // Standart tab 'active' — Books sahifasidagi xuddi shu tuzatishga qarang.
+        $tab = (string) request('stationeries_tab', 'active');
         $search = trim((string) request('stationeries_search', ''));
         $query = Stationery::query()
             ->with(['category:id,name_uz', 'seller:id,shop_name', 'variants'])

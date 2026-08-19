@@ -377,6 +377,7 @@ class AuthController extends Controller
                 'name' => $firstName ?: null,
                 'lastname' => $lastName ?: null,
                 'verifyCode' => null,
+                'status' => 'active',
             ]);
         }
 
@@ -398,6 +399,12 @@ class AuthController extends Controller
             'phone_number' => $user->phone_number ?: $phone,
             'name' => $user->name ?: $firstName,
             'lastname' => $user->lastname ?: $lastName,
+            // Telegram orqali muvaffaqiyatli login qilgan foydalanuvchi avtomatik
+            // "active" qilinadi. `?:` bilan — agar status allaqachon 'blocked'
+            // bo'lsa TEGINILMAYDI (aks holda bloklangan admin bloklashdan
+            // "chiqib ketardi", chunki bu joy blockedUserResponse() tekshiruvidan
+            // OLDIN chaqiriladi).
+            'status' => $user->status ?: 'active',
         ])->save();
 
         return $user;

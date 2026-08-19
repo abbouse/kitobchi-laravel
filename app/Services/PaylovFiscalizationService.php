@@ -263,30 +263,15 @@ class PaylovFiscalizationService
             ->with('category:id,ofd_ikpu_code,ofd_package_code')
             ->whereIn('id', $statIds)->get(['id', 'category_id', 'ofd_ikpu_code', 'ofd_package_code'])->keyBy('id');
 
-        // Sotuvchilar STIRi — OFD har bir itemda tin YOKI pinfl talab qiladi.
-        // Sotuvchining o'z INN/PINFLi bo'lsa o'shani, bo'lmasa platforma STIRini
-        // ishlatamiz (config services.paylov.ofd.tin).
-        $sellerIds = $orderItems->pluck('seller_id')->filter()->unique()->values()->all();
-        $sellerInns = empty($sellerIds) ? collect() : \App\Models\Seller::query()
-            ->whereIn('id', $sellerIds)->pluck('inn', 'id');
-
-        /**
-         * @return array{tin: ?string, pinfl: ?string}
-         */
-        $resolveTaxId = function (?int $sellerId) use ($sellerInns, $tin): array {
-            $raw = preg_replace('/\D+/', '', (string) ($sellerId ? $sellerInns->get($sellerId) : ''));
-
-            if (strlen($raw) === 9) {
-                return ['tin' => $raw, 'pinfl' => null];
-            }
-
-            if (strlen($raw) === 14) {
-                return ['tin' => null, 'pinfl' => $raw];
-            }
-
-            // Fallback — platforma STIRi
-            return ['tin' => $tin !== '' ? $tin : null, 'pinfl' => null];
-        };
+        // OFD har bir itemda tin YOKI pinfl talab qiladi. Chek HAR DOIM
+        // platforma (Kitobchi) STIRi bilan yaratiladi — sotuvchining shaxsiy
+        // INN/PINFLi ishlatilmaydi. Sabab: to'lovni mijozdan sotuvchi emas,
+        // platforma (Paylov merchant) qabul qiladi, shuning uchun fiskal chek
+        // ham platforma nomidan bo'lishi kerak. Ilgari sotuvchining o'z INNi
+        // bo'lsa o'shani ishlatishga urinilardi — bu sotuvchining Paylov
+        // submerchant profili faol bo'lmaganda "commitent/subcommission not
+        // active" OFD xatosini keltirib chiqarardi (yuqoridagi izohga qarang).
+        $taxId = ['tin' => $tin !== '' ? $tin : null, 'pinfl' => null];
 
         $items = [];
 
@@ -339,8 +324,7 @@ class PaylovFiscalizationService
                 'package_code' => trim((string) ($product?->ofd_package_code ?: ($categoryPackage ?: $defaultPackage))),
             ];
 
-            // OFD: har bir itemda tin YOKI pinfl bo'lishi SHART
-            $taxId = $resolveTaxId((int) ($row['seller_id'] ?? 0) ?: null);
+            // OFD: har bir itemda tin YOKI pinfl bo'lishi SHART (platforma STIRi)
             if ($taxId['tin']) {
                 $item['tin'] = $taxId['tin'];
             } elseif ($taxId['pinfl']) {

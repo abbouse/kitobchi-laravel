@@ -3,6 +3,8 @@ import type { FormEvent, ReactNode } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Modal, Button } from 'react-bootstrap';
 import PaginationControls from '../components/PaginationControls';
+import ImageGalleryEditor from '../components/ImageGalleryEditor';
+import ModerationRejectModal from '../components/ModerationRejectModal';
 
 const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n || 0);
 
@@ -88,13 +90,17 @@ const Detail = ({ label, value }: { label: string; value?: ReactNode }) => (
   </div>
 );
 
+const statusChip = (status?: number): [string, string] =>
+  status === 1 ? ['Faol', 'chip-success'] : status === 2 ? ['Rad etilgan', 'chip-danger'] : ['Moderatsiya', 'chip-warning'];
+
 export default function Books() {
   const { books = [], bookPagination = { page: 1, totalPages: 1, from: 0, to: 0, total: 0 }, bookCounts = {}, bookFilters = {}, bookFormOptions = { categories: [], publishers: [], sellers: [] } } = usePage<{ books?: Book[]; bookPagination?: { page: number; totalPages: number; from: number; to: number; total: number }; bookCounts?: Record<string, number>; bookFilters?: { search?: string; tab?: string }; bookFormOptions?: { categories: OptionItem[]; publishers: OptionItem[]; sellers: OptionItem[] } }>().props;
   const [showView, setShowView] = useState(false);
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [search, setSearch] = useState(bookFilters.search || '');
-  const [activeTab, setActiveTab] = useState(bookFilters.tab || 'pending');
+  const [activeTab, setActiveTab] = useState(bookFilters.tab || 'active');
   const [autoOpenedSearch, setAutoOpenedSearch] = useState('');
+  const [rejectTarget, setRejectTarget] = useState<Book | null>(null);
 
   const handleOpenView = (book: Book) => {
     setSelectedBook(book);
@@ -117,11 +123,9 @@ export default function Books() {
     router.patch(book.moderateUrl, { is_approved: status, note: note ?? '' }, { preserveScroll: true });
   };
 
-  const handleReject = (book: Book) => {
-    if (!book.moderateUrl) return;
-    const reason = window.prompt("Rad etish sababi (sellerga ko'rinadi):", '');
-    if (reason === null) return; // admin bekor qildi
-    handleModerate(book, 2, reason.trim());
+  const confirmReject = (reason: string) => {
+    if (rejectTarget) handleModerate(rejectTarget, 2, reason);
+    setRejectTarget(null);
   };
 
   const submitEdit = (event: FormEvent<HTMLFormElement>) => {
@@ -171,11 +175,11 @@ export default function Books() {
         ))}
       </div>
 
-      <div className="card-panel mb-4">
-        <div className="d-flex flex-wrap gap-2 align-items-center justify-content-between">
+      <div className="card-panel">
+        <div className="panel-head">
           <div>
-            <div className="fw-semibold">Holat bo‘yicha filter</div>
-            <div className="text-muted small">Birinchi kirganda moderatsiyadagi kitoblar chiqadi. Shu blokdan boshqa holatlarga tez o‘tasiz.</div>
+            <div className="panel-title">Kitoblar</div>
+            <small className="text-muted">{bookPagination.total} ta kitob topildi</small>
           </div>
           <div className="d-flex gap-2 flex-wrap">
             {[
@@ -187,60 +191,90 @@ export default function Books() {
               <button
                 key={key}
                 type="button"
-                className={`btn btn-sm ${activeTab === key ? 'btn-primary-gradient' : 'btn-outline-secondary'}`}
+                className={`btn btn-sm ${activeTab === key ? 'btn-primary-gradient' : 'btn-light'}`}
                 onClick={() => { setActiveTab(key); loadBooks(1, key); }}
               >
-                {label} <span className="ms-1 opacity-75">{bookCounts[key] || 0}</span>
+                {label} <span className="badge rounded-pill bg-light text-dark ms-2">{bookCounts[key] || 0}</span>
               </button>
             ))}
           </div>
         </div>
+
+        <div className="table-responsive">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th></th>
+                <th>Kitob</th>
+                <th>Muallif</th>
+                <th>Seller</th>
+                <th>Narx</th>
+                <th>Ombor</th>
+                <th>Sotilgan</th>
+                <th>Ko'rish</th>
+                <th>Status</th>
+                <th>Amallar</th>
+              </tr>
+            </thead>
+            <tbody>
+              {books.map((book) => {
+                const [label, chip] = statusChip(book.status);
+                return (
+                  <tr key={book.id}>
+                    <td>
+                      <div className="thumb">
+                        {book.cover && String(book.cover).startsWith('http') ? <img src={book.cover} alt="" /> : <i className="bi bi-book"></i>}
+                      </div>
+                    </td>
+                    <td>
+                      <strong className="d-block text-truncate" style={{ maxWidth: 260 }}>{book.title}</strong>
+                      <small className="d-block text-muted">#{book.id} · {book.category || 'Kitob'}{book.hidden ? ' · yashirilgan' : ''}</small>
+                    </td>
+                    <td className="text-muted">{book.author}</td>
+                    <td>{book.seller?.name || 'Ichki katalog'}</td>
+                    <td>
+                      <strong>{fmt(book.discountPrice || book.price)} so'm</strong>
+                      {book.discountPrice ? <small className="d-block text-muted text-decoration-line-through">{fmt(book.price)}</small> : null}
+                    </td>
+                    <td>{fmt(book.stock)}</td>
+                    <td>{fmt(book.sold)}</td>
+                    <td>{fmt(book.views || 0)}</td>
+                    <td><span className={`chip ${chip}`}>{label}</span></td>
+                    <td>
+                      <div className="d-flex gap-1">
+                        <button className="btn btn-sm btn-light" onClick={() => handleOpenView(book)} title="Ko'rish / tahrirlash">
+                          <i className="bi bi-eye"></i>
+                        </button>
+                        {book.moderateUrl && book.status !== 1 ? (
+                          <button className="btn btn-sm btn-light text-success" onClick={() => handleModerate(book, 1)} title="Tasdiqlash">
+                            <i className="bi bi-check-lg"></i>
+                          </button>
+                        ) : null}
+                        {book.moderateUrl && book.status !== 2 ? (
+                          <button className="btn btn-sm btn-light text-danger" onClick={() => setRejectTarget(book)} title="Rad etish">
+                            <i className="bi bi-x-lg"></i>
+                          </button>
+                        ) : null}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+              {bookPagination.total === 0 ? (
+                <tr><td className="text-muted text-center py-5" colSpan={10}>Bu bo'limda kitob topilmadi</td></tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
+        <PaginationControls {...bookPagination} onPageChange={(page) => loadBooks(page)} />
       </div>
 
-      <div className="row g-3">
-        {books.map((book) => (
-          <div className="col-xl-3 col-md-6" key={book.id}>
-            <div className="card-panel h-100 d-flex flex-column justify-content-between">
-              <div>
-                <div className="d-flex gap-3">
-                  <div className="book-cover-sm">
-                    {book.cover && String(book.cover).startsWith('http') ? (
-                      <img src={book.cover} alt={book.title} />
-                    ) : (book.cover || '📕')}
-                  </div>
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <div className="fw-bold text-truncate" style={{ fontSize: 15 }}>{book.title}</div>
-                    <div className="text-muted small mb-2 text-truncate">{book.author}</div>
-                    <div className="fw-bold" style={{ color: '#4f46e5' }}>{fmt(book.price)} so'm</div>
-                    <div className="d-flex gap-1 mt-2 flex-wrap">
-                      <span className="chip chip-success">{book.stock} dona</span>
-                      <span className="chip chip-gray">{book.category || 'Kitob'}</span>
-                      <span className={`chip ${book.status === 1 ? 'chip-success' : (book.status === 2 ? 'chip-danger' : 'chip-warning')}`}>{book.statusLabel || 'Moderatsiya'}</span>
-                      {book.hidden ? <span className="chip chip-danger">Yashirilgan</span> : null}
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="d-flex gap-2 mt-3 pt-3 border-top">
-                <button className="btn btn-sm btn-light flex-fill" onClick={() => handleOpenView(book)} title="Ko'rish">
-                  <i className="bi bi-eye"></i>
-                </button>
-                {book.moderateUrl ? (
-                  <>
-                    <button className="btn btn-sm btn-light flex-fill text-success" onClick={() => handleModerate(book, 1)} title="Tasdiqlash">
-                      <i className="bi bi-check-lg"></i>
-                    </button>
-                    <button className="btn btn-sm btn-light flex-fill text-danger" onClick={() => handleReject(book)} title="Rad etish">
-                      <i className="bi bi-x-lg"></i>
-                    </button>
-                  </>
-                ) : null}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-      <PaginationControls {...bookPagination} onPageChange={(page) => loadBooks(page)} />
+      <ModerationRejectModal
+        show={!!rejectTarget}
+        itemLabel={rejectTarget?.title}
+        onCancel={() => setRejectTarget(null)}
+        onConfirm={confirmReject}
+      />
 
       <Modal show={showView} onHide={() => setShowView(false)} centered size="xl" scrollable>
         <Modal.Header closeButton>
@@ -380,8 +414,10 @@ export default function Books() {
                       <label className="form-check"><input name="recommended" value="1" className="form-check-input" type="checkbox" defaultChecked={selectedBook.recommended} /> <span className="form-check-label">Tavsiya</span></label>
                     </div>
                     <div className="col-md-6"><label className="form-label small text-muted">Tavsiya muddati</label><input name="recommendedExpiresAt" type="datetime-local" className="form-control" defaultValue={toInputDate(selectedBook.recommendedExpiresAt)} /></div>
-                    <div className="col-md-6"><label className="form-label small text-muted">Yangi rasmlar</label><input name="images[]" type="file" multiple accept="image/*" className="form-control" /></div>
-                    <div className="col-12"><label className="form-label small text-muted">Rasmlar ro'yxati</label><textarea name="images_text" className="form-control" rows={3} defaultValue={(selectedBook.rawImages || selectedBook.images || []).join('\n')} /></div>
+                    <div className="col-12">
+                      <label className="form-label small text-muted">Rasmlar</label>
+                      <ImageGalleryEditor key={selectedBook.id} images={selectedBook.rawImages || selectedBook.images || []} />
+                    </div>
                     <div className="col-12"><label className="form-label small text-muted">Tavsif</label><textarea name="description" className="form-control" rows={4} defaultValue={selectedBook.description || ''} /></div>
                     <div className="col-12"><button className="btn btn-primary-gradient">Saqlash</button></div>
                   </form>
@@ -393,7 +429,7 @@ export default function Books() {
         <Modal.Footer>
           {selectedBook?.moderateUrl ? (
             <>
-              <Button variant="outline-danger" onClick={() => handleReject(selectedBook)}>Rad etish</Button>
+              <Button variant="outline-danger" onClick={() => setRejectTarget(selectedBook)}>Rad etish</Button>
               <Button variant="outline-secondary" onClick={() => handleModerate(selectedBook, 0)}>Moderatsiyaga</Button>
               <Button variant="primary" className="btn-primary-gradient" onClick={() => handleModerate(selectedBook, 1)}>Tasdiqlash</Button>
             </>
