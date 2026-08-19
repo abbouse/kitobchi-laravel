@@ -37,6 +37,10 @@ return new class extends Migration
             }
         });
 
+        if (Schema::hasTable('admins') && Schema::hasColumn('admins', 'role')) {
+            DB::statement("ALTER TABLE `admins` MODIFY COLUMN `role` VARCHAR(50) NOT NULL DEFAULT 'admin'");
+        }
+
         if (! $columnAlreadyExisted && Schema::hasTable('admins')) {
             $allModules = json_encode(array_keys(Admin::MODULES));
 

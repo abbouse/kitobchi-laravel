@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS `admins` (
   `email` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
   `password` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `avatar` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `role` enum('superadmin','admin','moderator') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'moderator',
+  `role` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'admin',
   `permissions` json DEFAULT NULL COMMENT 'Ruxsatlar: ["users","books",...]',
   `is_active` tinyint(1) NOT NULL DEFAULT '1',
   `last_ip` varchar(45) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
