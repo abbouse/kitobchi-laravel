@@ -20,6 +20,8 @@ Route::get('/developers/api/{page?}', ApiDocsController::class)->name('developer
 
 // Smart Deep Link Redirection for Mobile & Web Ads
 Route::get('/r/{type}/{id}', [\App\Http\Controllers\Api\SmartRedirectController::class, 'redirect'])->name('smart-redirect');
+Route::get('/og-image', [\App\Http\Controllers\Api\OgImageController::class, 'generate']);
+Route::get('/og-image.png', [\App\Http\Controllers\Api\OgImageController::class, 'generate']);
 
 Route::get('/', function () {
     try {

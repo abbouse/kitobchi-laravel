@@ -72,8 +72,8 @@ export default defineNuxtConfig({
           property: 'og:description',
           content: 'O‘zbekistondagi eng katta online kitoblar va kanselyariya marketpleysi. Tezkor yetkazib berish va qulay narxlar.'
         },
-        { property: 'og:image', content: 'https://kitobchi.com/api/og-image.png' },
-        { property: 'og:image:secure_url', content: 'https://kitobchi.com/api/og-image.png' },
+        { property: 'og:image', content: 'https://kitobchi.com/api/og-image' },
+        { property: 'og:image:secure_url', content: 'https://kitobchi.com/api/og-image' },
         { property: 'og:image:type', content: 'image/png' },
         { property: 'og:image:width', content: '1200' },
         { property: 'og:image:height', content: '630' },
@@ -86,7 +86,7 @@ export default defineNuxtConfig({
           name: 'twitter:description',
           content: 'O‘zbekistondagi eng katta online kitoblar va kanselyariya marketpleysi. Tezkor yetkazib berish va qulay narxlar.'
         },
-        { name: 'twitter:image', content: 'https://kitobchi.com/api/og-image.png' }
+        { name: 'twitter:image', content: 'https://kitobchi.com/api/og-image' }
       ],
       link: [
         // Standard Favicon Icons (Yandex & Google Compatible)
