@@ -159,7 +159,7 @@
           </div>
 
           <!-- Checkout Button -->
-          <button @click="handleCheckout" :disabled="cartStore.selectedCount === 0" type="button" class="inline-flex items-center justify-center transition-colors px-2.5 py-1.5 gap-1.5 hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed outline-none w-full bg-primary text-white rounded-2xl h-14 text-base font-bold border-none cursor-pointer">
+          <button @click="$router.push('/checkout')" :disabled="cartStore.selectedCount === 0" type="button" class="inline-flex items-center justify-center transition-colors px-2.5 py-1.5 gap-1.5 hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed outline-none w-full bg-primary text-white rounded-2xl h-14 text-base font-bold border-none cursor-pointer">
             Rasmiylashtirishga o'tish <span class="iconify i-heroicons:arrow-right w-5 h-5 ml-1" aria-hidden="true"></span>
           </button>
         </div>
@@ -181,29 +181,9 @@
     </div>
 
     <!-- Modals -->
-    <!-- Buyurtmani tasdiqlash modal -->
-    <UModal v-model="isOrderConfirmOpen">
-      <div class="p-6">
-        <h3 class="text-xl font-bold text-neutral-900 mb-4">Buyurtmani tasdiqlash</h3>
-        <p class="text-sm text-neutral-600 mb-6">Tanlangan mahsulotlarni xarid qilishni tasdiqlaysizmi?</p>
-        <div class="flex justify-end gap-3">
-          <button @click="closeOrderConfirm" class="px-4 py-2 rounded-xl border border-neutral-300 text-neutral-700 bg-white hover:bg-neutral-50 transition-colors font-medium cursor-pointer">Bekor qilish</button>
-          <button @click="submitCheckout" class="px-4 py-2 rounded-xl bg-primary text-white hover:bg-primary/90 transition-colors font-medium border-none cursor-pointer">Tasdiqlash</button>
-        </div>
-      </div>
-    </UModal>
+    
 
-    <!-- Buyurtma muvaffaqiyatli modal -->
-    <UModal v-model="isOrderSuccessOpen">
-      <div class="p-8 text-center">
-        <div class="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4 text-green-500">
-          <svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-        </div>
-        <h3 class="text-2xl font-bold text-neutral-900 mb-2">Buyurtma qabul qilindi!</h3>
-        <p class="text-sm text-neutral-600 mb-6">Tez orada operatorlarimiz siz bilan bog'lanadi.</p>
-        <button @click="isOrderSuccessOpen = false" class="w-full px-4 py-3 rounded-xl bg-primary text-white hover:bg-primary/90 transition-colors font-bold border-none cursor-pointer">Tushunarli</button>
-      </div>
-    </UModal>
+    
 
   </main>
 </template>

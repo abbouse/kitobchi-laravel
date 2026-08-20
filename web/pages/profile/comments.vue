@@ -52,9 +52,9 @@
       <div v-else class="lg:flex lg:items-start lg:gap-5">
         <ProfileSidebar active="comments" />
 
-        <div class="flex-1 min-w-0">
-          <div class="flex items-center justify-between mb-4">
-            <h1 class="text-xl font-bold text-neutral-900 max-md:hidden">Sharhlarim</h1>
+        <div class="flex-1 min-w-0 bg-secondary-50 rounded-3xl p-4 sm:p-6">
+          <div class="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-4">
+            <h1 class="text-xl font-bold text-neutral-900 max-md:hidden m-0">Sharhlarim</h1>
 
             <!-- Segment tabs -->
             <div class="flex items-center gap-1 p-1 rounded-xl bg-secondary-100 w-full md:w-auto">

@@ -52,8 +52,8 @@
       <div v-else class="lg:flex lg:items-start lg:gap-5">
         <ProfileSidebar active="orders" />
 
-        <div class="flex-1 min-w-0">
-          <h1 class="text-xl font-bold text-neutral-900 mb-4 max-md:hidden">Buyurtmalarim</h1>
+        <div class="flex-1 min-w-0 bg-secondary-50 p-4 sm:p-6 rounded-3xl">
+          <h1 class="text-xl font-bold text-neutral-900 mb-4 max-md:hidden m-0">Buyurtmalarim</h1>
 
           <!-- MUHIM: piyola'dagi "Faol"/"Tugallangan" tab'lariga funksional
                parallellik uchun qo'shildi — oldin bu sahifada UMUMAN tab
