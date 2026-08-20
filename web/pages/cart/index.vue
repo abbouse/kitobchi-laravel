@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col min-h-dvh bg-[#F6F6F9] grow">
+  <div class="flex flex-col min-h-dvh bg-[#f1f1f1] grow">
     <!-- ====== MOBILE STICKY TOP BAR (Piyola Market 1:1) ====== -->
     <div class="md:hidden py-3 rounded-b-2xl mb-2 bg-white sticky top-0 z-40 transition-all duration-300 shadow-xs">
       <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto space-y-2">
@@ -52,7 +52,7 @@
     </div>
 
     <!-- ====== MAIN CONTENT ====== -->
-    <main class="max-md:grow h-full md:min-h-dvh max-md:pb-4 bg-[#F6F6F9]">
+    <main class="max-md:grow h-full md:min-h-dvh max-md:pb-4 bg-[#f1f1f1]">
       <div class="px-4 sm:px-6 lg:px-8 w-full max-w-7xl mx-auto py-2 md:py-6">
         <!-- Desktop Breadcrumb & Title Header (Piyola Market 1:1) -->
         <div class="mb-5 max-md:hidden">
@@ -106,7 +106,7 @@
             <div
               v-for="item in cartStore.items"
               :key="item.id"
-              class="rounded-[20px] p-4 bg-white flex gap-4 transition-colors relative shadow-sm border border-neutral-100/50"
+              class="rounded-[20px] px-[14px] py-[18px] bg-white flex gap-4 transition-colors relative shadow-sm border border-neutral-100/50"
             >
               <div class="pt-1 flex-shrink-0">
                 <!-- Checkbox -->
@@ -123,7 +123,7 @@
               </div>
               <div class="flex gap-3 flex-1 overflow-hidden">
                 <!-- Product Image -->
-                <NuxtLink :to="productUrl(item)" class="block w-[100px] h-[133px] rounded-xl overflow-hidden bg-[#F6F6F9] shrink-0 p-1 flex items-center justify-center">
+                <NuxtLink :to="productUrl(item)" class="block w-[100px] h-[133px] rounded-xl overflow-hidden bg-[#f1f1f1] shrink-0 p-1 flex items-center justify-center">
                   <img :src="item.image" :alt="item.name" class="w-full h-full object-contain" />
                 </NuxtLink>
 
@@ -199,7 +199,7 @@
                   v-model="promoCode"
                   type="text"
                   placeholder="Promokod"
-                  class="w-full rounded-2xl bg-[#F6F6F9] px-4 py-3 border-none outline-none font-medium text-neutral-900 text-sm placeholder:text-neutral-400"
+                  class="w-full rounded-2xl bg-[#F1F2F7] px-4 py-3 border-none outline-none font-medium text-neutral-900 text-sm placeholder:text-neutral-400"
                 />
               </div>
 
@@ -244,7 +244,7 @@
               <div
                 v-if="isInstallmentActive"
                 @click="isDrawerOpen = true"
-                class="mt-3 p-3.5 rounded-2xl bg-[#F6F6F9] flex items-center justify-between cursor-pointer border border-neutral-200/60 hover:bg-[#ECECEF] transition-colors"
+                class="mt-3 p-3.5 rounded-2xl bg-[#f1f1f1] flex items-center justify-between cursor-pointer border border-neutral-200/60 hover:bg-[#ECECEF] transition-colors"
               >
                 <div>
                   <span class="text-xs text-neutral-500 block">Oylik to'lov</span>
@@ -357,7 +357,7 @@
           <button
             type="button"
             @click="closeOrderConfirm"
-            class="w-9 h-9 rounded-full bg-[#F6F6F9] text-neutral-500 hover:text-neutral-900 flex items-center justify-center border-none cursor-pointer"
+            class="w-9 h-9 rounded-full bg-[#f1f1f1] text-neutral-500 hover:text-neutral-900 flex items-center justify-center border-none cursor-pointer"
             aria-label="Yopish"
           >
             <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -371,13 +371,13 @@
               v-model="checkoutForm.name"
               type="text"
               placeholder="Ism va familiya"
-              class="w-full h-12 rounded-2xl bg-[#F6F6F9] px-4 border-none outline-none text-sm font-semibold text-neutral-900 placeholder:text-neutral-400"
+              class="w-full h-12 rounded-2xl bg-[#f1f1f1] px-4 border-none outline-none text-sm font-semibold text-neutral-900 placeholder:text-neutral-400"
             />
           </label>
 
           <label class="block">
             <span class="block text-xs font-semibold text-neutral-500 mb-1.5">Telefon raqamingiz</span>
-            <div class="w-full h-12 rounded-2xl bg-[#F6F6F9] px-4 flex items-center gap-2">
+            <div class="w-full h-12 rounded-2xl bg-[#f1f1f1] px-4 flex items-center gap-2">
               <span class="text-sm font-bold text-neutral-900">+998</span>
               <input
                 v-model="checkoutForm.phone"
@@ -395,7 +395,7 @@
                 v-model="checkoutForm.region"
                 type="text"
                 placeholder="Toshkent"
-                class="w-full h-12 rounded-2xl bg-[#F6F6F9] px-4 border-none outline-none text-sm font-semibold text-neutral-900 placeholder:text-neutral-400"
+                class="w-full h-12 rounded-2xl bg-[#f1f1f1] px-4 border-none outline-none text-sm font-semibold text-neutral-900 placeholder:text-neutral-400"
               />
             </label>
             <label class="block">
@@ -404,7 +404,7 @@
                 v-model="checkoutForm.district"
                 type="text"
                 placeholder="Yunusobod"
-                class="w-full h-12 rounded-2xl bg-[#F6F6F9] px-4 border-none outline-none text-sm font-semibold text-neutral-900 placeholder:text-neutral-400"
+                class="w-full h-12 rounded-2xl bg-[#f1f1f1] px-4 border-none outline-none text-sm font-semibold text-neutral-900 placeholder:text-neutral-400"
               />
             </label>
           </div>
@@ -415,12 +415,12 @@
               v-model="checkoutForm.address"
               rows="3"
               placeholder="Ko‘cha, uy, mo‘ljal"
-              class="w-full rounded-2xl bg-[#F6F6F9] px-4 py-3 border-none outline-none text-sm font-semibold text-neutral-900 placeholder:text-neutral-400 resize-none"
+              class="w-full rounded-2xl bg-[#F1F2F7] px-4 py-3 border-none outline-none text-sm font-semibold text-neutral-900 placeholder:text-neutral-400 resize-none"
             ></textarea>
           </label>
         </div>
 
-        <div class="mt-5 rounded-2xl bg-[#F6F6F9] p-4 space-y-2">
+        <div class="mt-5 rounded-2xl bg-[#f1f1f1] p-4 space-y-2">
           <div class="flex items-center justify-between text-sm">
             <span class="text-neutral-500">{{ cartStore.selectedCount }} ta mahsulot</span>
             <span class="font-bold text-neutral-900">{{ formatPrice(cartStore.totalAmount) }} so‘m</span>

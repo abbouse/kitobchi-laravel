@@ -302,7 +302,7 @@
     </div>
 
     <!-- ====== DESKTOP LAYOUT (Piyola Market 1:1) ====== -->
-    <div class="max-md:hidden py-5 bg-[#F6F6F9] min-h-dvh">
+    <div class="max-md:hidden py-5 bg-[#f1f1f1] min-h-dvh">
       <div class="px-4 sm:px-6 lg:px-8 w-full max-w-7xl mx-auto">
         <!-- Breadcrumb & Back Arrow -->
         <div class="mb-5">
@@ -353,7 +353,7 @@
                     @click="selectThumbnail(idx)"
                     :aria-label="`gallery-image-selector-${idx}`"
                     :class="[
-                      'relative shrink-0 w-[75px] h-[100px] rounded-2xl overflow-hidden border-2 transition-all duration-300 cursor-pointer bg-[#F6F6F9] p-1 flex items-center justify-center',
+                      'relative shrink-0 w-[75px] h-[100px] rounded-2xl overflow-hidden border-2 transition-all duration-300 cursor-pointer bg-[#f1f1f1] p-1 flex items-center justify-center',
                       activeIndex === idx && !selectedVariantImage ? 'border-primary' : 'border-transparent hover:border-neutral-200'
                     ]"
                   >
@@ -367,7 +367,7 @@
                     <div class="overflow-hidden w-full h-full rounded-3xl">
                       <div
                         v-if="selectedVariantImage"
-                        class="w-full h-[460px] lg:h-[500px] xl:h-[520px] rounded-3xl overflow-hidden bg-[#F6F6F9] flex items-center justify-center relative p-4"
+                        class="w-full h-[460px] lg:h-[500px] xl:h-[520px] rounded-3xl overflow-hidden bg-[#f1f1f1] flex items-center justify-center relative p-4"
                       >
                         <img
                           :src="selectedVariantImage"
@@ -390,7 +390,7 @@
                             galleryImages.length > 1 ? 'basis-full xl:basis-1/2' : 'basis-full'
                           ]"
                         >
-                          <div class="w-full h-[460px] lg:h-[500px] xl:h-[520px] rounded-3xl overflow-hidden bg-[#F6F6F9] flex items-center justify-center relative p-4">
+                          <div class="w-full h-[460px] lg:h-[500px] xl:h-[520px] rounded-3xl overflow-hidden bg-[#f1f1f1] flex items-center justify-center relative p-4">
                             <img
                               :src="img"
                               :alt="product.name"
@@ -526,7 +526,7 @@
 
                 <!-- To'lov va Xarid Kartasi (Piyola 1:1) -->
                 <div class="p-6 rounded-3xl bg-white shadow-sm space-y-4">
-                  <div role="tablist" class="relative inline-flex bg-[#F6F6F9] rounded-2xl p-1 w-full flex">
+                  <div role="tablist" class="relative inline-flex bg-[#f1f1f1] rounded-2xl p-1 w-full flex">
                     <button
                       type="button"
                       role="tab"
@@ -628,7 +628,7 @@
             </div>
 
             <!-- Empty State (Screenshot 2) -->
-            <div v-if="displayReviews.length === 0" class="w-full bg-[#F6F6F9] rounded-3xl p-10 flex flex-col items-center justify-center gap-3">
+            <div v-if="displayReviews.length === 0" class="w-full bg-[#f1f1f1] rounded-3xl p-10 flex flex-col items-center justify-center gap-3">
               <div class="w-14 h-14 rounded-full bg-white flex items-center justify-center text-neutral-400 shadow-xs">
                 <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
@@ -643,7 +643,7 @@
                 <div
                   v-for="(r, ri) in displayReviews"
                   :key="'rev-card-' + ri"
-                  class="bg-[#F6F6F9] rounded-3xl p-5 flex flex-col justify-between gap-3 border border-neutral-100/60"
+                  class="bg-[#f1f1f1] rounded-3xl p-5 flex flex-col justify-between gap-3 border border-neutral-100/60"
                 >
                   <div>
                     <div class="flex items-center gap-3 mb-2">
@@ -679,7 +679,7 @@
           <!-- ====== SECTION 2: MAHSULOT HAQIDA (Piyola Market 1:1 Desktop) ====== -->
           <section class="mt-4">
             <h2 class="text-xl font-bold text-neutral-900 mb-3 m-0">Mahsulot haqida</h2>
-            <div class="bg-[#F6F6F9] rounded-3xl p-6 relative">
+            <div class="bg-[#f1f1f1] rounded-3xl p-6 relative">
               <div
                 class="kb-prose text-sm text-neutral-700 leading-relaxed transition-all"
                 :class="isDescExpanded ? '' : 'line-clamp-3'"
