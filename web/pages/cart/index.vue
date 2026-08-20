@@ -156,9 +156,6 @@
                     </div>
                   </div>
 
-                    </div>
-                  </div>
-
                   <!-- Bottom Row: Price & Stepper -->
                   <div class="flex items-center justify-between md:justify-end gap-6 pt-2">
                     <span class="text-lg font-bold text-neutral-900">
