@@ -339,7 +339,7 @@
                     @click="goToSlide(idx)"
                     :aria-label="`gallery-image-selector-${idx}`"
                     :class="[
-                      'relative shrink-0 w-[75px] h-[100px] rounded-xl overflow-hidden border-2 transition-all duration-300 cursor-pointer bg-white p-1 flex items-center justify-center',
+                      'relative shrink-0 w-[75px] h-[100px] rounded-xl overflow-hidden border-2 transition-all duration-300 cursor-pointer bg-secondary-50 p-1 flex items-center justify-center',
                       activeIndex === idx ? 'border-primary' : 'border-transparent hover:border-neutral-200'
                     ]"
                   >
@@ -359,13 +359,13 @@
                         <div
                           v-for="(img, idx) in galleryImages"
                           :key="'desk-main-' + idx"
-                          class="min-w-0 shrink-0 ps-4 snap-center flex h-full items-center justify-center basis-full"
+                          class="min-w-0 shrink-0 ps-4 snap-center flex h-full items-start justify-center basis-full xl:basis-1/2"
                         >
-                          <div class="w-full h-[460px] lg:h-[500px] xl:h-[520px] rounded-3xl overflow-hidden bg-white flex items-center justify-center relative p-4 border border-neutral-100">
+                          <div class="w-full aspect-[4/5] rounded-3xl overflow-hidden bg-secondary-50 flex items-center justify-center relative p-6">
                             <img
                               :src="img"
                               :alt="product.name"
-                              class="object-contain max-h-[460px] rounded-2xl w-full h-full"
+                              class="object-contain rounded-2xl w-full h-full"
                               :loading="idx === 0 ? 'eager' : 'lazy'"
                             />
                           </div>
@@ -419,15 +419,7 @@
                 <div>
                   <h1 class="text-xl md:text-2xl font-bold leading-snug text-neutral-900 m-0 mb-2">{{ product.name }}</h1>
                   
-                  <!-- Sharhlar va Reyting qatori (Piyola 1:1) -->
-                  <div class="flex items-center gap-3 text-sm mb-3">
-                    <div class="flex items-center cursor-pointer hover:opacity-80 transition-opacity" @click="openReviewsModal">
-                      <svg class="w-4 h-4 text-amber-400 fill-amber-400" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
-                      <span class="ml-1 font-bold text-neutral-900">{{ productRating }}</span>
-                      <span class="mx-1.5 text-neutral-400">•</span>
-                      <span class="text-neutral-500 hover:text-primary transition-colors font-medium">{{ reviewsCount }} Sharhlar</span>
-                    </div>
-                  </div>
+                  
 
                   <div v-if="product.author" class="text-sm font-medium text-neutral-500 mb-3">
                     Muallif: <span class="text-primary font-semibold">{{ product.author }}</span>
@@ -593,7 +585,7 @@
             </div>
 
             <!-- Empty State (Screenshot 2) -->
-            <div v-if="displayReviews.length === 0" class="w-full bg-white border border-neutral-100 rounded-3xl p-10 flex flex-col items-center justify-center gap-3">
+            <div v-if="displayReviews.length === 0" class="w-full bg-secondary-50 rounded-3xl p-10 flex flex-col items-center justify-center gap-3 border-none">
               <div class="w-14 h-14 rounded-full bg-white flex items-center justify-center text-neutral-400 shadow-xs">
                 <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
@@ -608,7 +600,7 @@
                 <div
                   v-for="(r, ri) in displayReviews"
                   :key="'rev-card-' + ri"
-                  class="bg-white rounded-3xl p-5 flex flex-col justify-between gap-3 border border-neutral-100"
+                  class="bg-secondary-50 rounded-3xl p-6 flex flex-col justify-between gap-3 border-none"
                 >
                   <div>
                     <div class="flex items-center gap-3 mb-2">
@@ -633,7 +625,7 @@
                 <button
                   type="button"
                   @click="openReviewsModal"
-                  class="px-5 py-2.5 rounded-xl bg-[#ECECEF] hover:bg-neutral-200 text-xs font-semibold text-neutral-800 transition-colors border-none cursor-pointer"
+                  class="px-5 py-2.5 rounded-full bg-secondary-100 hover:bg-secondary-200 text-sm font-semibold text-neutral-800 transition-colors border-none cursor-pointer"
                 >
                   Barcha sharhlarni ko'rsatish
                 </button>
@@ -644,7 +636,7 @@
           <!-- ====== SECTION 2: MAHSULOT HAQIDA (Piyola Market 1:1 Desktop) ====== -->
           <section class="mt-4">
             <h2 class="text-xl font-bold text-neutral-900 mb-3 m-0">Mahsulot haqida</h2>
-            <div class="bg-white border border-neutral-100 rounded-3xl p-6 relative">
+            <div class="bg-secondary-50 rounded-3xl p-6 md:p-8 relative border-none">
               <div
                 class="kb-prose text-sm text-neutral-700 leading-relaxed transition-all"
                 :class="isDescExpanded ? '' : 'line-clamp-3'"
@@ -654,7 +646,7 @@
                 <button
                   type="button"
                   @click="isDescExpanded = !isDescExpanded"
-                  class="px-6 py-2 rounded-full bg-white shadow-xs text-xs font-semibold text-neutral-800 hover:shadow-sm transition-shadow border border-neutral-200/60 cursor-pointer"
+                  class="px-6 py-2.5 rounded-full bg-white shadow-sm text-sm font-semibold text-neutral-800 hover:shadow-md transition-shadow border-none cursor-pointer"
                 >
                   {{ isDescExpanded ? 'Kamroq ko‘rsatish' : 'Batafsil ko‘rib chiqing' }}
                 </button>
