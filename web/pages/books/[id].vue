@@ -573,7 +573,7 @@
                     <button
                       type="button"
                       @click="handleAddToCart"
-                      class="h-12 w-14 rounded-2xl bg-[#ECECEF] hover:bg-neutral-200 text-neutral-800 border-none cursor-pointer flex items-center justify-center transition-colors shrink-0"
+                      class="font-medium inline-flex items-center text-base gap-2 text-primary bg-primary/10 hover:bg-primary/15 active:bg-primary/15 p-2 h-12 px-3 rounded-2xl border-none cursor-pointer transition-colors shrink-0"
                       aria-label="Savatga qo'shish"
                     >
                       <svg class="w-6 h-6 shrink-0 fill-current" viewBox="0 0 20 20">
