@@ -26,7 +26,7 @@
                   <img
                     :src="img"
                     :alt="product.name"
-                    class="w-full h-full object-cover"
+                    class="w-full h-full object-contain"
                     :loading="idx === 0 ? 'eager' : 'lazy'"
                     draggable="false"
                   />
@@ -309,7 +309,7 @@
                 <template v-if="product.category || product.category_id">
                   <li class="text-gray-400 text-xs"> / </li>
                   <li>
-                    <NuxtLink :to="`/catalog?category=${product.category_id || product.category?.id}`" class="hover:text-neutral-900 transition-colors">
+                    <NuxtLink :to="`/category/book-${product.category_id || product.category?.id}`" class="hover:text-neutral-900 transition-colors">
                       {{ product.category?.name_uz || product.category?.name || 'Janr' }}
                     </NuxtLink>
                   </li>
@@ -673,7 +673,7 @@
               </h2>
               <NuxtLink
                 v-if="product?.category_id"
-                :to="`/catalog?category=${product.category_id}`"
+                :to="`/category/book-${product.category_id}`"
                 class="text-sm font-semibold text-primary hover:underline flex items-center gap-1 shrink-0"
               >
                 Barchasi

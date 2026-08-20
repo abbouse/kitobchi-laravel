@@ -341,11 +341,107 @@
       </div>
     </div>
 
-    <!-- Buyurtma tasdiqlash oynasi -->
+    <!-- Rasmiylashtirish oynasi (Piyola cart checkout modaliga yaqin) -->
     <div
       v-if="isOrderConfirmOpen"
       class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
       @click.self="closeOrderConfirm"
+    >
+      <div class="bg-white rounded-3xl w-full max-w-md p-5 md:p-6 shadow-2xl">
+        <div class="flex items-center justify-between mb-5">
+          <h2 class="text-xl font-bold text-neutral-900 m-0">Rasmiylashtirish</h2>
+          <button
+            type="button"
+            @click="closeOrderConfirm"
+            class="w-9 h-9 rounded-full bg-[#F6F6F9] text-neutral-500 hover:text-neutral-900 flex items-center justify-center border-none cursor-pointer"
+            aria-label="Yopish"
+          >
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+
+        <div class="space-y-3">
+          <label class="block">
+            <span class="block text-xs font-semibold text-neutral-500 mb-1.5">To‘liq ism</span>
+            <input
+              v-model="checkoutForm.name"
+              type="text"
+              placeholder="Ism va familiya"
+              class="w-full h-12 rounded-2xl bg-[#F6F6F9] px-4 border-none outline-none text-sm font-semibold text-neutral-900 placeholder:text-neutral-400"
+            />
+          </label>
+
+          <label class="block">
+            <span class="block text-xs font-semibold text-neutral-500 mb-1.5">Telefon raqamingiz</span>
+            <div class="w-full h-12 rounded-2xl bg-[#F6F6F9] px-4 flex items-center gap-2">
+              <span class="text-sm font-bold text-neutral-900">+998</span>
+              <input
+                v-model="checkoutForm.phone"
+                type="tel"
+                placeholder="90 123 45 67"
+                class="flex-1 h-full bg-transparent border-none outline-none text-sm font-semibold text-neutral-900 placeholder:text-neutral-400"
+              />
+            </div>
+          </label>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <label class="block">
+              <span class="block text-xs font-semibold text-neutral-500 mb-1.5">Viloyatni tanlang</span>
+              <input
+                v-model="checkoutForm.region"
+                type="text"
+                placeholder="Toshkent"
+                class="w-full h-12 rounded-2xl bg-[#F6F6F9] px-4 border-none outline-none text-sm font-semibold text-neutral-900 placeholder:text-neutral-400"
+              />
+            </label>
+            <label class="block">
+              <span class="block text-xs font-semibold text-neutral-500 mb-1.5">Tumanni tanlang</span>
+              <input
+                v-model="checkoutForm.district"
+                type="text"
+                placeholder="Yunusobod"
+                class="w-full h-12 rounded-2xl bg-[#F6F6F9] px-4 border-none outline-none text-sm font-semibold text-neutral-900 placeholder:text-neutral-400"
+              />
+            </label>
+          </div>
+
+          <label class="block">
+            <span class="block text-xs font-semibold text-neutral-500 mb-1.5">Manzil</span>
+            <textarea
+              v-model="checkoutForm.address"
+              rows="3"
+              placeholder="Ko‘cha, uy, mo‘ljal"
+              class="w-full rounded-2xl bg-[#F6F6F9] px-4 py-3 border-none outline-none text-sm font-semibold text-neutral-900 placeholder:text-neutral-400 resize-none"
+            ></textarea>
+          </label>
+        </div>
+
+        <div class="mt-5 rounded-2xl bg-[#F6F6F9] p-4 space-y-2">
+          <div class="flex items-center justify-between text-sm">
+            <span class="text-neutral-500">{{ cartStore.selectedCount }} ta mahsulot</span>
+            <span class="font-bold text-neutral-900">{{ formatPrice(cartStore.totalAmount) }} so‘m</span>
+          </div>
+          <div class="flex items-center justify-between text-sm">
+            <span class="text-neutral-500">Yetkazib berish</span>
+            <span class="font-bold text-emerald-600">Aniqlanadi</span>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          @click="submitCheckout"
+          class="w-full mt-4 py-3.5 rounded-2xl bg-[#0B0A3F] text-white font-bold text-base hover:bg-[#150a58] transition-colors border-none cursor-pointer"
+        >
+          Buyurtma berish
+        </button>
+      </div>
+    </div>
+
+    <!-- Buyurtma qabul qilindi oynasi -->
+    <div
+      v-if="isOrderSuccessOpen"
+      class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
+      @click.self="isOrderSuccessOpen = false"
     >
       <div class="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl text-center">
         <div class="w-16 h-16 rounded-full bg-emerald-400 text-white mx-auto flex items-center justify-center mb-4">
@@ -357,7 +453,7 @@
         </p>
         <button
           type="button"
-          @click="closeOrderConfirm"
+          @click="isOrderSuccessOpen = false"
           class="w-full py-3.5 rounded-2xl bg-primary text-white font-semibold text-base hover:bg-primary/90 transition-colors border-none cursor-pointer"
         >
           Tushunarli
@@ -386,6 +482,14 @@ const isDrawerOpen = ref(false)
 const selectedInstallmentMonths = ref(12)
 const tempMonths = ref(12)
 const isOrderConfirmOpen = ref(false)
+const isOrderSuccessOpen = ref(false)
+const checkoutForm = reactive({
+  name: authStore.user?.name || '',
+  phone: authStore.user?.phone_number ? String(authStore.user.phone_number).replace(/^998/, '') : '',
+  region: '',
+  district: '',
+  address: ''
+})
 
 const monthlyPayment = computed(() => {
   if (!cartStore.totalAmount || selectedInstallmentMonths.value <= 0) return 0
@@ -435,6 +539,11 @@ function handleCheckout() {
 
 function closeOrderConfirm() {
   isOrderConfirmOpen.value = false
+}
+
+function submitCheckout() {
+  isOrderConfirmOpen.value = false
+  isOrderSuccessOpen.value = true
   cartStore.removeSelected()
 }
 
@@ -443,4 +552,3 @@ useSeoMeta({
   description: 'Tanlangan kitoblar va xaridlar savatchasi.'
 })
 </script>
-

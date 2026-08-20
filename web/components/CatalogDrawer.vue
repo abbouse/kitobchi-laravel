@@ -61,7 +61,7 @@
         <NuxtLink
           v-for="cat in filteredCategories"
           :key="cat.id"
-          :to="`/catalog?category=${cat.id}&type=${activeType}`"
+          :to="`/category/${activeType}-${cat.id}`"
           @click="$emit('close')"
           class="flex items-center justify-between p-3 rounded-2xl hover:bg-neutral-50 transition-colors group text-neutral-800"
         >

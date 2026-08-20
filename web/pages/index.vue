@@ -44,7 +44,7 @@
             class="min-w-0 shrink-0 ps-4 basis-1/4 md:basis-1/6 lg:basis-1/8"
           >
             <NuxtLink
-              :to="`/catalog?category=${cat.id}`"
+              :to="`/category/book-${cat.id}`"
               class="group/item flex flex-col items-center gap-2"
             >
               <div class="w-20 h-20 md:w-30 md:h-30 rounded-full overflow-hidden border-2 border-transparent group-hover/item:border-primary-500 transition-all duration-300 bg-secondary-100 flex items-center justify-center shadow-xs">
@@ -148,7 +148,7 @@
 
         <div class="flex justify-center">
           <NuxtLink
-            :to="`/catalog?category=${cat.category_id}`"
+            :to="`/category/book-${cat.category_id}`"
             class="font-semibold items-center py-2.5 px-8 text-white bg-primary hover:bg-primary/90 h-12 flex justify-center min-w-48 rounded-2xl text-base max-md:w-full transition-all shadow-md"
           >
             Barchasini ko‘rish
