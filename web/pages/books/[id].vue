@@ -288,8 +288,8 @@
     <!--  2. DESKTOP (PC) KO'RINISH (Piyola Market 1:1)                             -->
     <!-- ========================================================================= -->
     <!-- ====== DESKTOP LAYOUT (Piyola Market 1:1) ====== -->
-    <div class="max-md:hidden py-5 bg-[#f1f1f1] min-h-dvh">
-      <div class="px-4 sm:px-6 lg:px-8 w-full max-w-7xl mx-auto">
+    <div class="max-md:hidden bg-white min-h-dvh">
+      <div class="relative py-5 px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
         <!-- Breadcrumb & Back Arrow -->
         <div class="mb-5">
           <div class="flex items-center gap-2">
@@ -323,7 +323,7 @@
 
         <div class="flex flex-col gap-10">
           <!-- Asosiy Gridi: Chapda Galereya, O'ngda Ma'lumotlar va Buyurtma (Piyola 1:1) -->
-          <div class="lg:grid lg:grid-cols-2 xl:grid-cols-3 gap-6 items-start">
+          <div class="lg:grid lg:grid-cols-2 xl:grid-cols-3 gap-5">
             <!-- Chap ustun: Galereya (Thumbnails + Asosiy rasm) -->
             <div class="col-span-1 xl:col-span-2 h-full">
               <div class="flex flex-col-reverse md:flex-row gap-4 h-full">
@@ -339,7 +339,7 @@
                     @click="goToSlide(idx)"
                     :aria-label="`gallery-image-selector-${idx}`"
                     :class="[
-                      'relative shrink-0 w-[75px] h-[100px] rounded-2xl overflow-hidden border-2 transition-all duration-300 cursor-pointer bg-[#f1f1f1] p-1 flex items-center justify-center',
+                      'relative shrink-0 w-[75px] h-[100px] rounded-xl overflow-hidden border-2 transition-all duration-300 cursor-pointer bg-white p-1 flex items-center justify-center',
                       activeIndex === idx ? 'border-primary' : 'border-transparent hover:border-neutral-200'
                     ]"
                   >
@@ -361,7 +361,7 @@
                           :key="'desk-main-' + idx"
                           class="min-w-0 shrink-0 ps-4 snap-center flex h-full items-center justify-center basis-full"
                         >
-                          <div class="w-full h-[460px] lg:h-[500px] xl:h-[520px] rounded-3xl overflow-hidden bg-white flex items-center justify-center relative p-4">
+                          <div class="w-full h-[460px] lg:h-[500px] xl:h-[520px] rounded-3xl overflow-hidden bg-white flex items-center justify-center relative p-4 border border-neutral-100">
                             <img
                               :src="img"
                               :alt="product.name"
@@ -449,7 +449,7 @@
                 <div>
                   <div
                     @click="specsOpen = !specsOpen"
-                    class="w-full bg-white hover:bg-neutral-50 shadow-sm cursor-pointer rounded-2xl p-4 flex items-center justify-between transition-colors"
+                    class="w-full bg-secondary-300 hover:bg-secondary-400 cursor-pointer rounded-2xl p-4 md:px-6 flex items-center justify-between transition-colors duration-300"
                   >
                     <div class="flex items-center gap-3">
                       <svg class="w-5 h-5 text-neutral-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 16v-4m0-4h.01"/></svg>
@@ -459,7 +459,7 @@
                   </div>
 
                   <!-- Xususiyatlar ro'yxati -->
-                  <div v-show="specsOpen" class="mt-2 p-4 bg-white shadow-sm rounded-2xl transition-all">
+                  <div v-show="specsOpen" class="mt-2 p-4 md:px-6 bg-secondary-100 rounded-2xl transition-all">
                     <div v-if="hasSpecs" class="grid grid-cols-2 gap-3 text-sm">
                       <div v-if="product.publisher" class="p-3 rounded-xl bg-neutral-50">
                         <span class="text-neutral-400 block text-xs">Nashriyot:</span>
@@ -490,8 +490,8 @@
                 </div>
 
                 <!-- To'lov va Xarid Kartasi (Piyola 1:1) -->
-                <div class="p-6 rounded-3xl bg-white shadow-sm space-y-4">
-                  <div role="tablist" class="relative inline-flex bg-[#f1f1f1] rounded-2xl p-1 w-full flex">
+                <div class="p-6 rounded-3xl bg-secondary-100 space-y-5">
+                  <div role="tablist" class="relative inline-flex bg-secondary-300 rounded-xl p-1 w-full flex">
                     <button
                       type="button"
                       role="tab"
@@ -499,7 +499,7 @@
                       @click="paymentTab = 'installment'"
                       :class="[
                         'text-sm px-4 py-2 flex-1 font-semibold rounded-xl transition-all duration-200 border-none cursor-pointer text-center',
-                        paymentTab === 'installment' ? 'bg-white text-neutral-900 shadow-sm' : 'bg-transparent text-neutral-500'
+                        paymentTab === 'installment' ? 'bg-white text-gray-900 shadow-sm rounded-lg' : 'bg-transparent text-gray-400'
                       ]"
                     >
                       Muddatli to‘lov
@@ -511,7 +511,7 @@
                       @click="paymentTab = 'cash'"
                       :class="[
                         'text-sm px-4 py-2 flex-1 font-semibold rounded-xl transition-all duration-200 border-none cursor-pointer text-center',
-                        paymentTab === 'cash' ? 'bg-white text-neutral-900 shadow-sm' : 'bg-transparent text-neutral-500'
+                        paymentTab === 'cash' ? 'bg-white text-gray-900 shadow-sm rounded-lg' : 'bg-transparent text-gray-400'
                       ]"
                     >
                       Naqd to‘lov
@@ -522,7 +522,7 @@
                   <div v-if="paymentTab === 'installment'" class="flex justify-between items-end gap-4 w-full pt-1">
                     <div>
                       <p class="text-xs text-neutral-400 font-normal m-0 mb-1.5">Muddatli to'lov</p>
-                      <div class="inline-flex bg-[#ECECEF] rounded-xl p-1 gap-1">
+                      <div class="relative inline-flex bg-secondary-300 rounded-xl p-1">
                         <button
                           v-for="m in installmentMonths"
                           :key="m"
@@ -593,7 +593,7 @@
             </div>
 
             <!-- Empty State (Screenshot 2) -->
-            <div v-if="displayReviews.length === 0" class="w-full bg-[#f1f1f1] rounded-3xl p-10 flex flex-col items-center justify-center gap-3">
+            <div v-if="displayReviews.length === 0" class="w-full bg-white border border-neutral-100 rounded-3xl p-10 flex flex-col items-center justify-center gap-3">
               <div class="w-14 h-14 rounded-full bg-white flex items-center justify-center text-neutral-400 shadow-xs">
                 <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
@@ -608,7 +608,7 @@
                 <div
                   v-for="(r, ri) in displayReviews"
                   :key="'rev-card-' + ri"
-                  class="bg-[#f1f1f1] rounded-3xl p-5 flex flex-col justify-between gap-3 border border-neutral-100/60"
+                  class="bg-white rounded-3xl p-5 flex flex-col justify-between gap-3 border border-neutral-100"
                 >
                   <div>
                     <div class="flex items-center gap-3 mb-2">
@@ -644,7 +644,7 @@
           <!-- ====== SECTION 2: MAHSULOT HAQIDA (Piyola Market 1:1 Desktop) ====== -->
           <section class="mt-4">
             <h2 class="text-xl font-bold text-neutral-900 mb-3 m-0">Mahsulot haqida</h2>
-            <div class="bg-[#f1f1f1] rounded-3xl p-6 relative">
+            <div class="bg-white border border-neutral-100 rounded-3xl p-6 relative">
               <div
                 class="kb-prose text-sm text-neutral-700 leading-relaxed transition-all"
                 :class="isDescExpanded ? '' : 'line-clamp-3'"
