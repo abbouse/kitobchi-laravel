@@ -99,16 +99,16 @@
         </div>
 
         <!-- If cart has items (Piyola Market 1:1 Desktop Grid) -->
-        <div v-if="cartStore.items.length > 0" class="flex flex-col gap-4 md:grid md:grid-cols-[1fr_380px] md:gap-6 md:items-start min-h-[calc(100dvh-140px)]">
+        <div v-if="cartStore.items.length > 0" class="flex flex-col lg:flex-row gap-5 min-h-[calc(100dvh-140px)]">
           <!-- Chap ustun (Mahsulotlar ro'yxati) -->
-          <div class="flex flex-col gap-3 min-w-0">
+          <div class="md:p-6 rounded-3xl bg-secondary-50 flex-1 space-y-4 min-w-0">
             <!-- Items Cards List (Piyola 1:1) -->
             <div
               v-for="item in cartStore.items"
               :key="item.id"
-              class="rounded-3xl p-5 md:p-6 bg-white flex flex-col justify-between shadow-xs border border-neutral-100/80 relative"
+              class="rounded-[20px] p-4 bg-white flex gap-4 transition-colors relative shadow-sm border border-neutral-100/50"
             >
-              <div class="w-full flex gap-4 items-start">
+              <div class="pt-1 flex-shrink-0">
                 <!-- Checkbox -->
                 <button
                   type="button"
@@ -120,17 +120,20 @@
                   <svg v-if="item.selected" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M20 6L9 17l-5-5"/></svg>
                 </button>
 
+              </div>
+              <div class="flex gap-3 flex-1 overflow-hidden">
                 <!-- Product Image -->
-                <NuxtLink :to="productUrl(item)" class="block w-20 h-24 rounded-2xl overflow-hidden bg-[#F6F6F9] shrink-0 p-1 flex items-center justify-center">
+                <NuxtLink :to="productUrl(item)" class="block w-[100px] h-[133px] rounded-xl overflow-hidden bg-[#F6F6F9] shrink-0 p-1 flex items-center justify-center">
                   <img :src="item.image" :alt="item.name" class="w-full h-full object-contain" />
                 </NuxtLink>
 
                 <!-- Title & Actions on Right -->
                 <div class="flex flex-col justify-between flex-1 min-w-0">
-                  <div class="flex justify-between items-start gap-4">
-                    <NuxtLink :to="productUrl(item)" class="text-sm font-semibold text-neutral-900 line-clamp-2 hover:underline">
-                      {{ item.name }}
-                    </NuxtLink>
+                  <div class="space-y-2">
+                    <div class="flex justify-between items-start gap-4">
+                      <NuxtLink :to="productUrl(item)" class="text-sm font-semibold text-neutral-900 line-clamp-2 hover:underline">
+                        {{ item.name }}
+                      </NuxtLink>
 
                     <!-- Heart & Trash Quick Actions (Piyola 1:1) -->
                     <div class="flex items-center gap-2 shrink-0">
@@ -153,8 +156,11 @@
                     </div>
                   </div>
 
+                    </div>
+                  </div>
+
                   <!-- Bottom Row: Price & Stepper -->
-                  <div class="flex items-center justify-between gap-4 pt-3">
+                  <div class="flex items-center justify-between md:justify-end gap-6 pt-2">
                     <span class="text-lg font-bold text-neutral-900">
                       {{ formatPrice(item.price * item.quantity) }} so'm
                     </span>
@@ -187,9 +193,9 @@
           </div>
 
           <!-- ====== O'NG USTUN: Promokod + Buyurtma xulosasi + Muddatli to'lov + Rasmiylashtirish (Piyola 1:1) ====== -->
-          <div class="flex flex-col gap-4 md:sticky md:top-6">
+          <div class="flex flex-col gap-4 lg:w-[400px] shrink-0 h-fit space-y-2 md:sticky md:top-6">
             <!-- Promokod va Buyurtma xulosasi kartasi -->
-            <div class="p-6 bg-white rounded-3xl shadow-xs border border-neutral-100/80 space-y-4">
+            <div class="p-6 bg-white rounded-3xl shadow-sm border border-neutral-100/50 space-y-4">
               <div>
                 <input
                   v-model="promoCode"

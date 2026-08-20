@@ -44,7 +44,7 @@
       </div>
 
       <!-- Grid (If has favorites) -->
-      <div v-if="favStore.items.length > 0" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-3 lg:gap-5 mb-10">
+      <div v-if="favStore.items.length > 0" class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-2 md:gap-3 lg:gap-5 mb-10">
         <ProductCard
           v-for="item in favStore.items"
           :key="item.productId"
