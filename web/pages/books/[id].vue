@@ -359,12 +359,9 @@
                         <div
                           v-for="(img, idx) in galleryImages"
                           :key="'desk-main-' + idx"
-                          :class="[
-                            'min-w-0 shrink-0 ps-4 snap-center flex h-full items-center justify-center',
-                            galleryImages.length > 1 ? 'basis-full xl:basis-1/2' : 'basis-full'
-                          ]"
+                          class="min-w-0 shrink-0 ps-4 snap-center flex h-full items-center justify-center basis-full"
                         >
-                          <div class="w-full h-[460px] lg:h-[500px] xl:h-[520px] rounded-3xl overflow-hidden bg-[#f1f1f1] flex items-center justify-center relative p-4">
+                          <div class="w-full h-[460px] lg:h-[500px] xl:h-[520px] rounded-3xl overflow-hidden bg-white flex items-center justify-center relative p-4">
                             <img
                               :src="img"
                               :alt="product.name"

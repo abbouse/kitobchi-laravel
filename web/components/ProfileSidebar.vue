@@ -1,6 +1,6 @@
 <template>
-  <div class="hidden lg:block w-100 shrink-0">
-    <div class="bg-secondary-50 rounded-3xl p-4 md:p-6 border border-neutral-100 sticky top-24 flex flex-col gap-4">
+  <div class="hidden lg:block w-[400px] shrink-0">
+    <div class="bg-white rounded-[24px] p-4 md:p-6 border border-transparent sticky top-24 flex flex-col gap-4">
       <div class="flex items-center gap-3 pb-4 border-b border-neutral-100">
         <div class="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center text-lg font-bold shrink-0">
           {{ initial }}
