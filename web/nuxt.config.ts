@@ -21,7 +21,9 @@ export default defineNuxtConfig({
     '/contacts': { prerender: true },
     '/privacy': { prerender: true },
     '/faq': { prerender: true },
-    '/legal/**': { swr: 300 }
+    '/legal/**': { swr: 300 },
+    '/sitemap.xml': { swr: 3600 },
+    '/google-merchant.xml': { swr: 3600 }
   },
 
   runtimeConfig: {

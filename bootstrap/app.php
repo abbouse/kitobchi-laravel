@@ -1,5 +1,9 @@
 <?php
 
+if (!trait_exists('Laravel\Scout\Searchable', false)) {
+    eval('namespace Laravel\Scout { trait Searchable {} }');
+}
+
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;

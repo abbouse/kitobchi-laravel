@@ -31,9 +31,21 @@ export const useCartStore = defineStore('cart', () => {
     return selectedItems.value.reduce((sum, item) => sum + item.price * item.quantity, 0)
   })
 
+  const totalDiscount = computed(() => {
+    return selectedItems.value.reduce((sum, item) => {
+      const diff = (item.originalPrice || item.price) - item.price
+      return sum + (diff > 0 ? diff * item.quantity : 0)
+    }, 0)
+  })
+
   const isAllSelected = computed(() => {
     return items.value.length > 0 && items.value.every(item => item.selected)
   })
+
+  function isSelected(id: number): boolean {
+    const item = items.value.find(i => i.id === id)
+    return item ? Boolean(item.selected) : false
+  }
 
   function addItem(product: any, type: 'book' | 'stationery' = 'book', quantity = 1) {
     const existing = items.value.find(i => i.productId === product.id && i.type === type)
@@ -102,7 +114,9 @@ export const useCartStore = defineStore('cart', () => {
     selectedItems,
     selectedCount,
     totalAmount,
+    totalDiscount,
     isAllSelected,
+    isSelected,
     addItem,
     updateQuantity,
     removeItem,

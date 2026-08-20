@@ -147,9 +147,22 @@
                   <span class="absolute top-1 bg-white w-5 h-5 rounded-full transition-all shadow-sm" :class="isInstallmentActive ? 'left-8' : 'left-1'"></span>
                 </button>
               </div>
-              <div class="text-neutral-500 text-sm max-md:hidden mt-2 mb-4">Muddatli to'lovni yoqish orqali xaridingizni qismlarga bo'ling</div>
+              <div v-if="isInstallmentActive" class="space-y-3 max-md:hidden mt-3 pt-3 border-t border-neutral-100">
+                <div class="flex justify-between items-center text-sm">
+                  <span class="text-neutral-500">Oylik to'lov</span>
+                  <span class="text-primary font-bold text-base">{{ formatPrice(Math.round((cartStore.totalAmount - cartStore.totalDiscount) / installmentMonths * 1.15)) }} so'm <span class="text-neutral-400 font-normal text-xs"> × {{ installmentMonths }} oy</span></span>
+                </div>
+                <div class="flex gap-2">
+                  <button @click="installmentMonths = 6" type="button" class="py-2 px-4 rounded-[40px] text-sm font-medium transition-all duration-200 border-none cursor-pointer" :class="installmentMonths === 6 ? 'bg-primary text-white' : 'bg-[#F8F8F8] text-primary hover:bg-neutral-100'">
+                    6 oy
+                  </button>
+                  <button @click="installmentMonths = 12" type="button" class="py-2 px-4 rounded-[40px] text-sm font-medium transition-all duration-200 border-none cursor-pointer" :class="installmentMonths === 12 ? 'bg-primary text-white' : 'bg-[#F8F8F8] text-primary hover:bg-neutral-100'">
+                    12 oy
+                  </button>
+                </div>
+              </div>
               
-              <button @click="$router.push('/checkout')" :disabled="cartStore.selectedCount === 0" type="button" class="inline-flex items-center justify-center transition-colors px-2.5 py-1.5 gap-1.5 hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed outline-none w-full bg-primary text-white rounded-2xl h-14 text-base font-bold border-none cursor-pointer shadow-sm">
+              <button @click="$router.push('/checkout')" :disabled="cartStore.selectedCount === 0" type="button" class="inline-flex items-center justify-center transition-colors px-2.5 py-1.5 gap-1.5 hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed outline-none w-full bg-primary text-white rounded-2xl h-14 text-base font-bold border-none cursor-pointer shadow-sm mt-3">
                 Rasmiylashtirishga o'tish <svg class="w-5 h-5 ml-1 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
               </button>
             </div>
@@ -168,6 +181,7 @@ import { useCartStore } from '~/stores/cart'
 const cartStore = useCartStore()
 const promoCode = ref('')
 const isInstallmentActive = ref(false)
+const installmentMonths = ref(12)
 
 const isAllSelected = computed(() => {
   return cartStore.items.length > 0 && cartStore.selectedItems.length === cartStore.items.length

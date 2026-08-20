@@ -781,59 +781,65 @@ class ProductCatalogController extends Controller
 
     public function sitemap()
     {
-        try {
-            $books = $this->visibleBooks()
-                ->select('id', 'name', 'updated_at')
-                ->orderByDesc('updated_at')
-                ->take(10000)
-                ->get();
+        $xml = \Illuminate\Support\Facades\Cache::remember('seo_sitemap_xml', 86400, function () {
+            try {
+                $books = $this->visibleBooks()
+                    ->select('id', 'name', 'updated_at')
+                    ->orderByDesc('updated_at')
+                    ->take(10000)
+                    ->get();
 
-            $stationeries = $this->visibleStationeries()
-                ->select('id', 'name', 'updated_at')
-                ->orderByDesc('updated_at')
-                ->take(5000)
-                ->get();
+                $stationeries = $this->visibleStationeries()
+                    ->select('id', 'name', 'updated_at')
+                    ->orderByDesc('updated_at')
+                    ->take(5000)
+                    ->get();
 
-            $bookCategories = \App\Models\BookCategories::where('is_active', true)
-                ->select('id', 'slug', 'updated_at')
-                ->get();
+                $bookCategories = \App\Models\BookCategories::where('is_active', true)
+                    ->select('id', 'slug', 'updated_at')
+                    ->get();
 
-            $stationeryCategories = \App\Models\StationeryCategory::where('is_active', true)
-                ->select('id', 'slug', 'updated_at')
-                ->get();
+                $stationeryCategories = \App\Models\StationeryCategory::where('is_active', true)
+                    ->select('id', 'slug', 'updated_at')
+                    ->get();
 
-            $policies = Policy::where('is_active', true)->get();
-        } catch (\Throwable $e) {
-            $books = collect();
-            $stationeries = collect();
-            $bookCategories = collect();
-            $stationeryCategories = collect();
-            $policies = collect();
-        }
+                $policies = Policy::where('is_active', true)->get();
+            } catch (\Throwable $e) {
+                $books = collect();
+                $stationeries = collect();
+                $bookCategories = collect();
+                $stationeryCategories = collect();
+                $policies = collect();
+            }
 
-        return response()
-            ->view('seo.sitemap', compact('books', 'stationeries', 'bookCategories', 'stationeryCategories', 'policies'))
-            ->header('Content-Type', 'text/xml');
+            return view('seo.sitemap', compact('books', 'stationeries', 'bookCategories', 'stationeryCategories', 'policies'))->render();
+        });
+
+        return response($xml, 200)
+            ->header('Content-Type', 'text/xml; charset=utf-8');
     }
 
     public function googleMerchantFeed()
     {
-        try {
-            $books = $this->visibleBooks(['publisher', 'category'])
-                ->take(5000)
-                ->get();
+        $xml = \Illuminate\Support\Facades\Cache::remember('seo_google_merchant_xml', 86400, function () {
+            try {
+                $books = $this->visibleBooks(['publisher', 'category'])
+                    ->take(5000)
+                    ->get();
 
-            $stationeries = $this->visibleStationeries(['category'])
-                ->take(2000)
-                ->get();
-        } catch (\Throwable $e) {
-            $books = collect();
-            $stationeries = collect();
-        }
+                $stationeries = $this->visibleStationeries(['category'])
+                    ->take(2000)
+                    ->get();
+            } catch (\Throwable $e) {
+                $books = collect();
+                $stationeries = collect();
+            }
 
-        return response()
-            ->view('seo.google-merchant', compact('books', 'stationeries'))
-            ->header('Content-Type', 'text/xml');
+            return view('seo.google-merchant', compact('books', 'stationeries'))->render();
+        });
+
+        return response($xml, 200)
+            ->header('Content-Type', 'text/xml; charset=utf-8');
     }
 
     public function robots()

@@ -594,11 +594,15 @@
                     <button
                       type="button"
                       @click="handleAddToCart"
-                      class="font-medium inline-flex items-center text-base gap-2 text-primary bg-primary/10 hover:bg-primary/15 active:bg-primary/15 p-2 h-12 px-3 rounded-2xl border-none cursor-pointer transition-colors shrink-0"
-                      aria-label="Savatga qo'shish"
+                      class="font-medium inline-flex items-center text-base gap-2 p-2 h-12 px-3 rounded-2xl border-none cursor-pointer transition-all shrink-0"
+                      :class="isAdded ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100' : 'text-primary bg-primary/10 hover:bg-primary/15 active:bg-primary/15'"
+                      :aria-label="isAdded ? 'Savatda' : 'Savatga qo\'shish'"
                     >
-                      <svg class="w-6 h-6 shrink-0 fill-current" viewBox="0 0 20 20">
+                      <svg v-if="!isAdded" class="w-6 h-6 shrink-0 fill-current" viewBox="0 0 20 20">
                         <path d="M3 1a1 1 0 0 0 0 2h1.22l.305 1.222l.01.042l1.358 5.43l-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 0 0 0-2H6.414l1-1H14a1 1 0 0 0 .894-.553l3-6A1 1 0 0 0 17 3H6.28l-.31-1.243A1 1 0 0 0 5 1zm13 15.5a1.5 1.5 0 1 1-3 0a1.5 1.5 0 0 1 3 0M6.5 18a1.5 1.5 0 1 0 0-3a1.5 1.5 0 0 0 0 3"/>
+                      </svg>
+                      <svg v-else class="w-6 h-6 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd" />
                       </svg>
                     </button>
                   </div>

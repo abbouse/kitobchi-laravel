@@ -53,7 +53,7 @@
           </div>
           <h2 class="text-2xl font-bold text-neutral-900 mb-2 m-0">Avtorizatsiya</h2>
           <p class="text-neutral-500 mb-8 max-w-xs text-center m-0">Shaxsiy kabinetga kirish uchun tizimga kiring</p>
-          <button @click="$router.push('/login')" class="inline-flex items-center px-8 py-3.5 rounded-2xl bg-primary text-white font-bold text-sm hover:bg-primary/90 transition-colors border-none cursor-pointer">
+          <button @click="authStore.openAuthModal()" class="inline-flex items-center px-8 py-3.5 rounded-2xl bg-primary text-white font-bold text-sm hover:bg-primary/90 transition-colors border-none cursor-pointer">
             Kirish
           </button>
         </div>
@@ -64,7 +64,75 @@
           <div class="w-full">
             <div class="max-md:min-h-dvh flex flex-col max-md:pb-2">
               <div class="p-4 md:p-6 rounded-3xl bg-secondary-50">
+                <!-- Tabs: Faol / Tugallangan -->
+                <div class="flex items-center gap-2 mb-5">
+                  <button
+                    v-for="tab in ORDER_TABS"
+                    :key="tab.value"
+                    type="button"
+                    @click="activeTab = tab.value"
+                    class="font-medium items-center transition-colors py-1.5 text-sm gap-1.5 h-10 flex justify-center rounded-xl px-4 border-none cursor-pointer"
+                    :class="activeTab === tab.value ? 'bg-primary text-white' : 'bg-white text-neutral-500 hover:text-neutral-900'"
+                  >
+                    {{ tab.label }}
+                  </button>
+                </div>
 
+                <!-- Loading -->
+                <div v-if="pending" class="flex flex-col gap-3">
+                  <div v-for="n in 3" :key="n" class="bg-white rounded-2xl p-4 animate-pulse">
+                    <div class="h-4 bg-neutral-100 rounded w-1/3 mb-3"></div>
+                    <div class="h-4 bg-neutral-100 rounded w-1/2"></div>
+                  </div>
+                </div>
+
+                <!-- Error -->
+                <div v-else-if="loadError" class="flex flex-col items-center py-12 text-center">
+                  <p class="text-neutral-500 mb-4">Buyurtmalarni yuklashda xatolik yuz berdi</p>
+                  <button @click="fetchOrders(1)" type="button" class="text-primary font-medium border-none bg-transparent cursor-pointer">Qayta urinish</button>
+                </div>
+
+                <!-- Empty -->
+                <div v-else-if="filteredOrders.length === 0" class="flex flex-col items-center py-16 text-center">
+                  <div class="w-20 h-20 bg-white rounded-full flex items-center justify-center mb-4">
+                    <svg class="w-10 h-10 text-neutral-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m-.75 11.25h9a2.25 2.25 0 002.25-2.25l-.75-9a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25l-.75 9a2.25 2.25 0 002.25 2.25z"/></svg>
+                  </div>
+                  <p class="text-neutral-500 font-medium">Buyurtmalar yo'q</p>
+                </div>
+
+                <!-- Orders list -->
+                <div v-else class="flex flex-col gap-3">
+                  <div
+                    v-for="order in filteredOrders"
+                    :key="order.id"
+                    class="bg-white rounded-2xl p-4 flex flex-col gap-3"
+                  >
+                    <div class="flex items-center justify-between gap-2">
+                      <span class="text-neutral-500 text-sm">№ {{ order.id }}</span>
+                      <span
+                        class="text-xs font-semibold px-3 py-1 rounded-full"
+                        :class="statusBadgeClass(order)"
+                      >{{ statusLabel(order) }}</span>
+                    </div>
+                    <div class="flex items-center justify-between gap-2">
+                      <span class="text-neutral-500 text-sm">{{ formatOrderDate(order) }}</span>
+                      <span class="text-neutral-900 font-bold text-base">{{ formatPrice(orderTotal(order)) }} so'm</span>
+                    </div>
+                    <div class="text-neutral-400 text-sm">{{ orderItemCount(order) }} ta mahsulot</div>
+                  </div>
+
+                  <!-- Load more -->
+                  <div v-if="meta && meta.current_page < meta.last_page" class="flex justify-center mt-2">
+                    <button
+                      @click="loadMore"
+                      :disabled="loadingMore"
+                      type="button"
+                      class="font-medium items-center transition-colors py-1.5 text-sm gap-1.5 text-primary bg-primary/10 hover:bg-primary/15 h-10 flex justify-center rounded-xl px-6 border-none cursor-pointer disabled:opacity-60"
+                    >
+                      {{ loadingMore ? 'Yuklanmoqda...' : 'Ko\'proq ko\'rsatish' }}
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
