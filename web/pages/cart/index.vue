@@ -78,7 +78,7 @@
                   <div class="flex flex-col justify-between flex-1 min-w-0">
                     <div class="space-y-2">
                       <div class="flex justify-between items-start gap-4">
-                        <NuxtLink :to="item.type === 'book' ? `/books/${item.id}` : `/stationery/${item.id}`" class="text-sm md:text-sm leading-5 font-normal lg:max-w-[70%] line-clamp-2 text-neutral-900 no-underline hover:text-primary transition-colors">
+                        <NuxtLink :to="item.type === 'book' ? `/books/${item.slug || item.productId || item.id}` : `/stationery/${item.slug || item.productId || item.id}`" class="text-sm md:text-sm leading-5 font-normal lg:max-w-[70%] line-clamp-2 text-neutral-900 no-underline hover:text-primary transition-colors">
                           {{ item.name }}
                         </NuxtLink>
                         <div class="flex shrink-0">
@@ -123,7 +123,7 @@
               <div class="space-y-4 pt-2">
                 <div class="flex justify-between text-neutral-500 text-sm md:text-base">
                   <span>{{ cartStore.selectedCount }} ta mahsulot</span>
-                  <span class="font-medium text-neutral-900">{{ formatPrice(cartStore.totalAmount) }} so'm</span>
+                  <span class="font-medium text-neutral-900">{{ formatPrice(cartStore.originalTotalAmount) }} so'm</span>
                 </div>
                 <div v-if="cartStore.totalDiscount > 0" class="flex justify-between text-neutral-500 text-sm md:text-base">
                   <span>Chegirma</span>
@@ -136,7 +136,7 @@
               </div>
               <div class="flex justify-between items-center bg-white pt-2 border-t border-neutral-100">
                 <span class="text-xl font-bold text-neutral-900">Jami</span>
-                <span class="text-xl font-bold text-neutral-900">{{ formatPrice(cartStore.totalAmount - cartStore.totalDiscount) }} so'm</span>
+                <span class="text-xl font-bold text-neutral-900">{{ formatPrice(cartStore.totalAmount) }} so'm</span>
               </div>
             </div>
 
@@ -150,7 +150,7 @@
               <div v-if="isInstallmentActive" class="space-y-3 max-md:hidden mt-3 pt-3 border-t border-neutral-100">
                 <div class="flex justify-between items-center text-sm">
                   <span class="text-neutral-500">Oylik to'lov</span>
-                  <span class="text-primary font-bold text-base">{{ formatPrice(Math.round((cartStore.totalAmount - cartStore.totalDiscount) / installmentMonths * 1.15)) }} so'm <span class="text-neutral-400 font-normal text-xs"> × {{ installmentMonths }} oy</span></span>
+                  <span class="text-primary font-bold text-base">{{ formatPrice(Math.round(cartStore.totalAmount / installmentMonths * 1.15)) }} so'm <span class="text-neutral-400 font-normal text-xs"> × {{ installmentMonths }} oy</span></span>
                 </div>
                 <div class="flex gap-2">
                   <button @click="installmentMonths = 6" type="button" class="py-2 px-4 rounded-[40px] text-sm font-medium transition-all duration-200 border-none cursor-pointer" :class="installmentMonths === 6 ? 'bg-primary text-white' : 'bg-[#F8F8F8] text-primary hover:bg-neutral-100'">

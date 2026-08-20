@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 export interface CartItem {
   id: number
   productId: number
+  slug?: string
   type: 'book' | 'stationery'
   name: string
   price: number
@@ -25,6 +26,10 @@ export const useCartStore = defineStore('cart', () => {
 
   const selectedCount = computed(() => {
     return selectedItems.value.reduce((sum, item) => sum + item.quantity, 0)
+  })
+
+  const originalTotalAmount = computed(() => {
+    return selectedItems.value.reduce((sum, item) => sum + (item.originalPrice || item.price) * item.quantity, 0)
   })
 
   const totalAmount = computed(() => {
@@ -62,6 +67,7 @@ export const useCartStore = defineStore('cart', () => {
       items.value.push({
         id: Date.now() + Math.random(),
         productId: product.id,
+        slug: product.slug || `${product.id}`,
         type,
         name: product.name,
         price: Number(currentPrice),
@@ -113,6 +119,7 @@ export const useCartStore = defineStore('cart', () => {
     totalCount,
     selectedItems,
     selectedCount,
+    originalTotalAmount,
     totalAmount,
     totalDiscount,
     isAllSelected,
