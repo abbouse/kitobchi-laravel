@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col min-h-dvh bg-secondary-300 md:bg-gray-50 grow py-3 md:py-6">
+  <div class="flex flex-col min-h-dvh bg-[#f1f1f1] grow py-3 md:py-6">
     <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto space-y-2">
       <!-- Breadcrumb (Desktop) -->
       <div class="flex items-center gap-2 mb-4 max-md:hidden">
