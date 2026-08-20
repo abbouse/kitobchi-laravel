@@ -128,10 +128,11 @@
               {{ loadingMore ? 'Yuklanmoqda...' : 'Yana yuklash' }}
             </button>
           </div>
-        </div>
-      </div>
-    </div>
-  </div>
+</div>
+</div>
+</div>
+</div>
+
 </template>
 
 <script setup lang="ts">

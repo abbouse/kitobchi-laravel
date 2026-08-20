@@ -1,287 +1,165 @@
 <template>
-  <div class="py-3 md:py-6 min-h-dvh bg-white md:bg-transparent grow">
-    <!-- ====== MOBILE STICKY TOP BAR ====== -->
-    <div class="md:hidden py-3 rounded-b-2xl mb-4 bg-white sticky top-0 z-40 transition-all duration-300 shadow-sm">
-      <div class="px-4 sm:px-6 lg:px-8 w-full mx-auto">
-        <div class="grid grid-cols-5 items-center gap-2">
-          <div class="col-span-1">
-            <button
-              type="button"
-              @click="$router.back()"
-              class="relative overflow-hidden transition-shadow duration-300 rounded-full hover:shadow-sm h-11 w-11 flex items-center justify-center p-0 cursor-pointer border-none bg-secondary-100 text-primary"
-            >
-              <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
-            </button>
-          </div>
-          <div class="col-span-3">
-            <h1 class="text-xl sm:text-2xl text-primary font-semibold text-center m-0">Ma'lumotlarim</h1>
-          </div>
-          <div class="col-span-1 flex justify-end"></div>
+  <div class="w-full">
+    <div class="max-md:min-h-dvh flex flex-col max-md:pb-2">
+      <div class="p-4 md:p-6 rounded-3xl bg-secondary-50">
+        
+        <div class="mb-4 flex items-center justify-between">
+          <h2 class="text-primary text-xl font-bold m-0">Ma'lumotlarim</h2>
+          <button @click="openEditModal" type="button" class="font-medium items-center transition-colors py-1.5 text-sm gap-1.5 text-primary bg-primary/10 hover:bg-primary/15 outline-primary/25 border-none cursor-pointer h-10 rounded-xl px-4 flex justify-center sm:min-w-40">
+            <svg class="shrink-0 size-5" viewBox="0 0 24 24" fill="currentColor"><path d="M21.731 2.269a2.625 2.625 0 00-3.712 0l-1.157 1.158 3.712 3.712 1.158-1.157a2.625 2.625 0 000-3.712zM19.513 8.199l-3.712-3.712-8.4 8.4a5.25 5.25 0 00-1.32 2.214l-.8 2.685a.75.75 0 00.933.933l2.685-.8a5.25 5.25 0 002.214-1.32l8.4-8.4z"/><path d="M5.25 5.25a3 3 0 00-3 3v10.5a3 3 0 003 3h10.5a3 3 0 003-3V13.5a.75.75 0 00-1.5 0v5.25a1.5 1.5 0 01-1.5 1.5H5.25a1.5 1.5 0 01-1.5-1.5V8.25a1.5 1.5 0 011.5-1.5h5.25a.75.75 0 000-1.5H5.25z"/></svg>
+            <span class="truncate">Tahrirlash</span>
+          </button>
         </div>
-      </div>
-    </div>
 
-    <div class="px-4 sm:px-6 lg:px-8 w-full max-w-[--ui-container] mx-auto">
-      <!-- Breadcrumb (Desktop) -->
-      <div class="flex items-center gap-2 mb-6 max-md:hidden">
-        <NuxtLink to="/profile" class="font-medium inline-flex items-center text-base gap-2 text-primary p-2 rounded-full hover:bg-primary/10 transition-colors border-none bg-transparent cursor-pointer">
-          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
-        </NuxtLink>
-        <nav class="flex items-center gap-2 text-sm text-neutral-500">
-          <NuxtLink to="/" class="hover:text-neutral-900 transition-colors no-underline">Asosiy</NuxtLink>
-          <span class="text-gray-300">/</span>
-          <NuxtLink to="/profile" class="hover:text-neutral-900 transition-colors no-underline">Profil</NuxtLink>
-          <span class="text-gray-300">/</span>
-          <span class="text-neutral-900 font-medium">Ma'lumotlarim</span>
-        </nav>
-      </div>
-
-      <!-- Auth Gate -->
-      <div v-if="!authStore.isAuthenticated" class="text-center py-20 bg-secondary-50 rounded-3xl p-8">
-        <h2 class="text-2xl font-bold text-neutral-800 mb-2">Tizimga kiring</h2>
-        <p class="text-sm text-neutral-500 mb-6 max-w-sm mx-auto">Shaxsiy ma'lumotlaringizni ko'rish uchun tizimga kiring.</p>
-        <button
-          type="button"
-          @click="authStore.openAuthModal()"
-          class="inline-flex items-center px-8 py-3.5 rounded-2xl bg-primary text-white font-bold text-sm border-none cursor-pointer hover:bg-primary/90 transition-colors"
-        >
-          Kirish
-        </button>
-      </div>
-
-      <div v-else class="lg:flex lg:items-start lg:gap-5">
-        <!-- Desktop Sidebar -->
-        <ProfileSidebar active="info" />
-
-        <div class="flex-1 min-w-0 space-y-4">
-          <!-- Shaxsiy ma'lumotlar kartasi -->
-          <div class="bg-secondary-50 rounded-3xl p-4 sm:p-6">
-            <div class="flex items-center justify-between mb-5">
-              <h2 class="text-xl font-bold text-neutral-900 m-0">Ma'lumotlarim</h2>
-              
-              <button
-                @click="openEditModal"
-                class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white text-primary text-sm font-semibold transition-colors hover:bg-neutral-50 border-none cursor-pointer shadow-sm"
-              >
-                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg>
-                Tahrirlash
-              </button>
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              <div class="flex flex-col gap-1">
-                <span class="text-sm font-medium text-neutral-400">Ism</span>
-                <span class="text-base font-semibold text-neutral-900">{{ authStore.user?.name || 'Kiritilmagan' }}</span>
-              </div>
-              <div class="flex flex-col gap-1">
-                <span class="text-sm font-medium text-neutral-400">Familiya</span>
-                <span class="text-base font-semibold text-neutral-900">{{ userAny?.lastname || 'Kiritilmagan' }}</span>
-              </div>
-              <div class="flex flex-col gap-1">
-                <span class="text-sm font-medium text-neutral-400">Telefon raqam</span>
-                <span class="text-base font-semibold text-neutral-900">+{{ authStore.user?.phone_number || 'Kiritilmagan' }}</span>
-              </div>
-              <div class="flex flex-col gap-1">
-                <span class="text-sm font-medium text-neutral-400">Elektron pochta</span>
-                <span class="text-base font-semibold text-neutral-900 truncate">{{ userAny?.email || 'Kiritilmagan' }}</span>
-              </div>
-              <div class="flex flex-col gap-1">
-                <span class="text-sm font-medium text-neutral-400">Jins</span>
-                <span class="text-base font-semibold text-neutral-900">{{ sexLabel }}</span>
-              </div>
-              <div class="flex flex-col gap-1">
-                <span class="text-sm font-medium text-neutral-400">Tug'ilgan sana</span>
-                <span class="text-base font-semibold text-neutral-900">{{ birthdateLabel }}</span>
-              </div>
-            </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="flex flex-col">
+            <span class="text-neutral-500 flex-1 font-normal shrink-0 text-sm">To'liq ism</span>
+            <span class="flex-1 font-medium shrink-0 text-neutral-900">{{ userAny?.name || "Kiritilmagan" }}</span>
           </div>
-
-          <!-- Mening manzillarim kartasi -->
-          <div class="bg-secondary-50 rounded-3xl p-4 sm:p-6">
-            <div class="flex items-center justify-between mb-5">
-              <h2 class="text-xl font-bold text-neutral-900 m-0">Mening manzillarim</h2>
-              <button
-                type="button"
-                @click="openAddressModal"
-                class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white text-primary text-sm font-semibold transition-colors hover:bg-neutral-50 border-none cursor-pointer shadow-sm"
-              >
-                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-                Manzil qo'shish
-              </button>
-            </div>
-
-            <div v-if="addressesLoading" class="flex justify-center py-8">
-              <svg class="animate-spin h-6 w-6 text-primary" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
-              </svg>
-            </div>
-            
-            <div v-else-if="addresses.length === 0" class="flex flex-col items-center justify-center py-10 bg-white rounded-2xl border border-dashed border-neutral-200">
-              <div class="w-16 h-16 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-400 mb-3">
-                <svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg>
-              </div>
-              <p class="text-sm font-medium text-neutral-500 m-0">Hech qanday manzil qo'shilmagan</p>
-            </div>
-
-            <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div
-                v-for="loc in addresses"
-                :key="loc.id"
-                class="relative rounded-2xl p-4 bg-white border-2 transition-all group"
-                :class="mainAddressId === loc.id ? 'border-primary' : 'border-transparent'"
-              >
-                <div v-if="mainAddressId === loc.id" class="absolute top-3 right-3 text-primary bg-primary/10 px-2 py-0.5 rounded text-[10px] font-bold uppercase">
-                  Asosiy
-                </div>
-                
-                <div class="flex items-start gap-3">
-                  <div class="mt-1 text-primary shrink-0">
-                    <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg>
-                  </div>
-                  <div class="min-w-0 pr-8">
-                    <p class="text-sm font-semibold text-neutral-900 leading-snug m-0 line-clamp-2">
-                      {{ loc.fullAddress }}
-                    </p>
-                    <div class="flex items-center gap-3 mt-3">
-                      <button
-                        v-if="mainAddressId !== loc.id"
-                        @click="makeMain(loc)"
-                        class="text-xs font-semibold text-primary hover:text-primary-600 bg-transparent border-none cursor-pointer p-0"
-                      >
-                        Asosiy qilish
-                      </button>
-                      <button
-                        @click="removeAddress(loc)"
-                        class="text-xs font-semibold text-red-500 hover:text-red-700 bg-transparent border-none cursor-pointer p-0"
-                      >
-                        O'chirish
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+          <div class="flex flex-col">
+            <span class="text-neutral-500 flex-1 font-normal shrink-0 text-sm">Tug'ilgan sana</span>
+            <span class="flex-1 font-medium shrink-0 text-neutral-900">{{ userAny?.birthDate ? formatDate(userAny.birthDate) : "Kiritilmagan" }}</span>
+          </div>
+          <div class="flex flex-col">
+            <span class="text-neutral-500 flex-1 font-normal shrink-0 text-sm">Jins</span>
+            <span class="flex-1 font-medium shrink-0 text-neutral-900">{{ userAny?.gender === 'female' ? 'Ayol' : (userAny?.gender === 'male' ? 'Erkak' : 'Kiritilmagan') }}</span>
+          </div>
+          <div class="flex flex-col">
+            <span class="text-neutral-500 flex-1 font-normal shrink-0 text-sm">Telefon raqam</span>
+            <span class="flex-1 font-medium shrink-0 text-neutral-900">{{ formatPhone(userAny?.phone) || "Kiritilmagan" }}</span>
+          </div>
+          <div class="flex flex-col">
+            <span class="text-neutral-500 flex-1 font-normal shrink-0 text-sm">Elektron pochta</span>
+            <span class="flex-1 font-medium shrink-0 text-neutral-900">{{ userAny?.email || "Kiritilmagan" }}</span>
           </div>
         </div>
-      </div>
-    </div>
 
-    <!-- Modals -->
-    <!-- Tahrirlash Modal (Piyola 100% matched) -->
-    <UModal v-model="isEditModalOpen" :ui="{ width: 'sm:max-w-[600px]', rounded: 'rounded-3xl', background: 'bg-white' }">
-      <div class="relative bg-white rounded-3xl p-6 sm:p-8 flex flex-col">
-        <!-- Close button -->
-        <button type="button" @click="isEditModalOpen = false" class="absolute top-4 right-4 bg-[#F4F4F4] hover:bg-neutral-200 transition-colors rounded-full p-1.5 flex items-center justify-center border-none cursor-pointer">
-          <svg class="w-5 h-5 text-neutral-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-        </button>
-        
-        <h2 class="text-2xl font-bold text-neutral-900 mb-6 m-0">Profilni tahrirlash</h2>
-        
-        <form @submit.prevent="handleSaveEditModal" class="space-y-4">
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label class="block font-medium text-neutral-800 text-sm mb-1.5">Ism</label>
-              <input v-model="editForm.name" type="text" class="w-full appearance-none text-neutral-900 focus:outline-none md:text-sm text-base rounded-2xl max-md:h-12 p-3 md:p-4 bg-[#F1F2F7] border border-transparent focus:border-primary/20 transition-all">
-            </div>
-            <div>
-              <label class="block font-medium text-neutral-800 text-sm mb-1.5">Familiya</label>
-              <input v-model="editForm.lastname" type="text" class="w-full appearance-none text-neutral-900 focus:outline-none md:text-sm text-base rounded-2xl max-md:h-12 p-3 md:p-4 bg-[#F1F2F7] border border-transparent focus:border-primary/20 transition-all">
-            </div>
+        <div class="mt-8">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-bold m-0 text-neutral-900">Saqlangan manzillar</h2>
           </div>
-          
-          <div>
-            <label class="block font-medium text-neutral-800 text-sm mb-1.5">Elektron pochta</label>
-            <input v-model="editForm.email" type="email" class="w-full appearance-none text-neutral-900 focus:outline-none md:text-sm text-base rounded-2xl max-md:h-12 p-3 md:p-4 bg-[#F1F2F7] border border-transparent focus:border-primary/20 transition-all">
-          </div>
-          
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label class="block font-medium text-neutral-800 text-sm mb-1.5">Tug'ilgan sana</label>
-              <input v-model="editForm.birthdate" type="date" :max="todayIso" class="w-full appearance-none text-neutral-900 focus:outline-none md:text-sm text-base rounded-2xl max-md:h-12 p-3 md:p-4 bg-[#F1F2F7] border border-transparent focus:border-primary/20 transition-all">
-            </div>
-            <div>
-              <label class="block font-medium text-neutral-800 text-sm mb-1.5">Jins</label>
-              <div class="relative flex p-1 w-full rounded-2xl bg-[#F1F2F7] max-md:h-12 md:h-[54px]">
-                <button
-                  v-for="opt in SEX_TOGGLE_OPTIONS"
-                  :key="opt.value"
-                  type="button"
-                  @click="editForm.sex = opt.value"
-                  :class="[
-                    'flex-1 rounded-xl text-sm font-semibold transition-all border-none cursor-pointer flex items-center justify-center',
-                    editForm.sex === opt.value ? 'bg-white text-neutral-900 shadow-sm' : 'bg-transparent text-neutral-500 hover:text-neutral-700'
-                  ]"
-                >
-                  {{ opt.label }}
+
+          <!-- Addreslar ro'yxati -->
+          <div v-if="addresses.length > 0" class="space-y-4">
+            <div v-for="loc in addresses" :key="loc.id" class="rounded-[20px] bg-white p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-transparent shadow-sm">
+              <div class="flex items-start gap-4">
+                <div class="w-10 h-10 rounded-full bg-[#F6F6F9] flex items-center justify-center shrink-0">
+                  <svg class="w-5 h-5 text-neutral-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg>
+                </div>
+                <div class="flex flex-col gap-1">
+                  <p class="text-neutral-900 font-medium m-0">{{ loc.fullAddress }}</p>
+                  <span v-if="mainAddressId === loc.id" class="text-primary text-sm font-semibold">Asosiy manzil</span>
+                </div>
+              </div>
+              <div class="flex items-center gap-2 sm:shrink-0">
+                <button v-if="mainAddressId !== loc.id" @click="makeMain(loc)" class="px-4 py-2 rounded-xl bg-[#F6F6F9] hover:bg-neutral-200 text-neutral-700 text-sm font-medium transition-colors border-none cursor-pointer">Asosiy qilish</button>
+                <button @click="removeAddress(loc)" class="w-10 h-10 rounded-xl bg-[#F6F6F9] hover:bg-red-50 text-neutral-400 hover:text-red-500 transition-colors flex items-center justify-center border-none cursor-pointer">
+                  <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>
                 </button>
               </div>
             </div>
+            
+            <button @click="openAddressModal" type="button" class="mt-4 font-medium inline-flex items-center justify-center text-base gap-2 text-white bg-primary hover:bg-primary/90 transition-colors rounded-2xl h-12 px-6 border-none cursor-pointer w-full sm:w-auto shadow-sm">
+              <span class="truncate">Yangi manzil qo‘shish</span>
+            </button>
           </div>
 
-          <div v-if="editModalError" class="p-3 rounded-2xl bg-red-50 text-red-600 text-sm font-medium">
-            {{ editModalError }}
+          <!-- Bo'sh state -->
+          <div v-else class="mt-4 rounded-[20px] bg-[#F6F6F9] p-6 flex flex-col gap-3 items-center">
+            <div class="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-sm">
+              <svg class="w-10 h-10 text-neutral-400" viewBox="0 0 24 24" fill="currentColor"><path d="M11.47 3.84a.75.75 0 011.06 0l8.69 8.69a.75.75 0 101.06-1.06l-8.689-8.69a2.25 2.25 0 00-3.182 0l-8.69 8.69a.75.75 0 001.061 1.06l8.69-8.69z"/><path d="M12 5.432l8.159 8.159c.03.03.06.058.091.086v6.198c0 1.035-.84 1.875-1.875 1.875H15a.75.75 0 01-.75-.75v-4.5a.75.75 0 00-.75-.75h-3a.75.75 0 00-.75.75V21a.75.75 0 01-.75.75H5.625a1.875 1.875 0 01-1.875-1.875v-6.198a2.29 2.29 0 00.091-.086L12 5.43z"/></svg>
+            </div>
+            <h2 class="text-lg md:text-xl font-semibold text-center m-0 text-neutral-900">Saqlangan manzillar mavjud emas</h2>
+            <p class="text-sm font-normal max-w-md text-center m-0 text-neutral-500">Yetkazib berish manzilini qo‘shing</p>
+            <button @click="openAddressModal" type="button" class="mt-2 font-medium inline-flex items-center text-base gap-2 text-white bg-primary hover:bg-primary/90 transition-colors rounded-2xl h-12 px-6 border-none cursor-pointer shadow-sm">
+              <span class="truncate">Yangi manzil qo‘shish</span>
+            </button>
           </div>
+        </div>
 
-          <button
-            type="submit"
-            :disabled="savingEdit"
-            class="w-full font-bold items-center transition-colors gap-1.5 text-white bg-primary hover:bg-primary/90 h-12 md:h-14 flex justify-center rounded-2xl text-base px-6 mt-6 border-none cursor-pointer disabled:opacity-75"
-          >
-            {{ savingEdit ? 'Saqlanmoqda...' : 'Saqlash' }}
+      </div>
+    </div>
+
+    <!-- Tahrirlash Modali -->
+    <UModal v-model="isEditModalOpen" prevent-close :ui="{ base: 'sm:max-w-[600px]', rounded: 'rounded-3xl', margin: 'sm:my-8' }">
+      <div class="relative bg-white rounded-3xl overflow-hidden p-6 sm:p-8">
+        <button @click="isEditModalOpen = false" class="absolute top-4 right-4 sm:top-6 sm:right-6 w-10 h-10 rounded-full bg-[#F6F6F9] hover:bg-neutral-200 transition-colors flex items-center justify-center border-none cursor-pointer">
+          <svg class="w-5 h-5 text-neutral-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+        <h3 class="text-2xl font-bold text-center m-0 mb-8 text-neutral-900">Tahrirlash</h3>
+        <form @submit.prevent="handleSaveInfoModal" class="space-y-4">
+          <div class="space-y-1.5">
+            <label class="text-sm font-medium text-neutral-700">Ismingiz</label>
+            <input v-model="editForm.name" type="text" class="w-full appearance-none text-base text-neutral-900 focus:outline-none rounded-2xl p-4 bg-[#F1F2F7] border border-transparent focus:border-primary/20 transition-all" placeholder="Ismingizni kiriting" required>
+          </div>
+          <div class="space-y-1.5">
+            <label class="text-sm font-medium text-neutral-700">Telefon raqam</label>
+            <input v-model="editForm.phone" type="text" class="w-full appearance-none text-base text-neutral-900 focus:outline-none rounded-2xl p-4 bg-[#F1F2F7] border border-transparent focus:border-primary/20 transition-all" placeholder="+998" disabled>
+          </div>
+          <div class="space-y-1.5">
+            <label class="text-sm font-medium text-neutral-700">Tug'ilgan sana</label>
+            <input v-model="editForm.birthDate" type="date" class="w-full appearance-none text-base text-neutral-900 focus:outline-none rounded-2xl p-4 bg-[#F1F2F7] border border-transparent focus:border-primary/20 transition-all">
+          </div>
+          <div class="space-y-1.5">
+            <label class="text-sm font-medium text-neutral-700">Jinsingiz</label>
+            <div class="flex items-center gap-2 p-1 bg-[#F1F2F7] rounded-2xl">
+              <button type="button" @click="editForm.gender = 'male'" :class="editForm.gender === 'male' ? 'bg-white shadow-sm text-neutral-900' : 'text-neutral-500 hover:text-neutral-700'" class="flex-1 py-3 px-4 rounded-xl font-medium text-sm transition-all border-none cursor-pointer">
+                Erkak
+              </button>
+              <button type="button" @click="editForm.gender = 'female'" :class="editForm.gender === 'female' ? 'bg-white shadow-sm text-neutral-900' : 'text-neutral-500 hover:text-neutral-700'" class="flex-1 py-3 px-4 rounded-xl font-medium text-sm transition-all border-none cursor-pointer">
+                Ayol
+              </button>
+            </div>
+          </div>
+          
+          <button type="submit" :disabled="savingInfoModal" class="w-full font-bold items-center transition-colors gap-1.5 text-white bg-primary hover:bg-primary/90 h-12 md:h-14 flex justify-center rounded-2xl text-base px-6 mt-6 border-none cursor-pointer disabled:opacity-75 shadow-sm">
+            {{ savingInfoModal ? "Saqlanmoqda..." : "Saqlash" }}
           </button>
         </form>
       </div>
     </UModal>
 
-    <!-- Manzil Qo'shish Modal -->
-    <UModal v-model="isAddressModalOpen" :ui="{ width: 'sm:max-w-[575px]', rounded: 'rounded-3xl', background: 'bg-white' }">
-      <div class="relative bg-white rounded-3xl p-6 sm:p-8 flex flex-col">
-        <!-- Close button -->
-        <button type="button" @click="isAddressModalOpen = false" class="absolute top-4 right-4 bg-[#F4F4F4] hover:bg-neutral-200 transition-colors rounded-full p-1.5 flex items-center justify-center border-none cursor-pointer">
-          <svg class="w-5 h-5 text-neutral-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+    <!-- Manzil Qo'shish Modali -->
+    <UModal v-model="isAddressModalOpen" prevent-close :ui="{ base: 'sm:max-w-[600px]', rounded: 'rounded-3xl', margin: 'sm:my-8' }">
+      <div class="relative bg-white rounded-3xl overflow-hidden p-6 sm:p-8">
+        <button @click="isAddressModalOpen = false" class="absolute top-4 right-4 sm:top-6 sm:right-6 w-10 h-10 rounded-full bg-[#F6F6F9] hover:bg-neutral-200 transition-colors flex items-center justify-center border-none cursor-pointer">
+          <svg class="w-5 h-5 text-neutral-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
-        
-        <h2 class="text-2xl font-bold text-neutral-900 mb-6 m-0">Yangi manzil qo'shish</h2>
-
+        <h3 class="text-2xl font-bold text-center m-0 mb-8 text-neutral-900">Manzil qo'shish</h3>
         <form @submit.prevent="handleSaveAddressModal" class="space-y-4">
           
-          <div>
-            <label class="block font-medium text-neutral-800 text-sm mb-1.5">Manzil nomi (Ko'cha, uy)</label>
-            <input v-model="modalAddressText" type="text" placeholder="Navoiy ko'chasi 1-uy" class="w-full appearance-none text-neutral-900 focus:outline-none md:text-sm text-base rounded-2xl max-md:h-12 p-3 md:p-4 bg-[#F1F2F7] border border-transparent focus:border-primary/20 transition-all">
-          </div>
-
-          <!-- Joylashuvni aniqlash tugmasi -->
-          <div class="p-4 rounded-2xl bg-amber-50 flex items-start gap-3">
-            <svg class="w-6 h-6 text-amber-500 shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg>
-            <div class="flex-1 min-w-0 text-sm text-amber-800">
-              Manzilingiz xaritadagi aniq koordinatalarini olish uchun ruxsat bering:
-              <br>
-              <button
-                type="button"
-                @click="captureModalLocation"
-                :disabled="modalLocating"
-                class="mt-2 px-4 py-2 rounded-xl bg-white border border-amber-200 text-amber-700 font-semibold hover:border-amber-400 transition-colors border-none cursor-pointer shadow-sm text-xs"
-              >
-                {{ modalLocating ? 'Aniqlanmoqda...' : (modalCoords ? 'Joylashuv aniqlandi' : 'Joylashuvimni aniqlash') }}
-              </button>
-            </div>
-          </div>
-
-          <div v-if="modalGeoError" class="p-3 rounded-2xl bg-amber-100 text-amber-800 text-sm font-medium">
+          <div v-if="modalGeoError" class="p-3 bg-red-50 text-red-600 rounded-xl text-sm font-medium text-center">
             {{ modalGeoError }}
           </div>
-
-          <div v-if="modalAddressError" class="p-3 rounded-2xl bg-red-50 text-red-600 text-sm font-medium">
+          <div v-if="modalAddressError" class="p-3 bg-red-50 text-red-600 rounded-xl text-sm font-medium text-center">
             {{ modalAddressError }}
           </div>
 
-          <button
-            type="submit"
-            :disabled="!modalAddressText.trim() || savingModalAddress"
-            class="w-full font-bold items-center transition-colors gap-1.5 text-white bg-primary hover:bg-primary/90 h-12 md:h-14 flex justify-center rounded-2xl text-base px-6 mt-6 border-none cursor-pointer disabled:opacity-75"
-          >
-            {{ savingModalAddress ? 'Qo\'shilmoqda...' : 'Qo\'shish' }}
+          <div class="space-y-1.5">
+            <label class="text-sm font-medium text-neutral-700">Joylashuv</label>
+            <div class="flex items-center gap-2 p-1 bg-[#FFF9E5] rounded-2xl border border-yellow-200/50 relative">
+              <div class="flex items-center px-4 py-3 gap-3 w-full">
+                <div class="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center shrink-0">
+                  <svg class="w-5 h-5 text-yellow-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg>
+                </div>
+                <div class="flex flex-col flex-1">
+                  <span class="text-sm font-semibold text-neutral-900">Joylashuvni aniqlash</span>
+                  <span class="text-xs text-neutral-500">{{ modalCoords ? 'Joylashuv olindi' : 'Lokatsiyangizni yuboring' }}</span>
+                </div>
+                <button type="button" @click="captureModalLocation" :disabled="modalLocating" class="bg-white text-neutral-900 text-sm font-semibold px-4 py-2 rounded-xl shadow-sm border-none cursor-pointer hover:bg-neutral-50 transition-colors disabled:opacity-50">
+                  {{ modalLocating ? '...' : 'Aniqlash' }}
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <div class="space-y-1.5 pt-2">
+            <label class="text-sm font-medium text-neutral-700">To'liq manzil</label>
+            <input v-model="modalAddressText" type="text" class="w-full appearance-none text-base text-neutral-900 focus:outline-none rounded-2xl p-4 bg-[#F1F2F7] border border-transparent focus:border-primary/20 transition-all" placeholder="Toshkent shahar, Yunusobod tumani..." required>
+          </div>
+          
+          <button type="submit" :disabled="!modalAddressText.trim() || savingModalAddress" class="w-full font-bold items-center transition-colors gap-1.5 text-white bg-primary hover:bg-primary/90 h-12 md:h-14 flex justify-center rounded-2xl text-base px-6 mt-6 border-none cursor-pointer disabled:opacity-75 shadow-sm">
+            {{ savingModalAddress ? "Qo'shilmoqda..." : "Qo'shish" }}
           </button>
         </form>
       </div>
@@ -289,93 +167,62 @@
   </div>
 </template>
 
-
 <script setup lang="ts">
 import { useAuthStore } from '~/stores/auth'
 
-const authStore = useAuthStore()
 const config = useRuntimeConfig()
+const authStore = useAuthStore()
 
 const userAny = computed(() => authStore.user as any)
 
-const SEX_OPTIONS = [
-  { value: '', label: "Ko'rsatilmagan" },
-  { value: 'erkak', label: 'Erkak' },
-  { value: 'ayol', label: 'Ayol' },
-]
+function formatDate(dStr: string) {
+  if (!dStr) return ''
+  const d = new Date(dStr)
+  return d.toLocaleDateString('ru-RU')
+}
 
-// Desktop modaldagi tab-tugma uchun — piyoladagi kabi bo'sh variantsiz,
-// faqat Erkak/Ayol.
-const SEX_TOGGLE_OPTIONS = SEX_OPTIONS.filter(o => o.value)
+function formatPhone(phone: string) {
+  if (!phone) return ''
+  return phone
+}
 
-const sexLabel = computed(() => {
-  const found = SEX_OPTIONS.find(o => o.value === (userAny.value?.sex || ''))
-  return found && found.value ? found.label : 'Kiritilmagan'
-})
-
-// MUHIM: piyola'dagi kabi "DD.MM.YYYY" formatida ko'rsatiladi. Backend
-// `birthdate`ni "YYYY-MM-DD" (Laravel `date` ustuni) shaklida qaytaradi.
-const birthdateLabel = computed(() => {
-  const raw = userAny.value?.birthdate
-  if (!raw) return 'Kiritilmagan'
-  const datePart = String(raw).slice(0, 10)
-  const [y, m, d] = datePart.split('-')
-  if (!y || !m || !d) return 'Kiritilmagan'
-  return `${d}.${m}.${y}`
-})
-
-const todayIso = computed(() => new Date().toISOString().slice(0, 10))
-
-// ── Desktop Edit Modal Holatlari ────────────────────────────────────
+// ── Tahrirlash Modali ───────────────────────────────────────────────
 const isEditModalOpen = ref(false)
-const savingEdit = ref(false)
-const editModalError = ref('')
-
-const editForm = reactive({
-  name: '',
-  lastname: '',
-  sex: '',
-  birthdate: '',
-  email: '',
-})
+const savingInfoModal = ref(false)
+const editForm = ref({ name: '', phone: '', birthDate: '', gender: '' })
 
 function openEditModal() {
-  editForm.name = authStore.user?.name || ''
-  editForm.lastname = userAny.value?.lastname || ''
-  editForm.sex = userAny.value?.sex || ''
-  editForm.birthdate = userAny.value?.birthdate ? String(userAny.value.birthdate).slice(0, 10) : ''
-  editForm.email = userAny.value?.email || ''
-  editModalError.value = ''
+  editForm.value = {
+    name: userAny.value?.name || '',
+    phone: userAny.value?.phone || '',
+    birthDate: userAny.value?.birthDate || '',
+    gender: userAny.value?.gender || 'male'
+  }
   isEditModalOpen.value = true
 }
 
-async function handleSaveEditModal() {
-  savingEdit.value = true
-  editModalError.value = ''
+async function handleSaveInfoModal() {
+  savingInfoModal.value = true
   try {
-    await $fetch(`${config.public.apiBase}/v1/kitobchi/settings`, {
-      method: 'POST',
+    await $fetch(`${config.public.apiBase}/v1/kitobchi/user/profile`, {
+      method: 'PUT',
       headers: { Authorization: `Bearer ${authStore.token}` },
       body: {
-        name: editForm.name,
-        lastname: editForm.lastname,
-        sex: editForm.sex,
-        birthdate: editForm.birthdate || '',
-        email: editForm.email || '',
+        name: editForm.value.name,
+        birthDate: editForm.value.birthDate,
+        gender: editForm.value.gender
       }
     })
     authStore.updateUser({
-      name: editForm.name,
-      lastname: editForm.lastname,
-      sex: editForm.sex,
-      birthdate: editForm.birthdate || null,
-      email: editForm.email || null,
+      name: editForm.value.name,
+      birthDate: editForm.value.birthDate,
+      gender: editForm.value.gender
     })
     isEditModalOpen.value = false
-  } catch (e: any) {
-    editModalError.value = e?.data?.message || "Saqlashda xatolik yuz berdi"
+  } catch (e) {
+    // 
   } finally {
-    savingEdit.value = false
+    savingInfoModal.value = false
   }
 }
 
