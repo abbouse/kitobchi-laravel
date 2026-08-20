@@ -155,9 +155,8 @@
                       </button>
                     </div>
                   </div>
-                </div>
 
-                <!-- Bottom Row: Price & Stepper -->
+                  <!-- Bottom Row: Price & Stepper -->
                   <div class="flex items-center justify-between md:justify-end gap-6 pt-2">
                     <span class="text-lg font-bold text-neutral-900">
                       {{ formatPrice(item.price * item.quantity) }} so'm
@@ -233,7 +232,7 @@
                   <span
                     class="pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out"
                     :class="isInstallmentActive ? 'translate-x-5' : 'translate-x-0'"
-                  ></span>
+                  />
                 </button>
               </div>
               <p class="text-xs text-neutral-400 font-normal m-0 leading-relaxed">
