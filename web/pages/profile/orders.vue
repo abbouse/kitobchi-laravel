@@ -1,8 +1,8 @@
 <template>
-  <div class="py-3 md:py-6 min-h-dvh bg-[#f1f1f1] grow">
+  <main class="max-md:grow h-full md:min-h-dvh bg-[#f1f1f1] lg:bg-white">
     <!-- ====== MOBILE STICKY TOP BAR ====== -->
-    <div class="md:hidden py-3 rounded-b-2xl mb-4 bg-white sticky top-0 z-40 transition-all duration-300">
-      <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
+    <div class="md:hidden py-3 rounded-b-2xl mb-4 bg-white sticky top-0 z-40 transition-all duration-300 shadow-[0_4px_10px_rgba(0,0,0,0.05)]">
+      <div class="px-4 sm:px-6 lg:px-8 w-full max-w-[--ui-container] mx-auto">
         <div class="grid grid-cols-5 items-center gap-2">
           <div class="col-span-1">
             <button
@@ -14,127 +14,67 @@
             </button>
           </div>
           <div class="col-span-3">
-            <h1 class="text-xl sm:text-2xl text-primary font-semibold text-center m-0">Buyurtmalarim</h1>
+            <h1 class="text-xl sm:text-xl text-primary font-bold text-center m-0">Buyurtmalarim</h1>
           </div>
           <div class="col-span-1 flex justify-end"></div>
         </div>
       </div>
     </div>
-
-    <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
-      <!-- Breadcrumb (Desktop) -->
-      <div class="flex items-center gap-2 mb-6 max-md:hidden">
-        <NuxtLink to="/profile" class="rounded-full w-9 h-9 flex items-center justify-center transition-colors text-primary bg-secondary-200 hover:bg-secondary-400 shrink-0">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
-        </NuxtLink>
-        <nav class="flex items-center gap-2 text-sm text-[#8F8FA1]">
-          <NuxtLink to="/" class="hover:text-neutral-600 transition-colors">Asosiy</NuxtLink>
-          <span class="text-gray-300">/</span>
-          <NuxtLink to="/profile" class="hover:text-neutral-600 transition-colors">Profil</NuxtLink>
-          <span class="text-gray-300">/</span>
-          <span class="text-neutral-900 font-semibold">Buyurtmalarim</span>
-        </nav>
-      </div>
-
-      <!-- Auth Gate -->
-      <div v-if="!authStore.isAuthenticated" class="text-center py-20">
-        <h2 class="text-2xl font-bold text-neutral-800 mb-2">Tizimga kiring</h2>
-        <p class="text-sm text-neutral-500 mb-6 max-w-sm mx-auto">Buyurtmalar tarixini ko'rish uchun tizimga kiring.</p>
-        <button
-          type="button"
-          @click="authStore.openAuthModal()"
-          class="inline-flex items-center px-8 py-3.5 rounded-2xl bg-primary text-white font-bold text-sm border-none cursor-pointer shadow-md hover:bg-primary/90 transition-colors"
-        >
-          Kirish
-        </button>
-      </div>
-
-      <div v-else class="lg:flex lg:items-start lg:gap-5">
-        <ProfileSidebar active="orders" />
-
-        <div class="flex-1 min-w-0 bg-secondary-50 p-4 sm:p-6 rounded-3xl">
-          <h1 class="text-xl font-bold text-neutral-900 mb-4 max-md:hidden m-0">Buyurtmalarim</h1>
-
-          <!-- MUHIM: piyola'dagi "Faol"/"Tugallangan" tab'lariga funksional
-               parallellik uchun qo'shildi — oldin bu sahifada UMUMAN tab
-               yo'q edi, barcha buyurtmalar (statusidan qat'iy nazar) bitta
-               ro'yxatda chiqardi. Backendda status bo'yicha filtrlash
-               parametri yo'qligi (jonli tasdiqlangan) sababli, filtrlash
-               allaqachon yuklab olingan sahifalar ustida CLIENT tomonda
-               amalga oshiriladi. -->
-          <div class="inline-flex bg-secondary-100 rounded-2xl p-1 mb-4">
-            <button
-              v-for="tab in ORDER_TABS"
-              :key="tab.value"
-              type="button"
-              @click="activeTab = tab.value"
-              :class="[
-                'px-5 py-2 rounded-xl text-sm font-semibold transition-colors border-none cursor-pointer',
-                activeTab === tab.value ? 'bg-primary text-white shadow-xs' : 'bg-transparent text-neutral-500 hover:text-neutral-800'
-              ]"
-            >
-              {{ tab.label }}
+    
+    <div class="py-6 min-h-dvh">
+      <div class="px-4 sm:px-6 lg:px-8 w-full max-w-[--ui-container] mx-auto">
+        
+        <div class="pb-5 max-md:hidden">
+          <div class="flex items-center gap-2">
+            <button @click="$router.back()" type="button" class="rounded-md font-medium inline-flex items-center transition-colors px-2.5 py-1.5 text-sm gap-1.5 text-primary hover:text-primary/75 outline-primary/25 border-none bg-transparent cursor-pointer">
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
             </button>
+            <nav class="relative min-w-0">
+              <ol class="flex items-center gap-2 p-0 m-0 list-none">
+                <li class="flex min-w-0 text-[#8F8FA1] text-sm">
+                  <NuxtLink to="/" class="group relative flex items-center gap-1.5 min-w-0 rounded-md font-medium transition-colors text-[#8F8FA1] text-sm no-underline hover:text-neutral-900">
+                    <span class="truncate">Asosiy</span>
+                  </NuxtLink>
+                </li>
+                <li class="flex"><span class="text-neutral-400 text-xs"> / </span></li>
+                <li class="flex min-w-0 text-[#8F8FA1] text-sm">
+                  <span class="group relative flex items-center gap-1.5 min-w-0 rounded-md font-semibold text-[#8F8FA1] text-sm text-neutral-900">
+                    <span class="truncate">Profil</span>
+                  </span>
+                </li>
+              </ol>
+            </nav>
           </div>
+        </div>
 
-          <!-- Loading skeleton -->
-          <div v-if="pending" class="space-y-4">
-            <div v-for="n in 4" :key="n" class="shimmer h-28 w-full rounded-2xl"></div>
+        <div v-if="!authStore.isAuthenticated" class="flex flex-col items-center justify-center py-20 bg-white rounded-3xl mt-4 max-w-2xl mx-auto shadow-sm">
+          <div class="w-24 h-24 bg-[#F6F6F9] rounded-full flex items-center justify-center mb-6">
+            <svg class="w-12 h-12 text-neutral-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/></svg>
           </div>
+          <h2 class="text-2xl font-bold text-neutral-900 mb-2 m-0">Avtorizatsiya</h2>
+          <p class="text-neutral-500 mb-8 max-w-xs text-center m-0">Shaxsiy kabinetga kirish uchun tizimga kiring</p>
+          <button @click="$router.push('/login')" class="inline-flex items-center px-8 py-3.5 rounded-2xl bg-primary text-white font-bold text-sm hover:bg-primary/90 transition-colors border-none cursor-pointer">
+            Kirish
+          </button>
+        </div>
 
-          <!-- Error -->
-          <div v-else-if="loadError" class="text-center py-16">
-            <p class="text-sm text-neutral-500 mb-4">Buyurtmalarni yuklab bo'lmadi. Birozdan so'ng qayta urinib ko'ring.</p>
-            <button type="button" @click="fetchOrders(1)" class="px-5 py-2.5 rounded-xl bg-secondary-100 text-sm font-semibold text-neutral-700 border-none cursor-pointer hover:bg-secondary-400 transition-colors">
-              Qayta urinish
-            </button>
-          </div>
+        <div v-else class="flex flex-col lg:flex-row gap-5">
+          <ProfileSidebar active="orders" />
+          
+          <div class="w-full">
+            <div class="max-md:min-h-dvh flex flex-col max-md:pb-2">
+              <div class="p-4 md:p-6 rounded-3xl bg-secondary-50">
 
-          <!-- Empty -->
-          <div v-else-if="!filteredOrders.length" class="text-center py-16">
-            <div class="w-16 h-16 rounded-full bg-secondary-100 text-neutral-400 mx-auto flex items-center justify-center mb-4">
-              <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m-.75 11.25h9a2.25 2.25 0 002.25-2.25l-.75-9a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25l-.75 9a2.25 2.25 0 002.25 2.25z"/></svg>
-            </div>
-            <p class="text-sm text-neutral-500 mb-4">{{ orders.length ? "Bu bo'limda buyurtmalar mavjud emas" : "Hozircha hech qanday buyurtma mavjud emas" }}</p>
-            <NuxtLink to="/catalog" class="inline-flex items-center px-6 py-3 rounded-2xl bg-primary text-white font-semibold text-sm hover:bg-primary/90 transition-colors">
-              Katalogga o'tish
-            </NuxtLink>
-          </div>
-
-          <!-- Orders list -->
-          <div v-else class="space-y-4">
-            <div v-for="order in filteredOrders" :key="order.id" class="bg-white border border-neutral-100 rounded-2xl p-4 sm:p-6 shadow-sm">
-              <div class="flex items-center justify-between gap-3 mb-3">
-                <div class="text-sm font-bold text-neutral-900">Buyurtma #{{ order.id }}</div>
-                <span :class="statusBadgeClass(order)" class="text-xs font-semibold px-2.5 py-1 rounded-full shrink-0">{{ statusLabel(order) }}</span>
-              </div>
-              <div class="flex items-center justify-between text-sm text-neutral-500">
-                <span>{{ formatOrderDate(order) }}</span>
-                <span>{{ orderItemCount(order) }} mahsulot</span>
-              </div>
-              <div class="mt-3 pt-3 border-t border-neutral-100 flex items-center justify-between">
-                <span class="text-sm text-neutral-500">Jami summa</span>
-                <span class="text-base font-bold text-primary">{{ formatPrice(orderTotal(order)) }} so'm</span>
               </div>
             </div>
-
-            <button
-              v-if="meta && meta.current_page < meta.last_page"
-              type="button"
-              @click="loadMore"
-              :disabled="loadingMore"
-              class="w-full py-3 rounded-2xl bg-secondary-100 text-neutral-700 text-sm font-semibold hover:bg-secondary-400 transition-colors border-none cursor-pointer disabled:opacity-75"
-            >
-              {{ loadingMore ? 'Yuklanmoqda...' : 'Yana yuklash' }}
-            </button>
           </div>
-</div>
-</div>
-</div>
-</div>
+        </div>
+      </div>
+    </div>
+  </main>
 
+  
 </template>
-
 <script setup lang="ts">
 import { useAuthStore } from '~/stores/auth'
 

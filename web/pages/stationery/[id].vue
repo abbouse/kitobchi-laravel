@@ -288,7 +288,7 @@
             <svg v-else class="w-5 h-5 text-emerald-600 shrink-0" viewBox="0 0 20 20" fill="currentColor">
               <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd" />
             </svg>
-            <span class="truncate">{{ isAdded ? 'Savatga qo‘shildi' : 'Savatga qo‘shish' }}</span>
+            <span class="truncate">{{ isAdded ? 'Savatga o‘tish' : 'Savatga qo‘shish' }}</span>
           </button>
           <button
             type="button"
@@ -1066,17 +1066,19 @@ function formatPrice(val: number) {
   return (val || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
 }
 
-const isAdded = ref(false)
-let isAddedTimeout: any = null
+
+const isAdded = computed(() => {
+  if (!product.value) return false
+  return cartStore.items.some(i => i.productId === product.value.id && i.type === 'stationery')
+})
 
 function handleAddToCart() {
+  if (isAdded.value) {
+    router.push('/cart')
+    return
+  }
   if (product.value) {
     cartStore.addItem(product.value, 'stationery', 1)
-    isAdded.value = true
-    if (isAddedTimeout) clearTimeout(isAddedTimeout)
-    isAddedTimeout = setTimeout(() => {
-      isAdded.value = false
-    }, 2000)
   }
 }
 
