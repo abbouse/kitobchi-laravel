@@ -302,7 +302,7 @@
     </div>
 
     <!-- ====== DESKTOP LAYOUT (Piyola Market 1:1) ====== -->
-    <div class="max-md:hidden py-5 bg-white">
+    <div class="max-md:hidden py-5 bg-[#F6F6F9] min-h-dvh">
       <div class="px-4 sm:px-6 lg:px-8 w-full max-w-7xl mx-auto">
         <!-- Breadcrumb & Back Arrow -->
         <div class="mb-5">
@@ -496,7 +496,7 @@
                 <div>
                   <div
                     @click="specsOpen = !specsOpen"
-                    class="w-full bg-[#F6F6F9] hover:bg-[#ECECEF] cursor-pointer rounded-2xl p-4 flex items-center justify-between transition-colors"
+                    class="w-full bg-white hover:bg-neutral-50 shadow-sm cursor-pointer rounded-2xl p-4 flex items-center justify-between transition-colors"
                   >
                     <div class="flex items-center gap-3">
                       <svg class="w-5 h-5 text-neutral-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 16v-4m0-4h.01"/></svg>
@@ -506,17 +506,17 @@
                   </div>
 
                   <!-- Xususiyatlar ro'yxati -->
-                  <div v-show="specsOpen" class="mt-3 p-5 rounded-2xl bg-[#F6F6F9] space-y-3 border border-neutral-100/60">
+                  <div v-show="specsOpen" class="mt-2 p-4 bg-white shadow-sm rounded-2xl transition-all">
                     <div v-if="hasSpecs" class="grid grid-cols-2 gap-3 text-sm">
-                      <div v-if="product.material" class="p-3 rounded-xl bg-white">
+                      <div v-if="product.material" class="p-3 rounded-xl bg-neutral-50">
                         <span class="text-neutral-400 block text-xs">Material:</span>
                         <span class="font-semibold text-neutral-800">{{ product.material }}</span>
                       </div>
-                      <div v-if="product.barcode" class="p-3 rounded-xl bg-white">
+                      <div v-if="product.barcode" class="p-3 rounded-xl bg-neutral-50">
                         <span class="text-neutral-400 block text-xs">Barkod:</span>
                         <span class="font-semibold text-neutral-800">{{ product.barcode }}</span>
                       </div>
-                      <div v-if="product.category" class="p-3 rounded-xl bg-white">
+                      <div v-if="product.category" class="p-3 rounded-xl bg-neutral-50">
                         <span class="text-neutral-400 block text-xs">Kategoriya:</span>
                         <span class="font-semibold text-neutral-800">{{ product.category }}</span>
                       </div>
@@ -525,8 +525,8 @@
                 </div>
 
                 <!-- To'lov va Xarid Kartasi (Piyola 1:1) -->
-                <div class="p-6 rounded-3xl bg-[#F6F6F9] space-y-4">
-                  <div role="tablist" class="relative inline-flex bg-[#ECECEF] rounded-2xl p-1 w-full flex">
+                <div class="p-6 rounded-3xl bg-white shadow-sm space-y-4">
+                  <div role="tablist" class="relative inline-flex bg-[#F6F6F9] rounded-2xl p-1 w-full flex">
                     <button
                       type="button"
                       role="tab"
@@ -534,7 +534,7 @@
                       @click="paymentTab = 'installment'"
                       :class="[
                         'text-sm px-4 py-2 flex-1 font-semibold rounded-xl transition-all duration-200 border-none cursor-pointer text-center',
-                        paymentTab === 'installment' ? 'bg-white text-neutral-900 shadow-xs' : 'bg-transparent text-neutral-500'
+                        paymentTab === 'installment' ? 'bg-white text-neutral-900 shadow-sm' : 'bg-transparent text-neutral-500'
                       ]"
                     >
                       Muddatli to‘lov
@@ -546,7 +546,7 @@
                       @click="paymentTab = 'cash'"
                       :class="[
                         'text-sm px-4 py-2 flex-1 font-semibold rounded-xl transition-all duration-200 border-none cursor-pointer text-center',
-                        paymentTab === 'cash' ? 'bg-white text-neutral-900 shadow-xs' : 'bg-transparent text-neutral-500'
+                        paymentTab === 'cash' ? 'bg-white text-neutral-900 shadow-sm' : 'bg-transparent text-neutral-500'
                       ]"
                     >
                       Naqd to‘lov

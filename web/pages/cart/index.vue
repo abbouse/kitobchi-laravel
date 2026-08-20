@@ -52,7 +52,7 @@
     </div>
 
     <!-- ====== MAIN CONTENT ====== -->
-    <main class="max-md:grow h-full md:min-h-dvh max-md:pb-4">
+    <main class="max-md:grow h-full md:min-h-dvh max-md:pb-4 bg-[#F6F6F9]">
       <div class="px-4 sm:px-6 lg:px-8 w-full max-w-7xl mx-auto py-2 md:py-6">
         <!-- Desktop Breadcrumb & Title Header (Piyola Market 1:1) -->
         <div class="mb-5 max-md:hidden">
@@ -101,7 +101,7 @@
         <!-- If cart has items (Piyola Market 1:1 Desktop Grid) -->
         <div v-if="cartStore.items.length > 0" class="flex flex-col lg:flex-row gap-5 min-h-[calc(100dvh-140px)]">
           <!-- Chap ustun (Mahsulotlar ro'yxati) -->
-          <div class="md:p-6 rounded-3xl bg-secondary-50 flex-1 space-y-4 min-w-0">
+          <div class="flex-1 space-y-4 min-w-0">
             <!-- Items Cards List (Piyola 1:1) -->
             <div
               v-for="item in cartStore.items"
