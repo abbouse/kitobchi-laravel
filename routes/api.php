@@ -38,8 +38,6 @@ Route::get('instagram/test', [\App\Http\Controllers\Api\InstagramWebhookControll
 Route::get('update_locale', [UserController::class, 'updateLocale']);
 Route::get('counts', [UserController::class, 'getGlobalCounts']);
 Route::get('r/{type}/{id}', [\App\Http\Controllers\Api\SmartRedirectController::class, 'redirect']);
-Route::get('og-image', [\App\Http\Controllers\Api\OgImageController::class, 'generate']);
-Route::get('og-image.png', [\App\Http\Controllers\Api\OgImageController::class, 'generate']);
 Route::prefix('v1')->group(function () {
     Route::prefix('client')->group(base_path('routes/api_client.php')); 
     Route::prefix('kitobchi')->group(base_path('routes/api_user.php')); 

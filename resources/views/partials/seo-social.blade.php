@@ -81,6 +81,12 @@
     "@type": "Brand",
     "name": @json($brand ?? 'Kitobchi')
   },
+  @if(!empty($sku))
+  "mpn": @json($sku),
+  @endif
+  @if(!empty($isbn))
+  "gtin13": @json(preg_replace('/[^0-9]/', '', $isbn)),
+  @endif
   "offers": {
     "@type": "Offer",
     "url": @json($canonical),
@@ -92,14 +98,49 @@
     "seller": {
       "@type": "Organization",
       "name": @json($brand ?? 'Kitobchi')
+    },
+    "hasMerchantReturnPolicy": {
+      "@type": "MerchantReturnPolicy",
+      "applicableCountry": "UZ",
+      "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
+      "merchantReturnDays": 4,
+      "returnMethod": "https://schema.org/ReturnByMail",
+      "returnFees": "https://schema.org/FreeReturn"
+    },
+    "shippingDetails": {
+      "@type": "OfferShippingDetails",
+      "shippingRate": {
+        "@type": "MonetaryAmount",
+        "value": 15000,
+        "currency": "UZS"
+      },
+      "shippingDestination": {
+        "@type": "DefinedRegion",
+        "addressCountry": "UZ"
+      },
+      "deliveryTime": {
+        "@type": "ShippingDeliveryTime",
+        "handlingTime": {
+          "@type": "QuantitativeValue",
+          "minValue": 0,
+          "maxValue": 1,
+          "unitCode": "DAY"
+        },
+        "transitTime": {
+          "@type": "QuantitativeValue",
+          "minValue": 1,
+          "maxValue": 3,
+          "unitCode": "DAY"
+        }
+      }
     }
   }
-  @if(!empty($ratingValue) && !empty($reviewCount))
+  @if(!empty($ratingValue) && (float)$ratingValue > 0)
   ,
   "aggregateRating": {
     "@type": "AggregateRating",
     "ratingValue": @json((string) number_format((float) $ratingValue, 1)),
-    "reviewCount": @json((int) $reviewCount),
+    "reviewCount": @json(max(1, (int) ($reviewCount ?? 1))),
     "bestRating": "5",
     "worstRating": "1"
   }

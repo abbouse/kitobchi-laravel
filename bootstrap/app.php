@@ -268,4 +268,9 @@ return Application::configure(basePath: dirname(__DIR__))
             ->withoutOverlapping(9)
             ->runInBackground();
 
+        // ── OG Image aforizmlarini har 6 soatda avtomatik yangilash ──
+        $schedule->command('og:rotate')
+            ->everySixHours()
+            ->timezone($tz);
+
     })->create();
