@@ -324,15 +324,12 @@ class PaylovFiscalizationService
                 'package_code' => trim((string) ($product?->ofd_package_code ?: ($categoryPackage ?: $defaultPackage))),
             ];
 
-            // OFD: itemda tin yoki pinfl kiritilsa, Paylov uni "Vositachi (komissioner)"
-            // cheki deb qabul qiladi. Agar subcommission faol bo'lmasa, ofd_commitent_or_subcommission_not_active
-            // xatosi chiqadi. Shuning uchun o'zimizning tovarlarda taxId ni yubormaymiz.
-            // Buni Paylov o'zi merchant kabinetidagi STIR bilan to'ldiradi.
-            // if ($taxId['tin']) {
-            //     $item['tin'] = $taxId['tin'];
-            // } elseif ($taxId['pinfl']) {
-            //     $item['pinfl'] = $taxId['pinfl'];
-            // }
+            // OFD: har bir itemda tin YOKI pinfl bo'lishi SHART (platforma STIRi)
+            if ($taxId['tin']) {
+                $item['tin'] = $taxId['tin'];
+            } elseif ($taxId['pinfl']) {
+                $item['pinfl'] = $taxId['pinfl'];
+            }
 
             $items[] = $item;
         }
@@ -356,10 +353,10 @@ class PaylovFiscalizationService
                 'package_code' => trim((string) ($cfg['service_package_code'] ?? '')),
             ];
 
-            // Xizmatlar ham xuddi shunday, TIN yuborilmaydi
-            // if ($tin !== '') {
-            //     $item['tin'] = $tin;
-            // }
+            // Xizmatlar platforma nomidan — platforma STIRi
+            if ($tin !== '') {
+                $item['tin'] = $tin;
+            }
 
             $items[] = $item;
         }
@@ -375,13 +372,14 @@ class PaylovFiscalizationService
                 return [];
             }
 
-            // if (empty($item['tin']) && empty($item['pinfl'])) {
-            //     Log::warning('[Paylov OFD] Item without tin/pinfl — set PAYLOV_OFD_TIN in .env', [
-            //         'order_id' => $order->id,
-            //         'title' => $item['title'],
-            //     ]);
-            //     return [];
-            // }
+            if (empty($item['tin']) && empty($item['pinfl'])) {
+                Log::warning('[Paylov OFD] Item without tin/pinfl — set PAYLOV_OFD_TIN in .env', [
+                    'order_id' => $order->id,
+                    'title' => $item['title'],
+                ]);
+
+                return [];
+            }
         }
 
         // ── Summani tranzaksiyaga tenglashtirish ───────────────────────
