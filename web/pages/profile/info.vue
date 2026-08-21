@@ -164,7 +164,7 @@
       class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
       @click.self="isEditModalOpen = false"
     >
-      <div class="relative bg-white rounded-3xl overflow-hidden p-6 sm:p-8 w-full max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <div class="relative bg-white rounded-3xl overflow-hidden p-6 sm:p-8 w-full max-w-lg sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <button @click="isEditModalOpen = false" type="button" class="absolute top-4 right-4 sm:top-6 sm:right-6 w-10 h-10 rounded-full bg-[#F6F6F9] hover:bg-neutral-200 transition-colors flex items-center justify-center border-none cursor-pointer">
           <svg class="w-5 h-5 text-neutral-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
@@ -207,7 +207,7 @@
       class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
       @click.self="isAddressModalOpen = false"
     >
-      <div class="relative bg-white rounded-3xl overflow-hidden p-6 sm:p-8 w-full max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <div class="relative bg-white rounded-3xl overflow-hidden p-6 sm:p-8 w-full max-w-lg sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <button @click="isAddressModalOpen = false" type="button" class="absolute top-4 right-4 sm:top-6 sm:right-6 w-10 h-10 rounded-full bg-[#F6F6F9] hover:bg-neutral-200 transition-colors flex items-center justify-center border-none cursor-pointer">
           <svg class="w-5 h-5 text-neutral-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>

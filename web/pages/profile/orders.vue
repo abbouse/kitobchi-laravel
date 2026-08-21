@@ -135,8 +135,17 @@
                 <div class="flex items-center justify-between w-full gap-4">
                   <div class="flex-1 flex gap-3 min-w-0">
                     <div class="flex items-center gap-3 shrink-0">
+                      <!-- MUHIM: rasm sifatida faqat type !== 'gift' bo'lgan
+                           (ya'ni sovg'a EMAS, xaridorning haqiqiy sotib olgan)
+                           birinchi mahsulot ko'rsatiladi. Agar shunday
+                           mahsulotlardan yana bo'lsa (+1 va undan ko'p),
+                           rasm burchagiga "+N" belgisi chiqadi. */-->
                       <div class="overflow-hidden relative rounded-lg w-[70px] h-[93px] bg-neutral-100 shrink-0">
                         <img v-if="orderThumb(order)" :src="orderThumb(order)" class="w-full h-full object-cover">
+                        <span
+                          v-if="orderExtraNonGiftCount(order) > 0"
+                          class="absolute bottom-1 right-1 min-w-[20px] h-5 px-1 rounded-full bg-primary text-white text-[11px] font-semibold flex items-center justify-center leading-none shadow-sm"
+                        >+{{ orderExtraNonGiftCount(order) }}</span>
                       </div>
                     </div>
                     <div class="min-w-0">
@@ -144,12 +153,11 @@
                       <p class="text-[#8F8FA1] text-xs mt-2 m-0">Soni: {{ orderTotalQty(order) }} dona</p>
                     </div>
                   </div>
-                  <!-- MUHIM: alohida buyurtma tafsilotlari sahifasi
-                       (/profile/orders/[id]) loyihada hali yo'q — shu
-                       sababli hozircha faqat vizual jihatdan piyoladagidek
-                       tugma ko'rsatilmoqda, lekin navigatsiya qilmaydi.
-                       Alohida vazifa sifatida qo'shilishi kerak. -->
-                  <button type="button" class="font-medium items-center transition-colors gap-1.5 text-primary bg-primary/10 hover:bg-primary/15 h-12 flex justify-center rounded-2xl text-base px-6 border-none cursor-pointer shrink-0">
+                  <button
+                    type="button"
+                    @click="openDetails(order)"
+                    class="font-medium items-center transition-colors gap-1.5 text-primary bg-primary/10 hover:bg-primary/15 h-12 flex justify-center rounded-2xl text-base px-6 border-none cursor-pointer shrink-0"
+                  >
                     Buyurtma tafsilotlari
                   </button>
                 </div>
@@ -173,6 +181,83 @@
     </div>
   </main>
 
+  <!-- Buyurtma tafsilotlari modali -->
+  <div
+    v-if="isDetailsOpen"
+    class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
+    @click.self="closeDetails"
+  >
+    <div class="relative bg-white rounded-3xl overflow-hidden w-full max-w-lg sm:max-w-[600px] max-h-[90vh] flex flex-col">
+      <div class="flex items-center justify-between p-6 pb-4 shrink-0">
+        <h3 class="text-xl font-bold m-0">Buyurtma tafsilotlari</h3>
+        <button @click="closeDetails" type="button" class="w-10 h-10 rounded-full bg-[#F6F6F9] hover:bg-neutral-200 transition-colors flex items-center justify-center border-none cursor-pointer shrink-0">
+          <svg class="w-5 h-5 text-[#8F8FA1]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div class="px-6 pb-6 overflow-y-auto">
+        <!-- Loading -->
+        <div v-if="detailsLoading" class="flex flex-col gap-3 py-4">
+          <div class="h-4 bg-neutral-100 rounded w-1/3 animate-pulse"></div>
+          <div class="h-16 bg-neutral-100 rounded animate-pulse"></div>
+          <div class="h-16 bg-neutral-100 rounded animate-pulse"></div>
+        </div>
+
+        <!-- Error -->
+        <div v-else-if="detailsError" class="text-center py-8">
+          <p class="text-[#8F8FA1] mb-3">Tafsilotlarni yuklashda xatolik yuz berdi</p>
+          <button @click="fetchDetails" type="button" class="text-primary font-medium border-none bg-transparent cursor-pointer">Qayta urinish</button>
+        </div>
+
+        <!-- Content -->
+        <div v-else-if="selectedOrder" class="flex flex-col gap-5">
+          <div class="flex items-center justify-between gap-3 flex-wrap">
+            <div class="flex items-center gap-6 flex-wrap">
+              <div>
+                <span class="text-[#8F8FA1] text-xs uppercase font-normal">Buyurtma raqami:</span>
+                <p class="text-sm font-medium m-0">№{{ selectedOrder.id }}</p>
+              </div>
+              <div>
+                <span class="text-[#8F8FA1] text-xs uppercase font-normal">Sana:</span>
+                <p class="text-sm font-medium m-0">{{ formatOrderDate(selectedOrder) }}</p>
+              </div>
+            </div>
+            <span
+              class="font-medium inline-flex items-center text-sm py-1 gap-1.5 rounded-full px-4"
+              :style="statusBadgeStyle(selectedOrder)"
+            >{{ statusLabel(selectedOrder) }}</span>
+          </div>
+
+          <div v-if="selectedOrderAddress" class="rounded-2xl bg-[#F6F6F9] p-4">
+            <span class="text-[#8F8FA1] text-xs uppercase font-normal">Yetkazib berish manzili</span>
+            <p class="text-sm font-medium m-0 mt-1">{{ selectedOrderAddress }}</p>
+          </div>
+
+          <div>
+            <p class="text-sm font-semibold m-0 mb-2">Mahsulotlar</p>
+            <div class="flex flex-col gap-3">
+              <div v-for="(item, idx) in (selectedOrder.items || [])" :key="idx" class="flex items-center gap-3">
+                <div class="overflow-hidden relative rounded-lg w-[56px] h-[74px] bg-neutral-100 shrink-0">
+                  <img v-if="item.cover" :src="item.cover" class="w-full h-full object-cover">
+                  <span v-if="item.type === 'gift'" class="absolute top-1 left-1 text-[10px] font-semibold bg-primary text-white rounded-full px-1.5 py-0.5 leading-none">Sovg'a</span>
+                </div>
+                <div class="min-w-0 flex-1">
+                  <p class="text-sm font-medium m-0 line-clamp-2">{{ item.name }}</p>
+                  <p class="text-[#8F8FA1] text-xs m-0 mt-1">{{ item.count_item }} dona</p>
+                </div>
+                <p class="text-sm font-semibold m-0 shrink-0">{{ formatPrice((item.item_price || 0) * (item.count_item || 0)) }} so'm</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between border-t border-neutral-100 pt-4">
+            <p class="text-base font-bold m-0">Jami</p>
+            <p class="text-base font-bold m-0 text-primary">{{ formatPrice(orderTotal(selectedOrder)) }} so'm</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
 </template>
 <script setup lang="ts">
@@ -224,22 +309,39 @@ function orderItemCount(order: any) {
 }
 
 // Backend `items` massividagi har bir element PurchaseController'da
-// `name`, `cover` (rasm), `count_item` (soni) kalitlari bilan saqlanadi
-// (savat item'lari emas!) — app/Http/Controllers/Api/PurchaseController.php
-// (~2061-qator) orqali tasdiqlangan.
-function orderFirstItem(order: any): any {
+// `name`, `cover` (rasm), `count_item` (soni), `type` ('book' | 'stationery'
+// | 'gift') kalitlari bilan saqlanadi (savat item'lari emas!) —
+// app/Http/Controllers/Api/PurchaseController.php (~2061-qator) orqali
+// tasdiqlangan. Karta rasmi/nomi uchun faqat `type !== 'gift'` bo'lgan
+// (ya'ni xaridor haqiqatan sotib olgan, sovg'a EMAS) item'lar hisobga
+// olinadi — foydalanuvchi talabiga ko'ra.
+function orderNonGiftItems(order: any): any[] {
+  if (!Array.isArray(order.items)) return []
+  return order.items.filter((item: any) => item?.type !== 'gift')
+}
+
+// Ko'rsatiladigan asosiy item: sovg'a bo'lmaganlarning birinchisi. Agar
+// buyurtmada sovg'adan boshqa hech narsa bo'lmasa (juda kamdan-kam holat),
+// bo'sh qolib ketmasligi uchun birinchi item'ga (garchi u sovg'a bo'lsa ham)
+// qaytiladi.
+function orderDisplayItem(order: any): any {
+  const nonGift = orderNonGiftItems(order)
+  if (nonGift.length > 0) return nonGift[0]
   return Array.isArray(order.items) && order.items.length > 0 ? order.items[0] : null
 }
 
 function orderThumb(order: any): string | undefined {
-  return orderFirstItem(order)?.cover || undefined
+  return orderDisplayItem(order)?.cover || undefined
 }
 
 function orderFirstItemName(order: any): string {
-  const first = orderFirstItem(order)
-  if (!first) return ''
-  const extra = orderItemCount(order) > 1 ? ` +${orderItemCount(order) - 1}` : ''
-  return `${first.name || ''}${extra}`
+  return orderDisplayItem(order)?.name || ''
+}
+
+// Rasm chetidagi "+N" belgisi uchun: sovg'a bo'lmagan item'lardan
+// birinchisidan TASHQARI yana nechtasi bor.
+function orderExtraNonGiftCount(order: any): number {
+  return Math.max(0, orderNonGiftItems(order).length - 1)
 }
 
 function orderTotalQty(order: any): number {
@@ -303,6 +405,61 @@ function statusBadgeStyle(order: any) {
   const bg = STATUS_COLORS[code] || '#0B0342'
   return { backgroundColor: bg, color: '#fff' }
 }
+
+// ── Buyurtma tafsilotlari modali ─────────────────────────────
+// GET /v1/kitobchi/purchase/details/{order_id} — PurchaseController::
+// purchaseDetails() — { status: 'success', data: [$order] } qaytaradi.
+// $order — Sold modelining o'zi (formatted_created_at va boshqa meta
+// maydonlar qo'shilgan holda), shu jumladan xom `address` (JSON-cast
+// massiv, [{ fullName, fullAddress, lat, lon, country_code, phoneNumber }])
+// va `items` maydonlari ham bor.
+const isDetailsOpen = ref(false)
+const detailsLoading = ref(false)
+const detailsError = ref(false)
+const selectedOrder = ref<any>(null)
+const selectedOrderId = ref<number | null>(null)
+
+async function openDetails(order: any) {
+  selectedOrderId.value = order.id
+  selectedOrder.value = null
+  isDetailsOpen.value = true
+  await fetchDetails()
+}
+
+function closeDetails() {
+  isDetailsOpen.value = false
+  selectedOrder.value = null
+  detailsError.value = false
+}
+
+async function fetchDetails() {
+  if (!selectedOrderId.value) return
+  detailsLoading.value = true
+  detailsError.value = false
+  try {
+    const res: any = await $fetch(`${config.public.apiBase}/v1/kitobchi/purchase/details/${selectedOrderId.value}`, {
+      headers: { Authorization: `Bearer ${authStore.token}` }
+    })
+    const found = Array.isArray(res?.data) ? res.data[0] : null
+    if (found) {
+      selectedOrder.value = found
+    } else {
+      detailsError.value = true
+    }
+  } catch (e) {
+    detailsError.value = true
+  } finally {
+    detailsLoading.value = false
+  }
+}
+
+const selectedOrderAddress = computed(() => {
+  const order = selectedOrder.value
+  if (!order) return ''
+  const raw = order.address
+  const entry = Array.isArray(raw) ? raw[0] : raw
+  return entry?.fullAddress || ''
+})
 
 onMounted(() => {
   if (authStore.isAuthenticated) {
