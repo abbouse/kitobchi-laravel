@@ -29,11 +29,11 @@
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
         </NuxtLink>
         <nav class="flex items-center gap-2 text-sm text-[#8F8FA1]">
-          <NuxtLink to="/" class="hover:text-neutral-600 transition-colors">Asosiy</NuxtLink>
+          <NuxtLink to="/" class="hover:text-neutral-700 transition-colors">Asosiy</NuxtLink>
           <span class="text-gray-300">/</span>
-          <NuxtLink to="/profile" class="hover:text-neutral-600 transition-colors">Profil</NuxtLink>
+          <NuxtLink to="/profile" class="hover:text-neutral-700 transition-colors">Profil</NuxtLink>
           <span class="text-gray-300">/</span>
-          <NuxtLink to="/profile/info" class="hover:text-neutral-600 transition-colors">Ma'lumotlarim</NuxtLink>
+          <NuxtLink to="/profile/info" class="hover:text-neutral-700 transition-colors">Ma'lumotlarim</NuxtLink>
           <span class="text-gray-300">/</span>
           <span class="text-neutral-900 font-semibold">Manzil qo'shish</span>
         </nav>

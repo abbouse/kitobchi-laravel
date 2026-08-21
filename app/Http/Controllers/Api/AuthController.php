@@ -200,6 +200,26 @@ class AuthController extends Controller
             $hashedToken    = hash('sha256', explode('|', $plainTextToken)[1]);
 
             // Qurilmani saqlash
+            //
+            // MUHIM — YANGI TUZATISH (sessiya "uzoqqa bormayapti" muammosi
+            // ildizi topildi): match kaliti ILGARI faqat `device_id + user_type`
+            // edi — `user_id` KIRMAGAN edi. Demak bitta brauzer/qurilma
+            // (bitta device_id) ustida IKKI XIL akkaunt navbatma-navbat login
+            // qilsa (masalan test uchun ikkita raqam: 998331234567 va
+            // 998333303034, yoki umuman boshqa foydalanuvchi xuddi shu
+            // kompyuter/brauzerdan kirsa), IKKINCHI login BIRINCHI
+            // foydalanuvchining connected_devices qatorini "o'g'irlab" o'ziniki
+            // qilib qo'yardi (chunki updateOrInsert xuddi shu device_id+user_type
+            // ga mos qatorni topib, uni user_id=ikkinchi bilan UPDATE qilardi).
+            // Natijada birinchi foydalanuvchi HALI HAM login holatida (tokeni
+            // brauzer cookie'sida saqlanib turibdi) bo'lsa-da, uning tokeni endi
+            // HECH QANDAY connected_devices qatoriga bog'lanmay qolardi —
+            // keyingi safar shu user_id uchun har qanday tozalash so'rovi
+            // ishga tushganda ($activeTokens ro'yxati bo'sh chiqib), uning hali
+            // brauzerda ishlatilayotgan "faol" tokeni DARHOL o'chirib
+            // tashlanardi. Match kaliti ichiga `user_id`ni ham qo'shish orqali —
+            // endi bitta device_id ostida har bir akkaunt uchun ALOHIDA qator
+            // saqlanadi va boshqa akkauntning qatoriga HECH QACHON TEGINILMAYDI.
             if ($request->has('device_id')) {
                 app(\App\Services\FcmRecipientService::class)->claimToken(
                     'user',
@@ -207,10 +227,8 @@ class AuthController extends Controller
                     $request->fcm_token,
                 );
                 DB::table('connected_devices')->updateOrInsert(
-                    ['device_id' => $request->device_id, 'user_type' => 'user'],
+                    ['device_id' => $request->device_id, 'user_type' => 'user', 'user_id' => $user->id],
                     [
-                        'user_id'     => $user->id,
-                        'user_type'   => 'user',
                         'token'       => $hashedToken,
                         'fcm_token'   => $request->fcm_token,
                         'device_name' => Str::limit(trim((string) ($request->device_name ?? 'Unknown Device')), 64, ''),
@@ -454,6 +472,10 @@ class AuthController extends Controller
         $plainTextToken = $tokenResult->plainTextToken;
         $hashedToken = hash('sha256', explode('|', $plainTextToken)[1]);
 
+        // MUHIM: xuddi shu tuzatish bu yerda ham qo'llanildi — match kaliti
+        // `user_id`ni ham o'z ichiga oladi (store() metodidagi izohga qarang,
+        // sabab bir xil: device_id qatorini boshqa akkauntga "o'g'irlab"
+        // ketishning oldini olish uchun).
         if ($request->filled('device_id')) {
             app(\App\Services\FcmRecipientService::class)->claimToken(
                 'user',
@@ -461,10 +483,8 @@ class AuthController extends Controller
                 $request->fcm_token,
             );
             DB::table('connected_devices')->updateOrInsert(
-                ['device_id' => $request->device_id, 'user_type' => 'user'],
+                ['device_id' => $request->device_id, 'user_type' => 'user', 'user_id' => $user->id],
                 [
-                    'user_id' => $user->id,
-                    'user_type' => 'user',
                     'token' => $hashedToken,
                     'fcm_token' => $request->fcm_token,
                     'device_name' => Str::limit(trim((string) ($request->device_name ?? 'Unknown Device')), 64, ''),

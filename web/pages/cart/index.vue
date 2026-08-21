@@ -2,7 +2,7 @@
   <main class="max-md:pb-[71px] max-md:grow h-full md:min-h-dvh">
     <ClientOnly>
     <div class="min-h-dvh py-3 md:py-6">
-      <div class="px-4 sm:px-6 lg:px-8 w-full max-w-[--ui-container] mx-auto">
+      <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
         
         <div class="mb-5 max-md:hidden">
           <div class="flex items-center gap-2">
@@ -12,13 +12,13 @@
             <nav class="relative min-w-0">
               <ol class="flex items-center gap-2 p-0 m-0 list-none">
                 <li class="flex min-w-0 text-[#8F8FA1] text-sm">
-                  <NuxtLink to="/" class="group relative flex items-center gap-1.5 min-w-0 rounded-md font-medium transition-colors text-[#8F8FA1] text-sm no-underline hover:text-neutral-900">
+                  <NuxtLink to="/" class="group relative flex items-center gap-1.5 min-w-0 rounded-md font-medium transition-colors text-[#8F8FA1] text-sm no-underline hover:text-neutral-700">
                     <span class="truncate">Asosiy</span>
                   </NuxtLink>
                 </li>
                 <li class="flex"><span class="text-neutral-400 text-xs"> / </span></li>
                 <li class="flex min-w-0 text-[#8F8FA1] text-sm">
-                  <span class="group relative flex items-center gap-1.5 min-w-0 rounded-md font-semibold text-[#8F8FA1] text-sm text-neutral-900">
+                  <span class="group relative flex items-center gap-1.5 min-w-0 rounded-md font-semibold text-[#8F8FA1] text-sm">
                     <span class="truncate">Savat</span>
                   </span>
                 </li>
@@ -40,22 +40,22 @@
 
         <div v-else class="flex flex-col lg:flex-row gap-5 lg:items-start">
           <div class="flex-1 min-w-0">
-            <h2 class="text-xl font-bold flex items-center gap-2 m-0">Savat <span class="text-neutral-500 text-sm font-medium leading-5">{{ cartStore.items.length }} ta mahsulot</span></h2>
+            <h2 class="text-xl font-bold flex items-center gap-2 m-0">Savat <span class="text-[#8F8FA1] text-sm font-medium leading-5">{{ cartStore.items.length }} ta mahsulot</span></h2>
             
             <div class="mt-4 flex gap-4 items-center">
               <div class="relative flex items-start flex-row">
                 <div class="flex items-center h-6">
-                  <button @click="toggleSelectAll" class="rounded-sm ring ring-inset overflow-hidden outline-primary/25 size-5 border-none p-0 cursor-pointer relative" :class="isAllSelected ? 'ring-primary bg-primary' : 'ring-neutral-300 bg-white'" type="button">
+                  <button @click="toggleSelectAll" class="rounded-sm ring ring-inset overflow-hidden outline-primary/25 size-5 border-none p-0 cursor-pointer relative" :class="isAllSelected ? 'ring-primary bg-primary' : 'ring-[var(--ui-color-neutral-300)] bg-white'" type="button">
                     <span v-if="isAllSelected" class="flex items-center justify-center size-full text-white">
                       <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                     </span>
                   </button>
                 </div>
                 <div class="w-full ms-2 text-base">
-                  <label @click="toggleSelectAll" class="block font-medium text-neutral-900 cursor-pointer text-sm md:text-base m-0">Barcha mahsulotlarni tanlash</label>
+                  <label @click="toggleSelectAll" class="block font-medium text-neutral-700 cursor-pointer text-sm md:text-base m-0">Barcha mahsulotlarni tanlash</label>
                 </div>
               </div>
-              <span class="text-neutral-500 text-sm font-medium leading-5 max-md:hidden">{{ cartStore.selectedCount }} ta mahsulot tanlandi</span>
+              <span class="text-[#8F8FA1] text-sm font-medium leading-5 max-md:hidden">{{ cartStore.selectedCount }} ta mahsulot tanlandi</span>
             </div>
 
             <div class="space-y-4 mt-4">
@@ -64,7 +64,7 @@
                 <div>
                   <div class="relative flex items-start flex-row">
                     <div class="flex items-center h-6">
-                      <button @click="cartStore.toggleSelect(item.id)" class="rounded-sm ring ring-inset overflow-hidden outline-primary/25 size-5 border-none p-0 cursor-pointer relative" :class="cartStore.isSelected(item.id) ? 'ring-primary bg-primary' : 'ring-neutral-300 bg-white'" type="button">
+                      <button @click="cartStore.toggleSelect(item.id)" class="rounded-sm ring ring-inset overflow-hidden outline-primary/25 size-5 border-none p-0 cursor-pointer relative" :class="cartStore.isSelected(item.id) ? 'ring-primary bg-primary' : 'ring-[var(--ui-color-neutral-300)] bg-white'" type="button">
                         <span v-if="cartStore.isSelected(item.id)" class="flex items-center justify-center size-full text-white">
                           <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                         </span>
@@ -78,14 +78,14 @@
                   <div class="flex flex-col justify-between flex-1 min-w-0">
                     <div class="space-y-2">
                       <div class="flex justify-between items-start gap-4">
-                        <NuxtLink :to="item.type === 'book' ? `/books/${item.slug || item.productId || item.id}` : `/stationery/${item.slug || item.productId || item.id}`" class="text-sm md:text-sm leading-5 font-normal lg:max-w-[70%] line-clamp-2 text-neutral-900 no-underline hover:text-primary transition-colors">
+                        <NuxtLink :to="item.type === 'book' ? `/books/${item.slug || item.productId || item.id}` : `/stationery/${item.slug || item.productId || item.id}`" class="text-sm md:text-sm leading-5 font-normal lg:max-w-[70%] line-clamp-2 no-underline hover:text-primary transition-colors">
                           {{ item.name }}
                         </NuxtLink>
                         <div class="flex shrink-0">
-                          <button class="relative w-8 h-8 flex items-center justify-center rounded-full transition-all duration-300 hover:scale-110 active:scale-95 border-none bg-transparent cursor-pointer text-neutral-400 hover:text-red-500">
+                          <button class="relative w-8 h-8 flex items-center justify-center rounded-full transition-all duration-300 hover:scale-110 active:scale-95 border-none bg-transparent cursor-pointer text-primary hover:text-red-500">
                             <svg class="w-5 h-5 relative z-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"/></svg>
                           </button>
-                          <button @click="cartStore.removeItem(item.id)" class="rounded-md font-medium inline-flex items-center transition-colors text-sm gap-1.5 text-neutral-400 hover:text-red-500 p-1.5 border-none bg-transparent cursor-pointer">
+                          <button @click="cartStore.removeItem(item.id)" class="rounded-md font-medium inline-flex items-center transition-colors text-sm gap-1.5 text-primary hover:text-red-500 p-1.5 border-none bg-transparent cursor-pointer">
                             <svg class="shrink-0 size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>
                           </button>
                         </div>
@@ -97,12 +97,12 @@
                       <div class="relative inline-flex items-center bg-[#EAEAEA] rounded-xl overflow-hidden">
                         <input type="text" readonly class="w-full border-0 text-base/5 gap-1.5 text-neutral-900 focus:outline-none text-center px-9 md:text-sm bg-transparent max-w-[120px] h-8 md:h-[34px] font-medium" :value="item.quantity">
                         <div class="absolute flex items-center inset-y-0 end-0 pe-1">
-                          <button @click="cartStore.updateQuantity(item.id, item.quantity + 1)" type="button" class="rounded-md font-medium inline-flex items-center transition-colors text-sm text-neutral-600 hover:text-primary p-1.5 border-none bg-transparent cursor-pointer">
+                          <button @click="cartStore.updateQuantity(item.id, item.quantity + 1)" type="button" class="rounded-md font-medium inline-flex items-center transition-colors text-sm text-primary p-1.5 border-none bg-transparent cursor-pointer">
                             <svg class="shrink-0 size-4 md:size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
                           </button>
                         </div>
                         <div class="absolute flex items-center inset-y-0 start-0 ps-1">
-                          <button @click="cartStore.updateQuantity(item.id, item.quantity - 1)" :disabled="item.quantity <= 1" type="button" class="rounded-md font-medium inline-flex items-center transition-colors text-sm text-neutral-600 hover:text-primary disabled:opacity-50 disabled:hover:text-neutral-600 p-1.5 border-none bg-transparent cursor-pointer">
+                          <button @click="cartStore.updateQuantity(item.id, item.quantity - 1)" :disabled="item.quantity <= 1" type="button" class="rounded-md font-medium inline-flex items-center transition-colors text-sm text-primary disabled:opacity-50 p-1.5 border-none bg-transparent cursor-pointer">
                             <svg class="shrink-0 size-4 md:size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M20 12H4"/></svg>
                           </button>
                         </div>
@@ -121,40 +121,40 @@
                 <input v-model="promoCode" type="text" placeholder="Promokod" class="w-full appearance-none placeholder:text-neutral-400 text-base/5 text-neutral-900 focus:outline-none md:text-sm rounded-2xl p-3 md:p-4 bg-[#F1F2F7] border border-transparent focus:border-primary/20 transition-all">
               </div>
               <div class="space-y-4 pt-2">
-                <div class="flex justify-between text-neutral-500 text-sm md:text-base">
+                <div class="flex justify-between text-[#8F8FA1] text-sm md:text-base">
                   <span>{{ cartStore.selectedCount }} ta mahsulot</span>
-                  <span class="font-medium text-neutral-900">{{ formatPrice(cartStore.originalTotalAmount) }} so'm</span>
+                  <span class="font-medium">{{ formatPrice(cartStore.originalTotalAmount) }} so'm</span>
                 </div>
-                <div v-if="cartStore.totalDiscount > 0" class="flex justify-between text-neutral-500 text-sm md:text-base">
+                <div v-if="cartStore.totalDiscount > 0" class="flex justify-between text-[#8F8FA1] text-sm md:text-base">
                   <span>Chegirma</span>
                   <span class="font-medium text-red-500"> -{{ formatPrice(cartStore.totalDiscount) }} so'm</span>
                 </div>
-                <div class="flex justify-between text-neutral-500 text-sm md:text-base">
+                <div class="flex justify-between text-[#8F8FA1] text-sm md:text-base">
                   <span>Yetkazib berish narxi</span>
-                  <span class="font-medium text-neutral-900">Bepul</span>
+                  <span class="font-medium">Bepul</span>
                 </div>
               </div>
-              <div class="flex justify-between items-center bg-white pt-2 border-t border-neutral-100">
-                <span class="text-xl font-bold text-neutral-900">Jami</span>
-                <span class="text-xl font-bold text-neutral-900">{{ formatPrice(cartStore.totalAmount) }} so'm</span>
+              <div class="flex justify-between items-center bg-white">
+                <span class="text-xl font-bold">Jami</span>
+                <span class="text-xl font-bold">{{ formatPrice(cartStore.totalAmount) }} so'm</span>
               </div>
             </div>
 
             <div class="p-4 sm:p-6 rounded-2xl bg-white space-y-3 max-md:hidden">
               <div class="flex items-center justify-between gap-4">
-                <h3 class="text-base md:text-xl font-semibold leading-6 m-0 text-neutral-900">Muddatli to‘lovga rasmiylashtirish</h3>
+                <h3 class="text-base md:text-xl font-semibold leading-6 m-0">Muddatli to‘lovga rasmiylashtirish</h3>
                 <button @click="isInstallmentActive = !isInstallmentActive" class="w-14 h-7 rounded-full transition-colors relative border-none cursor-pointer p-0 shrink-0" :class="isInstallmentActive ? 'bg-primary' : 'bg-neutral-300'">
                   <span class="absolute top-1 bg-white w-5 h-5 rounded-full transition-all shadow-sm" :class="isInstallmentActive ? 'left-8' : 'left-1'"></span>
                 </button>
               </div>
 
-              <p v-if="!isInstallmentActive" class="text-sm text-neutral-500 leading-relaxed m-0">
+              <p v-if="!isInstallmentActive" class="text-sm text-[#8F8FA1] leading-relaxed m-0">
                 Muddatli to'lovni yoqish orqali xaridingizni qismlarga bo'ling
               </p>
 
               <div v-else class="space-y-3 pt-3 border-t border-neutral-100">
                 <div class="flex justify-between items-center text-sm">
-                  <span class="text-neutral-500">Oylik to'lov</span>
+                  <span class="text-[#8F8FA1]">Oylik to'lov</span>
                   <span class="text-primary font-bold text-base">{{ formatPrice(Math.round(cartStore.totalAmount / installmentMonths * 1.15)) }} so'm <span class="text-neutral-400 font-normal text-xs"> × {{ installmentMonths }} oy</span></span>
                 </div>
                 <div class="flex gap-2">

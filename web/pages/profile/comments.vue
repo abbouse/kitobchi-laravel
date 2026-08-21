@@ -2,7 +2,7 @@
   <main class="max-md:grow h-full md:min-h-dvh bg-[#f1f1f1] lg:bg-white">
     <!-- ====== MOBILE STICKY TOP BAR ====== -->
     <div class="md:hidden py-3 rounded-b-2xl mb-4 bg-white sticky top-0 z-40 transition-all duration-300 shadow-[0_4px_10px_rgba(0,0,0,0.05)]">
-      <div class="px-4 sm:px-6 lg:px-8 w-full max-w-[--ui-container] mx-auto">
+      <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
         <div class="grid grid-cols-5 items-center gap-2">
           <div class="col-span-1">
             <button
@@ -22,7 +22,7 @@
     </div>
     
     <div class="py-6 min-h-dvh">
-      <div class="px-4 sm:px-6 lg:px-8 w-full max-w-[--ui-container] mx-auto">
+      <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
         
         <div class="pb-5 max-md:hidden">
           <div class="flex items-center gap-2">
@@ -32,7 +32,7 @@
             <nav class="relative min-w-0">
               <ol class="flex items-center gap-2 p-0 m-0 list-none">
                 <li class="flex min-w-0 text-[#8F8FA1] text-sm">
-                  <NuxtLink to="/" class="group relative flex items-center gap-1.5 min-w-0 rounded-md font-medium transition-colors text-[#8F8FA1] text-sm no-underline hover:text-neutral-900">
+                  <NuxtLink to="/" class="group relative flex items-center gap-1.5 min-w-0 rounded-md font-medium transition-colors text-[#8F8FA1] text-sm no-underline hover:text-neutral-700">
                     <span class="truncate">Asosiy</span>
                   </NuxtLink>
                 </li>

@@ -2,11 +2,11 @@
   <main class="max-md:grow h-full md:min-h-dvh">
     <!-- Mobile Header (hidden on md) -->
     <div class="md:hidden py-3 rounded-b-2xl mb-2 bg-white sticky top-0 z-40 transition-all duration-300 shadow-sm">
-      <div class="px-4 sm:px-6 lg:px-8 w-full max-w-[--ui-container] mx-auto space-y-2">
+      <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto space-y-2">
         <div class="grid grid-cols-5 items-center gap-2">
           <div class="col-span-1">
             <button @click="$router.back()" type="button" class="relative overflow-hidden transition-shadow duration-300 rounded-full hover:shadow-sm h-11 w-11 flex items-center justify-center p-0 cursor-pointer border-none bg-secondary-100 text-primary">
-              <span class="iconify i-lucide:chevron-left w-6 h-6" aria-hidden="true"></span>
+              <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
             </button>
           </div>
           <div class="col-span-3">
@@ -18,13 +18,13 @@
     </div>
 
     <div class="min-h-dvh md:py-6 bg-white md:bg-transparent">
-      <div class="px-4 sm:px-6 lg:px-8 w-full max-w-[--ui-container] mx-auto">
+      <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
         
         <!-- Desktop Breadcrumb (hidden on max-md) -->
         <div class="mb-5 max-md:hidden">
           <div class="flex items-center gap-2">
             <button type="button" @click="$router.back()" class="font-medium inline-flex items-center text-base gap-2 text-primary p-2 rounded-full hover:bg-primary/10 transition-colors border-none bg-transparent cursor-pointer">
-              <span class="iconify i-lucide:arrow-left shrink-0 size-5" aria-hidden="true"></span>
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
             </button>
             <nav class="flex items-center gap-2 text-sm text-neutral-500">
               <NuxtLink to="/" class="hover:text-neutral-900 transition-colors no-underline">Asosiy</NuxtLink>
@@ -137,7 +137,7 @@
           </form>
 
           <!-- Right Side: Order Summary -->
-          <div class="lg:w-[350px] xl:w-[400px] w-full shrink-0 h-fit lg:sticky top-24">
+          <div class="lg:w-[400px] w-full shrink-0 h-fit lg:sticky top-24">
             <div class="p-4 sm:p-6 rounded-3xl bg-secondary-50">
               
               <div class="space-y-4 mb-4 border-b border-neutral-200/50 pb-4">

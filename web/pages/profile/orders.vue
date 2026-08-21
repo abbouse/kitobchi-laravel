@@ -2,7 +2,7 @@
   <main class="max-md:grow h-full md:min-h-dvh bg-[#f1f1f1] lg:bg-white">
     <!-- ====== MOBILE STICKY TOP BAR ====== -->
     <div class="md:hidden py-3 rounded-b-2xl mb-4 bg-white sticky top-0 z-40 transition-all duration-300 shadow-[0_4px_10px_rgba(0,0,0,0.05)]">
-      <div class="px-4 sm:px-6 lg:px-8 w-full max-w-[--ui-container] mx-auto">
+      <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
         <div class="grid grid-cols-5 items-center gap-2">
           <div class="col-span-1">
             <button
@@ -20,10 +20,10 @@
         </div>
       </div>
     </div>
-    
+
     <div class="py-6 min-h-dvh">
-      <div class="px-4 sm:px-6 lg:px-8 w-full max-w-[--ui-container] mx-auto">
-        
+      <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
+
         <div class="pb-5 max-md:hidden">
           <div class="flex items-center gap-2">
             <button @click="$router.back()" type="button" class="rounded-md font-medium inline-flex items-center transition-colors px-2.5 py-1.5 text-sm gap-1.5 text-primary hover:text-primary/75 outline-primary/25 border-none bg-transparent cursor-pointer">
@@ -32,7 +32,7 @@
             <nav class="relative min-w-0">
               <ol class="flex items-center gap-2 p-0 m-0 list-none">
                 <li class="flex min-w-0 text-[#8F8FA1] text-sm">
-                  <NuxtLink to="/" class="group relative flex items-center gap-1.5 min-w-0 rounded-md font-medium transition-colors text-[#8F8FA1] text-sm no-underline hover:text-neutral-900">
+                  <NuxtLink to="/" class="group relative flex items-center gap-1.5 min-w-0 rounded-md font-medium transition-colors text-[#8F8FA1] text-sm no-underline hover:text-neutral-700">
                     <span class="truncate">Asosiy</span>
                   </NuxtLink>
                 </li>
@@ -58,81 +58,113 @@
           </button>
         </div>
 
+        <!-- MUHIM: piyolamarket.uz'ning /profile/orders sahifasi bilan
+             jonli solishtirildi (2026-08-21). Piyolada BU YERDA "Faol/
+             Tugallangan" TAB'LARI UMUMAN YO'Q — hammasi bitta ro'yxatda,
+             hech qanday bg-secondary-50/rounded-3xl "karta" o'rash ham
+             yo'q (sarlavha va buyurtma kartalari to'g'ridan-to'g'ri sahifa
+             foniga chiqadi). Har bir buyurtma o'zi alohida oq (bg-white)
+             rounded-2xl karta: {raqam / vaqt / summa} qatori + status
+             belgisi (rounded-full pill, TO'LIQ RANGLI fon + oq matn —
+             piyolada rgb(11,3,66) yoki holatga qarab boshqa rang, INLINE
+             style orqali, Tailwind klassi orqali emas), so'ng chiziq, so'ng
+             mahsulot rasmi+nomi+soni va "Buyurtma tafsilotlari" tugmasi.
+             Shu struktura pastda takrorlandi. -->
         <div v-else class="flex flex-col lg:flex-row gap-5">
           <ProfileSidebar active="orders" />
-          
+
           <div class="w-full">
-            <div class="max-md:min-h-dvh flex flex-col max-md:pb-2">
-              <div class="p-4 md:p-6 rounded-3xl bg-secondary-50">
-                <!-- Tabs: Faol / Tugallangan -->
-                <div class="flex items-center gap-2 mb-5">
-                  <button
-                    v-for="tab in ORDER_TABS"
-                    :key="tab.value"
-                    type="button"
-                    @click="activeTab = tab.value"
-                    class="font-medium items-center transition-colors py-1.5 text-sm gap-1.5 h-10 flex justify-center rounded-xl px-4 border-none cursor-pointer"
-                    :class="activeTab === tab.value ? 'bg-primary text-white' : 'bg-white text-neutral-500 hover:text-neutral-900'"
-                  >
-                    {{ tab.label }}
+            <div class="flex justify-between items-center mb-4">
+              <h2 class="text-primary text-xl font-semibold m-0">Buyurtmalaringiz</h2>
+            </div>
+
+            <!-- Loading -->
+            <div v-if="pending" class="flex flex-col gap-3">
+              <div v-for="n in 3" :key="n" class="bg-white rounded-2xl p-4 animate-pulse">
+                <div class="h-4 bg-neutral-100 rounded w-1/3 mb-3"></div>
+                <div class="h-4 bg-neutral-100 rounded w-1/2"></div>
+              </div>
+            </div>
+
+            <!-- Error -->
+            <div v-else-if="loadError" class="flex flex-col items-center py-12 text-center bg-white rounded-2xl p-6">
+              <p class="text-[#8F8FA1] mb-4">Buyurtmalarni yuklashda xatolik yuz berdi</p>
+              <button @click="fetchOrders(1)" type="button" class="text-primary font-medium border-none bg-transparent cursor-pointer">Qayta urinish</button>
+            </div>
+
+            <!-- Empty -->
+            <div v-else-if="orders.length === 0" class="flex flex-col items-center py-16 text-center bg-white rounded-2xl p-6">
+              <div class="w-20 h-20 bg-[#F6F6F9] rounded-full flex items-center justify-center mb-4">
+                <svg class="w-10 h-10 text-neutral-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m-.75 11.25h9a2.25 2.25 0 002.25-2.25l-.75-9a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25l-.75 9a2.25 2.25 0 002.25 2.25z"/></svg>
+              </div>
+              <p class="font-medium m-0">Buyurtmalar yo'q</p>
+            </div>
+
+            <!-- Orders list -->
+            <div v-else class="flex flex-col gap-3">
+              <div
+                v-for="order in orders"
+                :key="order.id"
+                class="rounded-2xl p-4 bg-white"
+              >
+                <div class="flex items-center justify-between w-full gap-3 flex-wrap-reverse">
+                  <div class="flex items-center gap-8 flex-wrap">
+                    <div>
+                      <span class="text-[#8F8FA1] text-xs uppercase font-normal">Buyurtma raqami:</span>
+                      <p class="text-sm font-medium m-0">№{{ order.id }}</p>
+                    </div>
+                    <div>
+                      <span class="text-[#8F8FA1] text-xs uppercase font-normal">Buyurtma vaqti:</span>
+                      <p class="text-sm font-medium m-0">{{ formatOrderDate(order) }}</p>
+                    </div>
+                    <div>
+                      <span class="text-[#8F8FA1] text-xs uppercase font-normal">Buyurtma summasi:</span>
+                      <p class="text-sm font-medium m-0">{{ formatPrice(orderTotal(order)) }} so'm</p>
+                    </div>
+                  </div>
+                  <span
+                    class="font-medium inline-flex items-center text-sm py-1 gap-1.5 rounded-full px-4"
+                    :style="statusBadgeStyle(order)"
+                  >{{ statusLabel(order) }}</span>
+                </div>
+
+                <div class="flex items-center w-full flex-row my-4">
+                  <div class="border-neutral-100 w-full border-solid border-t"></div>
+                </div>
+
+                <div class="flex items-center justify-between w-full gap-4">
+                  <div class="flex-1 flex gap-3 min-w-0">
+                    <div class="flex items-center gap-3 shrink-0">
+                      <div class="overflow-hidden relative rounded-lg w-[70px] h-[93px] bg-neutral-100 shrink-0">
+                        <img v-if="orderThumb(order)" :src="orderThumb(order)" class="w-full h-full object-cover">
+                      </div>
+                    </div>
+                    <div class="min-w-0">
+                      <h3 class="line-clamp-2 text-sm font-medium m-0">{{ orderFirstItemName(order) }}</h3>
+                      <p class="text-[#8F8FA1] text-xs mt-2 m-0">Soni: {{ orderTotalQty(order) }} dona</p>
+                    </div>
+                  </div>
+                  <!-- MUHIM: alohida buyurtma tafsilotlari sahifasi
+                       (/profile/orders/[id]) loyihada hali yo'q — shu
+                       sababli hozircha faqat vizual jihatdan piyoladagidek
+                       tugma ko'rsatilmoqda, lekin navigatsiya qilmaydi.
+                       Alohida vazifa sifatida qo'shilishi kerak. -->
+                  <button type="button" class="font-medium items-center transition-colors gap-1.5 text-primary bg-primary/10 hover:bg-primary/15 h-12 flex justify-center rounded-2xl text-base px-6 border-none cursor-pointer shrink-0">
+                    Buyurtma tafsilotlari
                   </button>
                 </div>
+              </div>
 
-                <!-- Loading -->
-                <div v-if="pending" class="flex flex-col gap-3">
-                  <div v-for="n in 3" :key="n" class="bg-white rounded-2xl p-4 animate-pulse">
-                    <div class="h-4 bg-neutral-100 rounded w-1/3 mb-3"></div>
-                    <div class="h-4 bg-neutral-100 rounded w-1/2"></div>
-                  </div>
-                </div>
-
-                <!-- Error -->
-                <div v-else-if="loadError" class="flex flex-col items-center py-12 text-center">
-                  <p class="text-neutral-500 mb-4">Buyurtmalarni yuklashda xatolik yuz berdi</p>
-                  <button @click="fetchOrders(1)" type="button" class="text-primary font-medium border-none bg-transparent cursor-pointer">Qayta urinish</button>
-                </div>
-
-                <!-- Empty -->
-                <div v-else-if="filteredOrders.length === 0" class="flex flex-col items-center py-16 text-center">
-                  <div class="w-20 h-20 bg-white rounded-full flex items-center justify-center mb-4">
-                    <svg class="w-10 h-10 text-neutral-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m-.75 11.25h9a2.25 2.25 0 002.25-2.25l-.75-9a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25l-.75 9a2.25 2.25 0 002.25 2.25z"/></svg>
-                  </div>
-                  <p class="text-neutral-500 font-medium">Buyurtmalar yo'q</p>
-                </div>
-
-                <!-- Orders list -->
-                <div v-else class="flex flex-col gap-3">
-                  <div
-                    v-for="order in filteredOrders"
-                    :key="order.id"
-                    class="bg-white rounded-2xl p-4 flex flex-col gap-3"
-                  >
-                    <div class="flex items-center justify-between gap-2">
-                      <span class="text-neutral-500 text-sm">№ {{ order.id }}</span>
-                      <span
-                        class="text-xs font-semibold px-3 py-1 rounded-full"
-                        :class="statusBadgeClass(order)"
-                      >{{ statusLabel(order) }}</span>
-                    </div>
-                    <div class="flex items-center justify-between gap-2">
-                      <span class="text-neutral-500 text-sm">{{ formatOrderDate(order) }}</span>
-                      <span class="text-neutral-900 font-bold text-base">{{ formatPrice(orderTotal(order)) }} so'm</span>
-                    </div>
-                    <div class="text-neutral-400 text-sm">{{ orderItemCount(order) }} ta mahsulot</div>
-                  </div>
-
-                  <!-- Load more -->
-                  <div v-if="meta && meta.current_page < meta.last_page" class="flex justify-center mt-2">
-                    <button
-                      @click="loadMore"
-                      :disabled="loadingMore"
-                      type="button"
-                      class="font-medium items-center transition-colors py-1.5 text-sm gap-1.5 text-primary bg-primary/10 hover:bg-primary/15 h-10 flex justify-center rounded-xl px-6 border-none cursor-pointer disabled:opacity-60"
-                    >
-                      {{ loadingMore ? 'Yuklanmoqda...' : 'Ko\'proq ko\'rsatish' }}
-                    </button>
-                  </div>
-                </div>
+              <!-- Load more -->
+              <div v-if="meta && meta.current_page < meta.last_page" class="flex justify-center mt-2">
+                <button
+                  @click="loadMore"
+                  :disabled="loadingMore"
+                  type="button"
+                  class="font-medium items-center transition-colors py-1.5 text-sm gap-1.5 text-primary bg-primary/10 hover:bg-primary/15 h-10 flex justify-center rounded-xl px-6 border-none cursor-pointer disabled:opacity-60"
+                >
+                  {{ loadingMore ? 'Yuklanmoqda...' : 'Ko\'proq ko\'rsatish' }}
+                </button>
               </div>
             </div>
           </div>
@@ -141,7 +173,7 @@
     </div>
   </main>
 
-  
+
 </template>
 <script setup lang="ts">
 import { useAuthStore } from '~/stores/auth'
@@ -191,6 +223,30 @@ function orderItemCount(order: any) {
   return order.items_count ?? 0
 }
 
+// Backend `items` massividagi har bir element PurchaseController'da
+// `name`, `cover` (rasm), `count_item` (soni) kalitlari bilan saqlanadi
+// (savat item'lari emas!) — app/Http/Controllers/Api/PurchaseController.php
+// (~2061-qator) orqali tasdiqlangan.
+function orderFirstItem(order: any): any {
+  return Array.isArray(order.items) && order.items.length > 0 ? order.items[0] : null
+}
+
+function orderThumb(order: any): string | undefined {
+  return orderFirstItem(order)?.cover || undefined
+}
+
+function orderFirstItemName(order: any): string {
+  const first = orderFirstItem(order)
+  if (!first) return ''
+  const extra = orderItemCount(order) > 1 ? ` +${orderItemCount(order) - 1}` : ''
+  return `${first.name || ''}${extra}`
+}
+
+function orderTotalQty(order: any): number {
+  if (!Array.isArray(order.items)) return 0
+  return order.items.reduce((sum: number, item: any) => sum + (Number(item?.count_item) || 0), 0)
+}
+
 function formatPrice(value: number) {
   return new Intl.NumberFormat('ru-RU').format(value || 0)
 }
@@ -213,14 +269,24 @@ const STATUS_LABELS: Record<string, string> = {
   returned: 'Qaytarildi',
 }
 
-const STATUS_CLASSES: Record<string, string> = {
-  pending: 'bg-amber-100 text-amber-700',
-  packing: 'bg-amber-100 text-amber-700',
-  in_delivery: 'bg-secondary-100 text-blue',
-  delivered: 'bg-secondary-100 text-emerald-600',
-  customer_received: 'bg-secondary-100 text-emerald-600',
-  cancelled: 'bg-red-100 text-red-700',
-  returned: 'bg-red-100 text-red-700',
+// MUHIM: piyolamarket.uz'da status belgisi Tailwind rang-klassi bilan
+// EMAS, balki har bir buyurtmaga inline `style="background-color:...;
+// color:#fff"` orqali chiziladi (jonli DOM'dan tasdiqlangan: yakunlangan
+// buyurtma uchun rgb(255, 3, 91), to'liq rangli, oq matnli pill —
+// bg-amber-100/text-amber-700 kabi och (light-tint) fonlar EMAS). Aniq
+// rang faqat "yakunlangan/bekor qilingan" holat uchun jonli tasdiqlandi;
+// qolgan holatlar (kutilmoqda/yetkazilmoqda/yetkazildi) uchun piyolada
+// namuna topilmadi — shu sababli mantiqan yaqin, izchil to'liq rang
+// tanlandi. Piyolada boshqa status'li buyurtma paydo bo'lsa, shu jadval
+// aniqlashtirilishi kerak.
+const STATUS_COLORS: Record<string, string> = {
+  pending: '#F59E0B',
+  packing: '#F59E0B',
+  in_delivery: '#2563EB',
+  delivered: '#16A34A',
+  customer_received: '#16A34A',
+  cancelled: '#FF035B',
+  returned: '#FF035B',
 }
 
 function statusCode(order: any) {
@@ -232,31 +298,11 @@ function statusLabel(order: any) {
   return STATUS_LABELS[code] || code
 }
 
-function statusBadgeClass(order: any) {
+function statusBadgeStyle(order: any) {
   const code = statusCode(order)
-  return STATUS_CLASSES[code] || 'bg-secondary-100 text-neutral-600'
+  const bg = STATUS_COLORS[code] || '#0B0342'
+  return { backgroundColor: bg, color: '#fff' }
 }
-
-// "Faol" (hali yakunlanmagan) vs "Tugallangan" (yakuniy holat) — piyola'dagi
-// Buyurtmalarim tab'lariga mos.
-const ACTIVE_STATUSES = ['pending', 'packing', 'in_delivery']
-const COMPLETED_STATUSES = ['delivered', 'customer_received', 'cancelled', 'returned']
-
-const ORDER_TABS = [
-  { value: 'active' as const, label: 'Faol' },
-  { value: 'completed' as const, label: 'Tugallangan' },
-]
-
-const activeTab = ref<'active' | 'completed'>('active')
-
-const filteredOrders = computed(() => {
-  return orders.value.filter((order) => {
-    const code = statusCode(order)
-    return activeTab.value === 'active'
-      ? ACTIVE_STATUSES.includes(code)
-      : COMPLETED_STATUSES.includes(code)
-  })
-})
 
 onMounted(() => {
   if (authStore.isAuthenticated) {

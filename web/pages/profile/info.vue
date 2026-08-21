@@ -2,7 +2,7 @@
   <main class="max-md:grow h-full md:min-h-dvh bg-[#f1f1f1] lg:bg-white">
     <!-- ====== MOBILE STICKY TOP BAR ====== -->
     <div class="md:hidden py-3 rounded-b-2xl mb-4 bg-white sticky top-0 z-40 transition-all duration-300 shadow-[0_4px_10px_rgba(0,0,0,0.05)]">
-      <div class="px-4 sm:px-6 lg:px-8 w-full max-w-[--ui-container] mx-auto">
+      <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
         <div class="grid grid-cols-5 items-center gap-2">
           <div class="col-span-1">
             <button
@@ -22,7 +22,7 @@
     </div>
     
     <div class="py-6 min-h-dvh">
-      <div class="px-4 sm:px-6 lg:px-8 w-full max-w-[--ui-container] mx-auto">
+      <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
         
         <div class="pb-5 max-md:hidden">
           <div class="flex items-center gap-2">
@@ -32,7 +32,7 @@
             <nav class="relative min-w-0">
               <ol class="flex items-center gap-2 p-0 m-0 list-none">
                 <li class="flex min-w-0 text-[#8F8FA1] text-sm">
-                  <NuxtLink to="/" class="group relative flex items-center gap-1.5 min-w-0 rounded-md font-medium transition-colors text-[#8F8FA1] text-sm no-underline hover:text-neutral-900">
+                  <NuxtLink to="/" class="group relative flex items-center gap-1.5 min-w-0 rounded-md font-medium transition-colors text-[#8F8FA1] text-sm no-underline hover:text-neutral-700">
                     <span class="truncate">Asosiy</span>
                   </NuxtLink>
                 </li>
@@ -72,32 +72,32 @@
           </button>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="grid grid-cols-2 gap-4">
           <div class="flex flex-col">
-            <span class="text-neutral-500 flex-1 font-normal shrink-0 text-sm">To'liq ism</span>
-            <span class="flex-1 font-medium shrink-0 text-neutral-900">{{ userAny?.name || "Kiritilmagan" }}</span>
+            <span class="text-[#8F8FA1] flex-1 font-normal shrink-0">To'liq ism</span>
+            <span class="flex-1 font-medium shrink-0">{{ userAny?.name || "Kiritilmagan" }}</span>
           </div>
           <div class="flex flex-col">
-            <span class="text-neutral-500 flex-1 font-normal shrink-0 text-sm">Tug'ilgan sana</span>
-            <span class="flex-1 font-medium shrink-0 text-neutral-900">{{ userAny?.birthdate ? formatDate(userAny.birthdate) : "Kiritilmagan" }}</span>
+            <span class="text-[#8F8FA1] flex-1 font-normal shrink-0">Tug'ilgan sana</span>
+            <span class="flex-1 font-medium shrink-0">{{ userAny?.birthdate ? formatDate(userAny.birthdate) : "Kiritilmagan" }}</span>
           </div>
           <div class="flex flex-col">
-            <span class="text-neutral-500 flex-1 font-normal shrink-0 text-sm">Jins</span>
-            <span class="flex-1 font-medium shrink-0 text-neutral-900">{{ userAny?.sex === 'ayol' ? 'Ayol' : (userAny?.sex === 'erkak' ? 'Erkak' : 'Kiritilmagan') }}</span>
+            <span class="text-[#8F8FA1] flex-1 font-normal shrink-0">Jins</span>
+            <span class="flex-1 font-medium shrink-0">{{ userAny?.sex === 'ayol' ? 'Ayol' : (userAny?.sex === 'erkak' ? 'Erkak' : 'Kiritilmagan') }}</span>
           </div>
           <div class="flex flex-col">
-            <span class="text-neutral-500 flex-1 font-normal shrink-0 text-sm">Telefon raqam</span>
-            <span class="flex-1 font-medium shrink-0 text-neutral-900">{{ formatPhone(userAny?.phone) || "Kiritilmagan" }}</span>
+            <span class="text-[#8F8FA1] flex-1 font-normal shrink-0">Telefon raqam</span>
+            <span class="flex-1 font-medium shrink-0">{{ formatPhone(userAny?.phone) || "Kiritilmagan" }}</span>
           </div>
           <div class="flex flex-col">
-            <span class="text-neutral-500 flex-1 font-normal shrink-0 text-sm">Elektron pochta</span>
-            <span class="flex-1 font-medium shrink-0 text-neutral-900">{{ userAny?.email || "Kiritilmagan" }}</span>
+            <span class="text-[#8F8FA1] flex-1 font-normal shrink-0">Elektron pochta</span>
+            <span class="flex-1 font-medium shrink-0">{{ userAny?.email || "Kiritilmagan" }}</span>
           </div>
         </div>
 
         <div class="mt-8">
           <div class="flex items-center justify-between mb-4">
-            <h2 class="text-xl font-bold m-0 text-neutral-900">Saqlangan manzillar</h2>
+            <h2 class="text-xl font-bold m-0">Saqlangan manzillar</h2>
           </div>
 
           <!-- Addreslar ro'yxati -->
@@ -120,19 +120,19 @@
               </div>
             </div>
             
-            <button @click="openAddressModal" type="button" class="mt-4 font-medium inline-flex items-center justify-center text-base gap-2 text-white bg-primary hover:bg-primary/90 transition-colors rounded-2xl h-12 px-6 border-none cursor-pointer w-full sm:w-auto shadow-sm">
+            <button @click="openAddressModal" type="button" class="mt-4 font-medium inline-flex items-center justify-center text-base gap-2 text-white bg-primary hover:bg-primary/90 transition-colors rounded-2xl h-12 px-6 border-none cursor-pointer w-full sm:w-auto">
               <span class="truncate">Yangi manzil qo‘shish</span>
             </button>
           </div>
 
           <!-- Bo'sh state -->
           <div v-else class="mt-4 rounded-[20px] bg-[#F6F6F9] p-6 flex flex-col gap-3 items-center">
-            <div class="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-sm">
+            <div class="w-20 h-20 bg-white rounded-full flex items-center justify-center">
               <svg class="w-10 h-10 text-neutral-400" viewBox="0 0 24 24" fill="currentColor"><path d="M11.47 3.84a.75.75 0 011.06 0l8.69 8.69a.75.75 0 101.06-1.06l-8.689-8.69a2.25 2.25 0 00-3.182 0l-8.69 8.69a.75.75 0 001.061 1.06l8.69-8.69z"/><path d="M12 5.432l8.159 8.159c.03.03.06.058.091.086v6.198c0 1.035-.84 1.875-1.875 1.875H15a.75.75 0 01-.75-.75v-4.5a.75.75 0 00-.75-.75h-3a.75.75 0 00-.75.75V21a.75.75 0 01-.75.75H5.625a1.875 1.875 0 01-1.875-1.875v-6.198a2.29 2.29 0 00.091-.086L12 5.43z"/></svg>
             </div>
-            <h2 class="text-lg md:text-xl font-semibold text-center m-0 text-neutral-900">Saqlangan manzillar mavjud emas</h2>
-            <p class="text-sm font-normal max-w-md text-center m-0 text-neutral-500">Yetkazib berish manzilini qo‘shing</p>
-            <button @click="openAddressModal" type="button" class="mt-2 font-medium inline-flex items-center text-base gap-2 text-white bg-primary hover:bg-primary/90 transition-colors rounded-2xl h-12 px-6 border-none cursor-pointer shadow-sm">
+            <h2 class="text-lg md:text-xl font-semibold text-center m-0">Saqlangan manzillar mavjud emas</h2>
+            <p class="text-sm font-normal max-w-md text-center m-0">Yetkazib berish manzilini qo‘shing</p>
+            <button @click="openAddressModal" type="button" class="mt-2 font-medium inline-flex items-center text-base gap-2 text-white bg-primary hover:bg-primary/90 transition-colors rounded-2xl h-12 px-6 border-none cursor-pointer">
               <span class="truncate">Yangi manzil qo‘shish</span>
             </button>
               
