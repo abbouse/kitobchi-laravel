@@ -1,4 +1,4 @@
-import { defineStore } from 'pinia'
+import { defineStore, skipHydrate } from 'pinia'
 
 export interface CartItem {
   id: number
@@ -14,7 +14,20 @@ export interface CartItem {
 }
 
 export const useCartStore = defineStore('cart', () => {
-  const items = useLocalStorage<CartItem[]>('kc_cart_items', [])
+  // MUHIM: `useLocalStorage` bilan yaratilgan ref Pinia'ning SSR state
+  // serialization/hydration mexanizmi bilan to'qnashadi — Nuxt SSR paytida
+  // server tomonida `localStorage` yo'q, shu sababli bu ref `[]` (bo'sh
+  // massiv) bilan boshlanadi va shu holat Nuxt payload orqali clientga
+  // yuboriladi. Client tomonida Pinia hydration paytida `useLocalStorage`
+  // haqiqiy saqlangan qiymatni o'qib ulguradi, lekin darhol keyin Pinia
+  // uni yana serverdan kelgan bo'sh `[]` bilan almashtiradi — natijada
+  // foydalanuvchi savatga mahsulot qo'shib, keyin sahifani yangilasa
+  // (yoki to'g'ridan-to'g'ri /cart manziliga o'tsa) savat "bo'sh" bo'lib
+  // ko'rinadi va bu bo'sh holat localStorage'ga ham yozilib, haqiqiy
+  // ma'lumotni butunlay o'chirib yuboradi. `skipHydrate()` shu refni
+  // Pinia SSR hydration'idan chiqarib tashlaydi — endi u faqat o'zining
+  // manbasidan (localStorage) client tomonda to'g'ri tiklanadi.
+  const items = skipHydrate(useLocalStorage<CartItem[]>('kc_cart_items', []))
 
   const totalCount = computed(() => {
     return items.value.reduce((sum, item) => sum + item.quantity, 0)

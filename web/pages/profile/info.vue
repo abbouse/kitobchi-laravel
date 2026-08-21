@@ -79,11 +79,11 @@
           </div>
           <div class="flex flex-col">
             <span class="text-neutral-500 flex-1 font-normal shrink-0 text-sm">Tug'ilgan sana</span>
-            <span class="flex-1 font-medium shrink-0 text-neutral-900">{{ userAny?.birthDate ? formatDate(userAny.birthDate) : "Kiritilmagan" }}</span>
+            <span class="flex-1 font-medium shrink-0 text-neutral-900">{{ userAny?.birthdate ? formatDate(userAny.birthdate) : "Kiritilmagan" }}</span>
           </div>
           <div class="flex flex-col">
             <span class="text-neutral-500 flex-1 font-normal shrink-0 text-sm">Jins</span>
-            <span class="flex-1 font-medium shrink-0 text-neutral-900">{{ userAny?.gender === 'female' ? 'Ayol' : (userAny?.gender === 'male' ? 'Erkak' : 'Kiritilmagan') }}</span>
+            <span class="flex-1 font-medium shrink-0 text-neutral-900">{{ userAny?.sex === 'ayol' ? 'Ayol' : (userAny?.sex === 'erkak' ? 'Erkak' : 'Kiritilmagan') }}</span>
           </div>
           <div class="flex flex-col">
             <span class="text-neutral-500 flex-1 font-normal shrink-0 text-sm">Telefon raqam</span>
@@ -148,9 +148,24 @@
 
 
   <!-- Tahrirlash Modali -->
-    <UModal v-model="isEditModalOpen" prevent-close :ui="{ base: 'sm:max-w-[600px]', rounded: 'rounded-3xl', margin: 'sm:my-8' }">
-      <div class="relative bg-white rounded-3xl overflow-hidden p-6 sm:p-8">
-        <button @click="isEditModalOpen = false" class="absolute top-4 right-4 sm:top-6 sm:right-6 w-10 h-10 rounded-full bg-[#F6F6F9] hover:bg-neutral-200 transition-colors flex items-center justify-center border-none cursor-pointer">
+    <!-- MUHIM: bu yerda ilgari `<UModal>` (Nuxt UI) ishlatilgan edi, lekin
+         `@nuxt/ui` moduli loyihaga umuman o'rnatilmagan (package.json va
+         nuxt.config.ts'da yo'q) — shu sababli `<UModal>` "backdrop + fixed
+         overlay" berish o'rniga oddiy tanilmagan HTML elementi sifatida
+         DOM'ning ODDIY OQIMIGA (sahifa pastiga, boshqa kontent bilan
+         qatorlashib) chizilardi: overlay yo'q, markazlashtirish yo'q,
+         yopish/ochish animatsiyasi yo'q — desktopda "Tahrirlash" va
+         "Manzil qo'shish" tugmalari bosilganda forma sahifa oxirida paydo
+         bo'lib, sindirilgan ko'rinardi. Endi loyihada allaqachon ishlab
+         turgan `AuthModal.vue`dagi bilan bir xil naqsh — `fixed inset-0`
+         qora fon (backdrop) + markazlashtirilgan oq kartochka — ishlatildi. -->
+    <div
+      v-if="isEditModalOpen"
+      class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
+      @click.self="isEditModalOpen = false"
+    >
+      <div class="relative bg-white rounded-3xl overflow-hidden p-6 sm:p-8 w-full max-w-[600px] max-h-[90vh] overflow-y-auto">
+        <button @click="isEditModalOpen = false" type="button" class="absolute top-4 right-4 sm:top-6 sm:right-6 w-10 h-10 rounded-full bg-[#F6F6F9] hover:bg-neutral-200 transition-colors flex items-center justify-center border-none cursor-pointer">
           <svg class="w-5 h-5 text-neutral-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
         <h3 class="text-2xl font-bold text-center m-0 mb-8 text-neutral-900">Tahrirlash</h3>
@@ -170,31 +185,35 @@
           <div class="space-y-1.5">
             <label class="text-sm font-medium text-neutral-700">Jinsingiz</label>
             <div class="flex items-center gap-2 p-1 bg-[#F1F2F7] rounded-2xl">
-              <button type="button" @click="editForm.gender = 'male'" :class="editForm.gender === 'male' ? 'bg-white shadow-sm text-neutral-900' : 'text-neutral-500 hover:text-neutral-700'" class="flex-1 py-3 px-4 rounded-xl font-medium text-sm transition-all border-none cursor-pointer">
+              <button type="button" @click="editForm.sex = 'erkak'" :class="editForm.sex === 'erkak' ? 'bg-white shadow-sm text-neutral-900' : 'text-neutral-500 hover:text-neutral-700'" class="flex-1 py-3 px-4 rounded-xl font-medium text-sm transition-all border-none cursor-pointer">
                 Erkak
               </button>
-              <button type="button" @click="editForm.gender = 'female'" :class="editForm.gender === 'female' ? 'bg-white shadow-sm text-neutral-900' : 'text-neutral-500 hover:text-neutral-700'" class="flex-1 py-3 px-4 rounded-xl font-medium text-sm transition-all border-none cursor-pointer">
+              <button type="button" @click="editForm.sex = 'ayol'" :class="editForm.sex === 'ayol' ? 'bg-white shadow-sm text-neutral-900' : 'text-neutral-500 hover:text-neutral-700'" class="flex-1 py-3 px-4 rounded-xl font-medium text-sm transition-all border-none cursor-pointer">
                 Ayol
               </button>
             </div>
           </div>
-          
+
           <button type="submit" :disabled="savingInfoModal" class="w-full font-bold items-center transition-colors gap-1.5 text-white bg-primary hover:bg-primary/90 h-12 md:h-14 flex justify-center rounded-2xl text-base px-6 mt-6 border-none cursor-pointer disabled:opacity-75 shadow-sm">
             {{ savingInfoModal ? "Saqlanmoqda..." : "Saqlash" }}
           </button>
         </form>
       </div>
-    </UModal>
+    </div>
 
     <!-- Manzil Qo'shish Modali -->
-    <UModal v-model="isAddressModalOpen" prevent-close :ui="{ base: 'sm:max-w-[600px]', rounded: 'rounded-3xl', margin: 'sm:my-8' }">
-      <div class="relative bg-white rounded-3xl overflow-hidden p-6 sm:p-8">
-        <button @click="isAddressModalOpen = false" class="absolute top-4 right-4 sm:top-6 sm:right-6 w-10 h-10 rounded-full bg-[#F6F6F9] hover:bg-neutral-200 transition-colors flex items-center justify-center border-none cursor-pointer">
+    <div
+      v-if="isAddressModalOpen"
+      class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
+      @click.self="isAddressModalOpen = false"
+    >
+      <div class="relative bg-white rounded-3xl overflow-hidden p-6 sm:p-8 w-full max-w-[600px] max-h-[90vh] overflow-y-auto">
+        <button @click="isAddressModalOpen = false" type="button" class="absolute top-4 right-4 sm:top-6 sm:right-6 w-10 h-10 rounded-full bg-[#F6F6F9] hover:bg-neutral-200 transition-colors flex items-center justify-center border-none cursor-pointer">
           <svg class="w-5 h-5 text-neutral-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
         <h3 class="text-2xl font-bold text-center m-0 mb-8 text-neutral-900">Manzil qo'shish</h3>
         <form @submit.prevent="handleSaveAddressModal" class="space-y-4">
-          
+
           <div v-if="modalGeoError" class="p-3 bg-red-50 text-red-600 rounded-xl text-sm font-medium text-center">
             {{ modalGeoError }}
           </div>
@@ -219,18 +238,18 @@
               </div>
             </div>
           </div>
-          
+
           <div class="space-y-1.5 pt-2">
             <label class="text-sm font-medium text-neutral-700">To'liq manzil</label>
             <input v-model="modalAddressText" type="text" class="w-full appearance-none text-base text-neutral-900 focus:outline-none rounded-2xl p-4 bg-[#F1F2F7] border border-transparent focus:border-primary/20 transition-all" placeholder="Toshkent shahar, Yunusobod tumani..." required>
           </div>
-          
+
           <button type="submit" :disabled="!modalAddressText.trim() || savingModalAddress" class="w-full font-bold items-center transition-colors gap-1.5 text-white bg-primary hover:bg-primary/90 h-12 md:h-14 flex justify-center rounded-2xl text-base px-6 mt-6 border-none cursor-pointer disabled:opacity-75 shadow-sm">
             {{ savingModalAddress ? "Qo'shilmoqda..." : "Qo'shish" }}
           </button>
         </form>
       </div>
-    </UModal>
+    </div>
 </template>
 <script setup lang="ts">
 import { useAuthStore } from '~/stores/auth'
@@ -254,14 +273,23 @@ function formatPhone(phone: string) {
 // ── Tahrirlash Modali ───────────────────────────────────────────────
 const isEditModalOpen = ref(false)
 const savingInfoModal = ref(false)
-const editForm = ref({ name: '', phone: '', birthDate: '', gender: '' })
+// MUHIM: jonli backend (`/v1/kitobchi/user/*`) javobini brauzer
+// cookie'sidagi `kc_user` orqali bevosita tekshirib TASDIQLADIK:
+// tug'ilgan sana maydoni `birthdate` (kichik harf, camelCase emas) va
+// jins maydoni `sex` (qiymatlari inglizcha "male"/"female" emas,
+// o'zbekcha "erkak"/"ayol") nomi bilan keladi. Oldin bu yerda `birthDate`
+// va `gender`("male"/"female") ishlatilgan edi — natijada "Tug'ilgan
+// sana" va "Jins" haqiqiy qiymat mavjud bo'lsa ham doim "Kiritilmagan"
+// bo'lib ko'rinardi, tahrirlab saqlash esa backend o'qimaydigan noto'g'ri
+// kalitlarga yozardi.
+const editForm = ref({ name: '', phone: '', birthDate: '', sex: '' })
 
 function openEditModal() {
   editForm.value = {
     name: userAny.value?.name || '',
     phone: userAny.value?.phone || '',
-    birthDate: userAny.value?.birthDate || '',
-    gender: userAny.value?.gender || 'male'
+    birthDate: userAny.value?.birthdate || '',
+    sex: userAny.value?.sex || 'erkak'
   }
   isEditModalOpen.value = true
 }
@@ -274,14 +302,14 @@ async function handleSaveInfoModal() {
       headers: { Authorization: `Bearer ${authStore.token}` },
       body: {
         name: editForm.value.name,
-        birthDate: editForm.value.birthDate,
-        gender: editForm.value.gender
+        birthdate: editForm.value.birthDate,
+        sex: editForm.value.sex
       }
     })
     authStore.updateUser({
       name: editForm.value.name,
-      birthDate: editForm.value.birthDate,
-      gender: editForm.value.gender
+      birthdate: editForm.value.birthDate,
+      sex: editForm.value.sex
     })
     isEditModalOpen.value = false
   } catch (e) {

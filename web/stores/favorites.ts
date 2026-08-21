@@ -1,4 +1,4 @@
-import { defineStore } from 'pinia'
+import { defineStore, skipHydrate } from 'pinia'
 
 export interface FavoriteItem {
   id: number
@@ -24,7 +24,11 @@ function extractImg(p: any): string {
 }
 
 export const useFavoritesStore = defineStore('favorites', () => {
-  const items = useLocalStorage<FavoriteItem[]>('kc_favorite_items', [])
+  // cart.ts'dagi izohga qarang: `useLocalStorage` + Pinia SSR hydration
+  // to'qnashuvi sababli, sahifani yangilashda "Sevimlilar" ro'yxati ham
+  // bo'shab qolishi (va localStorage'dagi haqiqiy ma'lumot o'chib ketishi)
+  // mumkin edi. `skipHydrate()` buni oldini oladi.
+  const items = skipHydrate(useLocalStorage<FavoriteItem[]>('kc_favorite_items', []))
 
   const count = computed(() => items.value.length)
 

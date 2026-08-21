@@ -172,16 +172,27 @@
     </div>
     
     <!-- Success Modal -->
-    <UModal v-model="isSuccessOpen">
-      <div class="p-8 text-center">
-        <div class="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4 text-green-500">
-          <svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+    <!-- MUHIM: bu yerda ham `<UModal>` (o'rnatilmagan `@nuxt/ui`) ishlatilgan
+         edi — buyurtma muvaffaqiyatli qabul qilingandan keyingi eng muhim
+         lahzada (checkout yakuni) tasdiqlash oynasi overlay sifatida emas,
+         sahifa oxirida oddiy blok sifatida chizilib, foydalanuvchini
+         chalg'itardi. AuthModal.vue'dagi bilan bir xil fixed-overlay
+         naqshiga o'tkazildi. -->
+    <div
+      v-if="isSuccessOpen"
+      class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
+    >
+      <div class="relative bg-white rounded-3xl w-full max-w-md shadow-2xl">
+        <div class="p-8 text-center">
+          <div class="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4 text-green-500">
+            <svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+          </div>
+          <h3 class="text-2xl font-bold text-neutral-900 mb-2">Buyurtma qabul qilindi!</h3>
+          <p class="text-sm text-neutral-600 mb-6">Tez orada operatorlarimiz siz bilan bog'lanadi.</p>
+          <button @click="finishOrder" type="button" class="w-full px-4 py-3 rounded-xl bg-primary text-white hover:bg-primary/90 transition-colors font-bold border-none cursor-pointer">Tushunarli, Asosiyga qaytish</button>
         </div>
-        <h3 class="text-2xl font-bold text-neutral-900 mb-2">Buyurtma qabul qilindi!</h3>
-        <p class="text-sm text-neutral-600 mb-6">Tez orada operatorlarimiz siz bilan bog'lanadi.</p>
-        <button @click="finishOrder" class="w-full px-4 py-3 rounded-xl bg-primary text-white hover:bg-primary/90 transition-colors font-bold border-none cursor-pointer">Tushunarli, Asosiyga qaytish</button>
       </div>
-    </UModal>
+    </div>
   </main>
 </template>
 

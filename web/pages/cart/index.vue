@@ -140,14 +140,19 @@
               </div>
             </div>
 
-            <div class="p-4 sm:p-6 rounded-t-2xl md:rounded-2xl bg-white md:space-y-4 max-md:fixed max-md:bottom-0 max-md:left-0 max-md:right-0 max-md:z-50 max-md:shadow-[0_-4px_10px_rgba(0,0,0,0.05)] md:shadow-none">
-              <div class="flex items-center justify-between">
-                <h3 class="md:text-xl font-semibold leading-6 md:max-w-[200px] m-0 text-neutral-900 max-md:hidden">Muddatli to‘lovga rasmiylashtirish</h3>
-                <button @click="isInstallmentActive = !isInstallmentActive" class="w-14 h-7 rounded-full transition-colors relative border-none cursor-pointer p-0 max-md:hidden" :class="isInstallmentActive ? 'bg-primary' : 'bg-neutral-300'">
+            <div class="p-4 sm:p-6 rounded-2xl bg-white space-y-3 max-md:hidden">
+              <div class="flex items-center justify-between gap-4">
+                <h3 class="text-base md:text-xl font-semibold leading-6 m-0 text-neutral-900">Muddatli to‘lovga rasmiylashtirish</h3>
+                <button @click="isInstallmentActive = !isInstallmentActive" class="w-14 h-7 rounded-full transition-colors relative border-none cursor-pointer p-0 shrink-0" :class="isInstallmentActive ? 'bg-primary' : 'bg-neutral-300'">
                   <span class="absolute top-1 bg-white w-5 h-5 rounded-full transition-all shadow-sm" :class="isInstallmentActive ? 'left-8' : 'left-1'"></span>
                 </button>
               </div>
-              <div v-if="isInstallmentActive" class="space-y-3 max-md:hidden mt-3 pt-3 border-t border-neutral-100">
+
+              <p v-if="!isInstallmentActive" class="text-sm text-neutral-500 leading-relaxed m-0">
+                Muddatli to'lovni yoqish orqali xaridingizni qismlarga bo'ling
+              </p>
+
+              <div v-else class="space-y-3 pt-3 border-t border-neutral-100">
                 <div class="flex justify-between items-center text-sm">
                   <span class="text-neutral-500">Oylik to'lov</span>
                   <span class="text-primary font-bold text-base">{{ formatPrice(Math.round(cartStore.totalAmount / installmentMonths * 1.15)) }} so'm <span class="text-neutral-400 font-normal text-xs"> × {{ installmentMonths }} oy</span></span>
@@ -161,8 +166,10 @@
                   </button>
                 </div>
               </div>
-              
-              <button @click="$router.push('/checkout')" :disabled="cartStore.selectedCount === 0" type="button" class="inline-flex items-center justify-center transition-colors px-2.5 py-1.5 gap-1.5 hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed outline-none w-full bg-primary text-white rounded-2xl h-14 text-base font-bold border-none cursor-pointer shadow-sm mt-3">
+            </div>
+
+            <div class="p-4 rounded-t-2xl md:rounded-none md:p-0 bg-white max-md:fixed max-md:bottom-0 max-md:left-0 max-md:right-0 max-md:z-50 max-md:shadow-[0_-4px_10px_rgba(0,0,0,0.05)] md:shadow-none">
+              <button @click="$router.push('/checkout')" :disabled="cartStore.selectedCount === 0" type="button" class="inline-flex items-center justify-center transition-colors px-2.5 py-1.5 gap-1.5 hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed outline-none w-full bg-primary text-white rounded-2xl h-14 text-base font-bold border-none cursor-pointer shadow-sm">
                 Rasmiylashtirishga o'tish <svg class="w-5 h-5 ml-1 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
               </button>
             </div>
