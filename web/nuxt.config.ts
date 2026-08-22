@@ -95,17 +95,17 @@ export default defineNuxtConfig({
       ],
       link: [
         // Standard Favicon Icons (Yandex & Google Compatible)
-        { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico?v=20260822' },
-        { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg?v=20260822' },
-        { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/favicon-32x32.png?v=20260822' },
-        { rel: 'icon', type: 'image/png', sizes: '16x16', href: '/favicon-16x16.png?v=20260822' },
-        { rel: 'icon', type: 'image/png', sizes: '48x48', href: '/favicon-48x48.png?v=20260822' },
+        { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg?v=20260822_2' },
+        { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/favicon-32x32.png?v=20260822_2' },
+        { rel: 'icon', type: 'image/png', sizes: '16x16', href: '/favicon-16x16.png?v=20260822_2' },
+        { rel: 'icon', type: 'image/png', sizes: '48x48', href: '/favicon-48x48.png?v=20260822_2' },
+        { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico?v=20260822_2' },
 
         // Apple Touch Icon
-        { rel: 'apple-touch-icon', sizes: '180x180', href: '/apple-touch-icon.png?v=20260822' },
+        { rel: 'apple-touch-icon', sizes: '180x180', href: '/apple-touch-icon.png?v=20260822_2' },
 
         // Manifest & Yandex Tableau
-        { rel: 'manifest', href: '/site.webmanifest?v=20260822' },
+        { rel: 'manifest', href: '/site.webmanifest?v=20260822_2' },
         { rel: 'yandex-tableau-widget', href: '/yandex-tableau.json' },
 
         // Canonical URL
