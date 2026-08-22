@@ -161,7 +161,7 @@
                 v-model="localLangTypes"
                 class="w-4 h-4 rounded border-neutral-300 text-primary focus:ring-primary shrink-0"
               />
-              <span class="text-neutral-800">{{ lt }}</span>
+              <span class="text-neutral-800">{{ langTypeLabel(lt) }}</span>
             </label>
           </div>
         </div>
@@ -180,7 +180,7 @@
                 v-model="localCoverTypes"
                 class="w-4 h-4 rounded border-neutral-300 text-primary focus:ring-primary shrink-0"
               />
-              <span class="text-neutral-800">{{ ct }}</span>
+              <span class="text-neutral-800">{{ coverTypeLabel(ct) }}</span>
             </label>
           </div>
         </div>
@@ -262,6 +262,8 @@ const emit = defineEmits<{
     coverTypes: string[]
   }]
 }>()
+
+const { langTypeLabel, coverTypeLabel } = useBookFilterLabels()
 
 const localMin = ref<string>(props.minPrice != null ? String(props.minPrice) : '')
 const localMax = ref<string>(props.maxPrice != null ? String(props.maxPrice) : '')

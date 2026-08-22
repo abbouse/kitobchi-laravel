@@ -141,26 +141,85 @@
 
         <div class="w-px h-6 bg-secondary-200 mx-1 shrink-0"></div>
 
-        <!-- Narx filtri — piyoladagi mobil "Narx ⌄" chip'iga mos (jonli
-             tekshirilib tasdiqlangan: chevron-down ikonkali pill, bosilganda
-             pastdan chiquvchi "bottom sheet" ochiladi — generic "Filtr"
-             so'zi emas, aynan "Narx" nomi bilan). -->
-        <button
-          type="button"
-          @click="openPriceFilter"
-          :class="[
-            'px-4 py-2 rounded-2xl text-sm font-semibold transition-all border-none cursor-pointer inline-flex items-center gap-1.5 shrink-0',
-            isFilterActive ? 'bg-primary text-white' : 'bg-secondary-300 text-primary hover:bg-primary/10'
-          ]"
-        >
-          Narx
-          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg>
-        </button>
+        <!-- Piyoladagi "Narx ⌄"/"Brendlar ⌄" naqshiga 1-1: har bir facet
+             o'ZINING kichik, mustaqil pill+popover'iga ega — bitta katta
+             panelga TIQIB QO'YISH o'rniga (jonli piyolamarket.uz'da
+             tasdiqlangan naqsh: CatalogFilterPill.vue). Pastdagi "Filtr"
+             tugmasi esa piyoladagi kabi HAMMASINI birlashtirgan qo'shimcha
+             (ixtiyoriy) yon panelni ochadi — bu ikkisi bir-birini
+             takrorlaydi, xuddi piyolada ham shunday (jonli tasdiqlandi). -->
+        <CatalogFilterPill
+          label="Narx"
+          mode="range"
+          :is-open="activePopover === 'price'"
+          :active="!!(route.query.min_price || route.query.max_price)"
+          :min-value="route.query.min_price as string"
+          :max-value="route.query.max_price as string"
+          @toggle="togglePopover('price')"
+          @close="activePopover = null"
+          @apply-range="applyPriceRange"
+        />
+
+        <CatalogFilterPill
+          v-if="activeType === 'book' && publisherOptions.length"
+          label="Nashriyot"
+          mode="checkbox"
+          :is-open="activePopover === 'publisher'"
+          :active="!!selectedPublisherIds.length"
+          :options="publisherOptions"
+          :model-value="selectedPublisherIds"
+          @toggle="togglePopover('publisher')"
+          @close="activePopover = null"
+          @update:model-value="updatePublisherIds"
+        />
+
+        <CatalogFilterPill
+          v-if="activeType === 'book' && sellerOptions.length"
+          label="Do'kon"
+          mode="checkbox"
+          :is-open="activePopover === 'seller'"
+          :active="!!selectedSellerIds.length"
+          :options="sellerOptions"
+          :model-value="selectedSellerIds"
+          @toggle="togglePopover('seller')"
+          @close="activePopover = null"
+          @update:model-value="updateSellerIds"
+        />
+
+        <CatalogFilterPill
+          v-if="activeType === 'book' && langTypeOptions.length"
+          label="Yozuv turi"
+          mode="checkbox"
+          :is-open="activePopover === 'langType'"
+          :active="!!selectedLangTypes.length"
+          :options="langTypeOptions"
+          :model-value="selectedLangTypes"
+          @toggle="togglePopover('langType')"
+          @close="activePopover = null"
+          @update:model-value="updateLangTypes"
+        />
+
+        <CatalogFilterPill
+          v-if="activeType === 'book' && coverTypeOptions.length"
+          label="Muqova turi"
+          mode="checkbox"
+          :is-open="activePopover === 'coverType'"
+          :active="!!selectedCoverTypes.length"
+          :options="coverTypeOptions"
+          :model-value="selectedCoverTypes"
+          @toggle="togglePopover('coverType')"
+          @close="activePopover = null"
+          @update:model-value="updateCoverTypes"
+        />
 
         <!-- Desktopda piyola "Filtr" tugmasini alohida chip sifatida
              qator ichida ko'rsatadi (mobile'da esa header'dagi slider
              ikonkasi orqali, yuqoridagi kabi) — faqat kategoriya
-             tanlanganda ko'rinadi (jonli tekshirilib tasdiqlandi). -->
+             tanlanganda ko'rinadi (jonli tekshirilib tasdiqlandi). MUHIM:
+             piyolada bu tugma pastdagi alohida pill'lar tanlangan bo'lsa
+             ham DOIM neytral ko'rinishda qoladi (jonli tasdiqlandi) —
+             shu sabab statik klass, hech qanday "active" holatga
+             bog'lanmagan. -->
         <button
           v-if="activeCategory"
           type="button"
@@ -215,7 +274,7 @@
       :is-open="isFilterOpen"
       :min-price="route.query.min_price as string"
       :max-price="route.query.max_price as string"
-      :categories="filterDrawerMode === 'combined' ? (categoriesData?.data?.[activeType] || []) : undefined"
+      :categories="categoriesData?.data?.[activeType] || []"
       :active-category-id="route.query.category as string"
       :publishers="activeType === 'book' ? (bookFilterOptions?.publishers || []) : []"
       :sellers="activeType === 'book' ? (bookFilterOptions?.sellers || []) : []"
@@ -238,24 +297,13 @@ const config = useRuntimeConfig()
 
 const isCatalogOpen = ref(false)
 const isFilterOpen = ref(false)
-// "Narx" chip'i faqat narx maydonlarini ochadi ('price'), header/desktop
-// "Filtr" tugmasi esa Narx+Kategoriyalar birlashtirilgan ko'rinishni
-// ochadi ('combined') — piyolada bular ikki xil sheet edi (jonli
-// tekshirilib tasdiqlandi).
-const filterDrawerMode = ref<'price' | 'combined'>('price')
-function openPriceFilter() {
-  filterDrawerMode.value = 'price'
-  isFilterOpen.value = true
-}
+// MUHIM: piyolada "Narx" endi alohida kichik popover (CatalogFilterPill,
+// pastda), yon panel EMAS — shu sabab bu yerdagi "Filtr" endi doim
+// Kategoriyalar+hammasi birlashtirilgan yagona rejimda ochiladi (avvalgi
+// 'price'/'combined' ikki xil rejim keragi qolmadi).
 function openCombinedFilter() {
-  filterDrawerMode.value = 'combined'
   isFilterOpen.value = true
 }
-const isFilterActive = computed(() => !!(
-  route.query.min_price || route.query.max_price
-  || selectedPublisherIds.value.length || selectedSellerIds.value.length
-  || selectedLangTypes.value.length || selectedCoverTypes.value.length
-))
 const activeType = ref<'book' | 'stationery'>((route.query.type as any) || 'book')
 const activeSort = ref<string>((route.query.sort as string) || 'popular')
 const searchInput = ref<string>((route.query.search as string) || '')
@@ -300,6 +348,47 @@ const selectedPublisherIds = computed(() => parseCsvQuery(route.query.publisher_
 const selectedSellerIds = computed(() => parseCsvQuery(route.query.seller_ids))
 const selectedLangTypes = computed(() => parseCsvQuery(route.query.lang_types))
 const selectedCoverTypes = computed(() => parseCsvQuery(route.query.cover_types))
+
+// Piyoladagi alohida "Narx ⌄"/"Brendlar ⌄" pill+popover naqshi uchun —
+// bir vaqtda faqat BITTA popover ochiq turadi (CatalogFilterPill.vue),
+// category/[slug].vue'dagi bilan bir xil mantiq.
+const activePopover = ref<string | null>(null)
+function togglePopover(key: string) {
+  activePopover.value = activePopover.value === key ? null : key
+}
+
+const { langTypeLabel, coverTypeLabel } = useBookFilterLabels()
+
+const publisherOptions = computed(() =>
+  (bookFilterOptions.value?.publishers || []).map((p: any) => ({ value: String(p.id), label: p.name }))
+)
+const sellerOptions = computed(() =>
+  (bookFilterOptions.value?.sellers || []).map((s: any) => ({ value: String(s.id), label: s.name }))
+)
+const langTypeOptions = computed(() =>
+  (bookFilterOptions.value?.lang_types || []).map((lt: string) => ({ value: lt, label: langTypeLabel(lt) }))
+)
+const coverTypeOptions = computed(() =>
+  (bookFilterOptions.value?.cover_types || []).map((ct: string) => ({ value: ct, label: coverTypeLabel(ct) }))
+)
+
+// Checkbox facet'lar DARHOL qo'llanadi (piyolada "Brendlar" jonli
+// tekshirilib tasdiqlandi), Narx esa "Qo'llash" tugmasi orqali.
+function applyPriceRange(payload: { min: string | undefined; max: string | undefined }) {
+  router.push({ query: { ...route.query, min_price: payload.min, max_price: payload.max } })
+}
+function updatePublisherIds(vals: string[]) {
+  router.push({ query: { ...route.query, publisher_ids: vals.join(',') || undefined } })
+}
+function updateSellerIds(vals: string[]) {
+  router.push({ query: { ...route.query, seller_ids: vals.join(',') || undefined } })
+}
+function updateLangTypes(vals: string[]) {
+  router.push({ query: { ...route.query, lang_types: vals.join(',') || undefined } })
+}
+function updateCoverTypes(vals: string[]) {
+  router.push({ query: { ...route.query, cover_types: vals.join(',') || undefined } })
+}
 
 const pageTitle = computed(() => {
   if (route.query.search) return `Qidiruv: ${route.query.search}`
@@ -414,15 +503,13 @@ function applyFilter(payload: {
     lang_types: payload.langTypes?.join(',') || undefined,
     cover_types: payload.coverTypes?.join(',') || undefined
   }
-  // categoryId faqat "Filtr" (birlashtirilgan) rejimda keladi — "Narx"
-  // rejimida bu maydon undefined bo'lib qoladi, shuning uchun joriy
-  // kategoriya query'da o'zgarishsiz saqlanadi.
-  if (filterDrawerMode.value === 'combined') {
-    if (payload.categoryId) {
-      query.category = payload.categoryId
-    } else {
-      delete query.category
-    }
+  // Drawer endi doim Kategoriyalar bilan birga ochiladi (Narx alohida
+  // kichik popoverga ko'chirilgani sabab bu yerda faqat "combined" rejim
+  // qoldi), shuning uchun categoryId har doim shu yerda qo'llanadi.
+  if (payload.categoryId) {
+    query.category = payload.categoryId
+  } else {
+    delete query.category
   }
   router.push({ query })
 }

@@ -1881,7 +1881,30 @@ class SearchController extends Controller
                     return $q;
                 };
 
-                $publisherIds = (clone $base())->whereNotNull('publisher_id')->distinct()->pluck('publisher_id');
+                // MUHIM (2026-08-22 audit, jonli xato): `visibleBooks()` →
+                // `withAvailableTotal()` query'ga `books.*` + subquery
+                // ustunlarini ALLAQACHON `select()` qilib qo'yadi. Laravel'ning
+                // `pluck()` metodi ustunlarni FAQAT `$query->columns` hali
+                // NULL bo'lsagina o'zi bitta ustunga toraytiradi — bu yerda
+                // ustunlar ALLAQACHON to'liq ro'yxat bo'lgani uchun avvalgi
+                // `->distinct()->pluck('langType')` haqiqatda "SELECT DISTINCT
+                // books.*, (subquery)..." ustida ishlagan (deyarli hech qachon
+                // takrorlanmaydi — har kitob boshqacha), natijada DISTINCT
+                // AMALDA HECH NARSANI DEDUPLIKATSIYA QILMAGAN va har bitta
+                // kitob uchun alohida-alohida "latin"/"cyrillic" qatori qaytgan
+                // (jonli tekshirilib tasdiqlandi: kitobchi.com'da 154 ta
+                // mahsulotli kategoriyada ~154 ta takrorlangan checkbox).
+                // Nashriyot/Do'kon bu xatodan "tasodifan" najot topgan edi —
+                // chunki ularning natijasi keyin alohida `Publisher`/`Seller`
+                // jadvalidan `whereIn(...)` bilan qayta so'ralib, shu yerda
+                // haqiqiy deduplikatsiya sodir bo'ladi. `langType`/`coverType`
+                // uchun esa bunday keyingi bosqich yo'q edi. Tuzatish: aniq
+                // `->select('ustun')` bilan ustunlar ro'yxatini oldindan
+                // TORAYTIRAMIZ (shunda DISTINCT to'g'ri ustun ustida ishlaydi),
+                // qo'shimcha xavfsizlik uchun PHP darajasida ham `->unique()`.
+                $publisherIds = (clone $base())->whereNotNull('publisher_id')
+                    ->select('publisher_id')->distinct()->pluck('publisher_id')
+                    ->unique()->values();
                 $publishers = $publisherIds->isEmpty() ? collect() : \App\Models\Publisher::whereIn('id', $publisherIds)
                     ->select('id', 'name')
                     ->orderBy('name')
@@ -1889,7 +1912,9 @@ class SearchController extends Controller
                     ->map(fn ($p) => ['id' => $p->id, 'name' => $p->name])
                     ->values();
 
-                $sellerIds = (clone $base())->whereNotNull('seller_id')->distinct()->pluck('seller_id');
+                $sellerIds = (clone $base())->whereNotNull('seller_id')
+                    ->select('seller_id')->distinct()->pluck('seller_id')
+                    ->unique()->values();
                 $sellers = $sellerIds->isEmpty() ? collect() : \App\Models\Seller::whereIn('id', $sellerIds)
                     ->select('id', 'shop_name')
                     ->orderBy('shop_name')
@@ -1899,11 +1924,13 @@ class SearchController extends Controller
 
                 $langTypes = (clone $base())
                     ->whereNotNull('langType')->where('langType', '!=', '')
-                    ->distinct()->pluck('langType')->values();
+                    ->select('langType')->distinct()->pluck('langType')
+                    ->unique()->values();
 
                 $coverTypes = (clone $base())
                     ->whereNotNull('coverType')->where('coverType', '!=', '')
-                    ->distinct()->pluck('coverType')->values();
+                    ->select('coverType')->distinct()->pluck('coverType')
+                    ->unique()->values();
 
                 return [
                     'publishers'  => $publishers,

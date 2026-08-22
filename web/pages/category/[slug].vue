@@ -88,20 +88,93 @@
                  pastdan yuqoriga / Narx: yuqoridan pastga / Yangi), avvalgi
                  ikkita alohida "Ommabop"/"Yangi" pill o'rniga. -->
             <CatalogSortDropdown :model-value="activeSort" @update:model-value="setSort" />
-            <!-- MUHIM: bu tugma endi faqat narx emas — kitob (book) turida
-                 Nashriyot/Do'kon/Yozuv turi/Muqova turi bo'limlarini ham
-                 o'zida ochadi (CatalogFilterDrawer'ning "hasExtraSections"
-                 holatiga qarab sarlavha o'zi "Filtr"/"Narx" bo'lib almashadi),
-                 shu sababli piyoladagi asosiy "Filtr" tugmasiga mos "Filtr"
-                 deb nomlandi. -->
+            <!-- "Filtr" — piyoladagi kabi HAMMASINI birlashtirgan yon panelni
+                 ochadigan YAGONA umumiy tugma (Narx + Nashriyot + Do'kon +
+                 Yozuv turi + Muqova turi — barchasi shu yerda ham mavjud).
+                 MUHIM: piyolada bu tugma pastdagi alohida pill'lar (Narx,
+                 Brendlar) tanlangan bo'lsa ham DOIM bir xil (neytral)
+                 ko'rinishda qoladi — faqat o'sha aloxida pill'ning o'zi
+                 faollashadi (jonli tekshirilib tasdiqlandi: Brendlar orqali
+                 filtr qo'llanganda "Filtr" tugmasi emas, faqat "Brendlar"
+                 tugmasi to'q rangga o'tgan edi). Shu sabab bu yerda
+                 `isAnyFilterActive`ga bog'lanmagan, doim neytral. -->
             <button
               type="button"
               @click="isFilterOpen = true"
-              :class="chipClass(isAnyFilterActive)"
+              :class="chipClass(false)"
             >
               Filtr
               <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg>
             </button>
+
+            <!-- Piyoladagi "Narx ⌄"/"Brendlar ⌄" naqshiga 1-1: har bir facet
+                 (Narx, Nashriyot, Do'kon, Yozuv turi, Muqova turi) o'ZINING
+                 kichik, mustaqil pill+popover'iga ega — yuqoridagi "Filtr"
+                 hammasini bitta katta panelga TIQIB QO'YISH o'rniga (jonli
+                 piyolamarket.uz'da tasdiqlangan naqsh: CatalogFilterPill.vue). -->
+            <CatalogFilterPill
+              label="Narx"
+              mode="range"
+              :is-open="activePopover === 'price'"
+              :active="!!(route.query.min_price || route.query.max_price)"
+              :min-value="route.query.min_price as string"
+              :max-value="route.query.max_price as string"
+              @toggle="togglePopover('price')"
+              @close="activePopover = null"
+              @apply-range="applyPriceRange"
+            />
+
+            <CatalogFilterPill
+              v-if="activeType === 'book' && publisherOptions.length"
+              label="Nashriyot"
+              mode="checkbox"
+              :is-open="activePopover === 'publisher'"
+              :active="!!selectedPublisherIds.length"
+              :options="publisherOptions"
+              :model-value="selectedPublisherIds"
+              @toggle="togglePopover('publisher')"
+              @close="activePopover = null"
+              @update:model-value="updatePublisherIds"
+            />
+
+            <CatalogFilterPill
+              v-if="activeType === 'book' && sellerOptions.length"
+              label="Do'kon"
+              mode="checkbox"
+              :is-open="activePopover === 'seller'"
+              :active="!!selectedSellerIds.length"
+              :options="sellerOptions"
+              :model-value="selectedSellerIds"
+              @toggle="togglePopover('seller')"
+              @close="activePopover = null"
+              @update:model-value="updateSellerIds"
+            />
+
+            <CatalogFilterPill
+              v-if="activeType === 'book' && langTypeOptions.length"
+              label="Yozuv turi"
+              mode="checkbox"
+              :is-open="activePopover === 'langType'"
+              :active="!!selectedLangTypes.length"
+              :options="langTypeOptions"
+              :model-value="selectedLangTypes"
+              @toggle="togglePopover('langType')"
+              @close="activePopover = null"
+              @update:model-value="updateLangTypes"
+            />
+
+            <CatalogFilterPill
+              v-if="activeType === 'book' && coverTypeOptions.length"
+              label="Muqova turi"
+              mode="checkbox"
+              :is-open="activePopover === 'coverType'"
+              :active="!!selectedCoverTypes.length"
+              :options="coverTypeOptions"
+              :model-value="selectedCoverTypes"
+              @toggle="togglePopover('coverType')"
+              @close="activePopover = null"
+              @update:model-value="updateCoverTypes"
+            />
           </div>
 
           <div class="lg:hidden flex items-center gap-2 pb-5 overflow-x-auto no-scrollbar">
@@ -228,11 +301,47 @@ const selectedSellerIds = computed(() => parseCsvQuery(route.query.seller_ids))
 const selectedLangTypes = computed(() => parseCsvQuery(route.query.lang_types))
 const selectedCoverTypes = computed(() => parseCsvQuery(route.query.cover_types))
 
-const isAnyFilterActive = computed(() => !!(
-  route.query.min_price || route.query.max_price
-  || selectedPublisherIds.value.length || selectedSellerIds.value.length
-  || selectedLangTypes.value.length || selectedCoverTypes.value.length
-))
+// Piyoladagi alohida "Narx ⌄"/"Brendlar ⌄" pill+popover naqshi uchun —
+// bir vaqtda faqat BITTA popover ochiq turadi (CatalogFilterPill.vue).
+const activePopover = ref<string | null>(null)
+function togglePopover(key: string) {
+  activePopover.value = activePopover.value === key ? null : key
+}
+
+const { langTypeLabel, coverTypeLabel } = useBookFilterLabels()
+
+const publisherOptions = computed(() =>
+  (filterOptions.value?.publishers || []).map((p: any) => ({ value: String(p.id), label: p.name }))
+)
+const sellerOptions = computed(() =>
+  (filterOptions.value?.sellers || []).map((s: any) => ({ value: String(s.id), label: s.name }))
+)
+const langTypeOptions = computed(() =>
+  (filterOptions.value?.lang_types || []).map((lt: string) => ({ value: lt, label: langTypeLabel(lt) }))
+)
+const coverTypeOptions = computed(() =>
+  (filterOptions.value?.cover_types || []).map((ct: string) => ({ value: ct, label: coverTypeLabel(ct) }))
+)
+
+// Alohida pill'lardan kelgan o'zgarishlar — checkbox facet'lar DARHOL
+// qo'llanadi (piyolada "Brendlar" checkbox'i jonli tekshirilib tasdiqlandi:
+// bosilishi bilanoq, alohida tugmasiz natija yangilangan edi), Narx esa
+// "Qo'llash" tugmasi orqali (matn kiritish commit nuqtasini talab qiladi).
+function applyPriceRange(payload: { min: string | undefined; max: string | undefined }) {
+  router.push({ query: { ...route.query, min_price: payload.min, max_price: payload.max } })
+}
+function updatePublisherIds(vals: string[]) {
+  router.push({ query: { ...route.query, publisher_ids: vals.join(',') || undefined } })
+}
+function updateSellerIds(vals: string[]) {
+  router.push({ query: { ...route.query, seller_ids: vals.join(',') || undefined } })
+}
+function updateLangTypes(vals: string[]) {
+  router.push({ query: { ...route.query, lang_types: vals.join(',') || undefined } })
+}
+function updateCoverTypes(vals: string[]) {
+  router.push({ query: { ...route.query, cover_types: vals.join(',') || undefined } })
+}
 
 function toApiSort(sort: string) {
   return sort === 'new' ? 'newest' : sort
