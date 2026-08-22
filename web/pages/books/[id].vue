@@ -302,10 +302,19 @@
               <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
             </button>
             <nav aria-label="breadcrumb" class="relative min-w-0">
+              <!-- MUHIM: ilgari bu yerda "Katalog" (/catalog'ga) va "Janr"
+                   (/category/book-{id}'ga) degan IKKITA alohida havola bor
+                   edi — ikkalasi ham aslida bir xil narsani, mahsulot
+                   joylashgan bo'limni anglatardi, faqat ikki xil sahifaga
+                   olib borardi. Piyolada mahsulot sahifasida breadcrumb
+                   shunchaki "Asosiy / {kategoriya} / {mahsulot nomi}" —
+                   bitta kategoriya bo'g'ini bilan tugaydi (ularda bu ikki
+                   pog'onali: "Original parfyum / Unisex original", chunki
+                   ularning kategoriyasi ota-bola tuzilmali; kitobchida esa
+                   tekis tuzilma bo'lgani uchun bitta bo'g'in yetarli).
+                   Ortiqcha "Katalog" havolasi olib tashlandi. -->
               <ol class="flex items-center gap-2 text-sm text-[#8F8FA1]">
                 <li><NuxtLink to="/" class="hover:text-neutral-900 transition-colors">Asosiy</NuxtLink></li>
-                <li class="text-gray-400 text-xs"> / </li>
-                <li><NuxtLink to="/catalog" class="hover:text-neutral-900 transition-colors">Katalog</NuxtLink></li>
                 <template v-if="product.category || product.category_id">
                   <li class="text-gray-400 text-xs"> / </li>
                   <li>

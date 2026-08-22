@@ -316,10 +316,14 @@
               <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
             </button>
             <nav aria-label="breadcrumb" class="relative min-w-0">
+              <!-- MUHIM: ilgari bu yerda "Katalog" va "Janr" degan IKKITA
+                   alohida havola bor edi (books/[id].vue bilan bir xil
+                   muammo — batafsili o'sha yerdagi izohda). Piyolada
+                   mahsulot breadcrumb'i shunchaki "Asosiy / {kategoriya} /
+                   {mahsulot}" ko'rinishida, ortiqcha "Katalog" bo'g'ini
+                   olib tashlandi. -->
               <ol class="flex items-center gap-2 text-sm text-[#8F8FA1]">
                 <li><NuxtLink to="/" class="hover:text-neutral-900 transition-colors">Asosiy</NuxtLink></li>
-                <li class="text-gray-400 text-xs"> / </li>
-                <li><NuxtLink to="/catalog?type=stationery" class="hover:text-neutral-900 transition-colors">Katalog</NuxtLink></li>
                 <template v-if="product.category || product.category_id">
                   <li class="text-gray-400 text-xs"> / </li>
                   <li>

@@ -28,13 +28,13 @@
         <!-- OS-Specific Store Button (Main Action Card) -->
         <a id="kcStoreBtn" href="https://apps.apple.com/uz/app/kitobchi/id6753818078" target="_blank" rel="noopener noreferrer" class="kc-store-card" style="background:#f5f6f8;border:1px solid #e5e7eb;border-radius:18px;padding:0.875rem 1rem;display:flex;align-items:center;justify-content:space-between;text-decoration:none;margin-bottom:0.75rem;">
             <div class="kc-store-left" style="display:flex;align-items:center;gap:0.875rem;">
-                <!-- Apple Box (Ready-made Asset) -->
-                <div id="kcAppleBox" class="kc-store-icon-box" style="width:48px;height:48px;border-radius:14px;overflow:hidden;background:#000;display:flex;align-items:center;justify-content:center;">
-                    <img src="{{ asset('images/icons/apple-app-store.svg') }}" alt="Apple App Store" width="48" height="48" style="width:100%;height:100%;object-fit:cover;">
+                <!-- Apple Box (Official Imported SVG) -->
+                <div id="kcAppleBox" class="kc-store-icon-box" style="width:48px;height:48px;border-radius:14px;overflow:hidden;display:flex;align-items:center;justify-content:center;">
+                    <img src="{{ asset('images/icons/app-store.svg') }}" alt="Apple App Store" width="48" height="48" style="width:100%;height:100%;object-fit:cover;">
                 </div>
-                <!-- Google Play Box (Ready-made Asset) -->
-                <div id="kcPlayBox" class="kc-store-icon-box" style="width:48px;height:48px;border-radius:14px;overflow:hidden;background:#fff;border:1px solid #e5e7eb;display:none;align-items:center;justify-content:center;">
-                    <img src="{{ asset('images/icons/google-play-store.svg') }}" alt="Google Play Store" width="48" height="48" style="width:100%;height:100%;object-fit:cover;">
+                <!-- Google Play Box (Official Imported SVG) -->
+                <div id="kcPlayBox" class="kc-store-icon-box" style="width:48px;height:48px;border-radius:14px;overflow:hidden;background:#fff;border:1px solid #e5e7eb;display:none;align-items:center;justify-content:center;padding:6px;">
+                    <img src="{{ asset('images/icons/google-play.svg') }}" alt="Google Play Store" width="36" height="36" style="width:100%;height:100%;object-fit:contain;">
                 </div>
 
                 <div class="kc-store-meta" style="text-align:left;">

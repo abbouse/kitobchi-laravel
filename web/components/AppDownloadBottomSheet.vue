@@ -59,10 +59,10 @@
               <!-- Official Apple App Store Icon Image -->
               <div
                 v-if="isIOS"
-                class="w-12 h-12 rounded-2xl overflow-hidden shrink-0 shadow-xs flex items-center justify-center bg-black"
+                class="w-12 h-12 rounded-2xl overflow-hidden shrink-0 shadow-xs flex items-center justify-center"
               >
                 <img
-                  src="/images/icons/apple-app-store.svg"
+                  src="/images/icons/app-store.svg"
                   alt="Apple App Store"
                   class="w-full h-full object-cover"
                   width="48"
@@ -73,12 +73,12 @@
               <!-- Official Google Play Store Icon Image -->
               <div
                 v-else
-                class="w-12 h-12 rounded-2xl overflow-hidden shrink-0 shadow-xs flex items-center justify-center bg-white"
+                class="w-12 h-12 rounded-2xl overflow-hidden shrink-0 shadow-xs flex items-center justify-center bg-white border border-gray-200/80 p-2"
               >
                 <img
-                  src="/images/icons/google-play-store.svg"
+                  src="/images/icons/google-play.svg"
                   alt="Google Play Store"
-                  class="w-full h-full object-cover"
+                  class="w-full h-full object-contain"
                   width="48"
                   height="48"
                 />

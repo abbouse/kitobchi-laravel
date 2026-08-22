@@ -36,8 +36,19 @@
         </nav>
       </div>
 
-      <div class="flex flex-col lg:grid lg:grid-cols-[260px_1fr] gap-6">
-        <aside class="hidden lg:block">
+      <!-- MUHIM: bu yerda ilgari `lg:grid lg:grid-cols-[260px_1fr]` ishlatilgan
+           edi — bu arbitrary (qavsli) qiymatli klass, loyihadagi
+           `assets/css/piyola.css` esa avtomatik qayta generatsiya qilinmaydigan,
+           bir marta commit qilingan STATIK fayl (oxirgi marta generatsiya
+           qilingan sana undan keyin yozilgan barcha yangi klasslardan eski).
+           Shu sabab bu klass uchun CSS umuman yo'q edi — natijada
+           `display:grid` ishlagan-u, lekin ustunlar kengligi belgilanmagani
+           uchun aside va section bo'lim ustma-ust, TO'LIQ KENGLIKDA
+           tushib qolgan edi (aynan shu www.book-6 sahifasida ko'ringan
+           muammo). Endi standart, allaqachon CSS'da mavjud
+           bo'lgan flex+w-64 klasslar bilan almashtirildi. -->
+      <div class="flex flex-col lg:flex-row lg:items-start gap-6">
+        <aside class="hidden lg:block lg:w-64 lg:shrink-0">
           <div class="sticky top-24 bg-white rounded-[20px] border border-neutral-100 p-2 shadow-xs">
             <NuxtLink
               v-for="cat in siblingCategories"
