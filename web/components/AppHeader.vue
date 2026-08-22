@@ -26,7 +26,7 @@
                 <svg class="w-5 h-5 transition-all duration-300 shrink-0" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M4.5 4.5a3 3 0 00-3 3v2.25a3 3 0 003 3h2.25a3 3 0 003-3V7.5a3 3 0 00-3-3H4.5zM4.5 15a3 3 0 00-3 3v.75a3 3 0 003 3h2.25a3 3 0 003-3V18a3 3 0 00-3-3H15zM15 4.5a3 3 0 00-3 3v2.25a3 3 0 003 3h2.25a3 3 0 003-3V7.5a3 3 0 00-3-3H15zM15 15a3 3 0 00-3 3v.75a3 3 0 003 3h2.25a3 3 0 003-3V18a3 3 0 00-3-3H15z"/>
                 </svg>
-                <span class="max-lg:hidden font-medium text-sm transition-all duration-300">Kataloglar</span>
+                <span class="max-lg:hidden font-medium text-sm transition-all duration-300">{{ t('catalogs') }}</span>
               </div>
             </button>
           </div>
@@ -41,7 +41,7 @@
           >
             <div class="absolute inset-0 pointer-events-none glass-border rounded-2xl rounded-full!"></div>
             <i class="icon-search text-lg text-gray-500"></i>
-            <span class="flex-1 text-sm text-neutral-500 m-0 p-0 h-full w-full">Mahsulotni izlash...</span>
+            <span class="flex-1 text-sm text-neutral-500 m-0 p-0 h-full w-full">{{ t('search_placeholder') }}</span>
           </button>
 
           <!-- Right: Capsule 1 & Capsule 2 -->
@@ -67,7 +67,7 @@
                     {{ cartStore.totalCount > 99 ? '99+' : cartStore.totalCount }}
                   </div>
                 </div>
-                <span class="max-lg:hidden font-normal text-sm leading-5 group-hover:text-green-500 transition-colors duration-200">Savatcha</span>
+                <span class="max-lg:hidden font-normal text-sm leading-5 group-hover:text-green-500 transition-colors duration-200">{{ t('cart') }}</span>
               </NuxtLink>
 
               <!-- Favorites -->
@@ -87,19 +87,43 @@
                     {{ favStore.count > 99 ? '99+' : favStore.count }}
                   </div>
                 </div>
-                <span class="max-lg:hidden font-normal text-sm leading-5 group-hover:text-green-500 transition-colors duration-200">Sevimlilar</span>
+                <span class="max-lg:hidden font-normal text-sm leading-5 group-hover:text-green-500 transition-colors duration-200">{{ t('favorites') }}</span>
               </NuxtLink>
 
-              <!-- Lang -->
-              <div class="relative">
+              <!-- Lang — MUHIM: ilgari bu tugma faqat `isLangOpen`ni
+                   almashtirardi, lekin uni o'qiydigan dropdown umuman yo'q
+                   edi (jonli sinovda tasdiqlandi: bosilganda hech narsa
+                   ochilmasdi). Endi piyoladagi kabi — tugma ostida oq,
+                   soyali kartochka ochiladi, tanlangan til belgisi (✓) bilan
+                   ko'rsatiladi, tashqariga bosilganda yopiladi. Piyolada 3 ta
+                   til bor (uz/ru/en), kitobchida esa aynan so'ralgani uchun
+                   yaponcha ham qo'shilgan (composables/useLocale.ts). -->
+              <div ref="langRootRef" class="relative">
                 <button
                   type="button"
                   @click="isLangOpen = !isLangOpen"
                   class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 border-none bg-transparent cursor-pointer"
                 >
                   <i class="icon-globe text-lg transition-colors duration-200 group-hover:text-green-500"></i>
-                  <span class="max-lg:hidden font-normal text-sm leading-5 group-hover:text-green-500 transition-colors duration-200">O‘zbekcha</span>
+                  <span class="max-lg:hidden font-normal text-sm leading-5 group-hover:text-green-500 transition-colors duration-200">{{ localeLabel }}</span>
                 </button>
+
+                <div
+                  v-if="isLangOpen"
+                  class="absolute z-30 top-full right-0 mt-2 w-44 rounded-2xl bg-white shadow-xl border border-neutral-100 py-2"
+                >
+                  <button
+                    v-for="opt in availableLocales"
+                    :key="opt.code"
+                    type="button"
+                    @click="selectLocale(opt.code)"
+                    class="w-full flex items-center justify-between gap-2 px-4 py-2.5 text-sm text-left bg-transparent border-none cursor-pointer hover:bg-secondary-100 transition-colors"
+                    :class="locale === opt.code ? 'text-primary font-semibold' : 'text-neutral-700'"
+                  >
+                    {{ opt.label }}
+                    <svg v-if="locale === opt.code" class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -115,7 +139,7 @@
                 ]"
               >
                 <i class="icon-profile text-lg"></i>
-                <span class="font-normal text-sm leading-5 max-lg:hidden">{{ authStore.user?.name || authStore.user?.phone_number || 'Profil' }}</span>
+                <span class="font-normal text-sm leading-5 max-lg:hidden">{{ authStore.user?.name || authStore.user?.phone_number || t('profile') }}</span>
               </NuxtLink>
               <button
                 v-else
@@ -124,7 +148,7 @@
                 class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 border-none bg-transparent cursor-pointer"
               >
                 <i class="icon-profile text-lg"></i>
-                <span class="font-normal text-sm leading-5 max-lg:hidden">Kirish</span>
+                <span class="font-normal text-sm leading-5 max-lg:hidden">{{ t('login') }}</span>
               </button>
             </div>
           </div>
@@ -139,7 +163,7 @@
           >
             <div class="absolute inset-0 pointer-events-none glass-border rounded-2xl"></div>
             <i class="icon-search text-xl text-gray-500"></i>
-            <span class="flex-1 text-sm text-neutral-500 m-0 p-0 h-full w-full">Kitobchi’da izlash</span>
+            <span class="flex-1 text-sm text-neutral-500 m-0 p-0 h-full w-full">{{ t('search_placeholder_mobile') }}</span>
           </button>
         </div>
       </div>
@@ -155,15 +179,24 @@ import { useCartStore } from '~/stores/cart'
 import { useFavoritesStore } from '~/stores/favorites'
 import { useAuthStore } from '~/stores/auth'
 import { useSearchStore } from '~/stores/search'
+import type { AppLocale } from '~/composables/useLocale'
 
 const route = useRoute()
 const cartStore = useCartStore()
 const favStore = useFavoritesStore()
 const authStore = useAuthStore()
 const searchStore = useSearchStore()
+const { locale, localeLabel, availableLocales, setLocale, t } = useLocale()
 
 const isCatalogOpen = ref(false)
 const isLangOpen = ref(false)
+const langRootRef = ref<HTMLElement | null>(null)
+onClickOutside(langRootRef, () => { isLangOpen.value = false })
+
+function selectLocale(code: AppLocale) {
+  setLocale(code)
+  isLangOpen.value = false
+}
 
 const isHomePage = computed(() => route.path === '/')
 </script>

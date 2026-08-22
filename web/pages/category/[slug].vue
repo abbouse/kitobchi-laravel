@@ -52,9 +52,14 @@
         </aside>
 
         <section class="min-w-0">
-          <div class="mb-4 md:mb-6">
+          <!-- MUHIM: piyolada sarlavha va "N ta mahsulot" bitta qatorda,
+               yonma-yon turadi (jonli tekshirilib tasdiqlandi: "Ayollar
+               original  0 dan 0 ni ko'rsatmoqda"), kitobchida esa
+               sarlavha va son alohida-alohida qatorlarga bo'linib
+               qolgan edi. -->
+          <div class="mb-4 md:mb-6 flex items-end gap-3 flex-wrap">
             <h1 class="text-2xl md:text-4xl font-bold text-primary leading-none m-0">{{ pageTitle }}</h1>
-            <p class="text-sm text-neutral-400 mt-2 mb-0">{{ totalCount }} ta mahsulot</p>
+            <p class="text-sm text-neutral-400 m-0">{{ totalCount }} ta mahsulot</p>
           </div>
 
           <div class="flex items-center gap-2 pb-5 overflow-x-auto no-scrollbar">

@@ -79,8 +79,11 @@
         </nav>
       </div>
 
-      <!-- Header Row -->
-      <div class="flex items-center justify-between flex-wrap gap-3 pt-2 pb-4">
+      <!-- Header Row — MUHIM: piyolada sarlavha va "N ta mahsulot" bitta
+           qatorda, yonma-yon (chapga to'plangan holda) turadi; ilgari bu
+           yerda `justify-between` bo'lib, son sarlavhadan uzoq, o'ng
+           chetga surilib ketardi. -->
+      <div class="flex items-end flex-wrap gap-3 pt-2 pb-4">
         <h1 class="text-2xl sm:text-3xl text-primary font-bold m-0 max-md:hidden">
           {{ pageTitle }}
         </h1>
