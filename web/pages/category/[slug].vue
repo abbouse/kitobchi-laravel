@@ -23,14 +23,24 @@
     </div>
 
     <main class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto py-4 md:py-8">
+      <!-- MUHIM: `/category` (kataloglar-xaritasi) sahifasi butunlay olib
+           tashlandi — foydalanuvchi so'rovi bo'yicha. Shu sabab orqaga
+           strelka endi `/category`ga emas, oddiy `router.back()`ga
+           (books/[id].vue'dagi kabi), breadcrumb esa ortiqcha "Kataloglar"
+           bo'g'inisiz — "Asosiy / {pageTitle}" ko'rinishida (mahsulot
+           sahifasidagi "Katalog" havolasini olib tashlashda qo'llangan
+           bilan bir xil mantiq). -->
       <div class="hidden md:flex items-center gap-2 mb-6">
-        <NuxtLink to="/category" class="rounded-full w-9 h-9 flex items-center justify-center text-primary bg-secondary-100 hover:bg-secondary-200 transition-colors">
+        <button
+          type="button"
+          @click="$router.back()"
+          class="rounded-full w-9 h-9 flex items-center justify-center text-primary bg-secondary-100 hover:bg-secondary-200 transition-colors border-none cursor-pointer"
+          aria-label="Orqaga"
+        >
           <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
-        </NuxtLink>
+        </button>
         <nav class="flex items-center gap-2 text-sm text-[#8F8FA1]">
           <NuxtLink to="/" class="hover:text-neutral-700">Asosiy</NuxtLink>
-          <span>/</span>
-          <NuxtLink to="/category" class="hover:text-neutral-700">Kataloglar</NuxtLink>
           <span>/</span>
           <span class="text-neutral-900 font-semibold">{{ pageTitle }}</span>
         </nav>
@@ -74,22 +84,22 @@
           </div>
 
           <div class="flex items-center gap-2 pb-5 overflow-x-auto no-scrollbar">
-            <NuxtLink
-              to="/category"
-              class="px-4 py-2 rounded-2xl text-sm font-semibold shrink-0 bg-secondary-300 text-primary hover:bg-primary/10"
-            >
-              Kataloglar
-            </NuxtLink>
             <!-- Saralash — piyoladagi kabi bitta dropdown (Ommabop / Narx:
                  pastdan yuqoriga / Narx: yuqoridan pastga / Yangi), avvalgi
                  ikkita alohida "Ommabop"/"Yangi" pill o'rniga. -->
             <CatalogSortDropdown :model-value="activeSort" @update:model-value="setSort" />
+            <!-- MUHIM: bu tugma endi faqat narx emas — kitob (book) turida
+                 Nashriyot/Do'kon/Yozuv turi/Muqova turi bo'limlarini ham
+                 o'zida ochadi (CatalogFilterDrawer'ning "hasExtraSections"
+                 holatiga qarab sarlavha o'zi "Filtr"/"Narx" bo'lib almashadi),
+                 shu sababli piyoladagi asosiy "Filtr" tugmasiga mos "Filtr"
+                 deb nomlandi. -->
             <button
               type="button"
               @click="isFilterOpen = true"
-              :class="chipClass(!!(route.query.min_price || route.query.max_price))"
+              :class="chipClass(isAnyFilterActive)"
             >
-              Narx
+              Filtr
               <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg>
             </button>
           </div>
@@ -145,6 +155,14 @@
       :is-open="isFilterOpen"
       :min-price="route.query.min_price as string"
       :max-price="route.query.max_price as string"
+      :publishers="activeType === 'book' ? (filterOptions?.publishers || []) : []"
+      :sellers="activeType === 'book' ? (filterOptions?.sellers || []) : []"
+      :lang-types="activeType === 'book' ? (filterOptions?.lang_types || []) : []"
+      :cover-types="activeType === 'book' ? (filterOptions?.cover_types || []) : []"
+      :selected-publisher-ids="selectedPublisherIds"
+      :selected-seller-ids="selectedSellerIds"
+      :selected-lang-types="selectedLangTypes"
+      :selected-cover-types="selectedCoverTypes"
       @close="isFilterOpen = false"
       @apply="applyFilter"
     />
@@ -185,6 +203,37 @@ watchEffect(() => {
   setCategorySeo(pageTitle.value, activeType.value, slug.value)
 })
 
+// Kitobga xos filtr variantlari (Nashriyot/Do'kon/Yozuv turi/Muqova turi) —
+// faqat book turida kerak, joriy kategoriyada haqiqatda mavjud
+// variantlargina qaytariladi (backend: SearchController::bookFilterOptions).
+const { data: filterOptionsData } = await useFetch<any>(`${config.public.apiBase}/v1/kitobchi/search/book-filter-options`, {
+  query: computed(() => ({ category_id: activeType.value === 'book' ? (categoryId.value || undefined) : undefined })),
+  lazy: true,
+  watch: [activeType, categoryId]
+})
+const filterOptions = computed(() => filterOptionsData.value?.data || null)
+
+// Route query'dagi vergul bilan ajratilgan qatorlarni massivga o'giradi
+// (masalan "1,2,3" → ['1','2','3']). Bitta-bitta parametr ham,
+// tasodifan massiv ham kelib qolishi mumkin (Vue Router xatti-harakati) —
+// ikkalasini ham qo'llab-quvvatlaydi.
+function parseCsvQuery(val: unknown): string[] {
+  if (!val) return []
+  const raw = Array.isArray(val) ? val.join(',') : String(val)
+  return raw.split(',').map((v) => v.trim()).filter(Boolean)
+}
+
+const selectedPublisherIds = computed(() => parseCsvQuery(route.query.publisher_ids))
+const selectedSellerIds = computed(() => parseCsvQuery(route.query.seller_ids))
+const selectedLangTypes = computed(() => parseCsvQuery(route.query.lang_types))
+const selectedCoverTypes = computed(() => parseCsvQuery(route.query.cover_types))
+
+const isAnyFilterActive = computed(() => !!(
+  route.query.min_price || route.query.max_price
+  || selectedPublisherIds.value.length || selectedSellerIds.value.length
+  || selectedLangTypes.value.length || selectedCoverTypes.value.length
+))
+
 function toApiSort(sort: string) {
   return sort === 'new' ? 'newest' : sort
 }
@@ -195,6 +244,10 @@ const searchQuery = computed(() => ({
   category_id: categoryId.value || undefined,
   min_price: route.query.min_price || undefined,
   max_price: route.query.max_price || undefined,
+  publisher_ids: selectedPublisherIds.value.join(',') || undefined,
+  seller_ids: selectedSellerIds.value.join(',') || undefined,
+  lang_types: selectedLangTypes.value.join(',') || undefined,
+  cover_types: selectedCoverTypes.value.join(',') || undefined,
   page: 1
 }))
 
@@ -241,12 +294,23 @@ async function loadMore() {
   }
 }
 
-function applyFilter(payload: { minPrice: string | undefined; maxPrice: string | undefined }) {
+function applyFilter(payload: {
+  minPrice: string | undefined
+  maxPrice: string | undefined
+  publisherIds?: string[]
+  sellerIds?: string[]
+  langTypes?: string[]
+  coverTypes?: string[]
+}) {
   router.push({
     query: {
       ...route.query,
       min_price: payload.minPrice,
-      max_price: payload.maxPrice
+      max_price: payload.maxPrice,
+      publisher_ids: payload.publisherIds?.join(',') || undefined,
+      seller_ids: payload.sellerIds?.join(',') || undefined,
+      lang_types: payload.langTypes?.join(',') || undefined,
+      cover_types: payload.coverTypes?.join(',') || undefined
     }
   })
 }

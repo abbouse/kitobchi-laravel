@@ -65,6 +65,12 @@ Route::prefix('search')->group(function () {
     Route::get('recommendations', [SearchController::class, 'recommendations']);
     Route::get('categories', [SearchController::class, 'allCategories']);
     Route::get('category-sellers', [SearchController::class, 'categoryBySellers']);
+    // Kitob filtri uchun: joriy kategoriyada (yoki umuman) mavjud
+    // nashriyot/do'kon/yozuv turi/muqova turi ro'yxati — piyoladagi
+    // "Brendlar" filtriga o'xshash, faqat kitoblarga xos maydonlar bilan
+    // (kanselyariyada bular yo'q — Books modelida allaqachon bor edi:
+    // publisher_id, seller_id, langType, coverType).
+    Route::get('book-filter-options', [SearchController::class, 'bookFilterOptions']);
 });
 Route::get('product_comments/{productId}/{type}', [BookClubController::class, 'getProductPosts']);
 Route::get('book_club', [BookClubController::class, 'index']);

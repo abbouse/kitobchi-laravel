@@ -217,6 +217,14 @@
       :max-price="route.query.max_price as string"
       :categories="filterDrawerMode === 'combined' ? (categoriesData?.data?.[activeType] || []) : undefined"
       :active-category-id="route.query.category as string"
+      :publishers="activeType === 'book' ? (bookFilterOptions?.publishers || []) : []"
+      :sellers="activeType === 'book' ? (bookFilterOptions?.sellers || []) : []"
+      :lang-types="activeType === 'book' ? (bookFilterOptions?.lang_types || []) : []"
+      :cover-types="activeType === 'book' ? (bookFilterOptions?.cover_types || []) : []"
+      :selected-publisher-ids="selectedPublisherIds"
+      :selected-seller-ids="selectedSellerIds"
+      :selected-lang-types="selectedLangTypes"
+      :selected-cover-types="selectedCoverTypes"
       @close="isFilterOpen = false"
       @apply="applyFilter"
     />
@@ -243,7 +251,11 @@ function openCombinedFilter() {
   filterDrawerMode.value = 'combined'
   isFilterOpen.value = true
 }
-const isFilterActive = computed(() => !!(route.query.min_price || route.query.max_price))
+const isFilterActive = computed(() => !!(
+  route.query.min_price || route.query.max_price
+  || selectedPublisherIds.value.length || selectedSellerIds.value.length
+  || selectedLangTypes.value.length || selectedCoverTypes.value.length
+))
 const activeType = ref<'book' | 'stationery'>((route.query.type as any) || 'book')
 const activeSort = ref<string>((route.query.sort as string) || 'popular')
 const searchInput = ref<string>((route.query.search as string) || '')
@@ -266,6 +278,28 @@ const activeCategory = computed(() => {
   const list = categoriesData.value?.data?.[activeType.value] || []
   return list.find((c: any) => String(c.id) === String(catId)) || null
 })
+
+// Kitobga xos filtr variantlari (Nashriyot/Do'kon/Yozuv turi/Muqova turi) —
+// category/[slug].vue'dagi bilan bir xil mantiq (SearchController::
+// bookFilterOptions). category tanlanmagan bo'lsa — BARCHA kitoblar
+// bo'yicha mavjud variantlar qaytariladi.
+const { data: bookFilterOptionsData } = await useFetch<any>(`${config.public.apiBase}/v1/kitobchi/search/book-filter-options`, {
+  query: computed(() => ({ category_id: activeType.value === 'book' ? (route.query.category || undefined) : undefined })),
+  lazy: true,
+  watch: [activeType, () => route.query.category]
+})
+const bookFilterOptions = computed(() => bookFilterOptionsData.value?.data || null)
+
+function parseCsvQuery(val: unknown): string[] {
+  if (!val) return []
+  const raw = Array.isArray(val) ? val.join(',') : String(val)
+  return raw.split(',').map((v) => v.trim()).filter(Boolean)
+}
+
+const selectedPublisherIds = computed(() => parseCsvQuery(route.query.publisher_ids))
+const selectedSellerIds = computed(() => parseCsvQuery(route.query.seller_ids))
+const selectedLangTypes = computed(() => parseCsvQuery(route.query.lang_types))
+const selectedCoverTypes = computed(() => parseCsvQuery(route.query.cover_types))
 
 const pageTitle = computed(() => {
   if (route.query.search) return `Qidiruv: ${route.query.search}`
@@ -310,6 +344,10 @@ const searchQuery = computed(() => ({
   category_id: route.query.category || undefined,
   min_price: route.query.min_price || undefined,
   max_price: route.query.max_price || undefined,
+  publisher_ids: selectedPublisherIds.value.join(',') || undefined,
+  seller_ids: selectedSellerIds.value.join(',') || undefined,
+  lang_types: selectedLangTypes.value.join(',') || undefined,
+  cover_types: selectedCoverTypes.value.join(',') || undefined,
   page: 1
 }))
 
@@ -358,11 +396,23 @@ function updateSearch() {
   router.push({ query: { ...route.query, search: searchInput.value || undefined } })
 }
 
-function applyFilter(payload: { minPrice: string | undefined; maxPrice: string | undefined; categoryId?: string | undefined }) {
+function applyFilter(payload: {
+  minPrice: string | undefined
+  maxPrice: string | undefined
+  categoryId?: string | undefined
+  publisherIds?: string[]
+  sellerIds?: string[]
+  langTypes?: string[]
+  coverTypes?: string[]
+}) {
   const query: Record<string, any> = {
     ...route.query,
     min_price: payload.minPrice,
-    max_price: payload.maxPrice
+    max_price: payload.maxPrice,
+    publisher_ids: payload.publisherIds?.join(',') || undefined,
+    seller_ids: payload.sellerIds?.join(',') || undefined,
+    lang_types: payload.langTypes?.join(',') || undefined,
+    cover_types: payload.coverTypes?.join(',') || undefined
   }
   // categoryId faqat "Filtr" (birlashtirilgan) rejimda keladi — "Narx"
   // rejimida bu maydon undefined bo'lib qoladi, shuning uchun joriy

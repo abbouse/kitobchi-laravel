@@ -760,6 +760,21 @@ class SearchController extends Controller
             'draft'        => 'nullable|in:0,1',
             'seller_id'    => 'nullable|integer',
             'tag'          => 'nullable|string|max:100',
+            // Kitob filtrlari (piyoladagi "Brendlar" ko'p tanlovli
+            // checkbox'iga o'xshash) — faqat type=book uchun ma'noli,
+            // stationeryga qo'llanmaydi. Mavjud yagona `seller_id`ga
+            // tegmaslik uchun ataylab ALOHIDA, ko'plik nom bilan.
+            // Vergul bilan ajratilgan satr sifatida yuboriladi ("1,2,3") —
+            // frontend $fetch/ofetch massiv query parametrlarini PHP
+            // tushunadigan `key[]=` ko'rinishida emas, qaytariladigan
+            // `key=a&key=b` ko'rinishida serializatsiya qiladi (PHP buni
+            // massiv sifatida EMAS, oxirgi qiymat sifatida o'qib qoladi) —
+            // shu sabab eng ishonchli format sifatida vergul bilan
+            // ajratilgan satr tanlandi.
+            'publisher_ids'   => 'nullable|string|max:1000',
+            'seller_ids'      => 'nullable|string|max:1000',
+            'lang_types'      => 'nullable|string|max:500',
+            'cover_types'     => 'nullable|string|max:500',
         ]);
 
         if ($validator->fails()) {
@@ -778,6 +793,16 @@ class SearchController extends Controller
         $forceDraft  = $request->query('draft') === '1';
         $minPrice    = $request->query('min_price') ? (float)$request->query('min_price') : null;
         $maxPrice    = $request->query('max_price') ? (float)$request->query('max_price') : null;
+        // Kitob filtrlari (ko'p tanlovli) — faqat queryBooksSmart()da
+        // ishlatiladi, stationeryga qo'llanmaydi (quyida ko'rinadi).
+        // Vergul bilan ajratilgan satrdan tozalab massivga o'giriladi.
+        $parseCsv = fn ($raw) => $raw
+            ? array_values(array_filter(array_map('trim', explode(',', (string) $raw)), fn ($v) => $v !== ''))
+            : [];
+        $publisherIds  = array_map('intval', $parseCsv($request->query('publisher_ids')));
+        $bookSellerIds = array_map('intval', $parseCsv($request->query('seller_ids')));
+        $langTypes     = $parseCsv($request->query('lang_types'));
+        $coverTypes    = $parseCsv($request->query('cover_types'));
 
         // Agar query, tag yoki category bo'lmasa — barcha mahsulotlar saralash bilan beriladi
         $hasFilter = mb_strlen($query) >= 2 || mb_strlen($tag) >= 2 || $categoryId || $sellerId || $minPrice !== null || $maxPrice !== null || in_array($sort, ['popular', 'newest', 'price_asc', 'price_desc', 'discount']);
@@ -794,7 +819,8 @@ class SearchController extends Controller
             if (in_array($type, ['book', 'all'])) {
                 $bookPaginator = $this->queryBooksSmart(
                     $analyzed, $tag, $categoryId, $sort,
-                    $page, $perPage, $query, $sellerId, $minPrice, $maxPrice
+                    $page, $perPage, $query, $sellerId, $minPrice, $maxPrice,
+                    $publisherIds, $bookSellerIds, $langTypes, $coverTypes
                 );
             }
             if (in_array($type, ['stationery', 'all'])) {
@@ -966,9 +992,13 @@ class SearchController extends Controller
         int    $page,
         int    $perPage,
         string $rawQuery,
-        ?int   $sellerId   = null,
-        ?float $minPrice   = null,
-        ?float $maxPrice   = null
+        ?int   $sellerId       = null,
+        ?float $minPrice       = null,
+        ?float $maxPrice       = null,
+        array  $publisherIds   = [],
+        array  $multiSellerIds = [],
+        array  $langTypes      = [],
+        array  $coverTypes     = []
     ) {
         $q = $this->visibleBooks(['category', 'seller', 'tags']);
 
@@ -982,6 +1012,13 @@ class SearchController extends Controller
         // qo'yilsa ham 105000 so'mlik kitob natijalarda chiqaverardi; jonli
         // sinovda kitobchi.com'da tasdiqlandi).
         if ($maxPrice !== null) $q->where('price', '<=', $maxPrice);
+        // Piyoladagi "Brendlar" ko'p tanlovli checkbox'iga o'xshash yangi
+        // kitob filtrlari — Nashriyot, Do'kon (bir nechtasi birdan tanlansa
+        // ham bo'ladi), Yozuv turi (lotin/kirill) va Muqova turi.
+        if (!empty($publisherIds)) $q->whereIn('publisher_id', $publisherIds);
+        if (!empty($multiSellerIds)) $q->whereIn('seller_id', $multiSellerIds);
+        if (!empty($langTypes)) $q->whereIn('langType', $langTypes);
+        if (!empty($coverTypes)) $q->whereIn('coverType', $coverTypes);
         $hasText = $analyzed !== null && !empty($analyzed['boolean']);
         $hasTag  = mb_strlen($tag) >= 2;
 
@@ -1809,6 +1846,77 @@ class SearchController extends Controller
             return response()->json(['status' => 'success', 'data' => $data]);
         } catch (\Throwable $e) {
             return response()->json(['status' => 'error', 'message' => 'Xato'], 500);
+        }
+    }
+
+    /**
+     * Kitob filtri uchun mavjud variantlar — piyoladagi "Brendlar"
+     * checkbox ro'yxatiga o'xshash, lekin kitoblarga xos maydonlar bilan:
+     * Nashriyot (publisher_id → Publisher.name), Do'kon (seller_id →
+     * Seller.shop_name), Yozuv turi (langType — lotin/kirill) va Muqova
+     * turi (coverType). `category_id` berilsa — faqat shu kategoriyada
+     * haqiqatda mavjud bo'lgan variantlar qaytariladi (bo'sh checkbox
+     * ro'yxati chiqmasligi uchun). Faqat KO'RINUVCHI (visibleBooks — status/
+     * approve/hidden tekshiruvlari bilan) kitoblardan yig'iladi.
+     */
+    public function bookFilterOptions(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'category_id' => 'nullable|integer',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['status' => 'error', 'errors' => $validator->errors()], 422);
+        }
+
+        $categoryId = $request->query('category_id');
+
+        try {
+            $cacheKey = 'api:book_filter_options:' . ($categoryId ?: 'all');
+
+            $data = Cache::remember($cacheKey, now()->addMinutes(30), function () use ($categoryId) {
+                $base = function () use ($categoryId) {
+                    $q = $this->visibleBooks([]);
+                    if ($categoryId) $q->where('category_id', $categoryId);
+                    return $q;
+                };
+
+                $publisherIds = (clone $base())->whereNotNull('publisher_id')->distinct()->pluck('publisher_id');
+                $publishers = $publisherIds->isEmpty() ? collect() : \App\Models\Publisher::whereIn('id', $publisherIds)
+                    ->select('id', 'name')
+                    ->orderBy('name')
+                    ->get()
+                    ->map(fn ($p) => ['id' => $p->id, 'name' => $p->name])
+                    ->values();
+
+                $sellerIds = (clone $base())->whereNotNull('seller_id')->distinct()->pluck('seller_id');
+                $sellers = $sellerIds->isEmpty() ? collect() : \App\Models\Seller::whereIn('id', $sellerIds)
+                    ->select('id', 'shop_name')
+                    ->orderBy('shop_name')
+                    ->get()
+                    ->map(fn ($s) => ['id' => $s->id, 'name' => $s->shop_name])
+                    ->values();
+
+                $langTypes = (clone $base())
+                    ->whereNotNull('langType')->where('langType', '!=', '')
+                    ->distinct()->pluck('langType')->values();
+
+                $coverTypes = (clone $base())
+                    ->whereNotNull('coverType')->where('coverType', '!=', '')
+                    ->distinct()->pluck('coverType')->values();
+
+                return [
+                    'publishers'  => $publishers,
+                    'sellers'     => $sellers,
+                    'lang_types'  => $langTypes,
+                    'cover_types' => $coverTypes,
+                ];
+            });
+
+            return response()->json(['status' => 'success', 'data' => $data]);
+        } catch (\Throwable $e) {
+            Log::error('Book filter options error', ['error' => $e->getMessage()]);
+            return response()->json(['status' => 'error', 'message' => 'Server xatosi'], 500);
         }
     }
 

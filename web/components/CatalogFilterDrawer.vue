@@ -30,7 +30,7 @@
       </div>
 
       <div class="catalog-filter-header px-5 pt-2 pb-4">
-        <h2 class="text-xl font-bold text-neutral-900 m-0">{{ categories && categories.length ? 'Filtr' : 'Narx' }}</h2>
+        <h2 class="text-xl font-bold text-neutral-900 m-0">{{ hasExtraSections ? 'Filtr' : 'Narx' }}</h2>
         <button
           type="button"
           @click="$emit('close')"
@@ -103,6 +103,88 @@
           </div>
         </div>
 
+        <!-- Kitobga xos filtrlar — piyoladagi "Brendlar" ko'p tanlovli
+             checkbox ro'yxatiga bir xil uslubda (jonli tekshirilib
+             tasdiqlangan checkbox+nom qatori), lekin kitobchida brend
+             o'rniga ma'noli bo'lgan maydonlar bilan: Nashriyot, Do'kon,
+             Yozuv turi (lotin/kirill), Muqova turi. Faqat kitob (book)
+             kontekstida va variantlar ro'yxati bo'sh bo'lmasa ko'rinadi. -->
+        <div v-if="publishers && publishers.length">
+          <h3 class="text-base font-bold text-neutral-900 mb-3 m-0">Nashriyot</h3>
+          <div class="space-y-1 max-h-56 overflow-y-auto">
+            <label
+              v-for="p in publishers"
+              :key="'pub-' + p.id"
+              class="flex items-center gap-3 text-sm py-2 px-1 rounded-lg hover:bg-neutral-50 transition-colors cursor-pointer"
+            >
+              <input
+                type="checkbox"
+                :value="String(p.id)"
+                v-model="localPublisherIds"
+                class="w-4 h-4 rounded border-neutral-300 text-primary focus:ring-primary shrink-0"
+              />
+              <span class="text-neutral-800">{{ p.name }}</span>
+            </label>
+          </div>
+        </div>
+
+        <div v-if="sellers && sellers.length">
+          <h3 class="text-base font-bold text-neutral-900 mb-3 m-0">Do'kon</h3>
+          <div class="space-y-1 max-h-56 overflow-y-auto">
+            <label
+              v-for="s in sellers"
+              :key="'seller-' + s.id"
+              class="flex items-center gap-3 text-sm py-2 px-1 rounded-lg hover:bg-neutral-50 transition-colors cursor-pointer"
+            >
+              <input
+                type="checkbox"
+                :value="String(s.id)"
+                v-model="localSellerIds"
+                class="w-4 h-4 rounded border-neutral-300 text-primary focus:ring-primary shrink-0"
+              />
+              <span class="text-neutral-800">{{ s.name }}</span>
+            </label>
+          </div>
+        </div>
+
+        <div v-if="langTypes && langTypes.length">
+          <h3 class="text-base font-bold text-neutral-900 mb-3 m-0">Yozuv turi</h3>
+          <div class="space-y-1">
+            <label
+              v-for="lt in langTypes"
+              :key="'lt-' + lt"
+              class="flex items-center gap-3 text-sm py-2 px-1 rounded-lg hover:bg-neutral-50 transition-colors cursor-pointer"
+            >
+              <input
+                type="checkbox"
+                :value="lt"
+                v-model="localLangTypes"
+                class="w-4 h-4 rounded border-neutral-300 text-primary focus:ring-primary shrink-0"
+              />
+              <span class="text-neutral-800">{{ lt }}</span>
+            </label>
+          </div>
+        </div>
+
+        <div v-if="coverTypes && coverTypes.length">
+          <h3 class="text-base font-bold text-neutral-900 mb-3 m-0">Muqova turi</h3>
+          <div class="space-y-1">
+            <label
+              v-for="ct in coverTypes"
+              :key="'ct-' + ct"
+              class="flex items-center gap-3 text-sm py-2 px-1 rounded-lg hover:bg-neutral-50 transition-colors cursor-pointer"
+            >
+              <input
+                type="checkbox"
+                :value="ct"
+                v-model="localCoverTypes"
+                class="w-4 h-4 rounded border-neutral-300 text-primary focus:ring-primary shrink-0"
+              />
+              <span class="text-neutral-800">{{ ct }}</span>
+            </label>
+          </div>
+        </div>
+
         <!-- Faqat biror filtr allaqachon tanlangan bo'lsagina ko'rsatiladi
              — piyolaning bo'sh holatida bu tugma umuman yo'q edi (jonli
              tekshirildi). Desktopda buning o'rniga pastdagi sticky
@@ -110,7 +192,7 @@
              (jonli desktop DOM'dan tasdiqlangan), shu sababli bu yerdagi
              matn-link faqat mobileda ko'rinadi. -->
         <button
-          v-if="localMin || localMax || localCategoryId"
+          v-if="hasAnyLocalFilter"
           type="button"
           @click="handleClear"
           class="catalog-filter-clear-mobile text-sm font-semibold text-neutral-500 hover:text-neutral-600 bg-transparent border-none cursor-pointer p-0"
@@ -121,7 +203,7 @@
 
       <div class="catalog-filter-footer sticky bottom-0 bg-white px-5 pb-5 pt-1">
         <button
-          v-if="localMin || localMax || localCategoryId"
+          v-if="hasAnyLocalFilter"
           type="button"
           @click="handleClear"
           class="catalog-filter-clear-desktop hidden py-3.5 rounded-2xl bg-secondary-200 text-primary font-semibold text-base hover:bg-secondary-400 transition-colors border-none cursor-pointer"
@@ -146,6 +228,10 @@ interface FilterCategory {
   name_uz?: string
   name?: string
 }
+interface FilterOption {
+  id: number | string
+  name: string
+}
 
 const props = defineProps<{
   isOpen: boolean
@@ -153,15 +239,54 @@ const props = defineProps<{
   maxPrice?: string | number | null
   categories?: FilterCategory[]
   activeCategoryId?: string | number | null
+  // Kitobga xos filtr variantlari — faqat type=book bo'lganda beriladi
+  // (chaqiruvchi sahifa `v1/kitobchi/search/book-filter-options`dan oladi).
+  publishers?: FilterOption[]
+  sellers?: FilterOption[]
+  langTypes?: string[]
+  coverTypes?: string[]
+  selectedPublisherIds?: (string | number)[]
+  selectedSellerIds?: (string | number)[]
+  selectedLangTypes?: string[]
+  selectedCoverTypes?: string[]
 }>()
 const emit = defineEmits<{
   close: []
-  apply: [{ minPrice: string | undefined; maxPrice: string | undefined; categoryId: string | undefined }]
+  apply: [{
+    minPrice: string | undefined
+    maxPrice: string | undefined
+    categoryId: string | undefined
+    publisherIds: string[]
+    sellerIds: string[]
+    langTypes: string[]
+    coverTypes: string[]
+  }]
 }>()
 
 const localMin = ref<string>(props.minPrice != null ? String(props.minPrice) : '')
 const localMax = ref<string>(props.maxPrice != null ? String(props.maxPrice) : '')
 const localCategoryId = ref<string>(props.activeCategoryId != null ? String(props.activeCategoryId) : '')
+const localPublisherIds = ref<string[]>((props.selectedPublisherIds || []).map(String))
+const localSellerIds = ref<string[]>((props.selectedSellerIds || []).map(String))
+const localLangTypes = ref<string[]>([...(props.selectedLangTypes || [])])
+const localCoverTypes = ref<string[]>([...(props.selectedCoverTypes || [])])
+
+// Sarlavha ("Filtr" vs "Narx") — Kategoriyalar YOKI kitob filtrlaridan
+// kamida bittasi berilgan bo'lsa "Filtr" (bir nechta bo'lim bor degani),
+// aks holda faqat narx maydonlari — "Narx".
+const hasExtraSections = computed(() =>
+  !!((props.categories && props.categories.length)
+    || (props.publishers && props.publishers.length)
+    || (props.sellers && props.sellers.length)
+    || (props.langTypes && props.langTypes.length)
+    || (props.coverTypes && props.coverTypes.length))
+)
+
+const hasAnyLocalFilter = computed(() =>
+  !!(localMin.value || localMax.value || localCategoryId.value
+    || localPublisherIds.value.length || localSellerIds.value.length
+    || localLangTypes.value.length || localCoverTypes.value.length)
+)
 
 // Panel yo'nalishi (translateY — mobile bottom sheet, translateX — desktop
 // o'ng panel) viewport kengligiga qarab tanlanadi. Tailwind JIT bu loyihada
@@ -191,11 +316,23 @@ watch(() => props.isOpen, (open) => {
     localMin.value = props.minPrice != null ? String(props.minPrice) : ''
     localMax.value = props.maxPrice != null ? String(props.maxPrice) : ''
     localCategoryId.value = props.activeCategoryId != null ? String(props.activeCategoryId) : ''
+    localPublisherIds.value = (props.selectedPublisherIds || []).map(String)
+    localSellerIds.value = (props.selectedSellerIds || []).map(String)
+    localLangTypes.value = [...(props.selectedLangTypes || [])]
+    localCoverTypes.value = [...(props.selectedCoverTypes || [])]
   }
 })
 
 function handleApply() {
-  emit('apply', { minPrice: localMin.value || undefined, maxPrice: localMax.value || undefined, categoryId: localCategoryId.value || undefined })
+  emit('apply', {
+    minPrice: localMin.value || undefined,
+    maxPrice: localMax.value || undefined,
+    categoryId: localCategoryId.value || undefined,
+    publisherIds: localPublisherIds.value,
+    sellerIds: localSellerIds.value,
+    langTypes: localLangTypes.value,
+    coverTypes: localCoverTypes.value
+  })
   emit('close')
 }
 
@@ -203,7 +340,19 @@ function handleClear() {
   localMin.value = ''
   localMax.value = ''
   localCategoryId.value = ''
-  emit('apply', { minPrice: undefined, maxPrice: undefined, categoryId: undefined })
+  localPublisherIds.value = []
+  localSellerIds.value = []
+  localLangTypes.value = []
+  localCoverTypes.value = []
+  emit('apply', {
+    minPrice: undefined,
+    maxPrice: undefined,
+    categoryId: undefined,
+    publisherIds: [],
+    sellerIds: [],
+    langTypes: [],
+    coverTypes: []
+  })
   emit('close')
 }
 </script>
