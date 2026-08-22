@@ -1,6 +1,6 @@
 <template>
   <div class="min-h-dvh bg-white grow">
-    <div class="md:hidden sticky top-0 z-40 bg-white rounded-b-2xl shadow-sm">
+    <div ref="headerRef" class="md:hidden sticky top-0 z-40 bg-white rounded-b-2xl shadow-sm">
       <div class="px-4 py-3 grid grid-cols-5 items-center gap-2">
         <button
           type="button"
@@ -19,6 +19,27 @@
         >
           <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75"/></svg>
         </button>
+      </div>
+      <!-- MUHIM: piyolaning HAR BIR sahifasida (bosh sahifa, kategoriya
+           ichida ham) header ostida to'liq kenglikdagi qidiruv paneli bor
+           (jonli tekshirilib tasdiqlandi: "Piyola'da izlash"), bizda esa
+           bu qism faqat `/catalog` sahifasida bor edi, kategoriya
+           sahifasida (aynan shu sahifada) umuman yo'q edi. `catalog/
+           index.vue`dagi bilan bir xil uslub va xatti-harakat — izlash
+           natijasi umumiy katalog sahifasiga olib boradi (bu sahifada
+           matn bo'yicha qidiruv infratuzilmasi yo'q, faqat kategoriya
+           bo'yicha). -->
+      <div class="px-4 pb-3">
+        <div class="relative overflow-hidden transition-shadow duration-300 rounded-[20px] px-4 py-2.5 h-11 text-gray bg-secondary-300! flex items-center gap-2.5">
+          <i class="icon-search text-lg text-gray-500"></i>
+          <input
+            v-model="searchInput"
+            type="text"
+            placeholder="Kitobchi’da izlash"
+            @keyup.enter="submitSearch"
+            class="flex-1 bg-transparent border-none outline-none text-sm text-neutral-900 m-0 p-0 h-full w-full"
+          />
+        </div>
       </div>
     </div>
 
@@ -83,7 +104,31 @@
             <p class="text-sm text-neutral-400 m-0">{{ totalCount }} ta mahsulot</p>
           </div>
 
-          <div class="flex items-center gap-2 pb-5 overflow-x-auto no-scrollbar">
+          <!-- MUHIM: piyolada mobileda header (sarlavha+qidiruv) VA filtr/
+               saralash pill'lar qatori BIRGALIKDA, bitta yopishqoq blok
+               sifatida qotadi (jonli scroll-tekshiruv bilan tasdiqlandi:
+               ikkalasi ham ekran tepasida birga qoladi, faqat mahsulotlar
+               to'ri o'zi scroll bo'ladi). Bizda ilgari faqat sarlavha+
+               qidiruv qismi `sticky` edi, bu qator esa mahsulotlar bilan
+               birga scroll bo'lib ketardi.
+
+               Endi bu qator ham (faqat mobileda) yopishqoq qilindi — LEKIN
+               `md:static` kabi Tailwind klassi ISHLATILMADI, chunki loyihada
+               `assets/css/piyola.css` bir marta generatsiya qilingan STATIK
+               fayl va bu klass (`grep` bilan tekshirildi) unda umuman
+               kompilyatsiya qilinmagan (xuddi ilgari `shadow-xl`/`z-[60]`da
+               bo'lgani kabi — sinab ko'rilmagan klass jim tarzda hech qanday
+               stilga ega bo'lmaydi). Shu sabab `position` VA `top` ikkalasi
+               ham JS orqali `:style`ga yoziladi (`isMobileSticky` — mobil/
+               desktop holatini `matchMedia` bilan aniqlaydi, `headerHeight` —
+               header balandligiga moslab hisoblanadi, pastda
+               `measureHeader()`/`updateStickyMode()`), shrift yoki burilish
+               sabab o'zgarishi mumkin bo'lgan qattiq pixel qiymat yozib
+               qo'yish xavfidan qochilgan. -->
+          <div
+            class="z-30 bg-white flex items-center gap-2 pb-5 overflow-x-auto no-scrollbar"
+            :style="{ position: isMobileSticky ? 'sticky' : 'static', top: headerHeight + 'px' }"
+          >
             <!-- Saralash — piyoladagi kabi bitta dropdown (Ommabop / Narx:
                  pastdan yuqoriga / Narx: yuqoridan pastga / Yangi), avvalgi
                  ikkita alohida "Ommabop"/"Yangi" pill o'rniga. -->
@@ -98,10 +143,16 @@
                  filtr qo'llanganda "Filtr" tugmasi emas, faqat "Brendlar"
                  tugmasi to'q rangga o'tgan edi). Shu sabab bu yerda
                  `isAnyFilterActive`ga bog'lanmagan, doim neytral. -->
+            <!-- MUHIM: piyolada mobileda "Filtr" alohida MATNLI pill sifatida
+                 bu qatorda umuman ko'rinmaydi — faqat header'dagi slider
+                 ikonkasi orqali ochiladi (yuqorida, jonli tasdiqlandi).
+                 Bizda esa ilgari ikkalasi ham bor edi (ikonka + bu pill) —
+                 ortiqcha takrorlanish. Shu sabab bu pill endi `md:`dan
+                 pastda (mobileda) yashirin, faqat desktopda ko'rinadi. -->
             <button
               type="button"
               @click="isFilterOpen = true"
-              :class="chipClass(false)"
+              :class="[...chipClass(false), 'max-md:hidden']"
             >
               Filtr
               <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg>
@@ -254,6 +305,45 @@ const categoryId = computed(() => {
   return match ? match[1] : ''
 })
 const activeSort = ref<string>((route.query.sort as string) || 'popular')
+// Piyoladagi har bir sahifada (kategoriya ichida ham) bor to'liq kenglikdagi
+// qidiruv paneli — bu sahifada matn qidiruv infratuzilmasi yo'q, shu sabab
+// `catalog/index.vue`dagi umumiy katalog+qidiruv sahifasiga yo'naltiradi.
+const searchInput = ref('')
+function submitSearch() {
+  if (!searchInput.value.trim()) return
+  router.push({ path: '/catalog', query: { search: searchInput.value, type: activeType.value } })
+}
+
+// Mobileda filtr/saralash pill qatorini header (sarlavha+qidiruv) ostiga
+// "yopishtirish" uchun — header balandligini JS orqali o'lchaydi (qattiq
+// pixel qiymat emas, chunki shrift/burilish sabab o'zgarishi mumkin) va
+// mobil/desktop holatini `matchMedia` bilan aniqlaydi (`md:static` kabi
+// Tailwind klassi loyihaning statik CSS bundle'ida yo'q — yuqoridagi
+// izohda tushuntirilgan).
+const headerRef = ref<HTMLElement | null>(null)
+const headerHeight = ref(112)
+const isMobileSticky = ref(false)
+
+function measureHeader() {
+  if (headerRef.value) headerHeight.value = headerRef.value.getBoundingClientRect().height
+}
+function updateStickyMode() {
+  isMobileSticky.value = window.matchMedia('(max-width: 767.98px)').matches
+}
+function handleHeaderResize() {
+  measureHeader()
+  updateStickyMode()
+}
+
+onMounted(() => {
+  measureHeader()
+  updateStickyMode()
+  window.addEventListener('resize', handleHeaderResize)
+})
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', handleHeaderResize)
+})
+
 const currentPage = ref(1)
 const allProducts = ref<any[]>([])
 const totalCount = ref(0)
@@ -269,6 +359,11 @@ const { data: categoriesData } = await useFetch<any>(`${config.public.apiBase}/v
 const siblingCategories = computed(() => categoriesData.value?.data?.[activeType.value] || [])
 const activeCategory = computed(() => siblingCategories.value.find((c: any) => String(c.id) === String(categoryId.value)) || null)
 const pageTitle = computed(() => activeCategory.value?.name_uz || activeCategory.value?.name || (activeType.value === 'stationery' ? 'Kanselyariya' : 'Kitoblar'))
+
+// Kategoriya o'zgarganda (masalan yon panel orqali) sarlavha matni
+// o'zgarib, ba'zan boshqa qatorga o'tib ketishi (wrap) mumkin — shu sabab
+// header balandligini har safar pageTitle o'zgarganda qayta o'lchaymiz.
+watch(pageTitle, () => nextTick(measureHeader))
 
 // 4-Language Dynamic SEO
 const { setCategorySeo } = useAppSeo()

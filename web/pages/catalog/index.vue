@@ -1,7 +1,7 @@
 <template>
   <div class="py-4 md:py-6 min-h-dvh bg-white grow">
     <!-- ====== MOBILE STICKY TOP BAR (PiyolaMarket 1:1) ====== -->
-    <div class="md:hidden sticky top-0 z-40 mb-3">
+    <div ref="headerRef" class="md:hidden sticky top-0 z-40 mb-3">
       <div class="py-3 rounded-b-2xl bg-white shadow-sm transition-all duration-300">
         <div class="px-4 space-y-2">
           <div class="grid grid-cols-5 items-center gap-2">
@@ -92,8 +92,17 @@
         </span>
       </div>
 
-      <!-- Filters & Sorting Pills -->
-      <div class="flex items-center gap-2 pb-6 overflow-x-auto no-scrollbar">
+      <!-- Filters & Sorting Pills — MUHIM: piyolada bu qator ham header
+           (sarlavha+qidiruv) bilan BIRGA yopishqoq bo'lib qoladi (jonli
+           scroll-tekshiruv bilan tasdiqlandi, `category/[slug].vue`dagi
+           bilan bir xil naqsh/sabab — batafsil izoh o'sha faylda). `md:static`
+           kabi Tailwind klassi ISHLATILMAYDI (loyihaning statik CSS
+           bundle'ida kompilyatsiya qilinmagan), shu sabab `position` va
+           `top` JS orqali `:style`ga yoziladi. -->
+      <div
+        class="z-30 bg-white flex items-center gap-2 pb-6 overflow-x-auto no-scrollbar"
+        :style="{ position: isMobileSticky ? 'sticky' : 'static', top: headerHeight + 'px' }"
+      >
         <!-- Faol kategoriya chip'i — piyolada kategoriya ichiga kirilganda
              sahifa konteksti (nom) doim ko'rinib turadi; kitobchida bunday
              ko'rinish yo'q edi, foydalanuvchi qaysi kategoriyada ekanini
@@ -308,6 +317,35 @@ const activeType = ref<'book' | 'stationery'>((route.query.type as any) || 'book
 const activeSort = ref<string>((route.query.sort as string) || 'popular')
 const searchInput = ref<string>((route.query.search as string) || '')
 
+// Mobileda filtr/saralash pill qatorini header (sarlavha+qidiruv) ostiga
+// "yopishtirish" uchun — `category/[slug].vue`dagi bilan bir xil mantiq
+// (u yerdagi izohda batafsil tushuntirilgan: header balandligini JS orqali
+// o'lchash, `matchMedia` bilan mobil/desktop holatini aniqlash — `md:static`
+// Tailwind klassi loyihaning statik CSS bundle'ida yo'q).
+const headerRef = ref<HTMLElement | null>(null)
+const headerHeight = ref(150)
+const isMobileSticky = ref(false)
+
+function measureHeader() {
+  if (headerRef.value) headerHeight.value = headerRef.value.getBoundingClientRect().height
+}
+function updateStickyMode() {
+  isMobileSticky.value = window.matchMedia('(max-width: 767.98px)').matches
+}
+function handleHeaderResize() {
+  measureHeader()
+  updateStickyMode()
+}
+
+onMounted(() => {
+  measureHeader()
+  updateStickyMode()
+  window.addEventListener('resize', handleHeaderResize)
+})
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', handleHeaderResize)
+})
+
 // Kategoriya nomlari — CatalogDrawer.vue bilan bir xil kalit ('catalog-drawer-
 // categories'), shuning uchun Nuxt payload keshi orqali ikkalasi bitta so'rovni
 // ulashadi (qayta-qayta fetch qilinmaydi). MUHIM: bu yerga kirilganda (ya'ni
@@ -398,6 +436,11 @@ const pageTitle = computed(() => {
   if (activeSort.value === 'popular') return 'Ommabop kitoblar'
   return 'Kitoblar katalogi'
 })
+
+// Sarlavha o'zgarganda (qidiruv, kategoriya, tur) header balandligi ham
+// o'zgarishi mumkin (matn boshqa qatorga o'tib ketishi/wrap) — shu sabab
+// qayta o'lchaymiz.
+watch(pageTitle, () => nextTick(measureHeader))
 
 function clearCategory() {
   const query = { ...route.query }
