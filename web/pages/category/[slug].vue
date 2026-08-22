@@ -64,20 +64,10 @@
             >
               Kataloglar
             </NuxtLink>
-            <button
-              type="button"
-              @click="setSort('popular')"
-              :class="chipClass(activeSort === 'popular')"
-            >
-              Ommabop
-            </button>
-            <button
-              type="button"
-              @click="setSort('new')"
-              :class="chipClass(activeSort === 'new')"
-            >
-              Yangi
-            </button>
+            <!-- Saralash — piyoladagi kabi bitta dropdown (Ommabop / Narx:
+                 pastdan yuqoriga / Narx: yuqoridan pastga / Yangi), avvalgi
+                 ikkita alohida "Ommabop"/"Yangi" pill o'rniga. -->
+            <CatalogSortDropdown :model-value="activeSort" @update:model-value="setSort" />
             <button
               type="button"
               @click="isFilterOpen = true"

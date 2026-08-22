@@ -131,27 +131,10 @@
 
         <div class="w-px h-6 bg-secondary-200 mx-1 shrink-0"></div>
 
-        <!-- Sort Pills -->
-        <button
-          type="button"
-          @click="setSort('popular')"
-          :class="[
-            'px-4 py-2 rounded-2xl text-sm font-semibold transition-all border-none cursor-pointer',
-            activeSort === 'popular' ? 'bg-primary text-white' : 'bg-secondary-300 text-primary hover:bg-primary/10'
-          ]"
-        >
-          Ommabop
-        </button>
-        <button
-          type="button"
-          @click="setSort('new')"
-          :class="[
-            'px-4 py-2 rounded-2xl text-sm font-semibold transition-all border-none cursor-pointer',
-            activeSort === 'new' ? 'bg-primary text-white' : 'bg-secondary-300 text-primary hover:bg-primary/10'
-          ]"
-        >
-          Yangi
-        </button>
+        <!-- Saralash — piyoladagi kabi bitta dropdown (Ommabop / Narx:
+             pastdan yuqoriga / Narx: yuqoridan pastga / Yangi), avvalgi
+             ikkita alohida "Ommabop"/"Yangi" pill o'rniga. -->
+        <CatalogSortDropdown :model-value="activeSort" @update:model-value="setSort" />
 
         <div class="w-px h-6 bg-secondary-200 mx-1 shrink-0"></div>
 

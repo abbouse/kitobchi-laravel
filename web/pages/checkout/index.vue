@@ -62,17 +62,60 @@
               <div class="flex justify-between items-center mb-4">
                 <h2 class="text-xl font-bold m-0">Yetkazib berish manzili</h2>
               </div>
-              <!-- MUHIM: avvalgi Viloyat/Tuman selectlari qattiq
-                   kodlangan (hardcoded), haqiqiy ma'lumotga bog'lanmagan
-                   5 tagina soxta variant edi. Endi haqiqiy Viloyat →
-                   Tuman → Mahalla/qishloq tanlovi (MIMAXUZ/
-                   uzbekistan-regions-data) ishlatiladi, GPS/lat-lon
-                   shart emas. -->
-              <UzAddressPicker ref="addressPickerRef" @update="onAddrUpdate" />
 
-              <div v-if="addressSummary.fullAddress" class="mt-3 p-3.5 rounded-2xl bg-white text-sm text-neutral-600">
-                {{ addressSummary.fullAddress }}
+              <!-- MUHIM: profil (profile/info.vue) bilan bir xil holat mantig'i.
+                   Userning saqlangan manzillari (`v1/kitobchi/locations`) yuklanmoqda
+                   bo'lsa — skeleton; agar saqlangan manzillar mavjud bo'lsa —
+                   gorizontal scroll orqali tanlanadigan kartochkalar + "Manzil
+                   qo'shish" kartasi (bosilganda profildagi bilan bir xil modal
+                   ochiladi); agar umuman manzil bo'lmasa — to'g'ridan-to'g'ri
+                   Viloyat → Tuman → Mahalla/qishloq formasi (UzAddressPicker)
+                   ko'rsatiladi, chunki tanlaydigan hech narsa yo'q. -->
+
+              <!-- Yuklanmoqda -->
+              <div v-if="addressesLoading" class="flex gap-3 overflow-x-auto pb-1">
+                <div v-for="n in 2" :key="n" class="shrink-0 w-64 h-[76px] rounded-2xl bg-white/60 animate-pulse"></div>
               </div>
+
+              <!-- Saqlangan manzillar bor: gorizontal scroll orqali tanlash -->
+              <div v-else-if="savedAddresses.length > 0" class="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1 snap-x snap-mandatory">
+                <button
+                  v-for="loc in savedAddresses"
+                  :key="loc.id"
+                  type="button"
+                  @click="selectedAddressId = loc.id"
+                  class="shrink-0 snap-start w-64 text-left rounded-2xl p-4 border-2 transition-all cursor-pointer bg-white"
+                  :class="selectedAddressId === loc.id ? 'border-primary' : 'border-transparent hover:border-neutral-200'"
+                >
+                  <div class="flex items-start gap-2.5">
+                    <div class="w-9 h-9 rounded-full bg-[#F6F6F9] flex items-center justify-center shrink-0">
+                      <svg class="w-[18px] h-[18px] text-neutral-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg>
+                    </div>
+                    <div class="min-w-0">
+                      <p class="text-sm text-neutral-900 font-medium m-0 line-clamp-2">{{ loc.fullAddress }}</p>
+                      <span v-if="mainAddressId === loc.id" class="text-primary text-xs font-semibold">Asosiy manzil</span>
+                    </div>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  @click="openAddAddressModal"
+                  class="shrink-0 snap-start w-36 rounded-2xl p-4 border-2 border-dashed border-neutral-300 hover:border-primary/50 transition-all cursor-pointer bg-white/60 flex flex-col items-center justify-center gap-1.5 text-primary"
+                >
+                  <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+                  <span class="text-sm font-medium text-center">Manzil qo'shish</span>
+                </button>
+              </div>
+
+              <!-- Saqlangan manzil umuman yo'q: to'g'ridan-to'g'ri forma -->
+              <template v-else>
+                <UzAddressPicker ref="addressPickerRef" @update="onAddrUpdate" />
+
+                <div v-if="addressSummary.fullAddress" class="mt-3 p-3.5 rounded-2xl bg-white text-sm text-neutral-600">
+                  {{ addressSummary.fullAddress }}
+                </div>
+              </template>
             </div>
 
             <!-- Section 3: To'lov turi (Payment Method) -->
@@ -160,6 +203,40 @@
         </div>
       </div>
     </div>
+
+    <!-- Manzil Qo'shish Modali -->
+    <!-- MUHIM: profile/info.vue'dagi "Manzil qo'shish" modali bilan bir xil
+         naqsh (fixed inset-0 backdrop + markazlashtirilgan oq kartochka) —
+         foydalanuvchining saqlangan manzillari mavjud bo'lganda, gorizontal
+         scroll ro'yxatidagi "Manzil qo'shish" kartasi bosilganda ochiladi. -->
+    <div
+      v-if="isAddAddressModalOpen"
+      class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
+      @click.self="isAddAddressModalOpen = false"
+    >
+      <div class="relative bg-white rounded-3xl overflow-hidden p-6 sm:p-8 w-full max-w-lg sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+        <button @click="isAddAddressModalOpen = false" type="button" class="absolute top-4 right-4 sm:top-6 sm:right-6 w-10 h-10 rounded-full bg-[#F6F6F9] hover:bg-neutral-200 transition-colors flex items-center justify-center border-none cursor-pointer">
+          <svg class="w-5 h-5 text-neutral-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+        <h3 class="text-2xl font-bold text-center m-0 mb-8 text-neutral-900">Manzil qo'shish</h3>
+        <form @submit.prevent="handleSaveAddressModal" class="space-y-4">
+
+          <div v-if="modalAddressError" class="p-3 bg-red-50 text-red-600 rounded-xl text-sm font-medium text-center">
+            {{ modalAddressError }}
+          </div>
+
+          <UzAddressPicker ref="modalAddressPickerRef" @update="onModalAddrUpdate" />
+
+          <div v-if="modalAddressSummary.fullAddress" class="p-3 rounded-xl bg-[#F6F6F9] text-sm text-neutral-600">
+            {{ modalAddressSummary.fullAddress }}
+          </div>
+
+          <button type="submit" :disabled="!modalAddressSummary.isValid || savingModalAddress" class="w-full font-bold items-center transition-colors gap-1.5 text-white bg-primary hover:bg-primary/90 h-12 md:h-14 flex justify-center rounded-2xl text-base px-6 mt-6 border-none cursor-pointer disabled:opacity-75 shadow-sm">
+            {{ savingModalAddress ? "Qo'shilmoqda..." : "Qo'shish" }}
+          </button>
+        </form>
+      </div>
+    </div>
   </main>
 </template>
 
@@ -167,6 +244,7 @@
 import { useCartStore } from '~/stores/cart'
 import { useAuthStore } from '~/stores/auth'
 
+const config = useRuntimeConfig()
 const cartStore = useCartStore()
 const authStore = useAuthStore()
 const router = useRouter()
@@ -198,6 +276,104 @@ function onAddrUpdate(summary: typeof addressSummary.value) {
   addressSummary.value = summary
 }
 
+// ── Saqlangan manzillar (profile/info.vue bilan bir xil endpoint/mantiq) ──
+// MUHIM: avval bu yerda faqat bo'sh (yangi) forma ko'rsatilardi — profildagi
+// "Manzil qo'shish" bilan farqi yo'q edi, garchi userning allaqachon
+// saqlangan manzillari bo'lsa ham. Endi: agar saqlangan manzillar bo'lsa —
+// ular orasidan gorizontal scroll orqali tanlanadi (+ "Manzil qo'shish"
+// kartasi profildagi bilan bir xil modalni ochadi); agar umuman manzil
+// bo'lmasa — to'g'ridan-to'g'ri UzAddressPicker formasi ko'rsatiladi.
+const savedAddresses = ref<any[]>([])
+const addressesLoading = ref(true)
+const selectedAddressId = ref<number | null>(null)
+const mainAddressId = computed(() => (authStore.user as any)?.mainAddressID ?? null)
+
+async function fetchAddresses() {
+  addressesLoading.value = true
+  try {
+    const res: any = await $fetch(`${config.public.apiBase}/v1/kitobchi/locations`, {
+      headers: { Authorization: `Bearer ${authStore.token}` }
+    })
+    savedAddresses.value = res?.data || []
+    if (savedAddresses.value.length > 0) {
+      const match = savedAddresses.value.find((a) => a.id === mainAddressId.value)
+      selectedAddressId.value = (match || savedAddresses.value[0]).id
+    }
+  } catch (e) {
+    savedAddresses.value = []
+  } finally {
+    addressesLoading.value = false
+  }
+}
+
+// Manzil qo'shish modali — profile/info.vue'dagi bilan bir xil (o'z alohida
+// `modalAddressSummary`/`modalAddressPickerRef` holati bilan, checkout
+// formasidagi asosiy `addressSummary`ga aralashib ketmasligi uchun).
+const isAddAddressModalOpen = ref(false)
+const modalAddressPickerRef = ref<{ reset: () => void } | null>(null)
+const modalAddressSummary = ref({
+  regionId: null as number | null,
+  regionName: '',
+  districtId: null as number | null,
+  districtName: '',
+  village: '',
+  street: '',
+  fullAddress: '',
+  isValid: false,
+})
+const savingModalAddress = ref(false)
+const modalAddressError = ref('')
+
+function openAddAddressModal() {
+  modalAddressError.value = ''
+  modalAddressSummary.value = {
+    regionId: null, regionName: '', districtId: null, districtName: '',
+    village: '', street: '', fullAddress: '', isValid: false,
+  }
+  isAddAddressModalOpen.value = true
+  nextTick(() => modalAddressPickerRef.value?.reset())
+}
+
+function onModalAddrUpdate(summary: typeof modalAddressSummary.value) {
+  modalAddressSummary.value = summary
+}
+
+async function handleSaveAddressModal() {
+  if (!modalAddressSummary.value.isValid) return
+  savingModalAddress.value = true
+  modalAddressError.value = ''
+  try {
+    const res: any = await $fetch(`${config.public.apiBase}/v1/kitobchi/locations/new`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${authStore.token}` },
+      body: {
+        fullAddress: modalAddressSummary.value.fullAddress,
+        countryCode: 'UZ',
+        regionName: modalAddressSummary.value.regionName,
+        districtName: modalAddressSummary.value.districtName,
+        cityName: modalAddressSummary.value.village,
+      }
+    })
+    if (res?.location_id) {
+      savedAddresses.value.push({ id: res.location_id, fullAddress: modalAddressSummary.value.fullAddress })
+      selectedAddressId.value = res.location_id
+      authStore.updateUser({ mainAddressID: res.location_id })
+    }
+    isAddAddressModalOpen.value = false
+  } catch (e: any) {
+    modalAddressError.value = e?.data?.message || "Manzilni saqlashda xatolik yuz berdi"
+  } finally {
+    savingModalAddress.value = false
+  }
+}
+
+// Buyurtma yuborish uchun "manzil to'g'ri tanlangan/kiritilgan"ligini
+// bitta joydan tekshirish — holatiga qarab ikki xil manbadan keladi.
+const hasValidAddress = computed(() => {
+  if (savedAddresses.value.length > 0) return !!selectedAddressId.value
+  return addressSummary.value.isValid
+})
+
 const paymentMethods = [
   { id: 'payme', name: 'Payme', label: "Onlayn to'lov" },
   { id: 'click', name: 'Click', label: "Onlayn to'lov" },
@@ -210,7 +386,7 @@ function formatPrice(val: number) {
 }
 
 function submitOrder() {
-  if(!form.fullName || !form.phone || !addressSummary.value.isValid) {
+  if(!form.fullName || !form.phone || !hasValidAddress.value) {
     alert("Iltimos barcha maydonlarni to'ldiring")
     return
   }
@@ -226,6 +402,11 @@ function finishOrder() {
 onMounted(() => {
   if (cartStore.selectedCount === 0) {
     router.push('/cart')
+  }
+  if (authStore.isAuthenticated) {
+    fetchAddresses()
+  } else {
+    addressesLoading.value = false
   }
 })
 

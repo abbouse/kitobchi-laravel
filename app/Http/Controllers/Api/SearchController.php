@@ -975,6 +975,13 @@ class SearchController extends Controller
         if ($sellerId) $q->where('seller_id', $sellerId);
         if ($categoryId) $q->where('category_id', $categoryId);
         if ($minPrice !== null) $q->where('price', '>=', $minPrice);
+        // MUHIM: bu yer avval `$maxPrice` parametrini qabul qilardi-yu, lekin
+        // hech qayerda queryga qo'llamasdi (`queryStationerySmart()`da esa
+        // to'g'ri qo'llangan edi) — natijada kitoblar uchun "Narx" filtrining
+        // YUQORI chegarasi jim-jit e'tiborga olinmasdi (masalan max_price=100000
+        // qo'yilsa ham 105000 so'mlik kitob natijalarda chiqaverardi; jonli
+        // sinovda kitobchi.com'da tasdiqlandi).
+        if ($maxPrice !== null) $q->where('price', '<=', $maxPrice);
         $hasText = $analyzed !== null && !empty($analyzed['boolean']);
         $hasTag  = mb_strlen($tag) >= 2;
 
