@@ -179,6 +179,12 @@ const siblingCategories = computed(() => categoriesData.value?.data?.[activeType
 const activeCategory = computed(() => siblingCategories.value.find((c: any) => String(c.id) === String(categoryId.value)) || null)
 const pageTitle = computed(() => activeCategory.value?.name_uz || activeCategory.value?.name || (activeType.value === 'stationery' ? 'Kanselyariya' : 'Kitoblar'))
 
+// 4-Language Dynamic SEO
+const { setCategorySeo } = useAppSeo()
+watchEffect(() => {
+  setCategorySeo(pageTitle.value, activeType.value, slug.value)
+})
+
 function toApiSort(sort: string) {
   return sort === 'new' ? 'newest' : sort
 }

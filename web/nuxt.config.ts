@@ -80,6 +80,9 @@ export default defineNuxtConfig({
         { property: 'og:image:width', content: '1200' },
         { property: 'og:image:height', content: '630' },
         { property: 'og:locale', content: 'uz_UZ' },
+        { property: 'og:locale:alternate', content: 'ru_RU' },
+        { property: 'og:locale:alternate', content: 'en_US' },
+        { property: 'og:locale:alternate', content: 'ja_JP' },
 
         // Twitter Card Meta Tags
         { name: 'twitter:card', content: 'summary_large_image' },

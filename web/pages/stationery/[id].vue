@@ -838,6 +838,25 @@ const product = computed(() => {
   return productData.value?.data || productData.value?.product || null
 })
 
+// 4-Language Dynamic SEO & JSON-LD Microdata (uz-Latn, uz-Cyrl, ru, en, ja)
+const { setProductSeo } = useAppSeo()
+if (product.value) {
+  setProductSeo({
+    name: product.value.name,
+    description: product.value.description,
+    image: product.value.image || product.value.first_image || product.value.images?.[0],
+    price: product.value.price,
+    discountPrice: product.value.discountPrice || product.value.discount_price,
+    currency: 'UZS',
+    inStock: product.value.count !== undefined ? product.value.count > 0 : true,
+    type: 'stationery',
+    categoryName: product.value.category?.name || (typeof product.value.category === 'string' ? product.value.category : ''),
+    rating: product.value.ugc_aggregate_score || product.value.rating || 5.0,
+    reviewsCount: product.value.ugc_reviews_count || product.value.reviews_count || 1,
+    urlPath: `/stationery/${route.params.id}`,
+  })
+}
+
 const productRating = computed(() => {
   if (product.value?.ugc_aggregate_score && Number(product.value.ugc_aggregate_score) > 0) {
     return Number(product.value.ugc_aggregate_score).toFixed(1)
