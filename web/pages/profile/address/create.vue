@@ -29,11 +29,11 @@
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
         </NuxtLink>
         <nav class="flex items-center gap-2 text-sm text-[#8F8FA1]">
-          <NuxtLink to="/" class="hover:text-neutral-700 transition-colors">Asosiy</NuxtLink>
+          <NuxtLink to="/" class="hover:text-neutral-600 transition-colors">Asosiy</NuxtLink>
           <span class="text-gray-300">/</span>
-          <NuxtLink to="/profile" class="hover:text-neutral-700 transition-colors">Profil</NuxtLink>
+          <NuxtLink to="/profile" class="hover:text-neutral-600 transition-colors">Profil</NuxtLink>
           <span class="text-gray-300">/</span>
-          <NuxtLink to="/profile/info" class="hover:text-neutral-700 transition-colors">Ma'lumotlarim</NuxtLink>
+          <NuxtLink to="/profile/info" class="hover:text-neutral-600 transition-colors">Ma'lumotlarim</NuxtLink>
           <span class="text-gray-300">/</span>
           <span class="text-neutral-900 font-semibold">Manzil qo'shish</span>
         </nav>
@@ -60,42 +60,14 @@
             <h2 class="text-xl font-bold text-neutral-900 mb-5 max-md:hidden">Yangi manzil qo'shish</h2>
 
             <form @submit.prevent="submitAddress" class="space-y-4">
-              <div>
-                <label class="block text-xs font-semibold text-neutral-600 mb-1.5">To'liq manzil</label>
-                <textarea
-                  v-model="newAddressText"
-                  rows="3"
-                  placeholder="Shahar/Tuman, ko'cha, uy va xonadon raqami..."
-                  class="w-full rounded-2xl bg-secondary-50 px-4 py-3.5 border border-neutral-100 outline-none focus:border-primary focus:bg-white transition-all font-medium text-neutral-900 text-sm resize-none"
-                  required
-                ></textarea>
-              </div>
+              <!-- MUHIM: GPS/geolocation olib tashlandi — manzil endi
+                   Viloyat → Tuman → Mahalla/qishloq tanlovi orqali
+                   kiritiladi (MIMAXUZ/uzbekistan-regions-data), web
+                   buyurtmasi uchun lat/lon shart emas. -->
+              <UzAddressPicker ref="addressPickerRef" @update="onAddrUpdate" />
 
-              <!-- Geolocation Button -->
-              <div class="p-4 rounded-2xl bg-secondary-50 border border-neutral-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div class="flex items-center gap-3">
-                  <div class="w-10 h-10 rounded-xl bg-white shadow-xs flex items-center justify-center text-primary shrink-0">
-                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg>
-                  </div>
-                  <div>
-                    <p class="text-xs font-semibold text-neutral-800 m-0">Geo-joylashuv</p>
-                    <p v-if="coords" class="text-xs text-emerald-600 font-medium m-0 mt-0.5">Joylashuv aniqlandi ✓ ({{ coords.lat.toFixed(4) }}, {{ coords.lon.toFixed(4) }})</p>
-                    <p v-else class="text-xs text-neutral-400 m-0 mt-0.5">Xaritada tez topish uchun</p>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  @click="captureLocation"
-                  :disabled="locating"
-                  class="px-4 py-2 rounded-xl bg-white border border-neutral-200 text-xs font-semibold text-neutral-700 hover:border-primary/40 hover:text-primary transition-all cursor-pointer disabled:opacity-75 shrink-0"
-                >
-                  {{ locating ? 'Aniqlanmoqda...' : (coords ? 'Qayta aniqlash' : 'Joriy joylashuv') }}
-                </button>
-              </div>
-
-              <div v-if="geoError" class="p-3 rounded-xl bg-amber-50 text-amber-700 text-xs font-medium">
-                {{ geoError }}
+              <div v-if="addressSummary.fullAddress" class="p-3.5 rounded-2xl bg-secondary-50 text-sm text-neutral-600">
+                {{ addressSummary.fullAddress }}
               </div>
 
               <div v-if="addressError" class="p-3 rounded-xl bg-red-50 text-red-600 text-xs font-medium">
@@ -105,7 +77,7 @@
               <div class="pt-3 flex flex-col sm:flex-row gap-3">
                 <button
                   type="submit"
-                  :disabled="!newAddressText.trim() || savingAddress"
+                  :disabled="!addressSummary.isValid || savingAddress"
                   class="w-full sm:flex-1 py-3.5 rounded-2xl bg-primary text-white font-semibold text-base border-none cursor-pointer hover:bg-primary/90 transition-colors shadow-md disabled:opacity-75"
                 >
                   {{ savingAddress ? 'Saqlanmoqda...' : 'Saqlash' }}
@@ -134,40 +106,29 @@ const authStore = useAuthStore()
 const config = useRuntimeConfig()
 const router = useRouter()
 
-const newAddressText = ref('')
-const coords = ref<{ lat: number; lon: number } | null>(null)
-const locating = ref(false)
-const geoError = ref('')
+// MUHIM: manzil endi GPS/geolocation orqali emas, balki
+// components/UzAddressPicker.vue orqali (Viloyat → Tuman → Mahalla/
+// qishloq, MIMAXUZ/uzbekistan-regions-data) kiritiladi.
+const addressPickerRef = ref<{ reset: () => void } | null>(null)
+const addressSummary = ref({
+  regionId: null as number | null,
+  regionName: '',
+  districtId: null as number | null,
+  districtName: '',
+  village: '',
+  street: '',
+  fullAddress: '',
+  isValid: false,
+})
 const savingAddress = ref(false)
 const addressError = ref('')
 
-function captureLocation() {
-  if (!('geolocation' in navigator)) {
-    geoError.value = 'Brauzeringiz joylashuvni aniqlay olmaydi'
-    return
-  }
-  locating.value = true
-  geoError.value = ''
-  navigator.geolocation.getCurrentPosition(
-    (pos) => {
-      coords.value = { lat: pos.coords.latitude, lon: pos.coords.longitude }
-      locating.value = false
-    },
-    () => {
-      // Default to Tashkent coordinates if permission denied
-      coords.value = { lat: 41.2995, lon: 69.2401 }
-      geoError.value = "Joylashuvga ruxsat berilmadi. Standart shahar koordinatasi olindi."
-      locating.value = false
-    },
-    { enableHighAccuracy: true, timeout: 10000 }
-  )
+function onAddrUpdate(summary: typeof addressSummary.value) {
+  addressSummary.value = summary
 }
 
 async function submitAddress() {
-  if (!newAddressText.value.trim()) return
-  if (!coords.value) {
-    coords.value = { lat: 41.2995, lon: 69.2401 }
-  }
+  if (!addressSummary.value.isValid) return
   savingAddress.value = true
   addressError.value = ''
   try {
@@ -175,9 +136,11 @@ async function submitAddress() {
       method: 'POST',
       headers: { Authorization: `Bearer ${authStore.token}` },
       body: {
-        lat: coords.value.lat,
-        lon: coords.value.lon,
-        fullAddress: newAddressText.value.trim(),
+        fullAddress: addressSummary.value.fullAddress,
+        countryCode: 'UZ',
+        regionName: addressSummary.value.regionName,
+        districtName: addressSummary.value.districtName,
+        cityName: addressSummary.value.village,
       }
     })
     if (res?.location_id) {

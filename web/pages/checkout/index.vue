@@ -24,7 +24,7 @@
         <div class="mb-5 max-md:hidden">
           <div class="flex items-center gap-2">
             <button type="button" @click="$router.back()" class="font-medium inline-flex items-center text-base gap-2 text-primary p-2 rounded-full hover:bg-primary/10 transition-colors border-none bg-transparent cursor-pointer">
-              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
+              <svg class="shrink-0 size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
             </button>
             <nav class="flex items-center gap-2 text-sm text-neutral-500">
               <NuxtLink to="/" class="hover:text-neutral-900 transition-colors no-underline">Asosiy</NuxtLink>
@@ -62,49 +62,16 @@
               <div class="flex justify-between items-center mb-4">
                 <h2 class="text-xl font-bold m-0">Yetkazib berish manzili</h2>
               </div>
-              <div class="grid grid-cols-2 gap-4 md:gap-5">
-                
-                <!-- Region Select -->
-                <div class="text-sm max-md:col-span-2">
-                  <label class="block font-medium text-neutral-800 text-base mb-1">Viloyat</label>
-                  <div class="relative">
-                    <select v-model="form.region" class="w-full appearance-none focus:outline-none text-neutral-900 md:text-sm text-base rounded-2xl max-md:h-12 p-3 md:p-4 bg-white border border-transparent focus:border-primary/20 transition-all cursor-pointer">
-                      <option value="" disabled>Viloyatni tanlang</option>
-                      <option value="Toshkent">Toshkent shahri</option>
-                      <option value="Samarqand">Samarqand viloyati</option>
-                      <option value="Andijon">Andijon viloyati</option>
-                      <option value="Fargona">Farg'ona viloyati</option>
-                      <option value="Jizzax">Jizzax viloyati</option>
-                    </select>
-                    <span class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-neutral-400">
-                      <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
-                    </span>
-                  </div>
-                </div>
+              <!-- MUHIM: avvalgi Viloyat/Tuman selectlari qattiq
+                   kodlangan (hardcoded), haqiqiy ma'lumotga bog'lanmagan
+                   5 tagina soxta variant edi. Endi haqiqiy Viloyat →
+                   Tuman → Mahalla/qishloq tanlovi (MIMAXUZ/
+                   uzbekistan-regions-data) ishlatiladi, GPS/lat-lon
+                   shart emas. -->
+              <UzAddressPicker ref="addressPickerRef" @update="onAddrUpdate" />
 
-                <!-- District Select -->
-                <div class="text-sm max-md:col-span-2">
-                  <label class="block font-medium text-neutral-800 text-base mb-1">Shahar/Tuman</label>
-                  <div class="relative">
-                    <select v-model="form.district" class="w-full appearance-none focus:outline-none text-neutral-900 md:text-sm text-base rounded-2xl max-md:h-12 p-3 md:p-4 bg-white border border-transparent focus:border-primary/20 transition-all cursor-pointer">
-                      <option value="" disabled>Tumanni tanlang</option>
-                      <option value="Yunusobod">Yunusobod</option>
-                      <option value="Mirzo Ulugbek">Mirzo Ulug'bek</option>
-                      <option value="Chilonzor">Chilonzor</option>
-                      <option value="Dostlik">Do'stlik tumani</option>
-                    </select>
-                    <span class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-neutral-400">
-                      <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
-                    </span>
-                  </div>
-                </div>
-
-                <!-- Exact Address -->
-                <div class="col-span-2 text-sm mt-2">
-                  <label class="block font-medium text-neutral-800 text-base mb-1">Aniq manzil (Ko'cha, uy)</label>
-                  <input v-model="form.address" type="text" placeholder="Masalan: Navoiy ko'chasi, 12-uy" class="w-full appearance-none placeholder:text-neutral-400 text-neutral-900 focus:outline-none md:text-sm text-base rounded-2xl max-md:h-12 p-3 md:p-4 bg-white border border-transparent focus:border-primary/20 transition-all">
-                </div>
-
+              <div v-if="addressSummary.fullAddress" class="mt-3 p-3.5 rounded-2xl bg-white text-sm text-neutral-600">
+                {{ addressSummary.fullAddress }}
               </div>
             </div>
 
@@ -209,11 +176,27 @@ const isSuccessOpen = ref(false)
 const form = reactive({
   fullName: authStore.user?.name || '',
   phone: authStore.user?.phone_number || '',
-  region: '',
-  district: '',
-  address: '',
   paymentMethod: 'payme'
 })
+
+// MUHIM: manzil endi GPS/geolocation yoki qo'lda kiritilgan Viloyat/Tuman
+// emas, balki components/UzAddressPicker.vue orqali (Viloyat → Tuman →
+// Mahalla/qishloq, MIMAXUZ/uzbekistan-regions-data) tanlanadi.
+const addressPickerRef = ref<{ reset: () => void } | null>(null)
+const addressSummary = ref({
+  regionId: null as number | null,
+  regionName: '',
+  districtId: null as number | null,
+  districtName: '',
+  village: '',
+  street: '',
+  fullAddress: '',
+  isValid: false,
+})
+
+function onAddrUpdate(summary: typeof addressSummary.value) {
+  addressSummary.value = summary
+}
 
 const paymentMethods = [
   { id: 'payme', name: 'Payme', label: "Onlayn to'lov" },
@@ -227,7 +210,7 @@ function formatPrice(val: number) {
 }
 
 function submitOrder() {
-  if(!form.fullName || !form.phone || !form.region || !form.district) {
+  if(!form.fullName || !form.phone || !addressSummary.value.isValid) {
     alert("Iltimos barcha maydonlarni to'ldiring")
     return
   }

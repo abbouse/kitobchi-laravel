@@ -32,7 +32,7 @@
             <nav class="relative min-w-0">
               <ol class="flex items-center gap-2 p-0 m-0 list-none">
                 <li class="flex min-w-0 text-[#8F8FA1] text-sm">
-                  <NuxtLink to="/" class="group relative flex items-center gap-1.5 min-w-0 rounded-md font-medium transition-colors text-[#8F8FA1] text-sm no-underline hover:text-neutral-700">
+                  <NuxtLink to="/" class="group relative flex items-center gap-1.5 min-w-0 rounded-md font-medium transition-colors text-[#8F8FA1] text-sm no-underline hover:text-neutral-900">
                     <span class="truncate">Asosiy</span>
                   </NuxtLink>
                 </li>
@@ -72,32 +72,32 @@
           </button>
         </div>
 
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="flex flex-col">
-            <span class="text-[#8F8FA1] flex-1 font-normal shrink-0">To'liq ism</span>
-            <span class="flex-1 font-medium shrink-0">{{ userAny?.name || "Kiritilmagan" }}</span>
+            <span class="text-neutral-500 flex-1 font-normal shrink-0 text-sm">To'liq ism</span>
+            <span class="flex-1 font-medium shrink-0 text-neutral-900">{{ userAny?.name || "Kiritilmagan" }}</span>
           </div>
           <div class="flex flex-col">
-            <span class="text-[#8F8FA1] flex-1 font-normal shrink-0">Tug'ilgan sana</span>
-            <span class="flex-1 font-medium shrink-0">{{ userAny?.birthdate ? formatDate(userAny.birthdate) : "Kiritilmagan" }}</span>
+            <span class="text-neutral-500 flex-1 font-normal shrink-0 text-sm">Tug'ilgan sana</span>
+            <span class="flex-1 font-medium shrink-0 text-neutral-900">{{ userAny?.birthdate ? formatDate(userAny.birthdate) : "Kiritilmagan" }}</span>
           </div>
           <div class="flex flex-col">
-            <span class="text-[#8F8FA1] flex-1 font-normal shrink-0">Jins</span>
-            <span class="flex-1 font-medium shrink-0">{{ userAny?.sex === 'ayol' ? 'Ayol' : (userAny?.sex === 'erkak' ? 'Erkak' : 'Kiritilmagan') }}</span>
+            <span class="text-neutral-500 flex-1 font-normal shrink-0 text-sm">Jins</span>
+            <span class="flex-1 font-medium shrink-0 text-neutral-900">{{ userAny?.sex === 'ayol' ? 'Ayol' : (userAny?.sex === 'erkak' ? 'Erkak' : 'Kiritilmagan') }}</span>
           </div>
           <div class="flex flex-col">
-            <span class="text-[#8F8FA1] flex-1 font-normal shrink-0">Telefon raqam</span>
-            <span class="flex-1 font-medium shrink-0">{{ formatPhone(userAny?.phone) || "Kiritilmagan" }}</span>
+            <span class="text-neutral-500 flex-1 font-normal shrink-0 text-sm">Telefon raqam</span>
+            <span class="flex-1 font-medium shrink-0 text-neutral-900">{{ formatPhone(userAny?.phone) || "Kiritilmagan" }}</span>
           </div>
           <div class="flex flex-col">
-            <span class="text-[#8F8FA1] flex-1 font-normal shrink-0">Elektron pochta</span>
-            <span class="flex-1 font-medium shrink-0">{{ userAny?.email || "Kiritilmagan" }}</span>
+            <span class="text-neutral-500 flex-1 font-normal shrink-0 text-sm">Elektron pochta</span>
+            <span class="flex-1 font-medium shrink-0 text-neutral-900">{{ userAny?.email || "Kiritilmagan" }}</span>
           </div>
         </div>
 
         <div class="mt-8">
           <div class="flex items-center justify-between mb-4">
-            <h2 class="text-xl font-bold m-0">Saqlangan manzillar</h2>
+            <h2 class="text-xl font-bold m-0 text-neutral-900">Saqlangan manzillar</h2>
           </div>
 
           <!-- Addreslar ro'yxati -->
@@ -120,19 +120,19 @@
               </div>
             </div>
             
-            <button @click="openAddressModal" type="button" class="mt-4 font-medium inline-flex items-center justify-center text-base gap-2 text-white bg-primary hover:bg-primary/90 transition-colors rounded-2xl h-12 px-6 border-none cursor-pointer w-full sm:w-auto">
+            <button @click="openAddressModal" type="button" class="mt-4 font-medium inline-flex items-center justify-center text-base gap-2 text-white bg-primary hover:bg-primary/90 transition-colors rounded-2xl h-12 px-6 border-none cursor-pointer w-full sm:w-auto shadow-sm">
               <span class="truncate">Yangi manzil qo‘shish</span>
             </button>
           </div>
 
           <!-- Bo'sh state -->
           <div v-else class="mt-4 rounded-[20px] bg-[#F6F6F9] p-6 flex flex-col gap-3 items-center">
-            <div class="w-20 h-20 bg-white rounded-full flex items-center justify-center">
+            <div class="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-sm">
               <svg class="w-10 h-10 text-neutral-400" viewBox="0 0 24 24" fill="currentColor"><path d="M11.47 3.84a.75.75 0 011.06 0l8.69 8.69a.75.75 0 101.06-1.06l-8.689-8.69a2.25 2.25 0 00-3.182 0l-8.69 8.69a.75.75 0 001.061 1.06l8.69-8.69z"/><path d="M12 5.432l8.159 8.159c.03.03.06.058.091.086v6.198c0 1.035-.84 1.875-1.875 1.875H15a.75.75 0 01-.75-.75v-4.5a.75.75 0 00-.75-.75h-3a.75.75 0 00-.75.75V21a.75.75 0 01-.75.75H5.625a1.875 1.875 0 01-1.875-1.875v-6.198a2.29 2.29 0 00.091-.086L12 5.43z"/></svg>
             </div>
-            <h2 class="text-lg md:text-xl font-semibold text-center m-0">Saqlangan manzillar mavjud emas</h2>
-            <p class="text-sm font-normal max-w-md text-center m-0">Yetkazib berish manzilini qo‘shing</p>
-            <button @click="openAddressModal" type="button" class="mt-2 font-medium inline-flex items-center text-base gap-2 text-white bg-primary hover:bg-primary/90 transition-colors rounded-2xl h-12 px-6 border-none cursor-pointer">
+            <h2 class="text-lg md:text-xl font-semibold text-center m-0 text-neutral-900">Saqlangan manzillar mavjud emas</h2>
+            <p class="text-sm font-normal max-w-md text-center m-0 text-neutral-500">Yetkazib berish manzilini qo‘shing</p>
+            <button @click="openAddressModal" type="button" class="mt-2 font-medium inline-flex items-center text-base gap-2 text-white bg-primary hover:bg-primary/90 transition-colors rounded-2xl h-12 px-6 border-none cursor-pointer shadow-sm">
               <span class="truncate">Yangi manzil qo‘shish</span>
             </button>
               
@@ -214,37 +214,21 @@
         <h3 class="text-2xl font-bold text-center m-0 mb-8 text-neutral-900">Manzil qo'shish</h3>
         <form @submit.prevent="handleSaveAddressModal" class="space-y-4">
 
-          <div v-if="modalGeoError" class="p-3 bg-red-50 text-red-600 rounded-xl text-sm font-medium text-center">
-            {{ modalGeoError }}
-          </div>
           <div v-if="modalAddressError" class="p-3 bg-red-50 text-red-600 rounded-xl text-sm font-medium text-center">
             {{ modalAddressError }}
           </div>
 
-          <div class="space-y-1.5">
-            <label class="text-sm font-medium text-neutral-700">Joylashuv</label>
-            <div class="flex items-center gap-2 p-1 bg-[#FFF9E5] rounded-2xl border border-yellow-200/50 relative">
-              <div class="flex items-center px-4 py-3 gap-3 w-full">
-                <div class="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center shrink-0">
-                  <svg class="w-5 h-5 text-yellow-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg>
-                </div>
-                <div class="flex flex-col flex-1">
-                  <span class="text-sm font-semibold text-neutral-900">Joylashuvni aniqlash</span>
-                  <span class="text-xs text-neutral-500">{{ modalCoords ? 'Joylashuv olindi' : 'Lokatsiyangizni yuboring' }}</span>
-                </div>
-                <button type="button" @click="captureModalLocation" :disabled="modalLocating" class="bg-white text-neutral-900 text-sm font-semibold px-4 py-2 rounded-xl shadow-sm border-none cursor-pointer hover:bg-neutral-50 transition-colors disabled:opacity-50">
-                  {{ modalLocating ? '...' : 'Aniqlash' }}
-                </button>
-              </div>
-            </div>
+          <!-- MUHIM: GPS/geolocation ("Joylashuvni aniqlash") olib
+               tashlandi — endi manzil Viloyat → Tuman → Mahalla/qishloq
+               tanlovi orqali kiritiladi (MIMAXUZ/uzbekistan-regions-data),
+               web buyurtmasi uchun lat/lon shart emas. -->
+          <UzAddressPicker ref="addressPickerRef" @update="onAddrUpdate" />
+
+          <div v-if="addressSummary.fullAddress" class="p-3 rounded-xl bg-[#F6F6F9] text-sm text-neutral-600">
+            {{ addressSummary.fullAddress }}
           </div>
 
-          <div class="space-y-1.5 pt-2">
-            <label class="text-sm font-medium text-neutral-700">To'liq manzil</label>
-            <input v-model="modalAddressText" type="text" class="w-full appearance-none text-base text-neutral-900 focus:outline-none rounded-2xl p-4 bg-[#F1F2F7] border border-transparent focus:border-primary/20 transition-all" placeholder="Toshkent shahar, Yunusobod tumani..." required>
-          </div>
-
-          <button type="submit" :disabled="!modalAddressText.trim() || savingModalAddress" class="w-full font-bold items-center transition-colors gap-1.5 text-white bg-primary hover:bg-primary/90 h-12 md:h-14 flex justify-center rounded-2xl text-base px-6 mt-6 border-none cursor-pointer disabled:opacity-75 shadow-sm">
+          <button type="submit" :disabled="!addressSummary.isValid || savingModalAddress" class="w-full font-bold items-center transition-colors gap-1.5 text-white bg-primary hover:bg-primary/90 h-12 md:h-14 flex justify-center rounded-2xl text-base px-6 mt-6 border-none cursor-pointer disabled:opacity-75 shadow-sm">
             {{ savingModalAddress ? "Qo'shilmoqda..." : "Qo'shish" }}
           </button>
         </form>
@@ -361,48 +345,42 @@ async function removeAddress(loc: any) {
 }
 
 // ── Desktop Address Modal Holatlari ─────────────────────────────────
+// MUHIM: manzil endi GPS/geolocation orqali emas, balki
+// components/UzAddressPicker.vue orqali (Viloyat → Tuman → Mahalla/
+// qishloq, MIMAXUZ/uzbekistan-regions-data) kiritiladi. `addressSummary`
+// — pickerdan har o'zgarishda keladigan xulosa (`regionName`,
+// `districtName`, `village`, `fullAddress`, `isValid`).
 const isAddressModalOpen = ref(false)
-const modalAddressText = ref('')
-const modalCoords = ref<{ lat: number; lon: number } | null>(null)
-const modalLocating = ref(false)
-const modalGeoError = ref('')
+const addressPickerRef = ref<{ reset: () => void } | null>(null)
+const addressSummary = ref({
+  regionId: null as number | null,
+  regionName: '',
+  districtId: null as number | null,
+  districtName: '',
+  village: '',
+  street: '',
+  fullAddress: '',
+  isValid: false,
+})
 const savingModalAddress = ref(false)
 const modalAddressError = ref('')
 
 function openAddressModal() {
-  modalAddressText.value = ''
-  modalCoords.value = null
-  modalGeoError.value = ''
   modalAddressError.value = ''
+  addressSummary.value = {
+    regionId: null, regionName: '', districtId: null, districtName: '',
+    village: '', street: '', fullAddress: '', isValid: false,
+  }
   isAddressModalOpen.value = true
+  nextTick(() => addressPickerRef.value?.reset())
 }
 
-function captureModalLocation() {
-  if (!('geolocation' in navigator)) {
-    modalGeoError.value = 'Brauzeringiz joylashuvni aniqlay olmaydi'
-    return
-  }
-  modalLocating.value = true
-  modalGeoError.value = ''
-  navigator.geolocation.getCurrentPosition(
-    (pos) => {
-      modalCoords.value = { lat: pos.coords.latitude, lon: pos.coords.longitude }
-      modalLocating.value = false
-    },
-    () => {
-      modalCoords.value = { lat: 41.2995, lon: 69.2401 }
-      modalGeoError.value = "Joylashuvga ruxsat berilmadi. Standart shahar koordinatasi olindi."
-      modalLocating.value = false
-    },
-    { enableHighAccuracy: true, timeout: 10000 }
-  )
+function onAddrUpdate(summary: typeof addressSummary.value) {
+  addressSummary.value = summary
 }
 
 async function handleSaveAddressModal() {
-  if (!modalAddressText.value.trim()) return
-  if (!modalCoords.value) {
-    modalCoords.value = { lat: 41.2995, lon: 69.2401 }
-  }
+  if (!addressSummary.value.isValid) return
   savingModalAddress.value = true
   modalAddressError.value = ''
   try {
@@ -410,9 +388,11 @@ async function handleSaveAddressModal() {
       method: 'POST',
       headers: { Authorization: `Bearer ${authStore.token}` },
       body: {
-        lat: modalCoords.value.lat,
-        lon: modalCoords.value.lon,
-        fullAddress: modalAddressText.value.trim(),
+        fullAddress: addressSummary.value.fullAddress,
+        countryCode: 'UZ',
+        regionName: addressSummary.value.regionName,
+        districtName: addressSummary.value.districtName,
+        cityName: addressSummary.value.village,
       }
     })
     if (res?.location_id) {

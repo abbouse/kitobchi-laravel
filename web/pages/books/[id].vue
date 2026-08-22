@@ -359,7 +359,8 @@
                         <div
                           v-for="(img, idx) in galleryImages"
                           :key="'desk-main-' + idx"
-                          class="min-w-0 shrink-0 ps-4 snap-center flex h-full items-start justify-center basis-full xl:basis-1/2"
+                          class="min-w-0 shrink-0 ps-4 snap-center flex h-full items-start justify-center basis-full"
+                          :class="galleryImages.length > 1 ? 'xl:basis-1/2' : ''"
                         >
                           <div class="w-full aspect-[4/5] rounded-3xl overflow-hidden bg-secondary-50 flex items-center justify-center relative p-6">
                             <img
@@ -438,7 +439,7 @@
                 </div>
 
                 <!-- Xususiyatlar va tavsif tugmasi (Piyola 1:1) -->
-                <div>
+                <div v-if="hasSpecs">
                   <div
                     @click="specsOpen = !specsOpen"
                     class="w-full bg-secondary-300 hover:bg-secondary-400 cursor-pointer rounded-2xl p-4 md:px-6 flex items-center justify-between transition-colors duration-300"

@@ -500,9 +500,15 @@ class UserController extends Controller
         if (!$user) {
             return response()->json(['status' => 'error', 'message' => "Bunday foydalanuvchi mavjud emas!"], 201);
         }
+        // MUHIM: web endi manzilni GPS/geolocation orqali emas, Viloyat →
+        // Tuman → Mahalla/qishloq (MIMAXUZ/uzbekistan-regions-data)
+        // tanlovi orqali oladi — shu sababli `lat`/`lon` endi MAJBURIY
+        // emas (nullable). Mobil ilova/kuryer oqimlari hali ham haqiqiy
+        // GPS koordinatasini yuborishi mumkin — shu maydonlar shunchaki
+        // ixtiyoriy bo'lib qoldi, olib tashlanmadi.
         $validated = $request->validate([
-            'lat' => ['required', 'numeric'],
-            'lon' => ['required', 'numeric'],
+            'lat' => ['nullable', 'numeric'],
+            'lon' => ['nullable', 'numeric'],
             'fullAddress' => ['required', 'string', 'max:1000'],
             'countryCode' => ['nullable', 'string', 'max:8'],
             'regionSlug' => ['nullable', 'string', 'max:100'],
@@ -511,13 +517,14 @@ class UserController extends Controller
             'cityName' => ['nullable', 'string', 'max:150'],
         ]);
 
-        $lat = (float) $validated['lat'];
-        $lon = (float) $validated['lon'];
+        $lat = isset($validated['lat']) ? (float) $validated['lat'] : null;
+        $lon = isset($validated['lon']) ? (float) $validated['lon'] : null;
         $fullAddress = trim((string) $validated['fullAddress']);
         $countryCode = strtoupper((string) ($validated['countryCode'] ?? ''));
         $isWithinUzbekistan = $countryCode === 'UZ'
             || $this->isUzbekistanAddress($fullAddress)
-            || $this->isWithinUzbekistanBounds($lat, $lon);
+            || (!empty($validated['regionName']))
+            || ($lat !== null && $lon !== null && $this->isWithinUzbekistanBounds($lat, $lon));
 
         $isSupportedCountry = $countryCode !== ''
             && $this->deliveryZoneResolverService->isCountrySupported($countryCode);
