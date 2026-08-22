@@ -7,11 +7,13 @@
     <meta name="theme-color" content="#393737">
 
     <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}?v=20260819">
-    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon-32x32.png') }}?v=20260819">
-    <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('favicon-16x16.png') }}?v=20260819">
-    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('apple-touch-icon.png') }}?v=20260819">
-    <link rel="manifest" href="{{ asset('site.webmanifest') }}?v=20260819">
+    <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}?v=20260822">
+    <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}?v=20260822">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon-32x32.png') }}?v=20260822">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('favicon-16x16.png') }}?v=20260822">
+    <link rel="icon" type="image/png" sizes="48x48" href="{{ asset('favicon-48x48.png') }}?v=20260822">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('apple-touch-icon.png') }}?v=20260822">
+    <link rel="manifest" href="{{ asset('site.webmanifest') }}?v=20260822">
 
     @stack('meta')
     @php
