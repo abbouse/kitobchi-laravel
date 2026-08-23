@@ -246,10 +246,11 @@
       <!-- Products Grid -->
       <div v-if="products.length > 0" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-3 lg:gap-5 mb-10">
         <ProductCard
-          v-for="product in products"
+          v-for="(product, idx) in products"
           :key="product.id"
           :product="product"
           :type="activeType"
+          :eager="idx < 2"
         />
       </div>
 
@@ -560,8 +561,55 @@ function applyFilter(payload: {
   router.push({ query })
 }
 
+// TUZATILDI: bu yerda faqat title+description bor edi, canonical umuman
+// yo'q edi — natijada `nuxt.config.ts`dagi UMUMIY (bosh sahifaga qattiq
+// yozilgan) canonical meros bo'lib qolardi, ya'ni Google'ga "bu sahifaning
+// asl nusxasi aslida bosh sahifa" degan noto'g'ri signal ketardi (bu
+// katalog — saytning eng muhim, ko'p mahsulotli sahifasi — reytingga
+// chiqishiga xalaqit berishi mumkin edi). Endi aniq belgilandi: `sort`/
+// `search`/`min_price`/`publisher_ids` kabi filtr parametrlari OLIB
+// TASHLANADI (ular yuzlab "deyarli bir xil" URL variantlari yaratadi —
+// bularning barchasi bitta toza `type`ga bog'langan URL'ga ko'rsatiladi,
+// Google'ning e'tibori tarqalib ketmasligi uchun), faqat `type` (kitob/
+// kanselyariya haqiqatan boshqa-boshqa kontent) saqlanadi.
+const catalogCanonicalUrl = computed(() => {
+  const base = `${config.public.siteUrl}/catalog`
+  return activeType.value === 'stationery' ? `${base}?type=stationery` : base
+})
+
 useSeoMeta({
   title: () => `${pageTitle.value} — Kitobchi`,
-  description: () => `${pageTitle.value} bo'yicha sifatli va hamyonbop mahsulotlar Kitobchi marketpleysida.`
+  description: () => `${pageTitle.value} bo'yicha sifatli va hamyonbop mahsulotlar Kitobchi marketpleysida.`,
+  ogTitle: () => `${pageTitle.value} — Kitobchi`,
+  ogUrl: () => catalogCanonicalUrl.value,
+  ogType: 'website'
+})
+
+useHead({
+  link: [
+    { rel: 'canonical', href: () => catalogCanonicalUrl.value },
+  ],
+  // TUZATILDI: katalog (saytdagi eng katta mahsulotlar ro'yxati) uchun
+  // hech qanday JSON-LD yo'q edi. `ItemList` sxemasi qo'shildi — Google'ga
+  // bu sahifa nima haqida ekanini (mahsulotlar ro'yxati) va joriy 20-40 ta
+  // mahsulotning nomi/havolasini aniq ko'rsatadi.
+  script: [
+    {
+      type: 'application/ld+json',
+      children: () => JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'ItemList',
+        name: pageTitle.value,
+        url: catalogCanonicalUrl.value,
+        numberOfItems: totalCount.value || products.value.length,
+        itemListElement: products.value.slice(0, 40).map((p: any, idx: number) => ({
+          '@type': 'ListItem',
+          position: idx + 1,
+          url: `${config.public.siteUrl}/${activeType.value}/${p.id}-${String(p.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}`,
+          name: p.name,
+        })),
+      }),
+    },
+  ],
 })
 </script>

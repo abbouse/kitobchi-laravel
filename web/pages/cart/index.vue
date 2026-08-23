@@ -69,49 +69,91 @@
               <span class="text-[#8F8FA1] text-sm font-medium leading-5 max-md:hidden">{{ cartStore.selectedCount }} ta mahsulot tanlandi</span>
             </div>
 
+            <!-- TUZATILDI: piyolaning savat kartochkasi jonli DOM'idan
+                 (getComputedStyle + struktura bo'yicha) tasdiqlangan haqiqiy
+                 farqlar:
+                 (1) karta butunlay TEKIS — soyasi (box-shadow) YO'Q, bizda
+                     esa mobileda `shadow-sm` bor edi;
+                 (2) checkbox alohida ustun sifatida EMAS, rasmning chap
+                     yuqori burchagiga QOPLANGAN holda turadi;
+                 (3) narx+dona-hisoblagich rasm yonida SIQILGAN emas —
+                     alohida, TO'LIQ KENGLIKDAGI ikkinchi qator sifatida
+                     (karta o'zi flex-col, ichida 2 ta qator: rasm+nom, va
+                     narx+hisoblagich);
+                 (4) yurak(sevimli)+savat ikkita alohida ikonka o'rniga —
+                     BITTA "⋮" menyu tugmasi, ichida "Ulashish"/"O'chirish"
+                     (piyolada shu menyuni ochib, matnini o'qib tasdiqlandi). -->
             <div class="space-y-4 mt-4">
-              <div v-for="item in cartStore.items" :key="item.id" class="rounded-[20px] px-[14px] py-[18px] bg-white flex gap-4 border border-transparent hover:border-neutral-200 transition-colors shadow-sm md:shadow-none">
-                
-                <div>
-                  <div class="relative flex items-start flex-row">
-                    <div class="flex items-center h-6">
-                      <button @click="cartStore.toggleSelect(item.id)" class="rounded-sm ring ring-inset overflow-hidden outline-primary/25 size-5 border-none p-0 cursor-pointer relative" :class="cartStore.isSelected(item.id) ? 'ring-primary bg-primary' : 'ring-[var(--ui-color-neutral-300)] bg-white'" type="button">
-                        <span v-if="cartStore.isSelected(item.id)" class="flex items-center justify-center size-full text-white">
-                          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-                        </span>
+              <div v-for="item in cartStore.items" :key="item.id" class="rounded-[20px] p-4 bg-white flex flex-col gap-3 border border-transparent hover:border-neutral-200 transition-colors">
+
+                <div class="w-full flex gap-4 items-start">
+                  <div class="relative shrink-0">
+                    <!-- TUZATILDI: h-[106px]/md:h-[133px] piyola.css to'plamida
+                         kompilyatsiya qilinmagan edi (jonli saytdan tekshirildi)
+                         — shuning uchun ProductCard.vue'dagi kabi aspect-ratio
+                         orqali balandlik kenglikdan avtomatik hisoblanadi
+                         (3:4 nisbat — 80px→106.7px, 100px→133.3px, deyarli
+                         bir xil natija, lekin doim ishlaydi). -->
+                    <img :src="item.image" class="w-[80px] md:w-[100px] rounded-xl object-cover bg-neutral-100" style="aspect-ratio: 3 / 4;">
+                    <button
+                      @click="cartStore.toggleSelect(item.id)"
+                      class="absolute left-1.5 top-1.5 rounded-sm ring ring-inset overflow-hidden outline-primary/25 size-5 border-none p-0 cursor-pointer shadow-sm"
+                      :class="cartStore.isSelected(item.id) ? 'ring-primary bg-primary' : 'ring-white bg-white'"
+                      type="button"
+                    >
+                      <span v-if="cartStore.isSelected(item.id)" class="flex items-center justify-center size-full text-white">
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                      </span>
+                    </button>
+                  </div>
+
+                  <div class="flex-1 min-w-0 flex justify-between items-start gap-4">
+                    <NuxtLink :to="item.type === 'book' ? `/books/${item.slug || item.productId || item.id}` : `/stationery/${item.slug || item.productId || item.id}`" class="flex-1 min-w-0 text-sm leading-5 font-normal line-clamp-2 no-underline hover:text-primary/75 transition-colors">
+                      {{ item.name }}
+                    </NuxtLink>
+                    <div class="relative shrink-0" data-item-menu>
+                      <button
+                        type="button"
+                        @click="toggleItemMenu(item.id)"
+                        aria-label="Yana"
+                        class="w-8 h-8 flex items-center justify-center rounded-full transition-colors border-none bg-transparent cursor-pointer text-neutral-500 hover:bg-neutral-100"
+                      >
+                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 6.5A1.75 1.75 0 1 0 12 3a1.75 1.75 0 0 0 0 3.5Zm0 7A1.75 1.75 0 1 0 12 10a1.75 1.75 0 0 0 0 3.5Zm0 7A1.75 1.75 0 1 0 12 17a1.75 1.75 0 0 0 0 3.5Z"/></svg>
                       </button>
+                      <div
+                        v-if="openMenuItemId === item.id"
+                        class="absolute right-0 top-full mt-1 z-20 w-40 rounded-2xl bg-white shadow-lg border border-neutral-100 py-1.5"
+                      >
+                        <button
+                          type="button"
+                          @click="shareItem(item)"
+                          class="w-full text-left px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-100 border-none bg-transparent cursor-pointer flex items-center gap-2"
+                        >
+                          <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185Z"/></svg>
+                          Ulashish
+                        </button>
+                        <button
+                          type="button"
+                          @click="cartStore.removeItem(item.id); openMenuItemId = null"
+                          class="w-full text-left px-4 py-2.5 text-sm text-red-500 hover:bg-neutral-100 border-none bg-transparent cursor-pointer flex items-center gap-2"
+                        >
+                          <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>
+                          O'chirish
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                <div class="flex gap-3 flex-1 overflow-hidden">
-                  <img :src="item.image" class="w-[80px] h-[106px] md:w-[100px] md:h-[133px] rounded-xl object-cover shrink-0 bg-neutral-100">
-                  <div class="flex flex-col justify-between flex-1 min-w-0">
-                    <div class="space-y-2">
-                      <div class="flex justify-between items-start gap-4">
-                        <NuxtLink :to="item.type === 'book' ? `/books/${item.slug || item.productId || item.id}` : `/stationery/${item.slug || item.productId || item.id}`" class="text-sm md:text-sm leading-5 font-normal lg:max-w-[70%] line-clamp-2 no-underline hover:text-primary transition-colors">
-                          {{ item.name }}
-                        </NuxtLink>
-                        <div class="flex shrink-0">
-                          <button class="relative w-8 h-8 flex items-center justify-center rounded-full transition-all duration-300 hover:scale-110 active:scale-95 border-none bg-transparent cursor-pointer text-primary hover:text-red-500">
-                            <svg class="w-5 h-5 relative z-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"/></svg>
-                          </button>
-                          <button @click="cartStore.removeItem(item.id)" class="rounded-md font-medium inline-flex items-center transition-colors text-sm gap-1.5 text-primary hover:text-red-500 p-1.5 border-none bg-transparent cursor-pointer">
-                            <svg class="shrink-0 size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>
-                          </button>
-                        </div>
-                      </div>
+                <div class="flex items-center justify-between gap-4">
+                  <h2 class="text-base sm:text-lg font-bold shrink-0 m-0">{{ formatPrice(item.price) }} so'm</h2>
+                  <div class="relative inline-flex items-center bg-[#EAEAEA] rounded-xl overflow-hidden">
+                    <input type="text" readonly class="w-full border-0 text-base/5 gap-1.5 text-neutral-900 focus:outline-none text-center px-9 md:text-sm bg-transparent max-w-[120px] h-8 md:h-[34px] font-medium" :value="item.quantity">
+                    <div class="absolute flex items-center inset-y-0 end-0 pe-1">
+                      <button @click="cartStore.updateQuantity(item.id, item.quantity + 1)" type="button" class="rounded-md font-medium inline-flex items-center transition-colors text-sm text-primary p-1.5 border-none bg-transparent cursor-pointer">
+                        <svg class="shrink-0 size-4 md:size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                      </button>
                     </div>
-                    
-                    <div class="flex items-center justify-between md:justify-end gap-6 pt-2">
-                      <h2 class="text-base md:text-lg font-bold shrink-0 m-0">{{ formatPrice(item.price) }} so'm</h2>
-                      <div class="relative inline-flex items-center bg-[#EAEAEA] rounded-xl overflow-hidden">
-                        <input type="text" readonly class="w-full border-0 text-base/5 gap-1.5 text-neutral-900 focus:outline-none text-center px-9 md:text-sm bg-transparent max-w-[120px] h-8 md:h-[34px] font-medium" :value="item.quantity">
-                        <div class="absolute flex items-center inset-y-0 end-0 pe-1">
-                          <button @click="cartStore.updateQuantity(item.id, item.quantity + 1)" type="button" class="rounded-md font-medium inline-flex items-center transition-colors text-sm text-primary p-1.5 border-none bg-transparent cursor-pointer">
-                            <svg class="shrink-0 size-4 md:size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-                          </button>
-                        </div>
                         <div class="absolute flex items-center inset-y-0 start-0 ps-1">
                           <button @click="cartStore.updateQuantity(item.id, item.quantity - 1)" :disabled="item.quantity <= 1" type="button" class="rounded-md font-medium inline-flex items-center transition-colors text-sm text-primary disabled:opacity-50 p-1.5 border-none bg-transparent cursor-pointer">
                             <svg class="shrink-0 size-4 md:size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M20 12H4"/></svg>
@@ -123,8 +165,6 @@
                 </div>
 
               </div>
-            </div>
-          </div>
 
           <div
             class="lg:w-[400px] shrink-0 space-y-4 lg:sticky top-24 mt-4 lg:mt-0"
@@ -235,6 +275,45 @@ onMounted(() => {
 })
 onBeforeUnmount(() => {
   window.removeEventListener('resize', updateIsMobile)
+})
+
+// Piyoladagi kabi har bir savat elementida bitta "⋮" (ko'proq) tugmasi —
+// bosilganda "Ulashish" va "O'chirish" variantlari bilan kichik dropdown
+// ochiladi (alohida yurak/urn ikonkalar o'rniga). `data-item-menu`
+// atributi orqali menyudan tashqariga bosilganda uni yopamiz.
+const openMenuItemId = ref<number | string | null>(null)
+
+function toggleItemMenu(id: any) {
+  openMenuItemId.value = openMenuItemId.value === id ? null : id
+}
+
+async function shareItem(item: any) {
+  openMenuItemId.value = null
+  if (import.meta.client) {
+    const url = `${location.origin}${item.type === 'stationery' ? '/stationery/' : '/books/'}${item.slug || item.productId || item.id}`
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: item.name, url })
+      } catch (e) {
+        // Foydalanuvchi ulashishni bekor qildi — xato emas, e'tiborsiz qoldiramiz.
+      }
+    } else if (navigator.clipboard) {
+      await navigator.clipboard.writeText(url)
+      alert("Havola nusxalandi!")
+    }
+  }
+}
+
+function handleItemMenuDocClick(e: MouseEvent) {
+  if (openMenuItemId.value !== null && !(e.target as HTMLElement).closest('[data-item-menu]')) {
+    openMenuItemId.value = null
+  }
+}
+onMounted(() => {
+  document.addEventListener('click', handleItemMenuDocClick)
+})
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleItemMenuDocClick)
 })
 
 const isAllSelected = computed(() => {

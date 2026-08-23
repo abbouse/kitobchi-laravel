@@ -220,13 +220,20 @@ export function useAppSeo() {
         // Multi-language alternative hints
         { name: 'language', content: computed(() => locale.value) },
       ],
+      // TUZATILDI: bu yerda ilgari `?lang=uz/ru/en/ja` bilan tugaydigan
+      // hreflang alternate havolalar bor edi. Bular NOTO'G'RI edi — `locale`
+      // aslida cookie (`kc_locale`) orqali saqlanadi, URL query parametri
+      // orqali EMAS (useLocale.ts'ga qarang), va mahsulot nomi/tavsifi kabi
+      // asosiy kontent hali faqat o'zbekcha (faqat header navigatsiya
+      // matnlari tarjima qilingan). Ya'ni bu 4 ta "til varianti" aslida bir
+      // xil (o'zbekcha) kontentga olib borardi — Google buni yolg'on/aldov
+      // signali sifatida qabul qilishi yoki e'tiborsiz qoldirishi mumkin
+      // edi, hech qanday foyda keltirmasdan. To'g'ri, real ko'p tilli
+      // kontent (backendda tarjima qilingan mahsulot nomi/tavsifi) qo'shilib,
+      // haqiqatan HAR BIR til uchun alohida URL/render paydo bo'lgandagina
+      // hreflang qaytarib qo'yish kerak.
       link: [
         { rel: 'canonical', href: canonicalUrl },
-        { rel: 'alternate', hreflang: 'uz', href: `${canonicalUrl}?lang=uz` },
-        { rel: 'alternate', hreflang: 'ru', href: `${canonicalUrl}?lang=ru` },
-        { rel: 'alternate', hreflang: 'en', href: `${canonicalUrl}?lang=en` },
-        { rel: 'alternate', hreflang: 'ja', href: `${canonicalUrl}?lang=ja` },
-        { rel: 'alternate', hreflang: 'x-default', href: canonicalUrl },
       ],
       script: [
         {
@@ -258,19 +265,35 @@ export function useAppSeo() {
   function setCategorySeo(categoryName: string, type: 'book' | 'stationery' = 'book', slug: string) {
     const canonicalUrl = `${siteUrl}/category/${slug}`
     const cyrillicCat = latinToCyrillic(categoryName)
+    const isBookCat = type !== 'stationery'
 
-    const titles: Record<AppLocale, string> = {
+    // TUZATILDI: bu yerda til shablonlari HAR DOIM "kitoblar" so'zi bilan
+    // yozilgan edi — `type` parametri qabul qilinsa-da, matnda umuman
+    // ishlatilmasdi. Natijada kanselyariya kategoriyalari (masalan
+    // "Daftarlar") uchun ham sarlavha "... kitoblari ..." deb chiqardi.
+    // Endi `isBookCat`ga qarab ikkala holat uchun ham to'g'ri so'z tanlanadi.
+    const titles: Record<AppLocale, string> = isBookCat ? {
       uz: `${categoryName} kitoblari — Narxlar va Yetkazib berish | Kitobchi`,
       ru: `Книги категории «${categoryName}» в Ташкенте — Купить в Kitobchi`,
       en: `${categoryName} Books in Uzbekistan — Buy Online | Kitobchi`,
       ja: `「${categoryName}」カテゴリーの本 — オンライン購入 | Kitobchi`,
+    } : {
+      uz: `${categoryName} — Narxlar va Yetkazib berish | Kitobchi`,
+      ru: `«${categoryName}» в Ташкенте — Купить в Kitobchi`,
+      en: `${categoryName} in Uzbekistan — Buy Online | Kitobchi`,
+      ja: `「${categoryName}」— オンライン購入 | Kitobchi`,
     }
 
-    const descriptions: Record<AppLocale, string> = {
+    const descriptions: Record<AppLocale, string> = isBookCat ? {
       uz: `${categoryName} bo‘limidagi eng sara kitoblar va yangi nashrlar Kitobchi marketpleysida. O‘zbekiston bo‘ylab tez yetkazib berish.`,
       ru: `Большой выбор книг в категории «${categoryName}» по выгодным ценам. Быстрая доставка по Ташкенту и всему Узбекистану на Kitobchi.`,
       en: `Explore top books in "${categoryName}" category at Kitobchi Marketplace. Fast delivery across Uzbekistan.`,
       ja: `Kitobchiで「${categoryName}」カテゴリーの本を多数取り揃えています。ウズベキスタン全土への配送。`,
+    } : {
+      uz: `${categoryName} bo‘limidagi kanselyariya mahsulotlari Kitobchi marketpleysida. O‘zbekiston bo‘ylab tez yetkazib berish.`,
+      ru: `Большой выбор канцтоваров в категории «${categoryName}» по выгодным ценам на Kitobchi. Быстрая доставка по Узбекистану.`,
+      en: `Explore "${categoryName}" stationery at Kitobchi Marketplace. Fast delivery across Uzbekistan.`,
+      ja: `Kitobchiで「${categoryName}」の文房具を取り揃えています。ウズベキスタン全土への配送。`,
     }
 
     useHead({
@@ -279,13 +302,33 @@ export function useAppSeo() {
         { name: 'description', content: computed(() => descriptions[locale.value as AppLocale] || descriptions.uz) },
         { name: 'keywords', content: `${categoryName}, ${cyrillicCat}, kitoblar, toifa, online kitob dokon, sotib olish` },
       ],
+      // TUZATILDI: setProductSeo'dagi bilan bir xil sabab — yolg'on
+      // `?lang=` hreflang havolalar olib tashlandi (izoh yuqorida).
       link: [
         { rel: 'canonical', href: canonicalUrl },
-        { rel: 'alternate', hreflang: 'uz', href: `${canonicalUrl}?lang=uz` },
-        { rel: 'alternate', hreflang: 'ru', href: `${canonicalUrl}?lang=ru` },
-        { rel: 'alternate', hreflang: 'en', href: `${canonicalUrl}?lang=en` },
-        { rel: 'alternate', hreflang: 'ja', href: `${canonicalUrl}?lang=ja` },
-        { rel: 'alternate', hreflang: 'x-default', href: canonicalUrl },
+      ],
+    })
+
+    // TUZATILDI: bu yerda JSON-LD (BreadcrumbList) umuman yo'q edi —
+    // faqat mahsulot sahifasida (setProductSeo) bor edi. Kategoriya
+    // sahifalari ham Google'ning "breadcrumb" rich-natijasida to'g'ri
+    // chiqishi uchun shu yerga ham qo'shildi.
+    const breadcrumbSchema = {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Bosh sahifa', item: siteUrl },
+        { '@type': 'ListItem', position: 2, name: type === 'stationery' ? 'Kanselyariya' : 'Kitoblar', item: `${siteUrl}/catalog?type=${type}` },
+        { '@type': 'ListItem', position: 3, name: categoryName, item: canonicalUrl },
+      ],
+    }
+
+    useHead({
+      script: [
+        {
+          type: 'application/ld+json',
+          children: JSON.stringify(breadcrumbSchema),
+        },
       ],
     })
 

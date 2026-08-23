@@ -16,11 +16,21 @@
           class="block w-full h-full shrink-0 snap-center"
         >
           <div class="w-full h-full rounded-xl overflow-hidden bg-gray-50 flex items-center justify-center">
+            <!-- TUZATILDI: bu yerda `idx === 0 ? 'lazy' : 'lazy'` deb
+                 yozilgan edi — ikkala shart ham AYNAN bir xil natija
+                 ('lazy') berardi, ya'ni ekranning yuqori qismida (birinchi
+                 qatorda) chiqadigan kartochkalarning ham rasmi "lazy"
+                 yuklanardi. Bu Google'ning Core Web Vitals (LCP — Largest
+                 Contentful Paint) ko'rsatkichiga salbiy ta'sir qiladi va bu
+                 ham reyting omili hisoblanadi. Endi `eager` prop orqali
+                 (sahifadan — ekranning yuqori qismidagi birinchi 2-4 ta
+                 kartochka uchun `true` beriladi) haqiqiy ustuvorlik beriladi. -->
             <img
               :src="img"
               :alt="product.name"
               class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-              :loading="idx === 0 ? 'lazy' : 'lazy'"
+              :loading="eager && idx === 0 ? 'eager' : 'lazy'"
+              :fetchpriority="eager && idx === 0 ? 'high' : 'auto'"
             />
           </div>
         </NuxtLink>
@@ -105,9 +115,14 @@ const props = withDefaults(
   defineProps<{
     product: any
     type?: 'book' | 'stationery'
+    // Ekranning yuqori qismida (LCP'ga ta'sir qiluvchi) chiqadigan
+    // kartochkalar uchun sahifadan `true` beriladi — pastdagi <img>'ga
+    // qarang.
+    eager?: boolean
   }>(),
   {
-    type: 'book'
+    type: 'book',
+    eager: false
   }
 )
 

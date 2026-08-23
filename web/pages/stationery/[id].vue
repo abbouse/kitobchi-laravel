@@ -838,25 +838,6 @@ const product = computed(() => {
   return productData.value?.data || productData.value?.product || null
 })
 
-// 4-Language Dynamic SEO & JSON-LD Microdata (uz-Latn, uz-Cyrl, ru, en, ja)
-const { setProductSeo } = useAppSeo()
-if (product.value) {
-  setProductSeo({
-    name: product.value.name,
-    description: product.value.description,
-    image: product.value.image || product.value.first_image || product.value.images?.[0],
-    price: product.value.price,
-    discountPrice: product.value.discountPrice || product.value.discount_price,
-    currency: 'UZS',
-    inStock: product.value.count !== undefined ? product.value.count > 0 : true,
-    type: 'stationery',
-    categoryName: product.value.category?.name || (typeof product.value.category === 'string' ? product.value.category : ''),
-    rating: product.value.ugc_aggregate_score || product.value.rating || 5.0,
-    reviewsCount: product.value.ugc_reviews_count || product.value.reviews_count || 1,
-    urlPath: `/stationery/${route.params.id}`,
-  })
-}
-
 const productRating = computed(() => {
   if (product.value?.ugc_aggregate_score && Number(product.value.ugc_aggregate_score) > 0) {
     return Number(product.value.ugc_aggregate_score).toFixed(1)
@@ -1137,33 +1118,26 @@ async function shareProduct() {
 }
 
 // SEO & Schema.org JSON-LD Rich Snippet for Google
-useSeoMeta({
-  title: () => `${product.value?.name || 'Mahsulot'} — Kitobchi`,
-  description: () => `${product.value?.name || 'Mahsulot'}. Tezkor yetkazib berish va arzon narxlar Kitobchi marketpleysida.`,
-  ogTitle: () => `${product.value?.name || 'Mahsulot'} | Kitobchi`,
-  ogImage: () => activeImage.value || '/images/logo/logo_blue.png',
-  ogType: 'product' as any
-})
-
-useHead({
-  script: [
-    {
-      type: 'application/ld+json',
-      innerHTML: JSON.stringify({
-        '@context': 'https://schema.org/',
-        '@type': 'Product',
-        name: product.value?.name,
-        image: activeImage.value,
-        description: product.value?.description ? product.value.description.replace(/<[^>]*>?/gm, '') : product.value?.name,
-        offers: {
-          '@type': 'Offer',
-          url: `https://kitobchi.com/stationery/${route.params.id}`,
-          priceCurrency: 'UZS',
-          price: currentPrice.value,
-          availability: 'https://schema.org/InStock'
-        }
-      })
-    }
-  ]
+// TUZATILDI: books/[id].vue'dagi bilan bir xil muammo — `useAppSeo().
+// setProductSeo()` (4 tilli sarlavha, to'g'ri canonical, Product JSON-LD,
+// BreadcrumbList) allaqachon yozilgan edi, lekin bu sahifada chaqirilmagan
+// edi. Endi ulandi.
+const { setProductSeo } = useAppSeo()
+watchEffect(() => {
+  if (!product.value) return
+  setProductSeo({
+    name: product.value.name,
+    description: product.value.description,
+    image: activeImage.value,
+    price: product.value.price,
+    discountPrice: product.value.discountPrice,
+    currency: 'UZS',
+    inStock: true,
+    type: 'stationery',
+    rating: productRating.value,
+    reviewsCount: reviewsCount.value,
+    categoryName: typeof product.value.category === 'string' ? product.value.category : (product.value.category?.name_uz || product.value.category?.name),
+    urlPath: `/stationery/${route.params.id}`,
+  })
 })
 </script>

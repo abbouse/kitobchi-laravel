@@ -245,10 +245,11 @@
 
           <div v-if="products.length > 0" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-3 lg:gap-5 mb-10">
             <ProductCard
-              v-for="product in products"
+              v-for="(product, idx) in products"
               :key="`${activeType}-${product.id}`"
               :product="product"
               :type="activeType"
+              :eager="idx < 2"
             />
           </div>
 
@@ -372,6 +373,30 @@ watch(pageTitle, () => nextTick(measureHeader))
 const { setCategorySeo } = useAppSeo()
 watchEffect(() => {
   setCategorySeo(pageTitle.value, activeType.value, slug.value)
+})
+
+// TUZATILDI: catalog/index.vue'dagi bilan bir xil — bu sahifada
+// mahsulotlar ro'yxati uchun hech qanday JSON-LD yo'q edi. `ItemList`
+// sxemasi qo'shildi.
+useHead({
+  script: [
+    {
+      type: 'application/ld+json',
+      children: () => JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'ItemList',
+        name: pageTitle.value,
+        url: `${config.public.siteUrl}/category/${slug.value}`,
+        numberOfItems: totalCount.value || products.value.length,
+        itemListElement: products.value.slice(0, 40).map((p: any, idx: number) => ({
+          '@type': 'ListItem',
+          position: idx + 1,
+          url: `${config.public.siteUrl}/${activeType.value}/${p.id}-${String(p.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}`,
+          name: p.name,
+        })),
+      }),
+    },
+  ],
 })
 
 // Kitobga xos filtr variantlari (Nashriyot/Do'kon/Yozuv turi/Muqova turi) —

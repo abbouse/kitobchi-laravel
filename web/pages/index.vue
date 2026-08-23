@@ -77,10 +77,11 @@
 
         <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5 md:gap-4 lg:gap-5 mb-5">
           <ProductCard
-            v-for="book in newBooks.slice(0, 5)"
+            v-for="(book, idx) in newBooks.slice(0, 5)"
             :key="'new-' + book.id"
             :product="book"
             type="book"
+            :eager="idx < 5"
           />
         </div>
 
@@ -172,10 +173,11 @@
 
         <div class="grid grid-cols-2 gap-2.5">
           <ProductCard
-            v-for="product in mobileFeed"
+            v-for="(product, idx) in mobileFeed"
             :key="'all-' + product.id"
             :product="product"
             type="book"
+            :eager="idx < 2"
           />
         </div>
 
@@ -343,32 +345,22 @@ const recommendedBooks = computed(() => {
   return data.recommended_products || data.recommended_books || data.topBooks || []
 })
 
-// Rich SEO Metadata & JSON-LD
-useSeoMeta({
-  title: 'Kitobchi — Online kitoblar va kanselyariya marketpleysi',
-  description: 'Kitobchi — O‘zbekistondagi eng katta online kitoblar va kanselyariya marketpleysi. Tezkor yetkazib berish, qulay narxlar va original kitoblar.',
-  ogTitle: 'Kitobchi — Online kitoblar va kanselyariya marketpleysi',
-  ogDescription: 'O‘zbekistondagi eng katta online kitoblar va kanselyariya marketpleysi. 10 000 dan ortiq original kitoblar.',
-  ogImage: '/images/logo/logo_blue.png',
-  ogType: 'website'
-})
-
+// TUZATILDI: bu yerda ilgari `ogImage: '/images/logo/logo_blue.png'`
+// (nisbiy yo'l, ijtimoiy tarmoqlar ko'pincha nisbiy rasm URL'ini
+// ochirolmaydi) yozilgan edi — bu `nuxt.config.ts`dagi umumiy, to'g'ri
+// sozlangan (1200x630, to'liq URL) `og-image.png`ni Nuxt'ning sahifa-daraja
+// ustunligi tufayli BOSIB QO'YARDI. Natijada bosh sahifa ijtimoiy
+// tarmoqlarda (Telegram/Facebook/WhatsApp) ulashilganda mo'ljallangan
+// banner o'rniga kichik logotip ko'rinardi (yoki umuman ko'rinmasdi, chunki
+// nisbiy URL). Endi bosh sahifa umumiy sozlamalarni MEROS QILIB OLADI —
+// title/description/ogImage/JSON-LD (WebSite+Organization) allaqachon
+// `nuxt.config.ts`da to'g'ri, to'liq holda bor, shu sabab bu yerda ularni
+// TAKRORLASH (va yomonroq qiymat bilan ustidan yozish) shart emas. Faqat
+// canonical aniq ko'rsatildi (umumiy sozlamada ham bor, lekin sahifa
+// darajasida aniq belgilash yaxshi amaliyot).
 useHead({
-  script: [
-    {
-      type: 'application/ld+json',
-      innerHTML: JSON.stringify({
-        '@context': 'https://schema.org',
-        '@type': 'WebSite',
-        name: 'Kitobchi Marketpleysi',
-        url: 'https://kitobchi.com',
-        potentialAction: {
-          '@type': 'SearchAction',
-          target: 'https://kitobchi.com/catalog?search={search_term_string}',
-          'query-input': 'required name=search_term_string'
-        }
-      })
-    }
-  ]
+  link: [
+    { rel: 'canonical', href: 'https://kitobchi.com/' },
+  ],
 })
 </script>

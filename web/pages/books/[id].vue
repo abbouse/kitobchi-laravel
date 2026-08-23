@@ -1095,33 +1095,34 @@ async function shareProduct() {
 }
 
 // SEO & Schema.org JSON-LD Rich Snippet for Google
-useSeoMeta({
-  title: () => `${product.value?.name || 'Kitob'} — Kitobchi`,
-  description: () => `${product.value?.name || 'Kitob'} muallif: ${product.value?.author || ''}. Tezkor yetkazib berish va arzon narxlar Kitobchi marketpleysida.`,
-  ogTitle: () => `${product.value?.name || 'Kitob'} | Kitobchi`,
-  ogImage: () => activeImage.value || '/images/logo/logo_blue.png',
-  ogType: 'product' as any
-})
-
-useHead({
-  script: [
-    {
-      type: 'application/ld+json',
-      innerHTML: JSON.stringify({
-        '@context': 'https://schema.org/',
-        '@type': 'Product',
-        name: product.value?.name,
-        image: activeImage.value,
-        description: product.value?.description ? product.value.description.replace(/<[^>]*>?/gm, '') : product.value?.name,
-        offers: {
-          '@type': 'Offer',
-          url: `https://kitobchi.com/books/${route.params.id}`,
-          priceCurrency: 'UZS',
-          price: currentPrice.value,
-          availability: 'https://schema.org/InStock'
-        }
-      })
-    }
-  ]
+// TUZATILDI: bu yerda ilgari qo'lda yozilgan, bitta tilli (faqat o'zbekcha),
+// canonical/hreflang'siz, aggregateRating/publisher/isbn'siz oddiy
+// useSeoMeta+useHead bor edi. `composables/useAppSeo.ts`da esa AYNAN shu
+// vaziyat uchun mo'ljallangan, ancha boyroq `setProductSeo()` funksiyasi
+// (4 tilli sarlavha/tavsif, to'g'ri canonical, Book/Product JSON-LD —
+// muallif/nashriyot/ISBN/reyting bilan, BreadcrumbList) allaqachon yozilgan
+// edi (category/[slug].vue'da kategoriya uchun ishlatilgan) — lekin
+// mahsulot sahifalarida (aynan shu yerda) HECH QACHON chaqirilmagan edi
+// (butun loyiha bo'yicha grep qilib tekshirildi). Endi ulandi.
+const { setProductSeo } = useAppSeo()
+watchEffect(() => {
+  if (!product.value) return
+  setProductSeo({
+    name: product.value.name,
+    description: product.value.description,
+    image: activeImage.value,
+    price: product.value.price,
+    discountPrice: product.value.discountPrice,
+    currency: 'UZS',
+    inStock: true,
+    type: 'book',
+    author: product.value.author,
+    publisher: product.value.publisher?.name || product.value.publisher,
+    isbn: product.value.isbn,
+    rating: productRating.value,
+    reviewsCount: reviewsCount.value,
+    categoryName: typeof product.value.category === 'string' ? product.value.category : (product.value.category?.name_uz || product.value.category?.name),
+    urlPath: `/books/${route.params.id}`,
+  })
 })
 </script>
