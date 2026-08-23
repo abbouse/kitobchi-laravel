@@ -14,8 +14,12 @@
 
 <script setup lang="ts">
 const route = useRoute()
+// TUZATILDI: /cart AppBottomNav.vue'dagi kabi shu ro'yxatdan olib
+// tashlandi — piyolada savatcha sahifasida pastki navigatsiya ko'rinadi
+// (jonli tekshirildi). cart/index.vue endi bu 71px joyni piyoladagidek
+// o'zi min-h-[calc(100dvh-71px)] + flex-grow orqali hisobga oladi.
 const isBottomNavHidden = computed(() => {
   const p = route.path
-  return p === '/cart' || p.startsWith('/books/') || p.startsWith('/stationery/') || p === '/profile/edit' || p.startsWith('/profile/address')
+  return p.startsWith('/books/') || p.startsWith('/stationery/') || p === '/profile/edit' || p.startsWith('/profile/address')
 })
 </script>

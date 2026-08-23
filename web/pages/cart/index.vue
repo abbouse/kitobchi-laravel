@@ -1,8 +1,15 @@
 <template>
-  <main class="max-md:pb-[71px] max-md:grow h-full md:min-h-dvh">
+  <!-- TUZATILDI: avval bu yerda <main> o'zining max-md:pb-[71px]'ini olib
+       yurar edi, lekin AppBottomNav endi savatchada ham ko'rinadigani
+       uchun bu joy endi layouts/default.vue'ning umumiy <main>'idan
+       keladi (boshqa sahifalar — catalog, category — ham xuddi shunday).
+       Ikkalasida ham bo'lsa 71px ikki marta qo'shilib ketardi. Element
+       ham boshqa sahifalardagidek <div> qilindi (<main> ichida yana
+       <main> — noto'g'ri semantika bo'lardi). -->
+  <div class="max-md:grow h-full md:min-h-dvh">
     <ClientOnly>
     <div class="min-h-dvh py-3 md:py-6">
-      <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
+      <div class="px-4 sm:px-6 lg:px-8 w-full max-w-[--ui-container] mx-auto">
         
         <div class="mb-5 max-md:hidden">
           <div class="flex items-center gap-2">
@@ -12,7 +19,7 @@
             <nav class="relative min-w-0">
               <ol class="flex items-center gap-2 p-0 m-0 list-none">
                 <li class="flex min-w-0 text-[#8F8FA1] text-sm">
-                  <NuxtLink to="/" class="group relative flex items-center gap-1.5 min-w-0 rounded-md font-medium transition-colors text-[#8F8FA1] text-sm no-underline hover:text-neutral-700">
+                  <NuxtLink to="/" class="group relative flex items-center gap-1.5 min-w-0 rounded-md font-medium transition-colors text-[#8F8FA1] text-sm no-underline hover:text-neutral-900">
                     <span class="truncate">Asosiy</span>
                   </NuxtLink>
                 </li>
@@ -38,7 +45,11 @@
           </NuxtLink>
         </div>
 
-        <div v-else class="flex flex-col lg:flex-row gap-5 lg:items-start">
+        <div
+          v-else
+          class="flex flex-col lg:flex-row gap-5 lg:items-start"
+          :style="isMobile ? { minHeight: 'calc(100dvh - 71px)' } : {}"
+        >
           <div class="flex-1 min-w-0">
             <h2 class="text-xl font-bold flex items-center gap-2 m-0">Savat <span class="text-[#8F8FA1] text-sm font-medium leading-5">{{ cartStore.items.length }} ta mahsulot</span></h2>
             
@@ -115,7 +126,10 @@
             </div>
           </div>
 
-          <div class="lg:w-[400px] shrink-0 space-y-4 lg:sticky top-24 mt-4 lg:mt-0">
+          <div
+            class="lg:w-[400px] shrink-0 space-y-4 lg:sticky top-24 mt-4 lg:mt-0"
+            :style="isMobile ? { display: 'flex', flexDirection: 'column', flexGrow: 1 } : {}"
+          >
             <div class="p-4 sm:p-6 rounded-2xl bg-white space-y-2 sm:space-y-3 md:space-y-4">
               <div class="relative inline-flex items-center w-full">
                 <input v-model="promoCode" type="text" placeholder="Promokod" class="w-full appearance-none placeholder:text-neutral-400 text-base/5 text-neutral-900 focus:outline-none md:text-sm rounded-2xl p-3 md:p-4 bg-[#F1F2F7] border border-transparent focus:border-primary/20 transition-all">
@@ -168,7 +182,22 @@
               </div>
             </div>
 
-            <div class="p-4 rounded-t-2xl md:rounded-none md:p-0 bg-white max-md:fixed max-md:bottom-0 max-md:left-0 max-md:right-0 max-md:z-50 max-md:shadow-[0_-4px_10px_rgba(0,0,0,0.05)] md:shadow-none">
+            <!-- TUZATILDI: avvalgi max-md:fixed/max-md:bottom-0/max-md:left-0/
+                 max-md:right-0/max-md:z-50 klasslari kitobchining piyola.css
+                 to'plamida UMUMAN KOMPILYATSIYA QILINMAGAN edi (jonli saytda
+                 fetch qilib tekshirildi) — shuning uchun tugma aslida hech
+                 qachon fixed bo'lmagan, oddiy oqimda turgan, faqat qisqa
+                 savatda tasodifan pastda ko'rinardi. Piyolaning o'zi ham bu
+                 qismni position:fixed bilan EMAS, balki flexbox orqali
+                 (yuqoridagi ikkita wrapper — min-height + flex-grow) pastga
+                 "itarib" chiqaradi (jonli getComputedStyle bilan tasdiqlandi:
+                 piyolada barcha ota-elementlar position:static). mt-auto
+                 shu texnikaning davomi — flex-grow bo'lgan sidebar ichida
+                 shu kartani pastga suradi. -->
+            <div
+              class="p-4 rounded-t-2xl md:rounded-2xl bg-white"
+              :style="isMobile ? { marginTop: 'auto' } : {}"
+            >
               <button @click="$router.push('/checkout')" :disabled="cartStore.selectedCount === 0" type="button" class="inline-flex items-center justify-center transition-colors px-2.5 py-1.5 gap-1.5 hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed outline-none w-full bg-primary text-white rounded-2xl h-14 text-base font-bold border-none cursor-pointer shadow-sm">
                 Rasmiylashtirishga o'tish <svg class="w-5 h-5 ml-1 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
               </button>
@@ -179,7 +208,7 @@
       </div>
     </div>
     </ClientOnly>
-  </main>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -189,6 +218,24 @@ const cartStore = useCartStore()
 const promoCode = ref('')
 const isInstallmentActive = ref(false)
 const installmentMonths = ref(12)
+
+// Piyoladagi flex-grow + min-height "pastga itarish" texnikasi faqat
+// mobil kenglikda kerak (desktopda sidebar allaqachon lg:sticky bilan
+// ishlaydi) — shuning uchun bu yerda ham boshqa sahifalardagi kabi
+// matchMedia orqali mobil holatni JSda aniqlaymiz (arbitrary Tailwind
+// klasslari piyola.css'da kompilyatsiya qilinmasligi mumkinligi sababli
+// inline :style ishlatilyapti, class emas).
+const isMobile = ref(false)
+function updateIsMobile() {
+  isMobile.value = window.matchMedia('(max-width: 767.98px)').matches
+}
+onMounted(() => {
+  updateIsMobile()
+  window.addEventListener('resize', updateIsMobile)
+})
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', updateIsMobile)
+})
 
 const isAllSelected = computed(() => {
   return cartStore.items.length > 0 && cartStore.selectedItems.length === cartStore.items.length

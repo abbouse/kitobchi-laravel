@@ -36,7 +36,16 @@
           </div>
         </div>
 
-        <div class="flex max-lg:flex-col gap-2 md:gap-3 lg:gap-5">
+        <!-- TUZATILDI: cart/index.vue'dagi bilan bir xil muammo — pastdagi
+             "To'lov sahifasiga o'tish" tugmasi max-md:sticky/max-md:z-50
+             orqali "yopishqoq" bo'lishi kerak edi, lekin bu klasslar
+             piyola.css'da kompilyatsiya qilinmagan (jonli tekshirildi),
+             shu sabab u aslida oddiy static holatda edi. Endi savatchadagi
+             kabi flex-grow + min-height texnikasi qo'llanildi. -->
+        <div
+          class="flex max-lg:flex-col gap-2 md:gap-3 lg:gap-5"
+          :style="isMobile ? { minHeight: 'calc(100dvh - 71px)' } : {}"
+        >
           <!-- Main Form Content -->
           <form class="w-full space-y-2 md:space-y-4" @submit.prevent="submitOrder">
             
@@ -147,7 +156,10 @@
           </form>
 
           <!-- Right Side: Order Summary -->
-          <div class="lg:w-[400px] w-full shrink-0 h-fit lg:sticky top-24">
+          <div
+            class="lg:w-[400px] w-full shrink-0 h-fit lg:sticky top-24"
+            :style="isMobile ? { display: 'flex', flexDirection: 'column', flexGrow: 1 } : {}"
+          >
             <div class="p-4 sm:p-6 rounded-3xl bg-secondary-50">
               
               <div class="space-y-4 mb-4 border-b border-neutral-200/50 pb-4">
@@ -169,7 +181,10 @@
             </div>
 
             <!-- Final Submit Button -->
-            <div class="p-4 sm:p-6 md:px-0 max-md:bg-white max-md:mt-2 max-md:rounded-t-2xl max-md:sticky max-md:bottom-0 max-md:z-50 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] md:shadow-none">
+            <div
+              class="p-4 sm:p-6 md:px-0 max-md:bg-white max-md:rounded-t-2xl"
+              :style="isMobile ? { marginTop: 'auto' } : {}"
+            >
               <button @click="submitOrder" type="button" class="font-bold items-center justify-center transition-colors py-1.5 gap-2 text-white bg-primary hover:bg-primary/90 h-14 flex rounded-2xl text-base px-6 w-full cursor-pointer border-none shadow-sm">
                 To'lov sahifasiga o'tish
                 <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
@@ -250,6 +265,20 @@ const authStore = useAuthStore()
 const router = useRouter()
 
 const isSuccessOpen = ref(false)
+
+// cart/index.vue'dagi bilan bir xil — piyoladagi flex-grow + min-height
+// "pastga itarish" texnikasi faqat mobil kenglikda kerak.
+const isMobile = ref(false)
+function updateIsMobile() {
+  isMobile.value = window.matchMedia('(max-width: 767.98px)').matches
+}
+onMounted(() => {
+  updateIsMobile()
+  window.addEventListener('resize', updateIsMobile)
+})
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', updateIsMobile)
+})
 
 const form = reactive({
   fullName: authStore.user?.name || '',

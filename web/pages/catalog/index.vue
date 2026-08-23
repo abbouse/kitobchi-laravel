@@ -17,7 +17,10 @@
               </button>
             </div>
             <div class="col-span-3">
-              <h1 class="text-lg sm:text-xl text-primary font-semibold text-center m-0 truncate">
+              <!-- TUZATILDI: piyolada bu sarlavha text-xl (20px) / sm:text-2xl
+                   (24px) — category/[slug].vue bilan bir xil qilindi (jonli
+                   tekshirilib tasdiqlandi). -->
+              <h1 class="text-xl sm:text-2xl text-primary font-semibold text-center m-0 truncate">
                 {{ pageTitle }}
               </h1>
             </div>

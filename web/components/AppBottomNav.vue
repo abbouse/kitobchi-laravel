@@ -98,12 +98,15 @@ import { useCartStore } from '~/stores/cart'
 const cartStore = useCartStore()
 const route = useRoute()
 
-// Piyolada mahsulot va savatcha sahifalarida (books/[id].vue,
-// stationery/[id].vue, cart/index.vue) pastki pill-navigatsiya
-// UMUMAN RENDER QILINMAYDI — chunki ularda pastda o'zining "buyurtma berish"
-// / "rasmiylashtirish" sticky panellari bor.
+// TUZATILDI: piyolaning jonli saytida (piyolamarket.uz/cart) pastki
+// pill-navigatsiya SAVATCHA sahifasida ham ko'rinishi jonli tekshirilib
+// tasdiqlandi (getComputedStyle orqali) — avvalgi izoh (savatda umuman
+// render qilinmaydi degan) noto'g'ri ekan. Mahsulot detail sahifalarida
+// (books/[id].vue, stationery/[id].vue) esa pastda o'zining "Savatga
+// qo'shish / Sotib olish" sticky paneli borligi sababli bu yerda hali ham
+// yashiriladi — bu qism piyola bilan alohida tekshirilmagan, o'zgartirilmadi.
 const isHiddenPage = computed(() => {
   const p = route.path
-  return p === '/cart' || p.startsWith('/books/') || p.startsWith('/stationery/') || p === '/profile/edit' || p.startsWith('/profile/address')
+  return p.startsWith('/books/') || p.startsWith('/stationery/') || p === '/profile/edit' || p.startsWith('/profile/address')
 })
 </script>

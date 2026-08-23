@@ -10,7 +10,10 @@
         >
           <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
         </button>
-        <h1 class="col-span-3 text-center text-lg font-semibold text-primary m-0 truncate">{{ pageTitle }}</h1>
+        <!-- TUZATILDI: piyolada bu sarlavha text-xl (20px) / sm:text-2xl
+             (24px) — jonli getComputedStyle bilan tasdiqlandi. Bizda
+             oddiy text-lg (18px) edi, bir oz kichikroq ko'rinardi. -->
+        <h1 class="col-span-3 text-center text-xl sm:text-2xl font-semibold text-primary m-0 truncate">{{ pageTitle }}</h1>
         <button
           type="button"
           @click="isFilterOpen = true"
