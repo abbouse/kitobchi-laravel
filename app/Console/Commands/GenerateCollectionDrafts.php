@@ -34,7 +34,12 @@ class GenerateCollectionDrafts extends Command
         $skipped = 0;
 
         foreach ($categories as $category) {
-            $categoryName = $category->name ?: $category->name_uz;
+            // TUZATILDI: konsolda (artisan) app locale odatda 'en' bo'ladi,
+            // shuning uchun BookCategories::name accessor (locale'ga qarab
+            // tanlaydi) inglizcha nomni qaytarib yuborardi (masalan
+            // "psychology-and-personal-development") — natijada slug/sarlavha
+            // ham inglizcha chiqardi. Endi name_uz aniq ustuvor.
+            $categoryName = $category->name_uz ?: $category->name;
             if (! $categoryName) {
                 continue;
             }

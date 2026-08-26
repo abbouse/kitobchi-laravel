@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Cache;
  */
 class PublishCollection extends Command
 {
-    protected $signature = 'collections:publish {slug} {--intro=} {--title=}';
+    protected $signature = 'collections:publish {slug} {--intro=} {--title=} {--description=}';
     protected $description = 'Kolleksiyaga intro matn yozib, is_active=true qilib e\'lon qiladi';
 
     public function handle(): int
@@ -35,6 +35,11 @@ class PublishCollection extends Command
         $title = $this->option('title');
         if ($title) {
             $collection->title = $title;
+        }
+
+        $description = $this->option('description');
+        if ($description) {
+            $collection->meta_description = $description;
         }
 
         if (! $collection->intro) {
