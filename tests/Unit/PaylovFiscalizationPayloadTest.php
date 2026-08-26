@@ -147,4 +147,31 @@ class PaylovFiscalizationPayloadTest extends TestCase
         $this->assertCount(2, $items);
         $this->assertTrue(collect($items)->every(fn (array $item) => $item['discount'] < $item['price']));
     }
+
+    public function test_build_fiscal_items_prioritizes_pinfl_over_tin(): void
+    {
+        config([
+            'services.paylov.ofd.pinfl' => '30101901234567',
+            'services.paylov.ofd.tin' => '123456789',
+            'services.paylov.ofd.book_ikpu' => '05801001001000000',
+            'services.paylov.ofd.book_package_code' => '123456',
+        ]);
+
+        $order = new \App\Models\Sold([
+            'amount' => 50000,
+            'items' => [[
+                'type' => 'book',
+                'name' => 'Test Kitob',
+                'item_price' => 50000,
+                'count_item' => 1,
+            ]],
+        ]);
+
+        $service = new \App\Services\PaylovFiscalizationService;
+        $items = $service->buildFiscalItems($order);
+
+        $this->assertCount(1, $items);
+        $this->assertSame('30101901234567', $items[0]['pinfl']);
+        $this->assertArrayNotHasKey('tin', $items[0]);
+    }
 }

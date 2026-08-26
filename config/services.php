@@ -74,8 +74,9 @@ return [
             // Yetkazish/qadoqlash xizmatlari uchun IKPU
             'service_ikpu' => env('PAYLOV_OFD_SERVICE_IKPU', ''),
             'service_package_code' => env('PAYLOV_OFD_SERVICE_PACKAGE_CODE', ''),
-            // Marketpleys STIRi (ixtiyoriy, item darajasida yuboriladi)
+            // Marketpleys STIRi (TIN) yoki JSHSHIR (PINFL) (ixtiyoriy, item darajasida yuboriladi)
             'tin' => env('PAYLOV_OFD_TIN', ''),
+            'pinfl' => env('PAYLOV_OFD_PINFL', ''),
         ],
     ],
 

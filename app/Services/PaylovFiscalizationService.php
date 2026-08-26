@@ -245,6 +245,13 @@ class PaylovFiscalizationService
         $mult = max(1, (int) ($cfg['amount_multiplier'] ?? 100));
         $vat = max(0, (int) ($cfg['vat_percent'] ?? 0));
         $tin = trim((string) ($cfg['tin'] ?? ''));
+        $pinfl = trim((string) ($cfg['pinfl'] ?? ''));
+
+        // Agar PAYLOV_OFD_TIN 14 xonali bo'lsa, u JSHSHIR (PINFL) hisoblanadi
+        if ($pinfl === '' && strlen($tin) === 14) {
+            $pinfl = $tin;
+            $tin = '';
+        }
 
         $orderItems = collect(is_array($order->items) ? $order->items : []);
         if ($orderItems->isEmpty()) {
@@ -263,15 +270,11 @@ class PaylovFiscalizationService
             ->with('category:id,ofd_ikpu_code,ofd_package_code')
             ->whereIn('id', $statIds)->get(['id', 'category_id', 'ofd_ikpu_code', 'ofd_package_code'])->keyBy('id');
 
-        // OFD har bir itemda tin YOKI pinfl talab qiladi. Chek HAR DOIM
-        // platforma (Kitobchi) STIRi bilan yaratiladi — sotuvchining shaxsiy
-        // INN/PINFLi ishlatilmaydi. Sabab: to'lovni mijozdan sotuvchi emas,
-        // platforma (Paylov merchant) qabul qiladi, shuning uchun fiskal chek
-        // ham platforma nomidan bo'lishi kerak. Ilgari sotuvchining o'z INNi
-        // bo'lsa o'shani ishlatishga urinilardi — bu sotuvchining Paylov
-        // submerchant profili faol bo'lmaganda "commitent/subcommission not
-        // active" OFD xatosini keltirib chiqarardi (yuqoridagi izohga qarang).
-        $taxId = ['tin' => $tin !== '' ? $tin : null, 'pinfl' => null];
+        // OFD har bir itemda pinfl YOKI tin talab qiladi (PINFL ustuvor).
+        $taxId = [
+            'pinfl' => $pinfl !== '' ? $pinfl : null,
+            'tin' => $tin !== '' ? $tin : null,
+        ];
 
         $items = [];
 
@@ -324,11 +327,11 @@ class PaylovFiscalizationService
                 'package_code' => trim((string) ($product?->ofd_package_code ?: ($categoryPackage ?: $defaultPackage))),
             ];
 
-            // OFD: har bir itemda tin YOKI pinfl bo'lishi SHART (platforma STIRi)
-            if ($taxId['tin']) {
-                $item['tin'] = $taxId['tin'];
-            } elseif ($taxId['pinfl']) {
+            // OFD: har bir itemda pinfl YOKI tin bo'lishi kerak (PINFL ustuvor)
+            if ($taxId['pinfl']) {
                 $item['pinfl'] = $taxId['pinfl'];
+            } elseif ($taxId['tin']) {
+                $item['tin'] = $taxId['tin'];
             }
 
             $items[] = $item;
@@ -353,9 +356,11 @@ class PaylovFiscalizationService
                 'package_code' => trim((string) ($cfg['service_package_code'] ?? '')),
             ];
 
-            // Xizmatlar platforma nomidan — platforma STIRi
-            if ($tin !== '') {
-                $item['tin'] = $tin;
+            // Xizmatlar platforma nomidan — platforma PINFL yoki STIRi
+            if ($taxId['pinfl']) {
+                $item['pinfl'] = $taxId['pinfl'];
+            } elseif ($taxId['tin']) {
+                $item['tin'] = $taxId['tin'];
             }
 
             $items[] = $item;
@@ -373,7 +378,7 @@ class PaylovFiscalizationService
             }
 
             if (empty($item['tin']) && empty($item['pinfl'])) {
-                Log::warning('[Paylov OFD] Item without tin/pinfl — set PAYLOV_OFD_TIN in .env', [
+                Log::warning('[Paylov OFD] Item without tin/pinfl — set PAYLOV_OFD_PINFL or PAYLOV_OFD_TIN in .env', [
                     'order_id' => $order->id,
                     'title' => $item['title'],
                 ]);

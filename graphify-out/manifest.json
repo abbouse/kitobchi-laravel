@@ -5946,15 +5946,15 @@
     "semantic_hash": "281970eb70b03676285198fa2d2a1932"
   },
   "app/Console/Commands/GenerateCollectionDrafts.php": {
-    "mtime": 1787775735.9945025,
-    "seen": 1787776850.848182,
-    "ast_hash": "3297d1138eb03649848099f57679bfa1",
+    "mtime": 1787777023.8071985,
+    "seen": 1787777128.2245052,
+    "ast_hash": "6803d90d8d09f8e4d1d276e96683255f",
     "semantic_hash": ""
   },
   "app/Console/Commands/PublishCollection.php": {
-    "mtime": 1787775735.9953363,
-    "seen": 1787776850.848188,
-    "ast_hash": "95dd696d0e34863e1991f08e25e4585e",
+    "mtime": 1787777023.8083923,
+    "seen": 1787777128.224512,
+    "ast_hash": "6c786afa60fc074254b7711000d339af",
     "semantic_hash": ""
   },
   "app/Http/Controllers/Api/CollectionsController.php": {

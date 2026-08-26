@@ -12661,6 +12661,17 @@ PROMPT;
             && filled(config('services.paylov.password'))
         );
         $tin = preg_replace('/\D+/', '', (string) ($cfg['tin'] ?? ''));
+        $pinfl = preg_replace('/\D+/', '', (string) ($cfg['pinfl'] ?? ''));
+        if ($pinfl === '' && strlen($tin) === 14) {
+            $pinfl = $tin;
+            $tin = '';
+        }
+        $taxReady = strlen($pinfl) === 14 || strlen($tin) === 9;
+        $taxLabel = strlen($pinfl) === 14 ? 'Platforma JSHSHIR (PINFL)' : 'Platforma STIR (TIN)';
+        $taxValue = strlen($pinfl) === 14
+            ? $this->maskSecret($pinfl)
+            : (strlen($tin) === 9 ? $this->maskSecret($tin) : '9 xonali STIR yoki 14 xonali JSHSHIR kerak');
+        $taxHint = strlen($pinfl) === 14 ? 'PAYLOV_OFD_PINFL' : 'PAYLOV_OFD_PINFL / PAYLOV_OFD_TIN';
 
         return [
             'fiscalSummary' => [
@@ -12674,7 +12685,7 @@ PROMPT;
             'fiscalHealth' => [
                 ['key' => 'enabled', 'label' => 'OFD moduli', 'ready' => (bool) ($cfg['enabled'] ?? false), 'value' => ($cfg['enabled'] ?? false) ? 'Yoqilgan' : 'O‘chirilgan', 'hint' => 'PAYLOV_OFD_ENABLED'],
                 ['key' => 'auth', 'label' => 'Paylov autentifikatsiya', 'ready' => $authReady, 'value' => $authReady ? 'Tayyor' : 'Sozlanmagan', 'hint' => 'Access token yoki OAuth credentiallari'],
-                ['key' => 'tin', 'label' => 'Platforma STIR', 'ready' => strlen($tin) === 9, 'value' => strlen($tin) === 9 ? $this->maskSecret($tin) : '9 xonali STIR kerak', 'hint' => 'PAYLOV_OFD_TIN'],
+                ['key' => 'tin', 'label' => $taxLabel, 'ready' => $taxReady, 'value' => $taxValue, 'hint' => $taxHint],
                 ['key' => 'services', 'label' => 'Xizmat IKPU/qadoq', 'ready' => filled($cfg['service_ikpu'] ?? null) && filled($cfg['service_package_code'] ?? null), 'value' => (filled($cfg['service_ikpu'] ?? null) && filled($cfg['service_package_code'] ?? null)) ? 'Tayyor' : 'To‘liq emas', 'hint' => 'Yetkazish va qadoqlash uchun'],
                 ['key' => 'queue', 'label' => 'Queue rejimi', 'ready' => config('queue.default') !== 'sync', 'value' => (string) config('queue.default'), 'hint' => 'Productionda queue worker doimiy ishlashi kerak'],
             ],
