@@ -619,8 +619,12 @@
           <section class="mt-4">
             <h2 class="text-xl font-bold text-neutral-900 m-0 mb-1">Sharhlar</h2>
             <div class="flex items-center gap-2 mb-4">
-              <span class="text-sm font-bold text-neutral-900">{{ productRating }}</span>
-              <svg class="w-4 h-4 text-amber-400 fill-amber-400" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+              <!-- TUZATILDI (2026-08-26): reyting bo'lmasa (0 sharh) soxta
+                   "5.0" ko'rsatilmasin — faqat haqiqiy baho mavjud bo'lsa chiqadi. -->
+              <template v-if="productRating">
+                <span class="text-sm font-bold text-neutral-900">{{ productRating }}</span>
+                <svg class="w-4 h-4 text-amber-400 fill-amber-400" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+              </template>
               <span class="text-sm text-neutral-500 font-medium">{{ reviewsCount }} Sharhlar</span>
             </div>
 
@@ -838,6 +842,9 @@ const product = computed(() => {
   return productData.value?.data || productData.value?.product || null
 })
 
+// TUZATILDI (2026-08-26): reyting/sharh yo'q mahsulotlarga SOXTA "5.0"
+// qo'yilmasin (na sahifada, na JSON-LD'da) — faqat haqiqiy ugc_aggregate_score
+// (BookClub sharhlaridan hisoblangan) bo'lsa qaytariladi, aks holda null.
 const productRating = computed(() => {
   if (product.value?.ugc_aggregate_score && Number(product.value.ugc_aggregate_score) > 0) {
     return Number(product.value.ugc_aggregate_score).toFixed(1)
@@ -845,11 +852,26 @@ const productRating = computed(() => {
   if (product.value?.rating && Number(product.value.rating) > 0) {
     return Number(product.value.rating).toFixed(1)
   }
-  return '5.0'
+  return undefined
 })
 
 const reviewsCount = computed(() => {
   return product.value?.ugc_reviews_count ?? (product.value?.reviews_count || reviews.value.length || 0)
+})
+
+// JSON-LD uchun haqiqiy sharhlar (BookClub postlari, ugc_reviews_preview
+// orqali backend'dan keladi) — review = mahsulot bilan yozilgan BookClub
+// posti, loyihadagi qabul qilingan atama. Google'ga soxta emas, sana/matni
+// bilan haqiqiy sharh sifatida boradi.
+const structuredReviews = computed(() => {
+  const preview = product.value?.ugc_reviews_preview
+  if (!Array.isArray(preview) || preview.length === 0) return []
+  return preview.slice(0, 5).map((p: any) => ({
+    author: [p.user?.name, p.user?.lastname].filter(Boolean).join(' ') || p.user?.name || 'Mijoz',
+    rating: p.ai_post_score ? Math.min(5, Math.max(1, Math.round(p.ai_post_score))) : undefined,
+    text: p.text || '',
+    date: p.created_at || undefined,
+  }))
 })
 
 const ugcList = ref<any[]>([])
@@ -1136,6 +1158,7 @@ watchEffect(() => {
     type: 'stationery',
     rating: productRating.value,
     reviewsCount: reviewsCount.value,
+    reviews: structuredReviews.value,
     categoryName: typeof product.value.category === 'string' ? product.value.category : (product.value.category?.name_uz || product.value.category?.name),
     urlPath: `/stationery/${route.params.id}`,
   })

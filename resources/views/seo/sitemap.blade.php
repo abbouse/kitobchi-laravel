@@ -70,6 +70,18 @@
     @endforeach
     @endif
 
+    <!-- Kolleksiya (mavzuiy to'plam) sahifalari -->
+    @if(isset($collections))
+    @foreach($collections as $col)
+    <url>
+        <loc>{{ url('/kolleksiya/' . $col->slug) }}</loc>
+        <lastmod>{{ $col->updated_at?->format('Y-m-d') ?? date('Y-m-d') }}</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.82</priority>
+    </url>
+    @endforeach
+    @endif
+
     <!-- Barcha Kitoblar -->
     @foreach($books as $book)
     <url>

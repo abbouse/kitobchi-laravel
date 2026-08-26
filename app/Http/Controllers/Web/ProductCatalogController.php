@@ -804,15 +804,23 @@ class ProductCatalogController extends Controller
                     ->get();
 
                 $policies = Policy::where('is_active', true)->get();
+
+                // Dasturiy SEO kolleksiya sahifalari — faqat is_active=true
+                // bo'lganlar sitemap'ga tushadi (qoralama/tekshirilmagan
+                // kolleksiyalar Google'ga umuman ko'rinmaydi).
+                $collections = \App\Models\Collection::where('is_active', true)
+                    ->select('slug', 'updated_at')
+                    ->get();
             } catch (\Throwable $e) {
                 $books = collect();
                 $stationeries = collect();
                 $bookCategories = collect();
                 $stationeryCategories = collect();
                 $policies = collect();
+                $collections = collect();
             }
 
-            return view('seo.sitemap', compact('books', 'stationeries', 'bookCategories', 'stationeryCategories', 'policies'))->render();
+            return view('seo.sitemap', compact('books', 'stationeries', 'bookCategories', 'stationeryCategories', 'policies', 'collections'))->render();
         });
 
         return response($xml, 200)

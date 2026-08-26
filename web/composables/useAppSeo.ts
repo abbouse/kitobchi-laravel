@@ -17,6 +17,9 @@ export interface ProductSeoOptions {
   rating?: number | string
   reviewsCount?: number
   categoryName?: string
+  // Haqiqiy foydalanuvchi sharhlari (BookClub'da shu mahsulotga yozilgan
+  // postlar) — Google review-snippet uchun soxta emas, haqiqiy matn kerak.
+  reviews?: Array<{ author?: string; rating?: number; text?: string; date?: string }>
   urlPath: string
 }
 
@@ -150,9 +153,15 @@ export function useAppSeo() {
         }
       }
 
-      const ratingVal = Number(options.rating || 5.0)
-      const reviewCnt = Number(options.reviewsCount || 1)
-      if (reviewCnt > 0) {
+      // TUZATILDI (2026-08-26): ilgari reyting/review bo'lmagan
+      // mahsulotlarga ham avtomatik "5.0 yulduz, 1 sharh" deb SOXTA
+      // aggregateRating yozib qo'yilardi — bu Google'ning haqiqiy
+      // foydalanuvchi sharhi bo'lmagan reytinglarga oid siyosatini
+      // buzadi. Endi FAQAT haqiqiy ugc_aggregate_score/ugc_reviews_count
+      // (BookClub postlaridan hisoblangan) mavjud bo'lsagina qo'shiladi.
+      const ratingVal = Number(options.rating || 0)
+      const reviewCnt = Number(options.reviewsCount || 0)
+      if (ratingVal > 0 && reviewCnt > 0) {
         productSchema.aggregateRating = {
           '@type': 'AggregateRating',
           ratingValue: ratingVal.toFixed(1),
@@ -160,6 +169,25 @@ export function useAppSeo() {
           bestRating: '5',
           worstRating: '1',
         }
+      }
+
+      // Individual sharhlar — BookClub'da shu mahsulotga yozilgan haqiqiy
+      // postlar (review = BookClub posti, loyihadagi qabul qilingan
+      // atama). Google review-snippet uchun ixtiyoriy, lekin mavjud
+      // bo'lsa aggregateRating'ni haqiqiy matn bilan tasdiqlaydi.
+      if (Array.isArray(options.reviews) && options.reviews.length > 0) {
+        productSchema.review = options.reviews.slice(0, 5).map((r) => ({
+          '@type': 'Review',
+          author: { '@type': 'Person', name: r.author || 'Kitobxon' },
+          reviewRating: {
+            '@type': 'Rating',
+            ratingValue: String(r.rating && r.rating > 0 ? r.rating : 5),
+            bestRating: '5',
+            worstRating: '1',
+          },
+          reviewBody: r.text || '',
+          ...(r.date ? { datePublished: r.date } : {}),
+        }))
       }
 
       schemas.push(productSchema)

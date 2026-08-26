@@ -15,6 +15,7 @@
             <li><NuxtLink to="/about" class="text-white hover:underline">Biz haqimizda</NuxtLink></li>
             <li><NuxtLink to="/contacts" class="text-white hover:underline">Aloqa</NuxtLink></li>
             <li><NuxtLink to="/vacancies" class="text-white hover:underline">Karyera</NuxtLink></li>
+            <li><NuxtLink to="/kolleksiya" class="text-white hover:underline">Kolleksiyalar</NuxtLink></li>
           </ul>
         </div>
 

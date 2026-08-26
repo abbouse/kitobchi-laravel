@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\CareersController;
 use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\ChatBotController;
 use App\Http\Controllers\Api\ChatController;
+use App\Http\Controllers\Api\CollectionsController;
 use App\Http\Controllers\Api\GiftCertificateController;
 use App\Http\Controllers\Api\GiftsController;
 use App\Http\Controllers\Api\GuestSyncController;
@@ -36,6 +37,10 @@ Route::get('counts', [UserController::class, 'getGlobalCounts']);
 Route::get('split-preview', [PurchaseController::class, 'splitPreview']);
 Route::get('news', [NewsController::class, 'index']);
 Route::get('blog', [NewsController::class, 'blog']);
+Route::prefix('collections')->group(function () {
+    Route::get('/', [CollectionsController::class, 'index']);
+    Route::get('{slug}', [CollectionsController::class, 'show']);
+});
 Route::prefix('products')->group(function () {
     Route::get('sellers/list', [ProductsController::class, 'sellersWithLatestProducts']);
     Route::get('sellers/by-qr/{token}', [ProductsController::class, 'sellerByQr']);
