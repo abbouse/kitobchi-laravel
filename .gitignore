@@ -11,6 +11,7 @@
 /storage/logs/*.log
 /storage/logs/laravel.log
 /vendor
+/graphify-out
 .env
 .env.backup
 .env.production
