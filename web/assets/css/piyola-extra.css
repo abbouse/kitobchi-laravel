@@ -280,7 +280,7 @@
 
 /* ===================================================================
  * 11) FAVICON BRAND GRADIENTS & DEEP SATURATED THEME PALETTE
- *     MUHIM: bu — --color-tima-*/--ui-primary uchun YAGONA haqiqiy manba.
+ *     MUHIM: bu — --color-tima-* / --ui-primary uchun YAGONA haqiqiy manba.
  *     piyola.css'da ham xuddi shu nomdagi o'zgaruvchilar bor (eski,
  *     ochroq to'plam) — lekin bu fayl piyola.css'dan KEYIN yuklanadi
  *     (nuxt.config.ts) va :root'ni qayta e'lon qiladi, shu sabab pastdagi
