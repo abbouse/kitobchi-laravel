@@ -30,7 +30,7 @@
             <img
               src="/favicon.svg"
               alt="Kitobchi App"
-              class="w-16 h-16 rounded-2xl shadow-lg shadow-[#2178D7]/20 object-cover"
+              class="w-16 h-16 rounded-2xl icon-badge-glow object-cover"
               width="64"
               height="64"
             />

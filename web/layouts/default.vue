@@ -1,5 +1,5 @@
 <template>
-  <div class="page-wrapper flex flex-col min-h-dvh bg-secondary-300 md:bg-gray-50 text-neutral-900 font-sans">
+  <div class="page-wrapper flex flex-col min-h-dvh text-neutral-900 font-sans" style="background: linear-gradient(180deg, #F0F6FD 0%, #F5F9FF 320px, #EFF5FC 100%);">
     <AppHeader />
     <main :class="['grow', isBottomNavHidden ? '' : 'max-md:pb-[71px]']">
       <slot />

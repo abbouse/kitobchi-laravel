@@ -278,4 +278,228 @@
   border-radius: 9999px;
 }
 
+/* ===================================================================
+ * 11) FAVICON BRAND GRADIENTS & DEEP SATURATED THEME PALETTE
+ *     MUHIM: bu — --color-tima-*/--ui-primary uchun YAGONA haqiqiy manba.
+ *     piyola.css'da ham xuddi shu nomdagi o'zgaruvchilar bor (eski,
+ *     ochroq to'plam) — lekin bu fayl piyola.css'dan KEYIN yuklanadi
+ *     (nuxt.config.ts) va :root'ni qayta e'lon qiladi, shu sabab pastdagi
+ *     qiymatlar doim g'alaba qiladi. Rang o'zgartirilganda FAQAT shu
+ *     yerni tahrirlang (piyola.css'dagi eski to'plamni goedent
+ *     muvofiqlik uchun ham yangilash tavsiya etiladi, lekin amaliy
+ *     ta'siri yo'q). Favicon.svg'ning haqiqiy gradient nuqtalaridan
+ *     (#469EF8 / #2178D7 / #144B8C) hosil qilingan — 2026-08-31'da
+ *     "to'qroq + gradient" so'roviga ko'ra chuqurlashtirildi.
+ * =================================================================== */
+:root {
+  --color-tima-50: #DDEAF7;
+  --color-tima-100: #BDD8F4;
+  --color-tima-200: #9AC6F4;
+  --color-tima-300: #6CB0F5;
+  --color-tima-400: #469EF8;
+  --color-tima-500: #2D89EA;
+  --color-tima-600: #2178D7;
+  --color-tima-700: #1A5FAE;
+  --color-tima-800: #144B8C;
+  --color-tima-900: #113661;
+  --color-tima-950: #0F2745;
+  --ui-primary: #2178D7;
+  --brand-gradient: linear-gradient(135deg, #469EF8 0%, #2178D7 55%, #113661 100%);
+  --brand-gradient-subtle: linear-gradient(180deg, #F0F6FD 0%, #F5F9FF 320px, #EFF5FC 100%);
+  --brand-card-gradient: linear-gradient(145deg, #FFFFFF 0%, #F8FAFD 100%);
+}
+
+.page-wrapper {
+  background: linear-gradient(180deg, #F0F6FD 0%, #F5F9FF 320px, #EFF5FC 100%);
+  min-height: 100dvh;
+}
+
+.bg-primary {
+  background: var(--brand-gradient) !important;
+}
+
+.hover\:bg-primary:hover {
+  background: var(--brand-gradient) !important;
+}
+
+.text-primary {
+  color: #2178D7 !important;
+}
+
+.bg-primary-100 {
+  background-color: #BDD8F4 !important;
+}
+
+.bg-primary-200 {
+  background-color: #9AC6F4 !important;
+}
+
+.hover\:bg-primary-200:hover {
+  background-color: #BDD8F4 !important;
+}
+
+.hover\:text-primary-700:hover,
+.group:hover .group-hover\:text-primary-700 {
+  color: #1A5FAE !important;
+}
+
+.bg-brand-gradient {
+  background: var(--brand-gradient) !important;
+}
+
+.card-brand-gradient {
+  background: linear-gradient(145deg, #FFFFFF 0%, #F6FAFF 100%) !important;
+}
+
+/* Header'da hover/selected holatlarida oq matn/icon kerak bo'lgan
+   joylar uchun (AppHeader.vue) — .bg-primary endi gradient bo'lgani
+   sabab shu klass orqali ustiga oq rang qo'yiladi. */
+.group:hover .group-hover\:text-white {
+  color: #FFFFFF !important;
+}
+
+/* ===================================================================
+ * 12) ULTRA-SOFT MODERN SHADOWS & LUXURY BUTTON ELEVATIONS
+ *     Qattiq, qora va o'tkir soyalar o'rniga zamonaviy loyihalardagi
+ *     kabi ko'p qatlamli, tarqoq, nafis va yumshoq soyalar tizimi.
+ * =================================================================== */
+
+/* Universal Soft Shadows (Ambient + Soft Depth) */
+.shadow-xs {
+  box-shadow: 0 1px 3px 0 rgba(20, 60, 130, 0.05), 0 1px 2px 0 rgba(20, 60, 130, 0.03) !important;
+}
+
+.shadow-sm {
+  box-shadow: 0 4px 12px -2px rgba(20, 60, 130, 0.07), 0 2px 6px -1px rgba(20, 60, 130, 0.04) !important;
+}
+
+.shadow,
+.shadow-md {
+  box-shadow: 0 10px 25px -5px rgba(20, 60, 130, 0.09), 0 4px 10px -2px rgba(20, 60, 130, 0.04) !important;
+}
+
+.shadow-lg {
+  box-shadow: 0 16px 36px -6px rgba(20, 60, 130, 0.12), 0 6px 16px -3px rgba(20, 60, 130, 0.05) !important;
+}
+
+.shadow-xl {
+  box-shadow: 0 24px 50px -10px rgba(20, 60, 130, 0.15), 0 10px 24px -4px rgba(20, 60, 130, 0.06) !important;
+}
+
+.shadow-2xl {
+  box-shadow: 0 32px 72px -12px rgba(20, 60, 130, 0.18), 0 12px 28px -6px rgba(20, 60, 130, 0.08) !important;
+}
+
+/* Hover Soft Shadows */
+.hover\:shadow-sm:hover {
+  box-shadow: 0 6px 16px -2px rgba(20, 60, 130, 0.09), 0 2px 8px -1px rgba(20, 60, 130, 0.05) !important;
+}
+
+.hover\:shadow-md:hover {
+  box-shadow: 0 16px 36px -6px rgba(20, 60, 130, 0.14), 0 6px 14px -2px rgba(20, 60, 130, 0.06) !important;
+}
+
+.hover\:shadow-lg:hover {
+  box-shadow: 0 22px 48px -8px rgba(20, 60, 130, 0.17), 0 8px 20px -3px rgba(20, 60, 130, 0.08) !important;
+}
+
+.hover\:shadow-xl:hover {
+  box-shadow: 0 28px 60px -10px rgba(20, 60, 130, 0.20), 0 12px 26px -4px rgba(20, 60, 130, 0.09) !important;
+}
+
+.hover\:shadow-black\/10:hover {
+  box-shadow: 0 8px 24px -4px rgba(20, 60, 130, 0.11), 0 3px 8px -1px rgba(20, 60, 130, 0.05) !important;
+}
+
+/* Product Cards & Catalog Items */
+.group.relative.flex.flex-col.rounded-xl.bg-white,
+.group.relative.flex.flex-col.rounded-2xl.bg-white,
+.product-card,
+.shimmer-card {
+  box-shadow: 0 4px 16px -2px rgba(20, 60, 130, 0.06), 0 1px 4px 0 rgba(20, 60, 130, 0.03) !important;
+  border: 1px solid rgba(220, 230, 245, 0.8) !important;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease !important;
+}
+
+.group.relative.flex.flex-col.rounded-xl.bg-white:hover,
+.group.relative.flex.flex-col.rounded-2xl.bg-white:hover,
+.product-card:hover {
+  transform: translateY(-4px) !important;
+  box-shadow: 0 18px 40px -8px rgba(20, 60, 130, 0.15), 0 6px 16px -2px rgba(20, 60, 130, 0.06) !important;
+  border-color: rgba(62, 155, 244, 0.45) !important;
+}
+
+/* Primary Action Buttons (Soft brand glow instead of harsh drop shadow) */
+button.bg-primary,
+a.bg-primary,
+.bg-primary:is(button, a),
+.btn-primary,
+.catalog-filter-apply-btn {
+  box-shadow: 0 6px 20px -2px rgba(29, 128, 232, 0.40), 0 2px 8px -1px rgba(29, 128, 232, 0.22) !important;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease !important;
+}
+
+button.bg-primary:hover,
+a.bg-primary:hover,
+.bg-primary:is(button, a):hover,
+.btn-primary:hover,
+.catalog-filter-apply-btn:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 12px 28px -4px rgba(29, 128, 232, 0.52), 0 4px 12px -2px rgba(29, 128, 232, 0.30) !important;
+}
+
+button.bg-primary:active,
+a.bg-primary:active,
+.bg-primary:is(button, a):active,
+.btn-primary:active,
+.catalog-filter-apply-btn:active {
+  transform: translateY(0) scale(0.98) !important;
+  box-shadow: 0 3px 10px -2px rgba(29, 128, 232, 0.35) !important;
+}
+
+/* Green Order Buttons (Mahsulot sotib olish) */
+.ios-order-btn,
+button.bg-\[\#08cb00\] {
+  box-shadow: 0 6px 20px -2px rgba(8, 203, 0, 0.40), 0 2px 8px -1px rgba(8, 203, 0, 0.22) !important;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease !important;
+}
+
+.ios-order-btn:hover,
+button.bg-\[\#08cb00\]:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 12px 28px -4px rgba(8, 203, 0, 0.52), 0 4px 12px -2px rgba(8, 203, 0, 0.30) !important;
+}
+
+.ios-order-btn:active,
+button.bg-\[\#08cb00\]:active {
+  transform: translateY(0) scale(0.98) !important;
+  box-shadow: 0 3px 10px -2px rgba(8, 203, 0, 0.30) !important;
+}
+
+/* App Icon Badge Glow (AppDownloadBottomSheet.vue) — o'rniga
+   shadow-[#2178D7]/20 arbitrary klassi ishlatilgan edi, lekin loyihada
+   Tailwind JIT o'chirilgani sabab u hech qachon kompilyatsiya
+   qilinmagan (jonli tekshirildi — natijada soya umuman ko'rinmasdi). */
+.icon-badge-glow {
+  box-shadow: 0 12px 28px -6px rgba(33, 120, 215, 0.35), 0 4px 12px -2px rgba(33, 120, 215, 0.2) !important;
+}
+
+/* Glass Floating Capsules & Bottom Navigation */
+.glass-card-bg {
+  box-shadow: 0 3px 12px -2px rgba(20, 60, 130, 0.06), inset 0 1px 1px 0 rgba(255, 255, 255, 0.7) !important;
+}
+
+/* Sticky Headers & Mobile Fixed Bars */
+.layout-sticky-header {
+  box-shadow: 0 6px 24px -6px rgba(20, 60, 130, 0.08) !important;
+}
+
+/* Modals & Popups */
+.auth-modal-pop-in,
+.catalog-filter-panel,
+.catalog-filter-popover {
+  box-shadow: 0 30px 80px -14px rgba(16, 45, 110, 0.20), 0 10px 30px -4px rgba(16, 45, 110, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.95) !important;
+}
+
 

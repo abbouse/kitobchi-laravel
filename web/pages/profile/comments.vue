@@ -1,7 +1,7 @@
 <template>
   <main class="max-md:grow h-full md:min-h-dvh bg-[#f1f1f1] lg:bg-white">
     <!-- ====== MOBILE STICKY TOP BAR ====== -->
-    <div class="md:hidden py-3 rounded-b-2xl mb-4 bg-white sticky top-0 z-40 transition-all duration-300 shadow-[0_4px_10px_rgba(0,0,0,0.05)]">
+    <div class="md:hidden py-3 rounded-b-2xl mb-4 bg-white sticky top-0 z-40 transition-all duration-300 shadow-sm">
       <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
         <div class="grid grid-cols-5 items-center gap-2">
           <div class="col-span-1">

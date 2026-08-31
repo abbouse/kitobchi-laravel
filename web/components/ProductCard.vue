@@ -1,5 +1,5 @@
 <template>
-  <div class="group relative flex flex-col rounded-xl bg-white border border-white hover:shadow-md transition-all duration-200 overflow-hidden">
+  <div class="group relative flex flex-col rounded-2xl bg-white border border-slate-100/80 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden">
     <!-- Image — piyola'dagi kabi bir nechta rasmni gorizontal swipe/snap
          orqali ko'rsatadigan mini-karusel (Nuxt UI mavjud bo'lmagani
          uchun toza CSS scroll-snap bilan qo'lda qurilgan). -->
