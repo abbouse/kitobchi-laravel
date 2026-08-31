@@ -21,7 +21,7 @@
          klasslar ishlamaydi — shuning uchun transform yo'nalishi JS orqali
          (isDesktop) hisoblanib, inline style bilan qo'llaniladi. -->
     <div
-      class="catalog-filter-panel fixed z-50 bg-white shadow-2xl transition-transform duration-300 overflow-y-auto bottom-0 left-0 right-0 rounded-t-3xl max-h-[85vh]"
+      class="catalog-filter-panel max-h-85vh fixed z-50 bg-white shadow-2xl transition-transform duration-300 overflow-y-auto bottom-0 left-0 right-0 rounded-t-3xl"
       :style="panelStyle"
     >
       <!-- Tortish tutqichi — faqat mobileda (piyoladagi kabi) -->

@@ -568,4 +568,90 @@ button.bg-\[\#08cb00\]:active {
   }
 }
 
+/* ===================================================================
+ * 14) O'CHIRILGAN "w-[Npx]/h-[Npx]" ARBITRARY KLASSLAR UCHUN TUZATISH
+ *     (2026-08-31). Tailwind JIT butun loyihada o'chirilgani sabab har
+ *     qanday w-[...]/h-[...] arbitrary-bracket klassi HECH QACHON
+ *     kompilyatsiya qilinmagan (0 ta natija — jonli tekshirildi). Bir
+ *     martalik joylarda to'g'ridan-to'g'ri inline style bilan tuzatildi,
+ *     lekin RESPONSIVE (md:/lg:) o'lchamlar kerak bo'lgan joylar uchun
+ *     bu yerda alohida klasslar yozildi (inline style media-query'ni
+ *     qo'llab-quvvatlamaydi).
+ * =================================================================== */
+
+/* Modal oynalar: 640px+ ekranlarda 600px kenglik (checkout/manzil,
+   profil/tahrirlash, buyurtma tafsilotlari modallarida ishlatiladi) */
+.modal-sm-600 {
+  max-width: 32rem; /* max-w-lg fallback, JIT ishlamasa ham xavfsiz */
+  max-height: 90vh; /* max-h-[90vh] ham shu klass ichiga qo'shildi — bir xil
+                        4 ta modalda doim birga ishlatilgani uchun */
+}
+@media (min-width: 640px) {
+  .modal-sm-600 {
+    max-width: 600px;
+  }
+}
+
+/* Checkout — o'ng tomondagi buyurtma xulosasi ustuni, faqat lg+ da
+   sobit 400px kenglik oladi */
+@media (min-width: 1024px) {
+  .checkout-summary-col {
+    width: 400px;
+  }
+}
+
+/* Savat sahifasi — mahsulot rasmi, mobil 80px, md+ da 100px
+   (avvalgi "aspect-ratio orqali hisoblanadi" izohi noto'g'ri edi —
+   w-[80px]/w-[100px]'ning o'zi ham kompilyatsiya qilinmagan ekan, shu
+   sabab rasm haqiqatda o'lchamsiz, tabiiy hajmida chiqib turgan edi). */
+.cart-item-thumb {
+  width: 80px;
+}
+@media (min-width: 768px) {
+  .cart-item-thumb {
+    width: 100px;
+  }
+}
+
+/* Stationery/kitob detail sahifasi — vertikal galereya thumbnaillari,
+   sobit 75x100px (responsive variant yo'q, barcha ekranlarda bir xil) */
+.gallery-thumb-75x100 {
+  width: 75px;
+  height: 100px;
+}
+
+/* Umumiy 85vh maksimal balandlik (variant tanlash modallari, katalog
+   filter paneli — bir nechta joyda ishlatiladi) */
+.max-h-85vh {
+  max-height: 85vh;
+}
+
+/* ===================================================================
+ * 15) PROFIL SIDEBAR NAVIGATSIYASI — hover/active kulrang fon
+ *     (2026-08-31). Avvalgi versiya before:bg-[rgb(241,245,249)] kabi
+ *     arbitrary-bracket + before: pseudo-element klasslariga tayangan
+ *     edi — bular ham (loyihadagi juda ko'p boshqa joy kabi) Tailwind
+ *     JIT o'chirilgani sabab HECH QACHON kompilyatsiya qilinmagan,
+ *     natijada hover/active paytidagi kulrang fon butunlay yo'qolib
+ *     qolgan edi. Endi ::before pseudo-elementsiz, to'g'ridan-to'g'ri
+ *     asosiy elementga fon beriladi — sodda va ishonchli.
+ * =================================================================== */
+.profile-nav-item {
+  background-color: transparent;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+.profile-nav-item:hover {
+  background-color: rgba(241, 245, 249, 0.65);
+}
+.profile-nav-item--active {
+  background-color: rgb(241, 245, 249);
+}
+.profile-nav-item:focus-visible {
+  outline: 3px solid rgba(41, 128, 221, 0.25);
+  outline-offset: -2px;
+}
+.profile-nav-item:hover .profile-nav-icon {
+  color: #525252;
+}
+
 

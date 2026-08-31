@@ -88,13 +88,17 @@
 
                 <div class="w-full flex gap-4 items-start">
                   <div class="relative shrink-0">
-                    <!-- TUZATILDI: h-[106px]/md:h-[133px] piyola.css to'plamida
-                         kompilyatsiya qilinmagan edi (jonli saytdan tekshirildi)
-                         — shuning uchun ProductCard.vue'dagi kabi aspect-ratio
-                         orqali balandlik kenglikdan avtomatik hisoblanadi
-                         (3:4 nisbat — 80px→106.7px, 100px→133.3px, deyarli
-                         bir xil natija, lekin doim ishlaydi). -->
-                    <img :src="item.image" class="w-[80px] md:w-[100px] rounded-xl object-cover bg-neutral-100" style="aspect-ratio: 3 / 4;">
+                    <!-- TUZATILDI (2026-08-31, 2-marta): avvalgi tuzatish
+                         to'liq emas ekan — w-[80px]/md:w-[100px]'ning O'ZI
+                         HAM arbitrary-bracket klass bo'lib, xuddi
+                         h-[106px]/md:h-[133px] kabi kompilyatsiya
+                         qilinmagan (0 ta natija — CSS fayllarda tekshirib
+                         tasdiqlandi), ya'ni rasm HALI HAM o'lchamsiz, tabiiy
+                         hajmida chiqib turgan edi. Endi haqiqatan ishlaydigan
+                         maxsus .cart-item-thumb klassiga o'tkazildi (mobil
+                         80px, md+ da 100px), balandlik esa aspect-ratio
+                         orqali avtomatik hisoblanadi. -->
+                    <img :src="item.image" class="cart-item-thumb rounded-xl object-cover bg-neutral-100" style="aspect-ratio: 3 / 4;">
                     <button
                       @click="cartStore.toggleSelect(item.id)"
                       class="absolute left-1.5 top-1.5 rounded-sm ring ring-inset overflow-hidden outline-primary/25 size-5 border-none p-0 cursor-pointer shadow-sm"
@@ -148,7 +152,7 @@
                 <div class="flex items-center justify-between gap-4">
                   <h2 class="text-base sm:text-lg font-bold shrink-0 m-0">{{ formatPrice(item.price) }} so'm</h2>
                   <div class="relative inline-flex items-center bg-[#EAEAEA] rounded-xl overflow-hidden">
-                    <input type="text" readonly class="w-full border-0 text-base/5 gap-1.5 text-neutral-900 focus:outline-none text-center px-9 md:text-sm bg-transparent max-w-[120px] h-8 md:h-[34px] font-medium" :value="item.quantity">
+                    <input type="text" readonly class="w-full border-0 text-base/5 gap-1.5 text-neutral-900 focus:outline-none text-center px-9 md:text-sm bg-transparent h-8 font-medium" style="max-width: 120px;" :value="item.quantity">
                     <div class="absolute flex items-center inset-y-0 end-0 pe-1">
                       <button @click="cartStore.updateQuantity(item.id, item.quantity + 1)" type="button" class="rounded-md font-medium inline-flex items-center transition-colors text-sm text-primary p-1.5 border-none bg-transparent cursor-pointer">
                         <svg class="shrink-0 size-4 md:size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
@@ -167,7 +171,7 @@
               </div>
 
           <div
-            class="lg:w-[400px] shrink-0 space-y-4 lg:sticky top-24 mt-4 lg:mt-0"
+            class="checkout-summary-col shrink-0 space-y-4 lg:sticky top-24 mt-4 lg:mt-0"
             :style="isMobile ? { display: 'flex', flexDirection: 'column', flexGrow: 1 } : {}"
           >
             <div class="p-4 sm:p-6 rounded-2xl bg-white space-y-2 sm:space-y-3 md:space-y-4">

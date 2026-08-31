@@ -140,11 +140,11 @@
                            birinchi mahsulot ko'rsatiladi. Agar shunday
                            mahsulotlardan yana bo'lsa (+1 va undan ko'p),
                            rasm burchagiga "+N" belgisi chiqadi. */-->
-                      <div class="overflow-hidden relative rounded-lg w-[70px] h-[93px] bg-neutral-100 shrink-0">
+                      <div class="overflow-hidden relative rounded-lg bg-neutral-100 shrink-0" style="width: 70px; height: 93px;">
                         <img v-if="orderThumb(order)" :src="orderThumb(order)" class="w-full h-full object-cover">
                         <span
                           v-if="orderExtraNonGiftCount(order) > 0"
-                          class="absolute bottom-1 right-1 min-w-[20px] h-5 px-1 rounded-full bg-primary text-white text-[11px] font-semibold flex items-center justify-center leading-none shadow-sm"
+                          class="absolute bottom-1 right-1 h-5 px-1 rounded-full bg-primary text-white text-[11px] font-semibold flex items-center justify-center leading-none shadow-sm" style="min-width: 20px;"
                         >+{{ orderExtraNonGiftCount(order) }}</span>
                       </div>
                     </div>
@@ -187,7 +187,7 @@
     class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
     @click.self="closeDetails"
   >
-    <div class="relative bg-white rounded-3xl overflow-hidden w-full max-w-lg sm:max-w-[600px] max-h-[90vh] flex flex-col">
+    <div class="modal-sm-600 relative bg-white rounded-3xl overflow-hidden w-full flex flex-col">
       <div class="flex items-center justify-between p-6 pb-4 shrink-0">
         <h3 class="text-xl font-bold m-0">Buyurtma tafsilotlari</h3>
         <button @click="closeDetails" type="button" class="w-10 h-10 rounded-full bg-[#F6F6F9] hover:bg-neutral-200 transition-colors flex items-center justify-center border-none cursor-pointer shrink-0">
@@ -237,7 +237,7 @@
             <p class="text-sm font-semibold m-0 mb-2">Mahsulotlar</p>
             <div class="flex flex-col gap-3">
               <div v-for="(item, idx) in (selectedOrder.items || [])" :key="idx" class="flex items-center gap-3">
-                <div class="overflow-hidden relative rounded-lg w-[56px] h-[74px] bg-neutral-100 shrink-0">
+                <div class="overflow-hidden relative rounded-lg bg-neutral-100 shrink-0" style="width: 56px; height: 74px;">
                   <img v-if="item.cover" :src="resolveImageUrl(item.cover)" class="w-full h-full object-cover">
                   <span v-if="item.type === 'gift'" class="absolute top-1 left-1 text-[10px] font-semibold bg-primary text-white rounded-full px-1.5 py-0.5 leading-none">Sovg'a</span>
                 </div>

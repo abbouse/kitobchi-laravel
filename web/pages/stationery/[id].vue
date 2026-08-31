@@ -333,7 +333,7 @@
                   </li>
                 </template>
                 <li class="text-gray-400 text-xs"> / </li>
-                <li><span class="font-semibold text-neutral-900 truncate max-w-[360px] inline-block align-bottom">{{ product.name }}</span></li>
+                <li><span class="font-semibold text-neutral-900 truncate inline-block align-bottom" style="max-width: 360px;">{{ product.name }}</span></li>
               </ol>
             </nav>
           </div>
@@ -357,7 +357,7 @@
                     @click="selectThumbnail(idx)"
                     :aria-label="`gallery-image-selector-${idx}`"
                     :class="[
-                      'relative shrink-0 w-[75px] h-[100px] rounded-xl overflow-hidden border-2 transition-all duration-300 cursor-pointer bg-secondary-50 p-1 flex items-center justify-center',
+                      'relative shrink-0 rounded-xl overflow-hidden border-2 transition-all duration-300 cursor-pointer bg-secondary-50 p-1 flex items-center justify-center gallery-thumb-75x100',
                       activeIndex === idx && !selectedVariantImage ? 'border-primary' : 'border-transparent hover:border-neutral-200'
                     ]"
                   >
@@ -733,7 +733,7 @@
       class="fixed inset-0 z-70 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
       @click.self="isReviewsOpen = false"
     >
-      <div class="bg-white rounded-3xl w-full max-w-lg p-6 shadow-2xl max-h-[85vh] flex flex-col">
+      <div class="max-h-85vh bg-white rounded-3xl w-full max-w-lg p-6 shadow-2xl flex flex-col">
         <div class="flex items-center justify-between pb-4 border-b border-gray-100">
           <div class="flex items-center gap-2">
             <h3 class="text-lg font-bold text-neutral-900 m-0">Mijozlar sharhlari</h3>
@@ -791,8 +791,8 @@
 
       <div class="lg:grid lg:grid-cols-2 xl:grid-cols-3 gap-8">
         <!-- Gallery Shimmer -->
-        <div class="col-span-1 xl:col-span-2 max-w-[520px] mx-auto lg:mx-0 w-full">
-          <div class="w-full aspect-3/4 max-h-[460px] rounded-3xl shimmer"></div>
+        <div class="col-span-1 xl:col-span-2 mx-auto lg:mx-0 w-full" style="max-width: 520px;">
+          <div class="w-full aspect-3/4 rounded-3xl shimmer" style="max-height: 460px;"></div>
           <div class="flex gap-2 mt-4">
             <div v-for="n in 4" :key="n" class="w-16 h-16 rounded-xl shimmer"></div>
           </div>

@@ -83,7 +83,7 @@
 
               <!-- Yuklanmoqda -->
               <div v-if="addressesLoading" class="flex gap-3 overflow-x-auto pb-1">
-                <div v-for="n in 2" :key="n" class="shrink-0 w-64 h-[76px] rounded-2xl bg-white/60 animate-pulse"></div>
+                <div v-for="n in 2" :key="n" class="shrink-0 w-64 rounded-2xl bg-white/60 animate-pulse" style="height: 76px;"></div>
               </div>
 
               <!-- Saqlangan manzillar bor: gorizontal scroll orqali tanlash -->
@@ -98,7 +98,7 @@
                 >
                   <div class="flex items-start gap-2.5">
                     <div class="w-9 h-9 rounded-full bg-[#F6F6F9] flex items-center justify-center shrink-0">
-                      <svg class="w-[18px] h-[18px] text-neutral-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg>
+                      <svg class="text-neutral-500" style="width: 18px; height: 18px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg>
                     </div>
                     <div class="min-w-0">
                       <p class="text-sm text-neutral-900 font-medium m-0 line-clamp-2">{{ loc.fullAddress }}</p>
@@ -177,7 +177,7 @@
                     <div class="w-full">
                       <div class="block font-medium text-neutral-900">
                         <div class="w-full sm:mx-auto max-sm:flex-row-reverse flex flex-col justify-between items-center sm:gap-2">
-                          <div class="h-6 sm:h-8 max-w-[110px] flex items-center justify-center text-primary font-bold text-lg italic my-auto">{{ method.name }}</div>
+                          <div class="h-6 sm:h-8 flex items-center justify-center text-primary font-bold text-lg italic my-auto" style="max-width: 110px;">{{ method.name }}</div>
                           <p class="sm:mt-1 leading-6 font-base m-0">{{ method.label }}</p>
                         </div>
                       </div>
@@ -192,7 +192,7 @@
                    + "Yangi karta qo'shish" (tanlangach avtomatik selected). -->
               <div v-if="form.paymentMethod === 'card'" class="mt-4 space-y-2">
                 <div v-if="cardsLoading" class="flex flex-col gap-2">
-                  <div v-for="n in 2" :key="n" class="h-[62px] rounded-2xl bg-white/60 animate-pulse"></div>
+                  <div v-for="n in 2" :key="n" class="rounded-2xl bg-white/60 animate-pulse" style="height: 62px;"></div>
                 </div>
                 <template v-else>
                   <button
@@ -234,7 +234,7 @@
 
           <!-- Right Side: Order Summary -->
           <div
-            class="lg:w-[400px] w-full shrink-0 h-fit lg:sticky top-24"
+            class="checkout-summary-col w-full shrink-0 h-fit lg:sticky top-24"
             :style="isMobile ? { display: 'flex', flexDirection: 'column', flexGrow: 1 } : {}"
           >
             <div class="p-4 sm:p-6 rounded-3xl bg-secondary-50">
@@ -312,7 +312,7 @@
       class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
       @click.self="isAddAddressModalOpen = false"
     >
-      <div class="relative bg-white rounded-3xl overflow-hidden p-6 sm:p-8 w-full max-w-lg sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <div class="modal-sm-600 relative bg-white rounded-3xl overflow-hidden p-6 sm:p-8 w-full overflow-y-auto">
         <button @click="isAddAddressModalOpen = false" type="button" class="absolute top-4 right-4 sm:top-6 sm:right-6 w-10 h-10 rounded-full bg-[#F6F6F9] hover:bg-neutral-200 transition-colors flex items-center justify-center border-none cursor-pointer">
           <svg class="w-5 h-5 text-neutral-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>

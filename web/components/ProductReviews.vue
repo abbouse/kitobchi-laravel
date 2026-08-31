@@ -46,7 +46,7 @@
             rows="3"
             required
             placeholder="Kitob haqida taassurotlaringiz, qaysi qismlari yoqqani yoki foydasi haqida yozing..."
-            class="w-full p-4 rounded-2xl bg-white border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary outline-none text-sm text-neutral-800 transition-all resize-y min-h-[100px]"
+            class="w-full p-4 rounded-2xl bg-white border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary outline-none text-sm text-neutral-800 transition-all resize-y" style="min-height: 100px;"
           ></textarea>
         </div>
 
