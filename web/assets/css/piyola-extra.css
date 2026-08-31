@@ -296,11 +296,11 @@
  *     pastki qismi asosiy (to'qroq) #2980DD rangida.
  * =================================================================== */
 :root {
-  --color-tima-50: #EFF3F8;
-  --color-tima-100: #DAE5F1;
-  --color-tima-200: #B7CFE8;
-  --color-tima-300: #87B4E3;
-  --color-tima-400: #5598E0;
+  --color-tima-50: #E7F2FD;
+  --color-tima-100: #CEE3FB;
+  --color-tima-200: #A5CCF5;
+  --color-tima-300: #75AFEE;
+  --color-tima-400: #4995E6;
   --color-tima-500: #2980DD;
   --color-tima-600: #1E6CBF;
   --color-tima-700: #1B589A;
@@ -331,15 +331,15 @@
 }
 
 .bg-primary-100 {
-  background-color: #DAE5F1 !important;
+  background-color: #CEE3FB !important;
 }
 
 .bg-primary-200 {
-  background-color: #B7CFE8 !important;
+  background-color: #A5CCF5 !important;
 }
 
 .hover\:bg-primary-200:hover {
-  background-color: #DAE5F1 !important;
+  background-color: #CEE3FB !important;
 }
 
 .hover\:text-primary-700:hover,
@@ -415,22 +415,36 @@
   box-shadow: 0 8px 24px -4px rgba(20, 60, 130, 0.11), 0 3px 8px -1px rgba(20, 60, 130, 0.05) !important;
 }
 
-/* Product Cards & Catalog Items */
-.group.relative.flex.flex-col.rounded-xl.bg-white,
-.group.relative.flex.flex-col.rounded-2xl.bg-white,
-.product-card,
+/* Product Cards & Catalog Items — 2026-08-31 TUZATILDI: yuqoridagi
+   umumiy .group.relative.flex.flex-col.rounded-2xl.bg-white kabi
+   compound-class selektor ANIQLIK (specificity) jihatidan pastda alohida
+   yozilgan .product-card qoidasidan har doim BALANDROQ edi (6 klass vs 1
+   klass) — shu sabab keyinchalik qilingan shadow/rang o'zgarishlari
+   productionda HECH QACHON ko'rinmagan edi (eski, hardcoded rangdagi
+   qoida doim g'alaba qilardi). Endi FAQAT .product-card'ga tayanadi —
+   ikkilanish yo'q, yagona haqiqiy manba. Border esa MUTLAQO OLIB
+   TASHLANDI (foydalanuvchi so'rovi bo'yicha) — karta endi FAQAT soya
+   bilan ajralib turadi, hoverda esa brend rangida yumshoq nur (glow)
+   qo'shiladi. */
 .shimmer-card {
   box-shadow: 0 4px 16px -2px rgba(20, 60, 130, 0.06), 0 1px 4px 0 rgba(20, 60, 130, 0.03) !important;
   border: 1px solid rgba(220, 230, 245, 0.8) !important;
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease !important;
 }
 
-.group.relative.flex.flex-col.rounded-xl.bg-white:hover,
-.group.relative.flex.flex-col.rounded-2xl.bg-white:hover,
+.product-card {
+  border: none !important;
+  box-shadow: 0 1px 3px 0 rgba(15, 39, 69, 0.07), 0 6px 20px -6px rgba(15, 39, 69, 0.14) !important;
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  will-change: transform, box-shadow;
+}
+
 .product-card:hover {
   transform: translateY(-4px) !important;
-  box-shadow: 0 18px 40px -8px rgba(20, 60, 130, 0.15), 0 6px 16px -2px rgba(20, 60, 130, 0.06) !important;
-  border-color: rgba(62, 155, 244, 0.45) !important;
+  box-shadow: 0 2px 6px 0 rgba(15, 39, 69, 0.08), 0 18px 38px -8px rgba(41, 128, 221, 0.28) !important;
+}
+
+.product-card__info {
+  padding: 14px 12px 16px !important;
 }
 
 /* Primary Action Buttons (Soft brand glow instead of harsh drop shadow) */
@@ -552,27 +566,6 @@ button.bg-\[\#08cb00\]:active {
     font-size: 14.5px;
     padding: 10px 16px 10px 18px;
   }
-}
-
-/* ===================================================================
- * 14) PRODUCT CARD — yumshoq "suzuvchi" shadow + hover ko'tarilish
- *     (2026-08-31). Avvalgi shadow-sm hover:shadow-md + qattiq
- *     border birgalikda "chiroyli emas" ko'rinardi (ikkalasi bir-biriga
- *     xalaqit berardi). Endi border deyarli sezilmas, shadow esa
- *     kartani sahifadan yumshoq ajratib turadigan, hoverda esa
- *     bir oz yuqoriga ko'tariladigan (translateY) qilib qayta ishlandi.
- * =================================================================== */
-.product-card {
-  box-shadow: 0 1px 2px 0 rgba(15, 39, 69, 0.04), 0 4px 14px -4px rgba(15, 39, 69, 0.08) !important;
-  border-color: rgba(15, 39, 69, 0.05) !important;
-  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.35s ease !important;
-  will-change: transform, box-shadow;
-}
-
-.product-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 10px 28px -6px rgba(15, 39, 69, 0.16), 0 4px 10px -2px rgba(15, 39, 69, 0.08) !important;
-  border-color: rgba(15, 39, 69, 0.08) !important;
 }
 
 
