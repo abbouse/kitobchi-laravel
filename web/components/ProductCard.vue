@@ -1,5 +1,5 @@
 <template>
-  <div class="group relative flex flex-col rounded-2xl bg-white border border-slate-100/80 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden">
+  <div class="product-card group relative flex flex-col rounded-2xl bg-white border border-slate-100/80 overflow-hidden">
     <!-- Image — piyola'dagi kabi bir nechta rasmni gorizontal swipe/snap
          orqali ko'rsatadigan mini-karusel (Nuxt UI mavjud bo'lmagani
          uchun toza CSS scroll-snap bilan qo'lda qurilgan). -->
@@ -86,7 +86,7 @@
     </div>
 
     <!-- Product Info -->
-    <div class="px-1 pt-4 pb-4 flex flex-col h-full grow">
+    <div class="px-3 pt-3.5 pb-4 flex flex-col h-full grow">
       <NuxtLink :to="productUrl" class="group grow">
         <div class="text-sm leading-snug line-clamp-2 transition-colors duration-300 group-hover:text-primary-600 text-neutral-900">
           {{ product.name }}

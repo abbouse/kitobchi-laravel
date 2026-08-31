@@ -69,10 +69,19 @@
     <!-- ====== SECTION 1: YANGI KELGAN KITOBLAR (Faqat Desktopda) ====== -->
     <section v-if="newBooks.length > 0" class="py-4 md:py-6 lg:py-10 max-md:hidden">
       <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
-        <div class="w-full px-1 max-md:mt-4 mb-3 md:mb-5 lg:mb-8">
+        <div class="w-full px-1 max-md:mt-4 mb-3 md:mb-5 lg:mb-8 flex items-center justify-between gap-3">
           <h2 class="font-bold text-xl md:text-3xl leading-[100%] text-primary m-0 capitalize">
             Yangi kelgan kitoblar
           </h2>
+          <NuxtLink
+            to="/catalog?sort=new"
+            class="section-see-all inline-flex items-center gap-1 shrink-0"
+          >
+            <span>Barchasini ko‘rish</span>
+            <svg class="section-see-all__icon w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+            </svg>
+          </NuxtLink>
         </div>
 
         <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5 md:gap-4 lg:gap-5 mb-5">
@@ -85,24 +94,25 @@
           />
         </div>
 
-        <div class="flex justify-center">
-          <NuxtLink
-            to="/catalog?sort=new"
-            class="font-semibold items-center py-2.5 px-8 text-white bg-primary hover:bg-primary/90 h-12 flex justify-center min-w-48 rounded-2xl text-base max-md:w-full transition-all shadow-md"
-          >
-            Barchasini ko‘rish
-          </NuxtLink>
-        </div>
       </div>
     </section>
 
     <!-- ====== SECTION 2: TAVSIYA ETAMIZ (Faqat Desktopda) ====== -->
     <section v-if="recommendedBooks.length > 0" class="py-4 md:py-6 lg:py-10 bg-secondary-50 max-md:hidden">
       <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
-        <div class="w-full px-1 max-md:mt-4 mb-3 md:mb-5 lg:mb-8">
+        <div class="w-full px-1 max-md:mt-4 mb-3 md:mb-5 lg:mb-8 flex items-center justify-between gap-3">
           <h2 class="font-bold text-xl md:text-3xl leading-[100%] text-primary m-0 capitalize">
             Tavsiya etamiz
           </h2>
+          <NuxtLink
+            to="/catalog?sort=popular"
+            class="section-see-all inline-flex items-center gap-1 shrink-0"
+          >
+            <span>Barchasini ko‘rish</span>
+            <svg class="section-see-all__icon w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+            </svg>
+          </NuxtLink>
         </div>
 
         <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5 md:gap-4 lg:gap-5 mb-5">
@@ -114,14 +124,6 @@
           />
         </div>
 
-        <div class="flex justify-center">
-          <NuxtLink
-            to="/catalog?sort=popular"
-            class="font-semibold items-center py-2.5 px-8 text-white bg-primary hover:bg-primary/90 h-12 flex justify-center min-w-48 rounded-2xl text-base max-md:w-full transition-all shadow-md"
-          >
-            Barchasini ko‘rish
-          </NuxtLink>
-        </div>
       </div>
     </section>
 
@@ -132,10 +134,19 @@
       class="py-4 md:py-6 lg:py-10 max-md:hidden"
     >
       <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
-        <div class="w-full px-1 mb-3 md:mb-5 lg:mb-8">
+        <div class="w-full px-1 mb-3 md:mb-5 lg:mb-8 flex items-center justify-between gap-3">
           <h2 class="font-bold text-xl md:text-3xl lg:text-4xl leading-[100%] capitalize text-primary m-0">
             {{ cat.name_uz }}
           </h2>
+          <NuxtLink
+            :to="`/category/book-${cat.category_id}`"
+            class="section-see-all inline-flex items-center gap-1 shrink-0"
+          >
+            <span>Barchasini ko‘rish</span>
+            <svg class="section-see-all__icon w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+            </svg>
+          </NuxtLink>
         </div>
 
         <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5 md:gap-4 lg:gap-5 mb-5">
@@ -147,14 +158,6 @@
           />
         </div>
 
-        <div class="flex justify-center">
-          <NuxtLink
-            :to="`/category/book-${cat.category_id}`"
-            class="font-semibold items-center py-2.5 px-8 text-white bg-primary hover:bg-primary/90 h-12 flex justify-center min-w-48 rounded-2xl text-base max-md:w-full transition-all shadow-md"
-          >
-            Barchasini ko‘rish
-          </NuxtLink>
-        </div>
       </div>
     </section>
 
