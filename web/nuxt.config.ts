@@ -6,8 +6,37 @@ export default defineNuxtConfig({
 
   modules: [
     '@pinia/nuxt',
-    '@vueuse/nuxt'
+    '@vueuse/nuxt',
+    '@nuxtjs/tailwindcss'
   ],
+
+  // Tailwind JIT ENDI HAQIQIY yoqilgan (2026-08-31'da). MUHIM: v3 emas, v4
+  // ishlatiladi — chunki piyola.css (piyolamarket.uz'dan olingan statik
+  // CSS) o'zi ham HAQIQIY Tailwind v4 chiqishi ekan (native @layer,
+  // preflight va hokazo). v3 bilan sinab ko'rilganda build butunlay
+  // buzilgan edi ("@layer base is used but no matching @tailwind base
+  // directive"), sabab: v3'ning @layer tizimi PostCSS-direktiv-asosli
+  // (har bir faylda alohida), v4'niki esa CSS-native, fayllararo ishlaydi.
+  // v4'da alohida tailwind.config.js SHART EMAS (content avtomatik
+  // aniqlanadi).
+  //
+  // cssPath ATAYIN '~/assets/css/tailwind.css'ga ko'rsatilgan (modulning
+  // standart avtomatik-aniqlash logikasi v4 bilan buzilgan edi: agar biz
+  // o'zimizning cssPath'imizni bermasak, modul o'zining ESKI/v3'ga mo'ljallangan
+  // fallback yo'lidan borib, 'tailwindcss/tailwind.css' degan MAVJUD BO'LMAGAN
+  // faylni import qilishga urinar edi — v4 paketida bunday fayl umuman yo'q,
+  // shuning uchun build "Rollup failed to resolve import" xatosi bilan
+  // qular edi). Bu faylda FAQAT theme + utilities import qilingan, preflight
+  // YO'Q — chunki piyola.css'da preflight allaqachon bor (rasmiy Tailwind v4
+  // "preflightsiz ishlatish" usuli: theme.css + utilities.css alohida-alohida
+  // import qilinadi, preflight.css esa import qilinmaydi).
+  tailwindcss: {
+    cssPath: '~/assets/css/tailwind.css',
+    exposeConfig: false,
+    experimental: {
+      tailwindcss4: true
+    }
+  },
 
   css: [
     '~/assets/css/piyola.css',

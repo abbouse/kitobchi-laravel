@@ -1,0 +1,10 @@
+/* Tailwind v4 JIT kirish nuqtasi.
+   MUHIM: faqat theme + utilities import qilinadi, "preflight" (base reset)
+   ATAYIN qo'shilmaydi — chunki piyola.css (piyolamarket.uz'dan olingan,
+   o'zi ham haqiqiy Tailwind v4 chiqishi) allaqachon o'zining to'liq
+   preflight/base qatlamiga ega. Ikkalasini birga yoqsak, reset qoidalari
+   ikki marta ishlaydi (zararsiz, lekin keraksiz) — shu sabab rasman
+   Tailwind v4'ning "preflightsiz ishlatish" usuli qo'llanildi:
+   https://tailwindcss.com/docs/upgrade-guide (theme.css + utilities.css). */
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
