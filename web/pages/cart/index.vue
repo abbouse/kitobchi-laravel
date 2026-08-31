@@ -9,7 +9,7 @@
   <div class="max-md:grow h-full md:min-h-dvh">
     <ClientOnly>
     <div class="min-h-dvh py-3 md:py-6">
-      <div class="px-4 sm:px-6 lg:px-8 w-full max-w-[--ui-container] mx-auto">
+      <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
         
         <div class="mb-5 max-md:hidden">
           <div class="flex items-center gap-2">
