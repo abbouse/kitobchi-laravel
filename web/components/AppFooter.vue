@@ -5,7 +5,7 @@
        an'anaviy ko'p-ustunli footer esa faqat desktopda kerak). Shu sabab
        footer endi faqat md+ (planshet/desktop)da ko'rinadi, mobilda esa
        butunlay yashirilgan — piyola bilan bir xil. -->
-  <footer class="max-md:hidden relative text-white pt-8 md:pt-20 pb-24 overflow-hidden" style="background: linear-gradient(145deg, #10488f 0%, #1e6ecb 48%, #1453a2 100%);">
+  <footer class="max-md:hidden relative text-white pt-8 md:pt-20 pb-24 overflow-hidden" style="background: linear-gradient(145deg, #123151 0%, #2980DD 48%, #174575 100%);">
     <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto relative z-10">
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
         <!-- 1. Umumiy -->
@@ -75,37 +75,37 @@
             class="font-bold text-[20px] md:text-[24px] text-white hover:underline inline-block"
           >{{ kitobchiPhone }}</a>
 
-          <!-- MUHIM: avvalgi versiya shaffof/glass fon (bg-white/12) ustida
-               oq ikonka ishlatgan edi — do'kon nishonchalarining rasmiy
-               ko'rinishi (Apple/Google) doim OFFICIAL ravishda quyuq/qora
-               fonda bo'ladi, shu sabab endi shu konvensiyaga o'tkazildi:
-               solid qora badge + aniqroq (sodda, lekin to'g'ri chizilgan)
-               ikonkalar. -->
+          <!-- TUZATILDI (2026-08-31, 3-marta): qora badge "rasmiy Apple/Google
+               konvensiyasi" edi, lekin bu sahifaning ko'k-gradient footeri
+               USTIDA alohida, notekis qora blok bo'lib ko'rinib qolgan edi
+               (foydalanuvchi savoli: "nega qora rangda"). Endi ijtimoiy
+               tarmoq ikonkalari bilan BIR XIL uslubga o'tkazildi — OQ
+               konteyner, ichida brend rangidagi (#2980DD) ikonka. -->
           <div class="flex flex-wrap gap-2.5 mt-6">
             <a
               :href="SITE_LINKS.googlePlay" target="_blank" rel="noopener"
-              class="inline-flex items-center gap-2.5 bg-black hover:bg-neutral-800 rounded-2xl px-3.5 py-2 text-white transition-all duration-300 hover:scale-105 hover:shadow-md"
+              class="inline-flex items-center gap-2.5 bg-white rounded-2xl px-3.5 py-2 transition-all duration-300 hover:scale-105 hover:shadow-md"
               aria-label="Yuklab olish Google Play"
             >
-              <svg class="h-6 w-6 shrink-0 fill-current" viewBox="0 0 24 24">
+              <svg class="h-6 w-6 shrink-0 fill-current text-primary" viewBox="0 0 24 24">
                 <path d="M22.018 13.298l-3.919 2.218-3.515-3.493 3.543-3.521 3.891 2.202a1.49 1.49 0 0 1 0 2.594zM1.337.924a1.486 1.486 0 0 0-.112.568v21.017c0 .217.045.419.124.6l11.155-11.087L1.337.924zm12.207 10.065l3.258-3.238L3.45.195a1.466 1.466 0 0 0-.946-.179l11.04 10.973zm0 2.067l-11 10.933c.298.036.612-.016.906-.183l13.324-7.54-3.23-3.21z"/>
               </svg>
-              <div class="flex flex-col leading-tight text-white">
-                <span class="text-[9px] uppercase tracking-wider font-semibold text-white/70">Yuklab olish</span>
-                <span class="text-[13px] font-bold text-white tracking-tight">Google Play</span>
+              <div class="flex flex-col leading-tight text-neutral-900">
+                <span class="text-[9px] uppercase tracking-wider font-semibold text-gray-500">Yuklab olish</span>
+                <span class="text-[13px] font-bold text-neutral-900 tracking-tight">Google Play</span>
               </div>
             </a>
             <a
               :href="SITE_LINKS.appStore" target="_blank" rel="noopener"
-              class="inline-flex items-center gap-2.5 bg-black hover:bg-neutral-800 rounded-2xl px-3.5 py-2 text-white transition-all duration-300 hover:scale-105 hover:shadow-md"
+              class="inline-flex items-center gap-2.5 bg-white rounded-2xl px-3.5 py-2 transition-all duration-300 hover:scale-105 hover:shadow-md"
               aria-label="Yuklab olish App Store"
             >
-              <svg class="h-6 w-6 shrink-0 fill-current" viewBox="0 0 24 24">
+              <svg class="h-6 w-6 shrink-0 fill-current text-primary" viewBox="0 0 24 24">
                 <path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zm3.415-3.156c.836-1.012 1.4-2.427 1.245-3.831-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701z"/>
               </svg>
-              <div class="flex flex-col leading-tight text-white">
-                <span class="text-[9px] uppercase tracking-wider font-semibold text-white/70">Yuklab olish</span>
-                <span class="text-[13px] font-bold text-white tracking-tight">App Store</span>
+              <div class="flex flex-col leading-tight text-neutral-900">
+                <span class="text-[9px] uppercase tracking-wider font-semibold text-gray-500">Yuklab olish</span>
+                <span class="text-[13px] font-bold text-neutral-900 tracking-tight">App Store</span>
               </div>
             </a>
           </div>
