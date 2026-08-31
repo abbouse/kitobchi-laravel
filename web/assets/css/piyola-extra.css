@@ -288,23 +288,27 @@
  *     yerni tahrirlang (piyola.css'dagi eski to'plamni goedent
  *     muvofiqlik uchun ham yangilash tavsiya etiladi, lekin amaliy
  *     ta'siri yo'q). Favicon.svg'ning haqiqiy gradient nuqtalaridan
- *     (#469EF8 / #2178D7 / #144B8C) hosil qilingan — 2026-08-31'da
- *     "to'qroq + gradient" so'roviga ko'ra chuqurlashtirildi.
+ *     Flutter mobil ilovaning haqiqiy `primaryColor = Color(0xFF2980DD)`
+ *     qiymatiga ANIQ moslab (2026-08-31, ikkinchi tur) qayta hisoblandi —
+ *     #2980DD endi 500-darajada TO'LIQ ANIQ (piksel-birma-bir) saqlanadi,
+ *     qolgan barcha darajalar shundan HSL orqali hosil qilingan. Gradient
+ *     endi vertikal (yuqoridan pastga): yuqorisi ozgina oqartirilgan,
+ *     pastki qismi asosiy (to'qroq) #2980DD rangida.
  * =================================================================== */
 :root {
-  --color-tima-50: #DDEAF7;
-  --color-tima-100: #BDD8F4;
-  --color-tima-200: #9AC6F4;
-  --color-tima-300: #6CB0F5;
-  --color-tima-400: #469EF8;
-  --color-tima-500: #2D89EA;
-  --color-tima-600: #2178D7;
-  --color-tima-700: #1A5FAE;
-  --color-tima-800: #144B8C;
-  --color-tima-900: #113661;
-  --color-tima-950: #0F2745;
-  --ui-primary: #2178D7;
-  --brand-gradient: linear-gradient(135deg, #469EF8 0%, #2178D7 55%, #113661 100%);
+  --color-tima-50: #EFF3F8;
+  --color-tima-100: #DAE5F1;
+  --color-tima-200: #B7CFE8;
+  --color-tima-300: #87B4E3;
+  --color-tima-400: #5598E0;
+  --color-tima-500: #2980DD;
+  --color-tima-600: #1E6CBF;
+  --color-tima-700: #1B589A;
+  --color-tima-800: #174575;
+  --color-tima-900: #123151;
+  --color-tima-950: #0E2237;
+  --ui-primary: #2980DD;
+  --brand-gradient: linear-gradient(180deg, #65A4E7 0%, #2980DD 100%);
   --brand-gradient-subtle: linear-gradient(180deg, #F0F6FD 0%, #F5F9FF 320px, #EFF5FC 100%);
   --brand-card-gradient: linear-gradient(145deg, #FFFFFF 0%, #F8FAFD 100%);
 }
@@ -323,24 +327,24 @@
 }
 
 .text-primary {
-  color: #2178D7 !important;
+  color: #2980DD !important;
 }
 
 .bg-primary-100 {
-  background-color: #BDD8F4 !important;
+  background-color: #DAE5F1 !important;
 }
 
 .bg-primary-200 {
-  background-color: #9AC6F4 !important;
+  background-color: #B7CFE8 !important;
 }
 
 .hover\:bg-primary-200:hover {
-  background-color: #BDD8F4 !important;
+  background-color: #DAE5F1 !important;
 }
 
 .hover\:text-primary-700:hover,
 .group:hover .group-hover\:text-primary-700 {
-  color: #1A5FAE !important;
+  color: #1B589A !important;
 }
 
 .bg-brand-gradient {
@@ -435,7 +439,7 @@ a.bg-primary,
 .bg-primary:is(button, a),
 .btn-primary,
 .catalog-filter-apply-btn {
-  box-shadow: 0 6px 20px -2px rgba(29, 128, 232, 0.40), 0 2px 8px -1px rgba(29, 128, 232, 0.22) !important;
+  box-shadow: 0 6px 20px -2px rgba(41, 128, 221, 0.40), 0 2px 8px -1px rgba(41, 128, 221, 0.22) !important;
   transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease !important;
 }
 
@@ -445,7 +449,7 @@ a.bg-primary:hover,
 .btn-primary:hover,
 .catalog-filter-apply-btn:hover {
   transform: translateY(-2px) !important;
-  box-shadow: 0 12px 28px -4px rgba(29, 128, 232, 0.52), 0 4px 12px -2px rgba(29, 128, 232, 0.30) !important;
+  box-shadow: 0 12px 28px -4px rgba(41, 128, 221, 0.52), 0 4px 12px -2px rgba(41, 128, 221, 0.30) !important;
 }
 
 button.bg-primary:active,
@@ -454,7 +458,7 @@ a.bg-primary:active,
 .btn-primary:active,
 .catalog-filter-apply-btn:active {
   transform: translateY(0) scale(0.98) !important;
-  box-shadow: 0 3px 10px -2px rgba(29, 128, 232, 0.35) !important;
+  box-shadow: 0 3px 10px -2px rgba(41, 128, 221, 0.35) !important;
 }
 
 /* Green Order Buttons (Mahsulot sotib olish) */
@@ -481,7 +485,7 @@ button.bg-\[\#08cb00\]:active {
    Tailwind JIT o'chirilgani sabab u hech qachon kompilyatsiya
    qilinmagan (jonli tekshirildi — natijada soya umuman ko'rinmasdi). */
 .icon-badge-glow {
-  box-shadow: 0 12px 28px -6px rgba(33, 120, 215, 0.35), 0 4px 12px -2px rgba(33, 120, 215, 0.2) !important;
+  box-shadow: 0 12px 28px -6px rgba(41, 128, 221, 0.35), 0 4px 12px -2px rgba(41, 128, 221, 0.2) !important;
 }
 
 /* Glass Floating Capsules & Bottom Navigation */
@@ -531,7 +535,7 @@ button.bg-\[\#08cb00\]:active {
 
 .section-see-all:hover {
   background-color: #E3EBF7;
-  color: #2178D7;
+  color: #2980DD;
 }
 
 .section-see-all__icon {
