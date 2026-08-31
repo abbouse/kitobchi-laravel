@@ -34,6 +34,7 @@ class Sold extends Model
         'resend_source_order_id', 'resend_replacement_order_id',
         'resend_available_at',
         'source_collection_id',
+        'order_source',
         // ── Packaging ─────────────────────────────────────────
         'with_packaging',
         'packaging_price',

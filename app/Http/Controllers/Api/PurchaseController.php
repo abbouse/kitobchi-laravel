@@ -199,6 +199,17 @@ class PurchaseController extends Controller
         return $this->deliveryZoneResolverService->resolveOffers($location, $sellerCount, $cartTotal);
     }
 
+    // Boshqaruv (admin) panelida buyurtma qayerdan tushganini ko'rsatish
+    // uchun — Nuxt web checkout so'rovga `X-Client-Platform: web` headerini
+    // qo'shadi (web/pages/checkout/index.vue). Mobil ilova hech narsa
+    // yubormaydi, shu sabab standart qiymat har doim 'app'.
+    private function resolveOrderSource(Request $request): string
+    {
+        $client = strtolower(trim((string) $request->header('X-Client-Platform', '')));
+
+        return $client === 'web' ? 'web' : 'app';
+    }
+
     private function applySignedDeliveryQr(Sold $order): Sold
     {
         if ($order->status === 'B') {
@@ -1241,6 +1252,7 @@ class PurchaseController extends Controller
             : null;
         $supportsCollectionDiscountAmount = Schema::hasColumn('solds', 'collectionDiscountAmount');
         $supportsSourceCollectionId = Schema::hasColumn('solds', 'source_collection_id');
+        $supportsOrderSource = Schema::hasColumn('solds', 'order_source');
 
         DB::beginTransaction();
         try {
@@ -1619,6 +1631,10 @@ class PurchaseController extends Controller
                 'recipient_region' => $request->input('recipient_region'),
                 'recipient_address' => $request->input('recipient_address'),
             ];
+
+            if ($supportsOrderSource) {
+                $purchasePayload['order_source'] = $this->resolveOrderSource($request);
+            }
 
             if ($supportsCollectionDiscountAmount) {
                 $purchasePayload['collectionDiscountAmount'] = $collectionDiscountAmount;

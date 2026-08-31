@@ -131,6 +131,7 @@ class CollectionCheckoutLogicTest extends TestCase
             Mockery::mock(ProductReviewPromptService::class),
             Mockery::mock(OrderFinancialSnapshotService::class),
             Mockery::mock(PostalTrackingService::class),
+            Mockery::mock(\App\Services\OrderStatusPushService::class),
         );
 
         $book = new Books([

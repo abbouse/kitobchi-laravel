@@ -164,6 +164,7 @@ class PurchaseDeliveryProgressTest extends TestCase
             Mockery::mock(ProductReviewPromptService::class),
             Mockery::mock(OrderFinancialSnapshotService::class),
             $postalTracking,
+            Mockery::mock(\App\Services\OrderStatusPushService::class),
         );
     }
 }

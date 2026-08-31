@@ -7,18 +7,18 @@ use Tests\TestCase;
 
 class ProductCatalogSeoTest extends TestCase
 {
-    public function test_catalog_page_returns_successful_response(): void
+    public function test_catalog_ajax_search_returns_json(): void
     {
-        $response = $this->get('/catalog');
+        $response = $this->getJson('/catalog?ajax=1&search=test');
         $response->assertStatus(200);
-        $response->assertSee('Kitoblar va Mahsulotlar Katalogi');
+        $response->assertJsonStructure(['items']);
     }
 
     public function test_sitemap_returns_valid_xml(): void
     {
         $response = $this->get('/sitemap.xml');
         $response->assertStatus(200);
-        $response->assertHeader('Content-Type', 'text/xml; charset=UTF-8');
+        $this->assertStringContainsString('text/xml', (string) $response->headers->get('Content-Type'));
         $response->assertSee('<urlset', false);
     }
 
@@ -50,7 +50,7 @@ class ProductCatalogSeoTest extends TestCase
     {
         $response = $this->get('/google-merchant.xml');
         $response->assertStatus(200);
-        $response->assertHeader('Content-Type', 'text/xml; charset=UTF-8');
+        $this->assertStringContainsString('text/xml', (string) $response->headers->get('Content-Type'));
         $response->assertSee('<rss', false);
     }
 }

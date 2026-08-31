@@ -95,6 +95,8 @@ interface SettlementOverview {
 interface Ord {
   id: string;
   rawId?: number;
+  source?: string;
+  sourceLabel?: string;
   splitStatus?: string | null;
   customer: string;
   user?: { name?: string; phone?: string; email?: string; url?: string } | null;
@@ -584,6 +586,7 @@ export default function Orders() {
               <tr>
                 <th>Buyurtma ID</th>
                 <th>Mijoz</th>
+                <th>Manba</th>
                 <th>Mahsulotlar</th>
                 <th>Summa</th>
                 <th>To'lov</th>
@@ -600,6 +603,11 @@ export default function Orders() {
                   <td>
                     <div className="fw-semibold">{order.customer}</div>
                     <div className="text-muted small">{order.user?.phone || ''}</div>
+                  </td>
+                  <td>
+                    <span className={`chip ${order.source === 'web' ? 'chip-purple' : 'chip-gray'}`}>
+                      {order.sourceLabel || (order.source === 'web' ? 'Veb-sayt' : 'Ilova')}
+                    </span>
                   </td>
                   <td>{order.items} dona</td>
                   <td className="fw-semibold">{fmt(order.total)} so'm</td>
@@ -679,6 +687,7 @@ export default function Orders() {
                     </div>
                   ) : null}
                   <div className="row g-3">
+                    <Detail label="Manba" value={selectedOrd.sourceLabel || (selectedOrd.source === 'web' ? 'Veb-sayt' : 'Ilova')} />
                     <Detail label="Sana" value={selectedOrd.date} />
                     <Detail label="Yakunlangan" value={selectedOrd.completedAt} />
                     <Detail label="To'lov holati" value={paymentLabel(selectedOrd.paymentStatus || selectedOrd.payment)} />

@@ -238,7 +238,7 @@
             <div class="flex flex-col gap-3">
               <div v-for="(item, idx) in (selectedOrder.items || [])" :key="idx" class="flex items-center gap-3">
                 <div class="overflow-hidden relative rounded-lg w-[56px] h-[74px] bg-neutral-100 shrink-0">
-                  <img v-if="item.cover" :src="item.cover" class="w-full h-full object-cover">
+                  <img v-if="item.cover" :src="resolveImageUrl(item.cover)" class="w-full h-full object-cover">
                   <span v-if="item.type === 'gift'" class="absolute top-1 left-1 text-[10px] font-semibold bg-primary text-white rounded-full px-1.5 py-0.5 leading-none">Sovg'a</span>
                 </div>
                 <div class="min-w-0 flex-1">
@@ -331,7 +331,7 @@ function orderDisplayItem(order: any): any {
 }
 
 function orderThumb(order: any): string | undefined {
-  return orderDisplayItem(order)?.cover || undefined
+  return resolveImageUrl(orderDisplayItem(order)?.cover) || undefined
 }
 
 function orderFirstItemName(order: any): string {

@@ -10,8 +10,12 @@
         <div class="hidden md:flex items-center justify-between w-full gap-6">
           <!-- Left: Logo + Kataloglar -->
           <div class="flex-y-center gap-6">
-            <NuxtLink to="/" class="router-link-active router-link-exact-active">
-              <img alt="Kitobchi" class="h-8 w-auto" src="/images/logo/logo_blue.png" />
+            <!-- TUZATILDI: eski logo_blue.png (raster, kam sifatli) o'rniga
+                 saytning haqiqiy brend belgisi bo'lgan favicon.svg (vektor,
+                 har qanday o'lchamda aniq) + "kitobchi" wordmark birlashtirildi. -->
+            <NuxtLink to="/" class="flex items-center gap-2.5 shrink-0 router-link-active router-link-exact-active">
+              <img alt="Kitobchi" class="h-9 w-9 rounded-[10px]" src="/favicon.svg" />
+              <span class="text-2xl font-extrabold text-primary tracking-tight leading-none">kitobchi<span class="text-primary-400">.</span></span>
             </NuxtLink>
             <button
               type="button"

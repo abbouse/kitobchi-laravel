@@ -116,8 +116,9 @@
         </div>
       </div>
 
-      <div class="border-t border-white/10 mt-10 pt-5 text-xs text-gray-300">
-        © {{ new Date().getFullYear() }} Kitobchi. Barcha huquqlar himoyalangan.
+      <div class="border-t border-white/10 mt-10 pt-5 text-xs text-gray-300 flex items-center gap-2">
+        <img alt="Kitobchi" class="h-4 w-4 rounded-[4px] shrink-0" src="/favicon.svg" />
+        <span>© {{ new Date().getFullYear() }} Kitobchi. Barcha huquqlar himoyalangan.</span>
       </div>
     </div>
   </footer>

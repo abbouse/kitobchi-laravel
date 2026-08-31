@@ -6356,6 +6356,8 @@ PROMPT;
                 'postal' => 'Pochta orqali yuboriladi',
                 default => 'Kuryer orqali yetkaziladi',
             },
+            'source' => $order->order_source ?: 'app',
+            'sourceLabel' => ($order->order_source ?: 'app') === 'web' ? 'Veb-sayt' : 'Ilova',
             'dataUrl' => route('boshqaruv.orders.data', $order),
             'statusUrl' => route('boshqaruv.orders.status', $order),
             'labelUrl' => route('boshqaruv.orders.print.label', $order),
@@ -13084,6 +13086,8 @@ PROMPT;
         return [
             'id' => '#'.$order->id,
             'rawId' => $order->id,
+            'source' => $order->order_source ?: 'app',
+            'sourceLabel' => ($order->order_source ?: 'app') === 'web' ? 'Veb-sayt' : 'Ilova',
             'customer' => trim(($order->user?->name ?? '').' '.($order->user?->lastname ?? '')) ?: 'Mijoz',
             'user' => $order->user ? [
                 'id' => $order->user->id,
