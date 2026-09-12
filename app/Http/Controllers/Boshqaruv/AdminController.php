@@ -97,6 +97,7 @@ use App\Services\PostalTrackingService;
 use App\Services\ProductModerationStateService;
 use App\Services\SellerCancellationReasonCatalog;
 use App\Services\SellerCommissionService;
+use App\Services\SellerOrderReassignmentService;
 use App\Services\SellerOrderSettlementService;
 use App\Services\SellerPremiumService;
 use App\Services\SplitContractService;
@@ -4206,6 +4207,12 @@ PROMPT;
                 ...$this->sellerOrdersPagePayload(),
                 'sellerOrderCounts' => $this->sellerOrderStatusCounts(),
                 'sellerOrderStatuses' => AdminOrderStatusSyncService::SELLER_STATUSES,
+                // Do'kon-egalik almashtirish uchun tanlov ro'yxati — faqat
+                // superadminga (Layout/HandleInertiaRequests orqali kelgan
+                // admin.isSuperAdmin shu tugmani frontendda ko'rsatadi).
+                'reassignSellers' => Auth::guard('panel')->user()?->isSuperAdmin()
+                    ? $this->reassignableSellersPayload()
+                    : [],
             ],
             'CourierOrders' => [
                 ...$this->couriersPagePayload(),
@@ -7180,7 +7187,44 @@ PROMPT;
             'items' => $items->all(),
             'showUrl' => route('boshqaruv.seller-orders'),
             'statusUrl' => route('boshqaruv.seller-orders.status', $order),
+            // Do'kon-egalik almashtirish — FAQAT superadmin uchun. Boshqa
+            // adminlarga bu maydonlarni hisoblab, keraksiz so'rov (CourierTask
+            // exists() tekshiruvi) qilmaslik uchun faqat superadmin bo'lsa
+            // hisoblanadi (frontend ham admin.isSuperAdmin ga qarab tugmani
+            // ko'rsatadi — ikkala tomonda ham himoya bor).
+            'canReassign' => Auth::guard('panel')->user()?->isSuperAdmin()
+                ? app(SellerOrderReassignmentService::class)->canReassign($order)
+                : false,
+            'reassignUrl' => route('boshqaruv.seller-orders.reassign-seller', $order),
         ];
+    }
+
+    /**
+     * "Do'konni almashtirish" tanlov ro'yxati uchun — faqat faol, asosiy
+     * (xodim/filial emas) do'konlar, do'kon nomi bo'yicha tartiblangan.
+     * Katta ro'yxatlarda sahifa og'irlashmasligi uchun 500 tagacha
+     * cheklangan (marketplace kattalashgani sayin bu yerga qidiruv/typeahead
+     * qo'shish kerak bo'lishi mumkin).
+     */
+    private function reassignableSellersPayload(): array
+    {
+        if (! Schema::hasTable('sellers')) {
+            return [];
+        }
+
+        return Seller::query()
+            ->where('status', 'approved')
+            ->where('is_hidden', false)
+            ->whereNull('parent_id')
+            ->orderBy('shop_name')
+            ->limit(500)
+            ->get(['id', 'shop_name'])
+            ->map(fn (Seller $seller) => [
+                'id' => $seller->id,
+                'name' => $seller->shop_name ?: "#{$seller->id}",
+            ])
+            ->values()
+            ->all();
     }
 
     private function sellerOrderStatusCounts(): array

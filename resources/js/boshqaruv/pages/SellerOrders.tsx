@@ -3,10 +3,15 @@ import { Link, router, usePage } from '@inertiajs/react';
 import { Modal, Button } from 'react-bootstrap';
 import PaginationControls from '../components/PaginationControls';
 import {
-  Seller, SellerOrderRow as SellerOrder, StatusMeta, Counts,
+  Seller, SellerOrderRow as SellerOrder, StatusMeta, Counts, ReassignSellerOption,
   fmt, badgeClass, sellerChip, sellerLabel,
   Info, MapButtons,
 } from '../components/SellerCommon';
+
+// admin.isSuperAdmin — HandleInertiaRequests middleware orqali HAR BIR
+// sahifaga uzatiladigan umumiy (shared) prop (Layout.tsx'da ham shu
+// tipdan foydalaniladi).
+type SharedAdmin = { isSuperAdmin?: boolean };
 
 const sellerTabs = [
   { key: 'pending', label: 'Kutilmoqda', icon: 'bi-hourglass-split' },
@@ -26,6 +31,8 @@ export default function SellerOrders() {
     sellerPagination = { page: 1, totalPages: 1, from: 0, to: 0, total: 0 },
     sellerOrderPagination = { page: 1, totalPages: 1, from: 0, to: 0, total: 0 },
     sellerFilters = {}, sellerOrderFilters = {},
+    reassignSellers = [],
+    admin,
   } = usePage<{
     sellers?: Seller[];
     sellerCounts?: Counts;
@@ -35,13 +42,18 @@ export default function SellerOrders() {
     sellerPagination?: { page: number; totalPages: number; from: number; to: number; total: number };
     sellerOrderPagination?: { page: number; totalPages: number; from: number; to: number; total: number };
     sellerFilters?: { tab?: string; search?: string }; sellerOrderFilters?: { tab?: string; search?: string };
+    reassignSellers?: ReassignSellerOption[];
+    admin?: SharedAdmin;
   }>().props;
+
+  const isSuperAdmin = !!admin?.isSuperAdmin;
 
   const [sellerTab, setSellerTab] = useState(sellerFilters.tab || 'pending');
   const [orderTab, setOrderTab] = useState(sellerOrderFilters.tab || 'all');
   const [sellerSearch, setSellerSearch] = useState(sellerFilters.search || '');
   const [orderSearch, setOrderSearch] = useState(sellerOrderFilters.search || '');
   const [selectedOrder, setSelectedOrder] = useState<SellerOrder | null>(null);
+  const [reassignOrder, setReassignOrder] = useState<SellerOrder | null>(null);
 
   const totalBalance = useMemo(() => sellers.reduce((sum, seller) => sum + (seller.balance || 0), 0), [sellers]);
   const orderStatusTabs = [{ key: 'all', label: 'Barchasi' }, ...Object.entries(sellerOrderStatuses).map(([key, meta]) => ({ key, label: meta.label }))];
@@ -63,6 +75,14 @@ export default function SellerOrders() {
   const resetPassword = (seller: Seller) => {
     if (!seller.actions?.resetPasswordUrl || !confirm(`${seller.name} uchun yangi parol SMS orqali yuborilsinmi?`)) return;
     router.post(seller.actions.resetPasswordUrl, {}, { preserveScroll: true });
+  };
+
+  const submitReassign = (sellerId: number) => {
+    if (!reassignOrder?.reassignUrl) return;
+    router.post(reassignOrder.reassignUrl, { seller_id: sellerId }, {
+      preserveScroll: true,
+      onSuccess: () => setReassignOrder(null),
+    });
   };
 
   return (
@@ -212,7 +232,14 @@ export default function SellerOrders() {
                     </select>
                   </td>
                   <td className="text-muted">{order.date || order.acceptedAt || '—'}</td>
-                  <td><button className="btn btn-sm btn-light" onClick={() => setSelectedOrder(order)}><i className="bi bi-eye"></i></button></td>
+                  <td>
+                    <div className="d-flex align-items-center gap-1">
+                      <button className="btn btn-sm btn-light" onClick={() => setSelectedOrder(order)} title="Ko'rish"><i className="bi bi-eye"></i></button>
+                      {isSuperAdmin && order.canReassign ? (
+                        <button className="btn btn-sm btn-light" onClick={() => setReassignOrder(order)} title="Do'konni almashtirish"><i className="bi bi-arrow-left-right"></i></button>
+                      ) : null}
+                    </div>
+                  </td>
                 </tr>
               ))}
               {sellerOrderPagination.total === 0 ? <tr><td colSpan={8} className="text-center text-muted py-5">Hech qanday buyurtma topilmadi</td></tr> : null}
@@ -223,7 +250,55 @@ export default function SellerOrders() {
       </div>
 
       <OrderModal order={selectedOrder} statuses={sellerOrderStatuses} onHide={() => setSelectedOrder(null)} onPatch={runPatch} />
+      <ReassignSellerModal order={reassignOrder} sellers={reassignSellers} onHide={() => setReassignOrder(null)} onSubmit={submitReassign} />
     </div>
+  );
+}
+
+function ReassignSellerModal({ order, sellers, onHide, onSubmit }: {
+  order: SellerOrder | null;
+  sellers: ReassignSellerOption[];
+  onHide: () => void;
+  onSubmit: (sellerId: number) => void;
+}) {
+  const [sellerId, setSellerId] = useState<string>('');
+
+  return (
+    <Modal show={!!order} onHide={onHide} centered onExited={() => setSellerId('')}>
+      <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">Do'konni almashtirish</Modal.Title></Modal.Header>
+      <Modal.Body>
+        {!order ? null : (
+          <div>
+            <p className="text-muted mb-3">
+              Seller order #{order.id} (asosiy buyurtma #{order.orderId || '—'}) hozir <strong>{order.seller}</strong> do'koniga tegishli.
+              Bu amal — faqat buyurtma hali qabul qilinmagan/kuryerga topshirilmagan holatda mumkin — do'kon egaligini butunlay boshqa
+              do'konga o'tkazadi (narx, mahsulot, manzil o'zgarmaydi).
+            </p>
+            <label className="form-label fw-semibold">Yangi do'kon</label>
+            <select className="form-select" value={sellerId} onChange={(e) => setSellerId(e.target.value)}>
+              <option value="">— tanlang —</option>
+              {sellers.filter((s) => s.id !== order.sellerId).map((s) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
+      </Modal.Body>
+      <Modal.Footer>
+        <Button variant="light" onClick={onHide}>Bekor qilish</Button>
+        <Button
+          variant="primary"
+          disabled={!sellerId}
+          onClick={() => {
+            if (!sellerId) return;
+            if (!confirm("Buyurtma egaligini boshqa do'konga o'tkazishni tasdiqlaysizmi? Bu amalni qaytarib bo'lmaydi.")) return;
+            onSubmit(Number(sellerId));
+          }}
+        >
+          Tasdiqlash
+        </Button>
+      </Modal.Footer>
+    </Modal>
   );
 }
 

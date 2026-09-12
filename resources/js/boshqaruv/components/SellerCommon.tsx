@@ -92,6 +92,7 @@ export interface Seller {
 export interface SellerOrderRow {
   id: number;
   orderId?: number;
+  sellerId?: number;
   seller: string;
   sellerOwner?: string;
   sellerPhone?: string;
@@ -112,7 +113,14 @@ export interface SellerOrderRow {
   summary?: { itemsCount?: number; itemsTotal?: number };
   items?: Array<{ name: string; type?: string; quantity: number; price: number; author?: string | null }>;
   statusUrl?: string;
+  // Do'kon-egalik almashtirish — faqat superadmin uchun (backend
+  // canReassign'ni faqat superadmin bo'lsa hisoblaydi, boshqalarga har doim
+  // false keladi).
+  canReassign?: boolean;
+  reassignUrl?: string;
 }
+
+export type ReassignSellerOption = { id: number; name: string };
 
 export const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n || 0);
 

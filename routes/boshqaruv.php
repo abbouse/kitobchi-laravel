@@ -145,6 +145,9 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
             Route::delete('/sellers/{seller}/documents/{document}', [\App\Http\Controllers\A122\SellerController::class, 'deleteDocument'])->name('sellers.documents.destroy');
             Route::patch('/seller-orders/{sellerOrder}/status', [\App\Http\Controllers\A122\SellerOrderController::class, 'updateStatus'])->name('seller-orders.status');
             Route::post('/seller-orders/{sellerOrder}/refund', [\App\Http\Controllers\A122\OrderController::class, 'refundSellerOrder'])->name('seller-orders.refund');
+            // Do'kon-egalik almashtirish — FAQAT superadmin (controller ichida tekshiriladi); shu route guruhi
+            // 'sellers' moduliga ruxsati bor har qanday admin uchun ochiq, lekin reassignSeller() ularni bloklaydi.
+            Route::post('/seller-orders/{sellerOrder}/reassign-seller', [\App\Http\Controllers\A122\OrderController::class, 'reassignSeller'])->name('seller-orders.reassign-seller');
             Route::post('/seller-order-items/{sellerOrderItem}/refund', [\App\Http\Controllers\A122\OrderController::class, 'refundSellerOrderItem'])->name('seller-order-items.refund');
         });
 

@@ -29,6 +29,7 @@ use App\Services\OrderStatusPushService;
 use App\Services\PostalResendService;
 use App\Services\SellerCancellationReasonCatalog;
 use App\Services\SellerOrderCancellationService;
+use App\Services\SellerOrderReassignmentService;
 use App\Services\SellerOrderSettlementService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -47,6 +48,7 @@ class OrderController extends Controller
         private readonly HubPrintViewService $hubPrintViewService,
         private readonly AdminPaidOrderRefundService $adminPaidOrderRefundService,
         private readonly SellerOrderCancellationService $sellerOrderCancellationService,
+        private readonly SellerOrderReassignmentService $sellerOrderReassignmentService,
     ) {}
 
     public function index(Request $request)
@@ -585,6 +587,41 @@ class OrderController extends Controller
             );
 
             return back()->with('success', 'Seller order bo‘yicha refund va bekor qilish bajarildi.');
+        } catch (\Throwable $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
+
+    /**
+     * Buyurtmaning bitta do'konga tegishli qismini (SellerOrder) boshqa
+     * do'konga qayta biriktiradi. FAQAT superadmin uchun (2026-09) — oddiy
+     * admin, hatto 'sellers' moduliga ruxsati bo'lsa ham, buni qila olmaydi.
+     * Amaliy cheklovlar (buyurtma "yosh"ligi, kuryer topshirig'i yo'qligi
+     * va h.k.) SellerOrderReassignmentService ichida tekshiriladi.
+     */
+    public function reassignSeller(Request $request, SellerOrder $sellerOrder)
+    {
+        $admin = Auth::guard('panel')->user();
+        if (! $admin || ! $admin->isSuperAdmin()) {
+            return back()->with('error', 'Bu amal faqat superadmin uchun ruxsat etilgan.');
+        }
+
+        $data = $request->validate([
+            'seller_id' => ['required', 'integer', 'exists:sellers,id'],
+            'reason' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $newSeller = Seller::query()->findOrFail((int) $data['seller_id']);
+
+        try {
+            $this->sellerOrderReassignmentService->reassign(
+                $admin,
+                $sellerOrder,
+                $newSeller,
+                $request->filled('reason') ? (string) $request->input('reason') : null,
+            );
+
+            return back()->with('success', "Buyurtma \"{$newSeller->shop_name}\" do'koniga o'tkazildi.");
         } catch (\Throwable $e) {
             return back()->with('error', $e->getMessage());
         }
