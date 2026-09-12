@@ -2,8 +2,10 @@
 
 namespace App\Jobs;
 
+use App\Models\BookClub;
 use App\Models\BookClubNotification;
 use App\Models\User;
+use App\Services\BookClubAiScoringService;
 use App\Services\BookClubNotificationTextService;
 use App\Services\FcmRecipientService;
 use Illuminate\Bus\Queueable;
@@ -29,6 +31,17 @@ class SendBookClubPushNotification implements ShouldQueue
     {
         $n = BookClubNotification::find($this->notificationId);
         if (!$n || $n->is_read) return;
+
+        // YANGI QOIDA (2026-09-12): "yangi post" turidagi push AI sifat bahosi
+        // past bo'lsa YUBORILMAYDI — lekin post o'zi baribir sayt/ilovada
+        // ko'rinishda qoladi (AI postni yashira olmaydi, faqat SHU push'ni
+        // to'xtata oladi). Bu job navbatda ishlagani uchun (foydalanuvchi
+        // so'rovini bloklamaydi) baholashni shu yerda, kerak bo'lsa, darhol
+        // qilamiz — kunlik `openai:score-book-club-content` jadvaliga
+        // qaramaydi.
+        if ($n->type === 'new_post' && $n->post_id && $this->shouldSuppressForLowAiScore((int) $n->post_id)) {
+            return;
+        }
 
         $receiver = User::find($n->user_id);
         if (!$receiver) return;
@@ -61,5 +74,37 @@ class SendBookClubPushNotification implements ShouldQueue
         ]);
 
         app(PushController::class)->sendPush($pushRequest);
+    }
+
+    /**
+     * Post hali AI tomonidan baholanmagan bo'lsa, shu yerda (navbatda,
+     * foydalanuvchini kutdirmasdan) baholaymiz, so'ng natijani chegara bilan
+     * solishtiramiz. AI xato bersa yoki baho hali yo'q bo'lsa — fail-open,
+     * ya'ni push YUBORILADI (postni bekorga jimlashtirmaslik uchun).
+     */
+    private function shouldSuppressForLowAiScore(int $postId): bool
+    {
+        $post = BookClub::query()->find($postId);
+        if (!$post || $post->is_deleted) {
+            return false;
+        }
+
+        if ($post->ai_post_score === null) {
+            try {
+                app(BookClubAiScoringService::class)->scorePosts(collect([$post]));
+                $post = $post->fresh();
+            } catch (\Throwable $e) {
+                // Baholay olmadik — fail-open, push to'xtatilmaydi.
+                return false;
+            }
+        }
+
+        if (!$post || $post->ai_post_score === null) {
+            return false;
+        }
+
+        $minScore = (float) config('book_club_moderation.push_min_score', 3.0);
+
+        return (float) $post->ai_post_score < $minScore;
     }
 }

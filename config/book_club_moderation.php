@@ -9,6 +9,14 @@ return [
     'post_limit' => (int) env('BOOK_CLUB_MODERATION_POST_LIMIT', 150),
     'comment_limit' => (int) env('BOOK_CLUB_MODERATION_COMMENT_LIMIT', 300),
 
+    // Yangi post uchun push (FCM) ogohlantirish shu 1-5 ballik AI sifat
+    // bahosidan (ai_post_score) past bo'lsa YUBORILMAYDI — lekin post o'zi
+    // baribir e'lon qilingan va ko'rinishda qoladi (faqat push bosiladi,
+    // AI postni hech qachon yashira olmaydi — SendBookClubPushNotification
+    // job'iga qarang). Baho hali mavjud bo'lmasa (masalan AI xizmati
+    // ulanmagan/xato bergan bo'lsa), fail-open — push yuboriladi.
+    'push_min_score' => (float) env('BOOK_CLUB_MODERATION_PUSH_MIN_SCORE', 3.0),
+
     // AI "hide" qarori shu ishonchdan past bo'lsa — yashirmaymiz (ko'rsatamiz).
     // Og'ir toifalar (scam, jinsiy, nafrat, tahdid, noqonuniy, xavfli link) uchun
     // pastroq bo'sag'a; oddiy toifalar (spam, ma'nosiz) uchun yuqoriroq.

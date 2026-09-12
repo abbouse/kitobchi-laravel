@@ -136,9 +136,15 @@ PROMPT,
                 ''
             );
 
+            // ESLATMA (2026-09-12): bu servis hozircha ishlatilmaydi (dead code —
+            // hech qayerdan chaqirilmaydi, jadval BookClubContentModerationService
+            // orqali ishlaydi). Lekin ehtiyot chorasi sifatida shu yerda ham
+            // is_hidden_by_ai maydoniga tegilmaydi va status nomlanishi
+            // BookClubContentModerationService bilan bir xil qilib qo'yildi —
+            // AI hech qachon, hech qanday yo'l bilan kommentni o'zi yashira
+            // olmasin (yashirish huquqi faqat admin qo'lida).
             $comment->forceFill([
-                'is_hidden_by_ai' => $action === 'hide',
-                'ai_moderation_status' => $action === 'hide' ? 'hidden' : 'clean',
+                'ai_moderation_status' => $action === 'hide' ? 'ai_flagged' : 'ai_clean',
                 'ai_moderated_at' => now(),
                 'ai_moderation_note' => $moderationNote,
                 'ai_moderation_model' => self::OPENAI_MODEL,
@@ -147,7 +153,7 @@ PROMPT,
 
         Log::info('BookClub comments moderated by AI', [
             'count' => $comments->count(),
-            'hidden' => $comments->where('is_hidden_by_ai', true)->count(),
+            'flagged' => $comments->where('ai_moderation_status', 'ai_flagged')->count(),
         ]);
     }
 }

@@ -85,10 +85,17 @@ class BookClubContentPolicy
         $inspection = $this->inspect($content);
 
         return [
-            // Optimistik: default ko'rinadi. Faqat hold_pending yoqilgan bo'lsa yoki
-            // deyarli aniq spam/scam (severe_risk) bo'lsagina darhol yashiriladi.
-            'is_hidden_by_ai' => (bool) config('book_club_moderation.hold_pending', false)
-                || (bool) $inspection['severe_risk'],
+            // QOIDA (2026-09-12'dan): avtomatik tizim (AI yoki bu regex-siyosat)
+            // postni HECH QACHON o'zi yashira olmaydi — yozilgan post doim
+            // darhol ko'rinadi. Yashirish huquqi FAQAT admin qo'lida
+            // (boshqaruv > Book Club > "Yashirish", applyManualBookClubModeration()).
+            // "severe_risk" (aniq spam/scam link) topilgan bo'lsa ham post
+            // yashirilmaydi — buning o'rniga ai_moderation_meta'dagi
+            // severe_risk=true belgisi orqali admin panelida tezda ko'rinadi,
+            // va navbatdagi AI moderatsiya sikli (~5 daqiqa) uni "AI tavsiya:
+            // yashirish" deb belgilab qo'yadi (BookClubContentModerationService)
+            // — lekin bu ham faqat TAVSIYA, haqiqiy yashirish emas.
+            'is_hidden_by_ai' => false,
             'ai_moderation_status' => 'pending',
             'ai_moderated_at' => null,
             'ai_moderation_note' => null,

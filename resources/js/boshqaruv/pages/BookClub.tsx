@@ -68,6 +68,51 @@ type PostDetail = {
 
 const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n || 0);
 
+// AI moderatsiya statusi endi FAQAT tavsiya ma'nosini bildiradi — 2026-09
+// dan boshlab AI postni/kommentariyani o'zi yashira olmaydi (buni faqat
+// admin qila oladi, quyidagi hiddenByAi/manual_* qiymatlari orqali).
+// 'ai_flagged'/'ai_clean' — AI tavsiyasi (eski 'hidden'/'clean' nomlari
+// o'rniga, chalkashlikni oldini olish uchun); 'manual_hidden'/'manual_clean'
+// — admin qo'lda qabul qilgan qaror; eski ma'lumotlarda hali ham
+// 'hidden'/'clean' uchrashi mumkin (migratsiyadan oldingi holat).
+function moderationLabel(status?: string | null): string {
+  switch (status) {
+    case 'ai_flagged':
+    case 'hidden':
+      return 'AI tavsiyasi: yashirish';
+    case 'ai_clean':
+    case 'clean':
+      return 'AI tavsiyasi: toza';
+    case 'manual_hidden':
+      return 'Admin yashirgan';
+    case 'manual_clean':
+      return 'Admin tozalagan';
+    case 'pending':
+    case undefined:
+    case null:
+    case '':
+      return 'Kutilmoqda';
+    default:
+      return status;
+  }
+}
+
+function moderationChipClass(status?: string | null): string {
+  switch (status) {
+    case 'ai_flagged':
+    case 'hidden':
+      return 'chip-warning';
+    case 'ai_clean':
+    case 'clean':
+    case 'manual_clean':
+      return 'chip-success';
+    case 'manual_hidden':
+      return 'chip-danger';
+    default:
+      return 'chip-gray';
+  }
+}
+
 export default function BookClub() {
   const { bookClubPosts = [] } = usePage<{ bookClubPosts?: Post[] }>().props;
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
@@ -172,7 +217,7 @@ export default function BookClub() {
                     <span className="btn btn-sm btn-light"><i className="bi bi-heart-fill text-danger"></i> {post.likes}</span>
                     <button className="btn btn-sm btn-light" onClick={() => openDetail(post)}><i className="bi bi-chat"></i> {post.comments}</button>
                     <span className={`chip ${post.aiStatus === 'scored' ? 'chip-success' : post.aiStatus === 'failed' ? 'chip-danger' : 'chip-gray'}`}>AI: {post.aiStatus || '—'} {post.aiScore ?? ''}</span>
-                    <span className={`chip ${post.hiddenByAi ? 'chip-danger' : post.moderationStatus === 'clean' || post.moderationStatus === 'manual_clean' ? 'chip-success' : 'chip-gray'}`}>Moderatsiya: {post.moderationStatus || 'pending'}</span>
+                    <span className={`chip ${moderationChipClass(post.moderationStatus)}`}>Moderatsiya: {moderationLabel(post.moderationStatus)}</span>
                     <button className="btn btn-sm btn-light ms-auto" onClick={() => openDetail(post)} title="Tafsilot"><i className="bi bi-eye"></i></button>
                     <button className="btn btn-sm btn-light" onClick={() => warn(post)} title="Ogohlantirish"><i className="bi bi-flag"></i></button>
                     <button className="btn btn-sm btn-light text-danger" onClick={() => destroy(post)} title="O'chirish"><i className="bi bi-trash"></i></button>
@@ -229,7 +274,7 @@ export default function BookClub() {
                   </div>
                   {detail.post.aiNote ? <div className="text-muted mt-3">{detail.post.aiNote}</div> : null}
                   <div className="row g-3 mt-1">
-                    <Info label="Moderatsiya" value={detail.post.moderationStatus || 'pending'} />
+                    <Info label="Moderatsiya" value={moderationLabel(detail.post.moderationStatus)} />
                     <Info label="Moderatsiya modeli" value={detail.post.moderationModel || '—'} />
                     <Info label="Moderatsiya vaqti" value={detail.post.moderatedAt || '—'} />
                     <Info label="Ko‘rinish" value={detail.post.hiddenByAi ? 'Yashirilgan' : 'Ochiq'} />
@@ -341,7 +386,7 @@ function CommentCard({ comment, onEdit, onDelete, onModerate }: { comment: Comme
           <div className="text-muted mt-2" style={{ whiteSpace: 'pre-line' }}>{comment.content}</div>
           <div className="d-flex gap-2 flex-wrap mt-2">
             <span className="chip chip-info">AI: {comment.aiStatus || '—'} {comment.aiScore ?? ''}</span>
-            {comment.moderationStatus ? <span className="chip chip-warning">{comment.moderationStatus}</span> : null}
+            {comment.moderationStatus ? <span className={`chip ${moderationChipClass(comment.moderationStatus)}`}>{moderationLabel(comment.moderationStatus)}</span> : null}
             <button className={`btn btn-sm btn-light ${comment.hiddenByAi ? 'text-success' : 'text-secondary'}`} onClick={() => onModerate(comment.moderationUrl, !comment.hiddenByAi)} title={comment.hiddenByAi ? 'Qayta ochish' : 'Yashirish'}><i className={`bi ${comment.hiddenByAi ? 'bi-eye' : 'bi-eye-slash'}`}></i></button>
             <button className="btn btn-sm btn-light ms-auto" onClick={onEdit}><i className="bi bi-pencil"></i></button>
             <button className="btn btn-sm btn-light text-danger" onClick={() => onDelete(comment.destroyUrl)}><i className="bi bi-trash"></i></button>

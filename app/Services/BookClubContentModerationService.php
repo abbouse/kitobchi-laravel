@@ -249,15 +249,13 @@ PROMPT,
 
     private function holdPendingChunk(Collection $chunk): void
     {
-        if (! config('book_club_moderation.hold_pending', true)) {
-            return;
-        }
-
-        foreach ($chunk as $item) {
-            if (in_array($item['model']->ai_moderation_status, [null, 'pending', 'failed'], true)) {
-                $item['model']->forceFill(['is_hidden_by_ai' => true])->save();
-            }
-        }
+        // QOIDA (2026-09-12'dan): AI/avtomatik tizim postni/izohni HECH QACHON
+        // o'zi yashira olmaydi — shu jumladan "hold_pending" rejimida ham.
+        // Yashirish huquqi endi FAQAT admin qo'lida. Bu metod ilgari
+        // "hold_pending" yoqilganda AI qaror qilguncha kontentni vaqtincha
+        // yashirar edi; endi u hech narsa qilmaydi (config kaliti moslik
+        // uchun saqlab qolingan, lekin amalda ta'sir qilmaydi).
+        return;
     }
 
     private function storeDecision(
@@ -268,9 +266,16 @@ PROMPT,
         float $confidence,
         array $policy,
     ): void {
+        // QOIDA (2026-09-12'dan): bu servis ENDI faqat TAVSIYA yozadi — u
+        // is_hidden_by_ai maydonini hech qachon o'zgartirmaydi. Haqiqiy
+        // ko'rinish holatini FAQAT admin (Boshqaruv > Book Club >
+        // applyManualBookClubModeration()) belgilaydi. 'ai_flagged'/'ai_clean'
+        // qiymatlari admin paneliga "AI shu postni yashirishni tavsiya qiladi"
+        // degan signal sifatida ko'rsatiladi, lekin postning o'zi ko'rinishda
+        // qoladi — avvalgi 'hidden'/'clean' nomlanishi chalkashtirar edi
+        // (chunki ular postni HAQIQATAN yashirar ham edi).
         $model->forceFill([
-            'is_hidden_by_ai' => $action === 'hide',
-            'ai_moderation_status' => $action === 'hide' ? 'hidden' : 'clean',
+            'ai_moderation_status' => $action === 'hide' ? 'ai_flagged' : 'ai_clean',
             'ai_moderated_at' => now(),
             'ai_moderation_note' => Str::limit($reason.($note !== '' ? ': '.$note : ''), 255, ''),
             'ai_moderation_model' => self::MODEL,
@@ -285,9 +290,8 @@ PROMPT,
     private function markFailed(BookClub|BookClubComment $model, array $policy, string $message): void
     {
         $model->forceFill([
-            // Fail-open: AI javob bermasa ham zararsiz kontentni yashirmaymiz —
-            // joriy ko'rinish saqlanadi (keyingi urinishda qayta baholanadi).
-            'is_hidden_by_ai' => (bool) $model->is_hidden_by_ai,
+            // is_hidden_by_ai bu yerda ENDI umuman qo'zg'atilmaydi — u faqat
+            // admin qo'li bilan o'zgaradi (yuqoridagi izohga qarang).
             'ai_moderation_status' => 'failed',
             'ai_moderated_at' => now(),
             'ai_moderation_note' => $message,
