@@ -7270,15 +7270,35 @@ PROMPT;
         // bu ustunda asosiy do'konlar ko'pincha NULL emas, balki 0 qiymatga
         // ega (boshqa joylarda, masalan sellersPagePayload()dagi $base
         // yopilishida, aynan shu sabab whereNull(...)->orWhere('parent_id', 0)
-        // ishlatiladi). Natijada bu yerga HECH QANDAY seller tushmay, "Do'konni
-        // almashtirish" oynasidagi tanlov ro'yxati doim bo'sh chiqqan edi.
-        return Seller::query()
+        // ishlatiladi). Bu birinchi tuzatishdan keyin ham ro'yxat bo'sh
+        // chiqishda davom etdi — demak productionda "status=approved" va/yoki
+        // "is_hidden=false" shartlariga mos asosiy do'kon yo'q edi (masalan,
+        // status boshqa qiymatda bo'lishi yoki barcha asosiy do'konlar
+        // is_hidden=true bo'lib qolgan bo'lishi mumkin). Foydalanuvchi aniq
+        // aytgan yagona qoida shu: parent_id mavjud bo'lsa — hodim, mavjud
+        // bo'lmasa (yoki 0) — do'kon, xolos. Shu sabab endi avval "toza"
+        // (tasdiqlangan + yashirin bo'lmagan) ro'yxat sinaladi, lekin u BO'SH
+        // chiqsa — bo'sh oyna ko'rsatish o'rniga faqat parent_id qoidasiga
+        // qarab HAMMA asosiy do'kon qaytariladi.
+        $mainSellerScope = fn ($query) => $query->whereNull('parent_id')->orWhere('parent_id', 0);
+
+        $strictSellers = Seller::query()
             ->where('status', 'approved')
             ->where('is_hidden', false)
-            ->where(fn ($query) => $query->whereNull('parent_id')->orWhere('parent_id', 0))
+            ->where($mainSellerScope)
             ->orderBy('shop_name')
             ->limit(500)
-            ->get(['id', 'shop_name'])
+            ->get(['id', 'shop_name']);
+
+        $sellers = $strictSellers->isNotEmpty()
+            ? $strictSellers
+            : Seller::query()
+                ->where($mainSellerScope)
+                ->orderBy('shop_name')
+                ->limit(500)
+                ->get(['id', 'shop_name']);
+
+        return $sellers
             ->map(fn (Seller $seller) => [
                 'id' => $seller->id,
                 'name' => $seller->shop_name ?: "#{$seller->id}",
