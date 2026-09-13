@@ -7270,38 +7270,25 @@ PROMPT;
         // bu ustunda asosiy do'konlar ko'pincha NULL emas, balki 0 qiymatga
         // ega (boshqa joylarda, masalan sellersPagePayload()dagi $base
         // yopilishida, aynan shu sabab whereNull(...)->orWhere('parent_id', 0)
-        // ishlatiladi). Bu birinchi tuzatishdan keyin ham ro'yxat bo'sh
-        // chiqishda davom etdi — demak productionda "status=approved" va/yoki
-        // "is_hidden=false" shartlariga mos asosiy do'kon yo'q edi (masalan,
-        // status boshqa qiymatda bo'lishi yoki barcha asosiy do'konlar
-        // is_hidden=true bo'lib qolgan bo'lishi mumkin). Foydalanuvchi aniq
-        // aytgan yagona qoida shu: parent_id mavjud bo'lsa — hodim, mavjud
-        // bo'lmasa (yoki 0) — do'kon, xolos. Shu sabab endi avval "toza"
-        // (tasdiqlangan + yashirin bo'lmagan) ro'yxat sinaladi, lekin u BO'SH
-        // chiqsa — bo'sh oyna ko'rsatish o'rniga faqat parent_id qoidasiga
-        // qarab HAMMA asosiy do'kon qaytariladi.
-        $mainSellerScope = fn ($query) => $query->whereNull('parent_id')->orWhere('parent_id', 0);
-
-        $strictSellers = Seller::query()
-            ->where('status', 'approved')
-            ->where('is_hidden', false)
-            ->where($mainSellerScope)
+        // ishlatiladi). Avval bu yerga qo'shimcha ravishda status='approved'
+        // va is_hidden=false shartlari ham qo'yilgan edi, lekin foydalanuvchi
+        // aniq talab qildi: "aktiv bo'lmasa ham qidirib topaverish kerak" —
+        // ya'ni bloklangan/kutilayotgan/yashirin do'konlar ham qidiruvda
+        // chiqishi va tanlash mumkin bo'lishi kerak (masalan id=1 kabi
+        // hozircha aktiv bo'lmagan do'kon ham topilishi kerak edi). Shu sabab
+        // status/is_hidden filtri butunlay olib tashlandi — yagona shart
+        // foydalanuvchi tasvirlagan qoida: parent_id yo'q yoki 0 bo'lsa —
+        // do'kon, xolos. Frontendda holati (faol/aktiv emas) alohida
+        // ko'rsatiladi, lekin tanlashga to'sqinlik qilmaydi.
+        return Seller::query()
+            ->where(fn ($query) => $query->whereNull('parent_id')->orWhere('parent_id', 0))
             ->orderBy('shop_name')
-            ->limit(500)
-            ->get(['id', 'shop_name']);
-
-        $sellers = $strictSellers->isNotEmpty()
-            ? $strictSellers
-            : Seller::query()
-                ->where($mainSellerScope)
-                ->orderBy('shop_name')
-                ->limit(500)
-                ->get(['id', 'shop_name']);
-
-        return $sellers
+            ->limit(1000)
+            ->get(['id', 'shop_name', 'status', 'is_hidden'])
             ->map(fn (Seller $seller) => [
                 'id' => $seller->id,
                 'name' => $seller->shop_name ?: "#{$seller->id}",
+                'isActive' => $seller->status === 'approved' && ! $seller->is_hidden,
             ])
             ->values()
             ->all();

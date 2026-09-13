@@ -121,7 +121,7 @@ export interface SellerOrderRow {
   reassignUrl?: string;
 }
 
-export type ReassignSellerOption = { id: number; name: string };
+export type ReassignSellerOption = { id: number; name: string; isActive?: boolean };
 
 export const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n || 0);
 
@@ -290,7 +290,12 @@ export function ReassignSellerModal({ order, sellers, onHide, onSubmit }: {
             <label className="form-label fw-semibold">Yangi do'kon</label>
             {selected ? (
               <div className="d-flex align-items-center justify-content-between border rounded-3 px-3 py-2">
-                <span className="fw-semibold">{selected.name}</span>
+                <span className="fw-semibold">
+                  {selected.name}
+                  {selected.isActive === false && (
+                    <span className="badge bg-warning-subtle text-warning-emphasis ms-2">aktiv emas</span>
+                  )}
+                </span>
                 <button type="button" className="btn btn-sm btn-link text-decoration-none p-0" onClick={() => setSelected(null)}>
                   O'zgartirish
                 </button>
@@ -318,6 +323,9 @@ export function ReassignSellerModal({ order, sellers, onHide, onSubmit }: {
                           onClick={() => { setSelected(s); setQuery(''); }}
                         >
                           {s.name}
+                          {s.isActive === false && (
+                            <span className="badge bg-warning-subtle text-warning-emphasis ms-2">aktiv emas</span>
+                          )}
                         </button>
                       ))
                     )}
