@@ -5,7 +5,7 @@ import PaginationControls from '../components/PaginationControls';
 import {
   Seller, SellerOrderRow as SellerOrder, StatusMeta, Counts, ReassignSellerOption,
   fmt, badgeClass, sellerChip, sellerLabel,
-  Info, MapButtons,
+  Info, MapButtons, ReassignSellerModal,
 } from '../components/SellerCommon';
 
 // admin.isSuperAdmin — HandleInertiaRequests middleware orqali HAR BIR
@@ -255,52 +255,6 @@ export default function SellerOrders() {
   );
 }
 
-function ReassignSellerModal({ order, sellers, onHide, onSubmit }: {
-  order: SellerOrder | null;
-  sellers: ReassignSellerOption[];
-  onHide: () => void;
-  onSubmit: (sellerId: number) => void;
-}) {
-  const [sellerId, setSellerId] = useState<string>('');
-
-  return (
-    <Modal show={!!order} onHide={onHide} centered onExited={() => setSellerId('')}>
-      <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">Do'konni almashtirish</Modal.Title></Modal.Header>
-      <Modal.Body>
-        {!order ? null : (
-          <div>
-            <p className="text-muted mb-3">
-              Seller order #{order.id} (asosiy buyurtma #{order.orderId || '—'}) hozir <strong>{order.seller}</strong> do'koniga tegishli.
-              Bu amal — faqat buyurtma hali qabul qilinmagan/kuryerga topshirilmagan holatda mumkin — do'kon egaligini butunlay boshqa
-              do'konga o'tkazadi (narx, mahsulot, manzil o'zgarmaydi).
-            </p>
-            <label className="form-label fw-semibold">Yangi do'kon</label>
-            <select className="form-select" value={sellerId} onChange={(e) => setSellerId(e.target.value)}>
-              <option value="">— tanlang —</option>
-              {sellers.filter((s) => s.id !== order.sellerId).map((s) => (
-                <option key={s.id} value={s.id}>{s.name}</option>
-              ))}
-            </select>
-          </div>
-        )}
-      </Modal.Body>
-      <Modal.Footer>
-        <Button variant="light" onClick={onHide}>Bekor qilish</Button>
-        <Button
-          variant="primary"
-          disabled={!sellerId}
-          onClick={() => {
-            if (!sellerId) return;
-            if (!confirm("Buyurtma egaligini boshqa do'konga o'tkazishni tasdiqlaysizmi? Bu amalni qaytarib bo'lmaydi.")) return;
-            onSubmit(Number(sellerId));
-          }}
-        >
-          Tasdiqlash
-        </Button>
-      </Modal.Footer>
-    </Modal>
-  );
-}
 
 function OrderModal({ order, statuses, onHide, onPatch }: {
   order: SellerOrder | null;

@@ -1,4 +1,5 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
+import { Modal, Button } from 'react-bootstrap';
 
 // ── Sellerlar bo'limi uchun umumiy tip va yordamchilar ───────────────────
 // SellerOrders (ro'yxat), SellerDetail (profil) va SellerEdit (tahrirlash)
@@ -230,5 +231,68 @@ export function SectionTitle({ title, hint }: { title: string; hint?: string }) 
       <h6 className="fw-bold mb-0">{title}</h6>
       {hint ? <div className="text-muted small">{hint}</div> : null}
     </div>
+  );
+}
+
+
+// ── Do'kon-egalik almashtirish modali ────────────────────────────────────
+// SellerOrders.tsx VA Orders.tsx (asosiy Buyurtmalar sahifasi) ikkalasida
+// ham ishlatiladi — shu sabab shu yerga (umumiy joyga) chiqarilgan, aks
+// holda ikki nusxa vaqt o'tishi bilan bir-biridan farqlanib qolishi mumkin
+// edi. Ikkala sahifaning o'z (bir-biridan biroz farqli) SellerOrder
+// tiplari bor, shu sabab bu yerda faqat HAQIQATDA kerak bo'lgan
+// maydonlarga ega minimal (strukturaviy mos keluvchi) tip ishlatiladi.
+export type ReassignableSellerOrder = {
+  id: number;
+  orderId?: number;
+  sellerId?: number;
+  seller?: string | null;
+};
+
+export function ReassignSellerModal({ order, sellers, onHide, onSubmit }: {
+  order: ReassignableSellerOrder | null;
+  sellers: ReassignSellerOption[];
+  onHide: () => void;
+  onSubmit: (sellerId: number) => void;
+}) {
+  const [sellerId, setSellerId] = useState<string>('');
+
+  return (
+    <Modal show={!!order} onHide={onHide} centered onExited={() => setSellerId('')}>
+      <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">Do'konni almashtirish</Modal.Title></Modal.Header>
+      <Modal.Body>
+        {!order ? null : (
+          <div>
+            <p className="text-muted mb-3">
+              Seller order #{order.id} (asosiy buyurtma #{order.orderId || '—'}) hozir <strong>{order.seller}</strong> do'koniga tegishli.
+              Bu amal — do'kon buyurtmani hali kuryerga topshirmagan bo'lsa (qabul qilgan bo'lsa ham mumkin) — egalikni butunlay
+              boshqa do'konga o'tkazadi: narx, mahsulot, manzil o'zgarmaydi; eski do'konning ombor zaxirasi avtomatik qaytariladi;
+              yangi do'kon buyurtmani "yangi" sifatida ko'rib, o'zi qabul qilishi kerak bo'ladi.
+            </p>
+            <label className="form-label fw-semibold">Yangi do'kon</label>
+            <select className="form-select" value={sellerId} onChange={(e) => setSellerId(e.target.value)}>
+              <option value="">— tanlang —</option>
+              {sellers.filter((s) => s.id !== order.sellerId).map((s) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
+      </Modal.Body>
+      <Modal.Footer>
+        <Button variant="light" onClick={onHide}>Bekor qilish</Button>
+        <Button
+          variant="primary"
+          disabled={!sellerId}
+          onClick={() => {
+            if (!sellerId) return;
+            if (!confirm("Buyurtma egaligini boshqa do'konga o'tkazishni tasdiqlaysizmi? Bu amalni qaytarib bo'lmaydi.")) return;
+            onSubmit(Number(sellerId));
+          }}
+        >
+          Tasdiqlash
+        </Button>
+      </Modal.Footer>
+    </Modal>
   );
 }

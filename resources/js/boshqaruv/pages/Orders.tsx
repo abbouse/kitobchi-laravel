@@ -3,6 +3,7 @@ import type { FormEvent, ReactNode } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Modal, Button } from 'react-bootstrap';
 import PaginationControls from '../components/PaginationControls';
+import { ReassignSellerModal, ReassignSellerOption } from '../components/SellerCommon';
 
 const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n || 0);
 
@@ -33,6 +34,7 @@ interface OrderItem {
 
 interface SellerOrder {
   id: number;
+  orderId?: number;
   sellerId?: number;
   seller?: string | null;
   sellerPhone?: string | null;
@@ -55,6 +57,9 @@ interface SellerOrder {
   refundStatus?: string | null;
   canRefund?: boolean;
   refundUrl?: string;
+  // Do'kon-egalik almashtirish — FAQAT superadmin uchun (2026-09).
+  canReassign?: boolean;
+  reassignUrl?: string;
 }
 
 interface RefundReasonOption {
@@ -444,18 +449,29 @@ interface PaginationMeta {
 }
 
 export default function Orders() {
-  const { orders = [], orderPagination = { page: 1, totalPages: 1, from: 0, to: 0, total: 0 }, orderCounts = {}, orderFilters = {} } = usePage<{
+  const {
+    orders = [], orderPagination = { page: 1, totalPages: 1, from: 0, to: 0, total: 0 }, orderCounts = {}, orderFilters = {},
+    reassignSellers = [], admin,
+  } = usePage<{
     orders?: Ord[];
     orderPagination?: PaginationMeta;
     orderCounts?: Record<string, number>;
     orderFilters?: { tab?: string; search?: string };
+    // Do'kon-egalik almashtirish (2026-09): tanlov ro'yxati va
+    // superadminlikni bilish uchun — Layout.tsx/HandleInertiaRequests
+    // orqali har bir sahifaga uzatiladigan umumiy (shared) 'admin' propi
+    // (SellerOrders.tsx dagi bilan bir xil pattern).
+    reassignSellers?: ReassignSellerOption[];
+    admin?: { isSuperAdmin?: boolean };
   }>().props;
+  const isSuperAdmin = !!admin?.isSuperAdmin;
   const [activeTab, setActiveTab] = useState(orderFilters.tab || 'pending');
   const [search, setSearch] = useState(orderFilters.search || '');
   const [showView, setShowView] = useState(false);
   const [selectedOrd, setSelectedOrd] = useState<Ord | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [autoOpenedSearch, setAutoOpenedSearch] = useState('');
+  const [reassignOrder, setReassignOrder] = useState<SellerOrder | null>(null);
 
   const loadOrders = (page = 1, tab = activeTab, term = search) => {
     router.get('/boshqaruv/orders', { orders_page: page, orders_tab: tab, orders_search: term }, {
@@ -533,6 +549,22 @@ export default function Orders() {
 
   const showItemRefundColumn = (selectedOrd?.itemsList || []).some((item) => item.canRefund && item.refundUrl);
   const showSellerOrderRefundColumn = (selectedOrd?.sellerOrders || []).some((row) => row.canRefund && row.refundUrl);
+
+  // Do'kon-egalik almashtirish (2026-09) — SellerOrders.tsx dagi bilan bir
+  // xil pattern: tanlangan do'kon o'zgargandan keyin buyurtma tafsilotini
+  // qayta yuklaymiz, shunda "Seller orderlar" jadvali yangilangan egalikni
+  // darhol ko'rsatadi.
+  const submitReassign = (sellerId: number) => {
+    if (!reassignOrder?.reassignUrl) return;
+    const currentOrder = selectedOrd;
+    router.post(reassignOrder.reassignUrl, { seller_id: sellerId }, {
+      preserveScroll: true,
+      onSuccess: () => {
+        setReassignOrder(null);
+        if (currentOrder) loadOrderDetail(currentOrder);
+      },
+    });
+  };
 
   return (
     <div>
@@ -1071,7 +1103,7 @@ export default function Orders() {
 
                 <div className="detail-panel mt-3">
                   <h6 className="fw-bold mb-3">Seller orderlar</h6>
-                  <SellerOrdersTable rows={selectedOrd.sellerOrders || []} reasonOptions={selectedOrd.refundReasonCatalog?.order || []} onSubmit={submitForm} showRefundColumn={showSellerOrderRefundColumn} />
+                  <SellerOrdersTable rows={selectedOrd.sellerOrders || []} reasonOptions={selectedOrd.refundReasonCatalog?.order || []} onSubmit={submitForm} showRefundColumn={showSellerOrderRefundColumn} isSuperAdmin={isSuperAdmin} onReassign={setReassignOrder} />
                 </div>
 
                 <div className="detail-panel mt-3">
@@ -1261,6 +1293,8 @@ export default function Orders() {
           <Button variant="light" onClick={() => setShowView(false)}>Yopish</Button>
         </Modal.Footer>
       </Modal>
+
+      <ReassignSellerModal order={reassignOrder} sellers={reassignSellers} onHide={() => setReassignOrder(null)} onSubmit={submitReassign} />
     </div>
   );
 }
@@ -1381,11 +1415,15 @@ function SellerOrdersTable({
   reasonOptions,
   onSubmit,
   showRefundColumn,
+  isSuperAdmin,
+  onReassign,
 }: {
   rows: SellerOrder[];
   reasonOptions: RefundReasonOption[];
   onSubmit: (event: FormEvent<HTMLFormElement>, url: string | undefined, method?: 'post' | 'patch') => void;
   showRefundColumn: boolean;
+  isSuperAdmin: boolean;
+  onReassign: (row: SellerOrder) => void;
 }) {
   if (!rows.length) {
     return <div className="text-muted small">Seller order topilmadi.</div>;
@@ -1404,6 +1442,7 @@ function SellerOrdersTable({
             <th>Status</th>
             <th>Qabul</th>
             {showRefundColumn ? <th>Refund</th> : null}
+            <th>Amallar</th>
           </tr>
         </thead>
         <tbody>
@@ -1449,6 +1488,16 @@ function SellerOrdersTable({
                   )}
                 </td>
               ) : null}
+              <td>
+                {/* Do'kon-egalik almashtirish (2026-09) — faqat superadmin,
+                    va faqat backend canReassign=true deganda (buyurtma hali
+                    kuryerga topshirilmagan bosqichda). */}
+                {isSuperAdmin && row.canReassign && row.reassignUrl ? (
+                  <button className="btn btn-sm btn-light" onClick={() => onReassign(row)} title="Do'konni almashtirish">
+                    <i className="bi bi-arrow-left-right"></i>
+                  </button>
+                ) : <span className="text-muted small">—</span>}
+              </td>
             </tr>
           ))}
         </tbody>

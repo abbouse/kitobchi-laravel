@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\OrderStatusCode;
+use App\Enums\PaymentStatusCode;
 use App\Enums\SellerOrderStatusCode;
 use App\Models\Admin;
 use App\Models\CourierTask;
@@ -25,19 +26,47 @@ use RuntimeException;
  * vositasi:
  *  - Faqat DO'KON egaligi (seller_id) almashtiriladi. Narx, mahsulot,
  *    manzil va h.k. o'zgarmaydi.
- *  - Faqat buyurtma hali "yosh" bo'lganda ruxsat beriladi — seller order
- *    hali qabul qilinmagan/kuryerga topshirilmagan, va bosh buyurtma hali
- *    yetkazish/yakunlash bosqichiga o'tmagan bo'lishi kerak. Bu bilan
- *    moliyaviy hisob-kitob (baholar, komissiya, seller balansi) va
- *    logistika (kuryer topshiriqlari) allaqachon boshlangan buyurtmalarni
+ *  - Ruxsat quyidagi real hayotiy holatga mo'ljallangan (2026-09,
+ *    foydalanuvchi tasdiqlagan): mijoz A do'konidan buyurtma beradi, A
+ *    buyurtmani QABUL QILADI, lekin keyin mahsulot omborida yo'qligi
+ *    ma'lum bo'ladi va operatorlar uni B do'konidan topib yuboradi. Shu
+ *    sabab reassignment SELLER_ORDER ACCEPTED bosqichida ham ruxsat
+ *    etiladi — faqat kuryerga TOPSHIRILGANDAN keyin (yoki shu do'kon
+ *    uchun kuryer topshirig'i allaqachon yaratilgan bo'lsa) taqiqlanadi,
+ *    chunki shu paytdan boshlab logistika jismonan A do'koni bilan
+ *    bog'langan bo'ladi.
+ *  - Bosh buyurtma hali yetkazish/yakunlash bosqichiga o'tmagan bo'lishi
+ *    kerak. Bu bilan moliyaviy hisob-kitob (baholar, komissiya, seller
+ *    balansi — SellerOrderSettlementService::settleCompletedOrder() FAQAT
+ *    buyurtma "yetkazilgan va to'langan" bo'lgandagina ishga tushadi,
+ *    ya'ni ACCEPTED/HANDED_TO_COURIER bosqichida hali balansga hech qanday
+ *    pul tushmagan bo'ladi) allaqachon yakunlangan buyurtmalarni
  *    "o'g'irlab olish" imkoniyati oldini olinadi — ular uchun mavjud
  *    bekor qilish/refund oqimlaridan foydalanish kerak.
  *  - 'gift' turidagi itemlar (platformaning o'z sovg'asi, seller_id=1)
  *    hech qachon qayta biriktirilmaydi — ular do'konga emas, platformaga
  *    tegishli.
+ *  - Eski do'kon (A) checkout paytida o'z ombor zaxirasidan (branch stock)
+ *    kamaytirilgan edi, lekin haqiqatda mahsulotni jismonan yubormaydi —
+ *    shu sabab reassignment paytida bu miqdor A ning zaxirasiga AVTOMATIK
+ *    qaytariladi (OrderService::incrementStock() orqali, checkout paytida
+ *    olingan aynan o'sha filialga). Yangi do'kon (B) uchun alohida stock
+ *    kamaytirilmaydi — chunki bu tizimda B ning o'z katalogida aynan shu
+ *    mahsulot yozuvi yo'q (har bir mahsulot yozuvi bitta seller_id'ga
+ *    biriktirilgan); B jismoniy yetkazib berishni tashqi/qo'lda
+ *    kelishuv asosida amalga oshiradi.
+ *  - Yangi do'konga o'tkazilgan seller order holati "yangi" (NEW, yoki
+ *    to'lov karta orqali hali kutilayotgan bo'lsa PAYMENT_PENDING) ga
+ *    qaytariladi va accepted_at tozalanadi — chunki B bu buyurtmani hali
+ *    umuman ko'rmagan/qabul qilmagan, uni birinchi marta ko'rayotgandek
+ *    o'zi qabul qilishi kerak.
  */
 class SellerOrderReassignmentService
 {
+    public function __construct(
+        private readonly OrderService $orderService,
+    ) {}
+
     public function reassign(Admin $admin, SellerOrder $sellerOrder, Seller $newSeller, ?string $reason = null): SellerOrder
     {
         if (! $admin->isSuperAdmin()) {
@@ -66,11 +95,25 @@ class SellerOrderReassignmentService
         }
 
         if (! $this->canReassignOrder($order, $sellerOrder, $oldSellerId)) {
-            throw new RuntimeException("Bu buyurtmani hozirgi bosqichida boshqa do'konga o'tkazib bo'lmaydi (seller allaqachon qabul qilgan/kuryerga topshirilgan, yoki bosh buyurtma yetkazish/yakunlash bosqichida).");
+            throw new RuntimeException("Bu buyurtmani hozirgi bosqichida boshqa do'konga o'tkazib bo'lmaydi (seller kuryerga topshirgan, yoki bosh buyurtma yetkazish/yakunlash bosqichida).");
         }
 
-        DB::transaction(function () use ($sellerOrder, $order, $oldSellerId, $newSellerId): void {
-            $sellerOrder->forceFill(['seller_id' => $newSellerId])->save();
+        // Yangi seller-order holati: to'lov karta orqali hali kutilayotgan
+        // bo'lsa PAYMENT_PENDING, aks holda NEW — xuddi buyurtma birinchi
+        // marta yaratilgandagi kabi (AdminOrderStatusSyncService::
+        // mapMainToSeller() dagi bir xil qoidaga mos).
+        $paymentCode = PaymentStatusCode::fromLegacy($order->payment_status_code ?? $order->paymentStatus);
+        $newSellerOrderStatus = $paymentCode === PaymentStatusCode::CARD_PENDING
+            ? SellerOrderStatusCode::PAYMENT_PENDING
+            : SellerOrderStatusCode::NEW;
+
+        DB::transaction(function () use ($sellerOrder, $order, $oldSellerId, $newSellerId, $newSellerOrderStatus): void {
+            $sellerOrder->forceFill([
+                'seller_id' => $newSellerId,
+                'status' => $newSellerOrderStatus->legacy(),
+                'status_code' => $newSellerOrderStatus->value,
+                'accepted_at' => null,
+            ])->save();
 
             $sellerOrder->items()
                 ->where('seller_id', $oldSellerId)
@@ -81,6 +124,13 @@ class SellerOrderReassignmentService
             $changed = false;
             foreach ($items as &$item) {
                 if ((int) ($item['seller_id'] ?? 0) === $oldSellerId && ($item['type'] ?? null) !== 'gift') {
+                    // Eski do'kon (A) checkout paytida shu miqdorni o'z
+                    // filial-zaxirasidan yechgan edi, lekin jismonan
+                    // yubormaydi — shu sabab reassignment paytida bu
+                    // miqdorni A ga qaytaramiz (aynan o'sha filialga,
+                    // item['location_id'] orqali — OrderService::
+                    // incrementStock() shu maydonni o'qiydi).
+                    $this->orderService->incrementStock($item);
                     $item['seller_id'] = $newSellerId;
                     $changed = true;
                 }
@@ -96,10 +146,10 @@ class SellerOrderReassignmentService
     }
 
     /**
-     * Boshqaruv paneli (AdminController::sellerOrderPayload()) shu metod
-     * orqali "Do'konni almashtirish" tugmasini ko'rsatish-ko'rsatmaslikni
-     * hal qiladi — mantiq bitta joyda (shu yerda) saqlanadi, ikki marta
-     * yozilmaydi.
+     * Boshqaruv paneli (AdminController::sellerOrderPayload() va
+     * AdminController::orderPayload()) shu metod orqali "Do'konni
+     * almashtirish" tugmasini ko'rsatish-ko'rsatmaslikni hal qiladi —
+     * mantiq bitta joyda (shu yerda) saqlanadi, ikki marta yozilmaydi.
      */
     public function canReassign(SellerOrder $sellerOrder): bool
     {
@@ -113,11 +163,20 @@ class SellerOrderReassignmentService
 
     private function canReassignOrder(Sold $order, SellerOrder $sellerOrder, int $oldSellerId): bool
     {
-        // Seller order o'zi hali "yangi" bosqichda bo'lishi kerak — do'kon
-        // buyurtmani qabul qilib, tayyorlashni boshlagandan keyin (yoki
-        // kuryerga topshirilgandan keyin) egalikni almashtirish xavfli.
+        // Seller order hali kuryerga TOPSHIRILMAGAN bosqichda bo'lishi
+        // kerak. 2026-09 gacha bu yerda faqat PAYMENT_PENDING/NEW ruxsat
+        // etilgan edi — ammo real hayotda do'kon ko'pincha buyurtmani
+        // QABUL QILGANDAN keyin (tayyorlash jarayonida) mahsulot yo'qligini
+        // aniqlaydi. Shu sabab ACCEPTED ham endi ruxsat etilgan holatlar
+        // qatoriga qo'shildi — faqat HANDED_TO_COURIER dan keyin
+        // taqiqlanadi (o'sha paytdan boshlab logistika jismonan shu do'kon
+        // bilan bog'langan bo'ladi).
         $sellerOrderStatus = SellerOrderStatusCode::fromLegacy($sellerOrder->status_code ?? $sellerOrder->status);
-        if (! in_array($sellerOrderStatus, [SellerOrderStatusCode::PAYMENT_PENDING, SellerOrderStatusCode::NEW], true)) {
+        if (! in_array($sellerOrderStatus, [
+            SellerOrderStatusCode::PAYMENT_PENDING,
+            SellerOrderStatusCode::NEW,
+            SellerOrderStatusCode::ACCEPTED,
+        ], true)) {
             return false;
         }
 

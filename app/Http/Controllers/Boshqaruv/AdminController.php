@@ -4242,7 +4242,18 @@ PROMPT;
             'Publishers' => ['publishers' => $this->publishersPayload()],
             'Users' => $this->usersPagePayload(),
             'Split' => $this->splitPagePayload(),
-            'Orders' => $this->ordersPagePayload(),
+            'Orders' => [
+                ...$this->ordersPagePayload(),
+                // Do'kon-egalik almashtirish uchun tanlov ro'yxati — xuddi
+                // 'SellerOrders' sahifasidagi kabi, faqat superadminga
+                // (2026-09: asosiy Buyurtmalar sahifasidan ham "Do'konni
+                // almashtirish" qilish imkoni qo'shildi, chunki adminlar
+                // kundalik ishda aynan shu sahifada ishlaydi, alohida
+                // "Seller orderlar" sahifasiga o'tmaydi).
+                'reassignSellers' => Auth::guard('panel')->user()?->isSuperAdmin()
+                    ? $this->reassignableSellersPayload()
+                    : [],
+            ],
             'SellerOrders' => [
                 ...$this->sellersPagePayload(),
                 'sellerCounts' => $this->sellerStatusCounts(),
@@ -13141,7 +13152,7 @@ PROMPT;
         }
 
         $sellerOrders = $sellerOrderModels
-            ->map(function (SellerOrder $sellerOrder) use ($sellerSettlements, $canModerateRefunds, $canProcessRefunds) {
+            ->map(function (SellerOrder $sellerOrder) use ($order, $sellerSettlements, $canModerateRefunds, $canProcessRefunds) {
                 $commissionRule = $sellerOrder->seller
                     ? app(SellerCommissionService::class)->resolve(
                         $sellerOrder->seller,
@@ -13152,6 +13163,7 @@ PROMPT;
 
                 return [
                     'id' => $sellerOrder->id,
+                    'orderId' => $order->id,
                     'sellerId' => $sellerOrder->seller_id,
                     'seller' => $sellerOrder->seller?->shop_name,
                     'sellerPhone' => $sellerOrder->seller?->phone_number,
@@ -13181,6 +13193,15 @@ PROMPT;
                     'refundStatus' => $sellerOrder->refund_status,
                     'canRefund' => $canModerateRefunds && $canProcessRefunds && $sellerOrder->cancelled_at === null,
                     'refundUrl' => route('boshqaruv.seller-orders.refund', $sellerOrder),
+                    // Do'kon-egalik almashtirish — FAQAT superadmin uchun.
+                    // Mantiq SellerOrderReassignmentService'da bitta joyda
+                    // saqlanadi (sellerOrderPayload() dagi bilan bir xil
+                    // pattern) — bu yerda faqat shu buyurtma sahifasida ham
+                    // ko'rsatish uchun qayta ishlatiladi.
+                    'canReassign' => $panelAdmin?->isSuperAdmin()
+                        ? app(SellerOrderReassignmentService::class)->canReassign($sellerOrder)
+                        : false,
+                    'reassignUrl' => route('boshqaruv.seller-orders.reassign-seller', $sellerOrder),
                 ];
             })
             ->values()
