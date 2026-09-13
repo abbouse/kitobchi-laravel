@@ -7265,10 +7265,17 @@ PROMPT;
             return [];
         }
 
+        // BUG TUZATILDI (2026-09): "asosiy do'kon" (xodim/filial emas)ni
+        // aniqlashda faqat whereNull('parent_id') tekshirilgan edi — lekin
+        // bu ustunda asosiy do'konlar ko'pincha NULL emas, balki 0 qiymatga
+        // ega (boshqa joylarda, masalan sellersPagePayload()dagi $base
+        // yopilishida, aynan shu sabab whereNull(...)->orWhere('parent_id', 0)
+        // ishlatiladi). Natijada bu yerga HECH QANDAY seller tushmay, "Do'konni
+        // almashtirish" oynasidagi tanlov ro'yxati doim bo'sh chiqqan edi.
         return Seller::query()
             ->where('status', 'approved')
             ->where('is_hidden', false)
-            ->whereNull('parent_id')
+            ->where(fn ($query) => $query->whereNull('parent_id')->orWhere('parent_id', 0))
             ->orderBy('shop_name')
             ->limit(500)
             ->get(['id', 'shop_name'])

@@ -255,10 +255,26 @@ export function ReassignSellerModal({ order, sellers, onHide, onSubmit }: {
   onHide: () => void;
   onSubmit: (sellerId: number) => void;
 }) {
-  const [sellerId, setSellerId] = useState<string>('');
+  // Do'kon soni yuzlab bo'lishi mumkin (backend 500 tagacha yuboradi) —
+  // oddiy <select> bilan qidirish noqulay, shu sabab yozib qidirish (nomi
+  // bo'yicha filtrlaydigan) maydonga almashtirildi (2026-09).
+  const [query, setQuery] = useState('');
+  const [selected, setSelected] = useState<ReassignSellerOption | null>(null);
+
+  const reset = () => {
+    setQuery('');
+    setSelected(null);
+  };
+
+  const matches = query.trim() === ''
+    ? []
+    : sellers
+        .filter((s) => !order || s.id !== order.sellerId)
+        .filter((s) => s.name.toLowerCase().includes(query.trim().toLowerCase()))
+        .slice(0, 20);
 
   return (
-    <Modal show={!!order} onHide={onHide} centered onExited={() => setSellerId('')}>
+    <Modal show={!!order} onHide={onHide} centered onExited={reset}>
       <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">Do'konni almashtirish</Modal.Title></Modal.Header>
       <Modal.Body>
         {!order ? null : (
@@ -272,12 +288,43 @@ export function ReassignSellerModal({ order, sellers, onHide, onSubmit }: {
               buyurtma egaligi (kim to'lov oladi) almashtiriladi.
             </p>
             <label className="form-label fw-semibold">Yangi do'kon</label>
-            <select className="form-select" value={sellerId} onChange={(e) => setSellerId(e.target.value)}>
-              <option value="">— tanlang —</option>
-              {sellers.filter((s) => s.id !== order.sellerId).map((s) => (
-                <option key={s.id} value={s.id}>{s.name}</option>
-              ))}
-            </select>
+            {selected ? (
+              <div className="d-flex align-items-center justify-content-between border rounded-3 px-3 py-2">
+                <span className="fw-semibold">{selected.name}</span>
+                <button type="button" className="btn btn-sm btn-link text-decoration-none p-0" onClick={() => setSelected(null)}>
+                  O'zgartirish
+                </button>
+              </div>
+            ) : (
+              <div>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Do'kon nomini yozing..."
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  autoFocus
+                />
+                {query.trim() !== '' && (
+                  <div className="border rounded-3 mt-1" style={{ maxHeight: 220, overflowY: 'auto' }}>
+                    {matches.length === 0 ? (
+                      <div className="px-3 py-2 text-muted small">Shu nomdagi do'kon topilmadi</div>
+                    ) : (
+                      matches.map((s) => (
+                        <button
+                          type="button"
+                          key={s.id}
+                          className="d-block w-100 text-start btn btn-light border-0 rounded-0 px-3 py-2"
+                          onClick={() => { setSelected(s); setQuery(''); }}
+                        >
+                          {s.name}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </Modal.Body>
@@ -285,11 +332,11 @@ export function ReassignSellerModal({ order, sellers, onHide, onSubmit }: {
         <Button variant="light" onClick={onHide}>Bekor qilish</Button>
         <Button
           variant="primary"
-          disabled={!sellerId}
+          disabled={!selected}
           onClick={() => {
-            if (!sellerId) return;
+            if (!selected) return;
             if (!confirm("Buyurtma egaligini boshqa do'konga o'tkazishni tasdiqlaysizmi? Bu amalni qaytarib bo'lmaydi.")) return;
-            onSubmit(Number(sellerId));
+            onSubmit(selected.id);
           }}
         >
           Tasdiqlash
