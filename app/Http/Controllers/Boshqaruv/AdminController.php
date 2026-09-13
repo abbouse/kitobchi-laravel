@@ -13080,6 +13080,32 @@ PROMPT;
             'phone' => $paymentCard?->phone_number ?: ($paymentCardSnapshot['phone_number'] ?? null),
         ];
 
+        // Admin uchun: karta to'lovini kutayotgan (CARD_PENDING) buyurtmani
+        // mijozning saqlangan (tasdiqlangan) kartasidan "to'lashga urinish"
+        // tugmasi uchun — 2026-09, foydalanuvchi so'rovi bilan qo'shildi.
+        // FAQAT shu holatda ko'rsatiladi: buyurtma aynan karta to'lovini
+        // kutayotgan (hali hech qanday hold/to'lov urinishi natijasiz
+        // qolmagan yoki hali umuman boshlanmagan) bosqichda bo'lishi kerak.
+        $orderPaymentStatusForCardPay = PaymentStatusCode::fromLegacy($order->payment_status_code ?? $order->paymentStatus);
+        $canPayPendingCard = (bool) ($panelAdmin?->isAdmin())
+            && $orderPaymentStatusForCardPay === PaymentStatusCode::CARD_PENDING
+            && (bool) $order->user_id;
+        $customerCards = ($canPayPendingCard && Schema::hasTable('user_cards'))
+            ? UserCard::query()
+                ->where('user_id', $order->user_id)
+                ->where('is_verified', true)
+                ->orderByDesc('is_default')
+                ->get(['id', 'card_number', 'vendor', 'is_default'])
+                ->map(fn (UserCard $card) => [
+                    'id' => $card->id,
+                    'maskedNumber' => $card->card_number,
+                    'vendor' => $card->vendor,
+                    'isDefault' => (bool) $card->is_default,
+                ])
+                ->values()
+                ->all()
+            : [];
+
         $sellerSettlements = [];
         $settlementOverview = [
             'gross' => 0,
@@ -13322,6 +13348,11 @@ PROMPT;
                 'date' => $this->dateTime($paymentTransaction->created_at),
             ] : null,
             'paymentCard' => $paymentCardView,
+            // Admin uchun: karta to'lovini kutayotgan buyurtmani mijoz
+            // kartasidan to'lashga urinish (2026-09).
+            'canPayPendingCard' => $canPayPendingCard,
+            'payPendingCardUrl' => route('boshqaruv.orders.pay-pending-card', $order),
+            'customerCards' => $customerCards,
             'postalInfo' => [
                 'provider' => (string) ($fulfillment?->postal_provider ?? ''),
                 'providers' => $postalTrackingService->providerOptions(),

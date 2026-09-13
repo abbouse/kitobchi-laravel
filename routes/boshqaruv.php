@@ -83,6 +83,7 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
             Route::patch('/orders/{order}/postal-return', [\App\Http\Controllers\A122\OrderController::class, 'markPostalReturned'])->name('orders.postal-return');
             Route::post('/orders/{order}/send-unreachable-push', [\App\Http\Controllers\A122\OrderController::class, 'sendUnreachablePush'])->name('orders.send-unreachable-push');
             Route::post('/orders/{order}/refund-cancel', [\App\Http\Controllers\A122\OrderController::class, 'refundAndCancel'])->name('orders.refund-cancel');
+            Route::post('/orders/{order}/pay-pending-card', [\App\Http\Controllers\A122\OrderController::class, 'payPendingOrderWithCard'])->name('orders.pay-pending-card');
         });
 
         // ══════════════════════════ FOYDALANUVCHILAR ══════════════════════════

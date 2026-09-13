@@ -26,6 +26,7 @@ use App\Services\FulfillmentAdminOverrideService;
 use App\Services\HubPrintViewService;
 use App\Services\OrderService;
 use App\Services\OrderStatusPushService;
+use App\Services\PaylovOrderPaymentService;
 use App\Services\PostalResendService;
 use App\Services\SellerCancellationReasonCatalog;
 use App\Services\SellerOrderCancellationService;
@@ -49,6 +50,7 @@ class OrderController extends Controller
         private readonly AdminPaidOrderRefundService $adminPaidOrderRefundService,
         private readonly SellerOrderCancellationService $sellerOrderCancellationService,
         private readonly SellerOrderReassignmentService $sellerOrderReassignmentService,
+        private readonly PaylovOrderPaymentService $paylovOrderPaymentService,
     ) {}
 
     public function index(Request $request)
@@ -622,6 +624,69 @@ class OrderController extends Controller
             );
 
             return back()->with('success', "Buyurtma \"{$newSeller->shop_name}\" do'koniga o'tkazildi.");
+        } catch (\Throwable $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
+
+    /**
+     * Admin uchun: karta to'lovini kutayotgan (CARD_PENDING) buyurtmani
+     * mijozning saqlangan (tasdiqlangan) kartalaridan biridan "to'lashga
+     * urinish" — 2026-09, foydalanuvchi so'rovi bilan qo'shildi (masalan,
+     * mijoz qo'ng'iroq qilib "ilovada to'lay olmayapman, shu kartamdan
+     * yechib qo'ying" desa).
+     *
+     * Bu — PaylovOrderPaymentService::payPendingOrder() orqali, mijozning
+     * o'z ilovasidagi "to'lash" tugmasi bosilganda ishlaydigan AYNAN SHU
+     * metodni chaqiradi — alohida to'lov logikasi YOZILMAGAN.
+     *
+     * MUHIM: bu FAQAT kartada summani BRON qiladi (hold) — pul darhol
+     * kompaniya hisobiga o'tmaydi. Bu tizimda pul faqat buyurtma
+     * seller/kuryerga topshirilganda avtomatik "yechiladi" (capture) —
+     * PaylovOrderPaymentService::chargeHeldOrder(), AdminOrderStatusSyncService
+     * orqali chaqiriladi. Ya'ni bu tugma mijozning o'zi to'laganidek AYNAN
+     * bir xil natijaga olib keladi, ortiqcha maxsus xulq-atvor qo'shmaydi.
+     */
+    public function payPendingOrderWithCard(Request $request, Sold $order)
+    {
+        $admin = Auth::guard('panel')->user();
+        if (! $admin || ! $admin->isAdmin()) {
+            return back()->with('error', "Bu amal faqat admin uchun ruxsat etilgan.");
+        }
+
+        $paymentStatus = PaymentStatusCode::fromLegacy($order->payment_status_code ?? $order->paymentStatus);
+        if ($paymentStatus !== PaymentStatusCode::CARD_PENDING) {
+            return back()->with('error', "Bu buyurtma karta to'lovini kutmayapti (allaqachon to'langan, hold qilingan, yoki boshqa to'lov turi).");
+        }
+
+        if (! $order->user_id) {
+            return back()->with('error', "Bu buyurtmaning mijozi aniqlanmagan.");
+        }
+
+        $data = $request->validate([
+            'card_id' => ['required', 'integer'],
+        ]);
+
+        /** @var UserCard|null $card */
+        $card = UserCard::query()
+            ->where('id', (int) $data['card_id'])
+            ->where('user_id', $order->user_id)
+            ->where('is_verified', true)
+            ->first();
+
+        if (! $card) {
+            return back()->with('error', "Karta topilmadi yoki tasdiqlanmagan.");
+        }
+
+        $user = $order->user;
+        if (! $user) {
+            return back()->with('error', "Bu buyurtmaning mijozi topilmadi.");
+        }
+
+        try {
+            $this->paylovOrderPaymentService->payPendingOrder($order, $user, $card);
+
+            return back()->with('success', "To'lovga urinish boshlandi — {$card->card_number} kartasida buyurtma summasi bron qilindi (hold). Pul, odatdagidek, buyurtma seller/kuryerga topshirilganda avtomatik yechib olinadi.");
         } catch (\Throwable $e) {
             return back()->with('error', $e->getMessage());
         }

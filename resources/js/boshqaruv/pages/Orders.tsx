@@ -179,6 +179,11 @@ interface Ord {
   } | null;
   paymentTransaction?: { id: number; provider?: string; providerCardId?: string; amount?: number; status?: string; date?: string } | null;
   paymentCard?: { provider?: string | null; providerCardId?: string | null; maskedNumber?: string | null; vendor?: string | null; cardName?: string | null; phone?: string | null };
+  // Admin uchun: karta to'lovini kutayotgan (CARD_PENDING) buyurtmani
+  // mijozning saqlangan kartasidan to'lashga urinish (2026-09).
+  canPayPendingCard?: boolean;
+  payPendingCardUrl?: string;
+  customerCards?: Array<{ id: number; maskedNumber?: string | null; vendor?: string | null; isDefault?: boolean }>;
   postalInfo?: {
     provider: string;
     providers: Array<{ code: string; name: string }>;
@@ -1189,6 +1194,37 @@ export default function Orders() {
                         <Detail label="Settled" value={selectedOrd.courierOrder?.settledAt ? `${fmt(selectedOrd.courierOrder?.settledAmount || 0)} so'm · ${selectedOrd.courierOrder.settledAt}` : '—'} />
                         <Detail label="Kutish rejimi" value="O'chirilgan" />
                       </div>
+
+                      {selectedOrd.canPayPendingCard ? (
+                        <form
+                          className="rounded-3 border p-3 mt-3"
+                          onSubmit={(event) => submitForm(event, selectedOrd.payPendingCardUrl)}
+                        >
+                          <div className="fw-semibold mb-2">Kartadan to'lovga urinish</div>
+                          <div className="text-muted small mb-2">
+                            Bu buyurtma hali karta to'lovini kutmoqda. Mijozning saqlangan kartasidan
+                            to'lovga urinish mumkin — bosilgach, kartada summa bron qilinadi (hold),
+                            yakuniy yechib olish esa buyurtma seller/kuryerga topshirilganda odatdagidek
+                            avtomatik amalga oshadi.
+                          </div>
+                          {(selectedOrd.customerCards || []).length === 0 ? (
+                            <div className="text-muted small">Mijozning tasdiqlangan saqlangan kartasi topilmadi.</div>
+                          ) : (
+                            <>
+                              <label className="form-label small text-muted">Karta</label>
+                              <select name="card_id" className="form-select form-select-sm mb-2" required>
+                                {(selectedOrd.customerCards || []).map((card) => (
+                                  <option value={card.id} key={card.id}>
+                                    {[card.maskedNumber, card.vendor].filter(Boolean).join(' / ')}
+                                    {card.isDefault ? ' (asosiy)' : ''}
+                                  </option>
+                                ))}
+                              </select>
+                              <button className="btn btn-sm btn-primary-gradient">To'lovga urinish</button>
+                            </>
+                          )}
+                        </form>
+                      ) : null}
                     </div>
                   </div>
                 </div>
