@@ -87,12 +87,14 @@ export function Reels() {
   };
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!pushText.uz.title.trim() || !pushText.uz.body.trim()) {
-      setActiveLocale('uz');
-      window.alert("Push yuborish uchun o'zbekcha sarlavha va matn majburiy.");
-      return;
-    }
-
+    // BUG TUZATILDI (2026-09): bu yerda ilgari boshqa (push-xabar)
+    // komponentidan noto'g'ri ko'chirilgan tekshiruv turgan edi —
+    // `pushText`/`setActiveLocale` bu komponentda UMUMAN mavjud emas
+    // (aniqlanmagan), shu sabab reel qo'shish/tahrirlash formasini
+    // yuborishning O'ZI `ReferenceError` bilan qulab tushar edi va
+    // funksiya butunlay ishlamas edi. Reel formasi uchun tegishli
+    // tekshiruv shart emas — sarlavha va tartib maydonlari allaqachon
+    // HTML `required` orqali tekshiriladi.
     const data = Object.fromEntries(new FormData(event.currentTarget).entries());
     const options = { preserveScroll: true, onSuccess: () => { setEditing(null); setShowForm(false); } };
     editing?.updateUrl ? router.put(editing.updateUrl, data, options) : router.post(createUrl, data, options);

@@ -1458,9 +1458,29 @@ class PurchaseController extends Controller
             $appliedCert = null;
 
             if ($request->filled('gift_certificate_id') && $request->paymentStatus == 1) {
+                // BUG TUZATILDI (2026-09): ilgari bu yerda oddiy (lock'siz)
+                // SELECT ishlatilar edi. Buyurtma esa allaqachon
+                // DB::beginTransaction() ichida (yuqorida, checkout
+                // boshida ochilgan) — ammo `lockForUpdate()` bo'lmagani
+                // uchun ikkita PARALLEL so'rov (masalan, foydalanuvchi
+                // ikkita qurilmada yoki ikki marta ustma-ust bosib
+                // yuborgan checkout) bir xil sertifikatni HAR IKKALASI
+                // ham hali "active" deb o'qib olishi, ikkalasi ham
+                // chegirmani (`$certDiscount`) o'z buyurtmasiga qo'llashi
+                // mumkin edi. Faqat KEYINROQ, `useInPurchase()` ichidagi
+                // shartli UPDATE orqali FAQAT bittasi haqiqatan
+                // sertifikatni "ishlatilgan" deb belgilay olardi — ikkinchi
+                // buyurtma esa chegirmani OLGAN holda, sertifikat hech
+                // qachon undan yechilmagan holda qolar edi (platforma
+                // uchun pul yo'qotish). `lockForUpdate()` bilan ikkinchi
+                // so'rov birinchisi commit/rollback bo'lguncha shu qatorda
+                // TO'XTAB turadi, keyin esa sertifikatning haqiqiy
+                // (yangilangan) holatini ko'rib, kerak bo'lsa to'g'ri
+                // ravishda rad etiladi.
                 $cert = GiftCertificate::where('id', $request->gift_certificate_id)
                     ->where('status', GiftCertificate::STATUS_ACTIVE)
                     ->where('recipient_user_id', $user->id)
+                    ->lockForUpdate()
                     ->first();
 
                 if (! $cert) {

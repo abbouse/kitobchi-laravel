@@ -232,7 +232,17 @@ class AdminOrderStatusSyncService
             $order->save();
             $this->syncFulfillmentFromCourierStatus($order, $statusCode);
 
-            SellerOrder::where('order_id', $order->id)->update([
+            // BUG TUZATILDI (2026-09): ilgari BARCHA seller orderlar
+            // (hatto allaqachon 'cancelled' bo'lganlari ham) kuryer
+            // statusiga qarab qayta yozilar edi. Masalan, ko'p-do'konli
+            // buyurtmada bitta do'kon o'z bo'lagini bekor qilgan bo'lsa-yu,
+            // keyin kuryer boshqa do'kon(lar) uchun "yetkazib berildi"
+            // deb belgilasa, bekor qilingan seller order xato ravishda
+            // qayta "faollashtirilar" edi (statusi HANDED_TO_COURIER/
+            // ACCEPTED'ga qaytardi). Endi faqat hali bekor qilinmagan
+            // (aktiv) seller orderlar yangilanadi — xuddi
+            // updateActiveSellerOrders() da bo'lgani kabi.
+            $this->activeSellerOrdersQuery($order)->update([
                 'status' => $this->mapCourierToSeller($statusCode->value)->legacy(),
                 'status_code' => $this->mapCourierToSeller($statusCode->value)->value,
                 'updated_at' => now(),

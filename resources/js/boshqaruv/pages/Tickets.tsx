@@ -159,7 +159,18 @@ export default function Tickets() {
                   <td><span className={`chip ${statusChip(ticket.status)}`}>{statusLabel(ticket.status)}</span></td>
                   <td>
                     <button className="btn btn-sm btn-light me-1" onClick={() => openDetail(ticket)}><i className="bi bi-eye"></i></button>
-                    <button className="btn btn-sm btn-primary-gradient me-1" onClick={() => handleOpenReply(ticket)}><i className="bi bi-reply"></i></button>
+                    {/* BUG TUZATILDI (2026-09): ilgari bu tugma
+                        `ticket.replyUrl` tekshirilmasdan HAR DOIM
+                        ko'rsatilar edi. Ammo backend yopilgan seller
+                        tiketlari uchun `replyUrl`ni ATAYLAB `null`
+                        qiladi (AdminController:9210). Natijada admin
+                        yopilgan tiketga "javob" bosib, matn yozib
+                        yuborsa — `sendReply()` ichidagi `replyUrl`
+                        tekshiruvi so'rovni jim tarzda bekor qilar,
+                        hech qanday xabar chiqmasdan modal ochiq
+                        qolaverardi. Endi tugma `closeUrl` bilan bir
+                        xil andozada shartli ko'rsatiladi. */}
+                    {ticket.replyUrl ? <button className="btn btn-sm btn-primary-gradient me-1" onClick={() => handleOpenReply(ticket)}><i className="bi bi-reply"></i></button> : null}
                     {ticket.closeUrl ? <button className="btn btn-sm btn-light" onClick={() => closeTicket(ticket)}><i className="bi bi-check2"></i></button> : null}
                   </td>
                 </tr>
@@ -182,7 +193,7 @@ export default function Tickets() {
             </div>
           )}
         </Modal.Body>
-        <Modal.Footer>{selectedTicket ? <Button variant="outline-primary" onClick={() => { setShowDetail(false); handleOpenReply(selectedTicket); }}>Javob yozish</Button> : null}{selectedTicket?.closeUrl ? <Button variant="outline-danger" onClick={() => closeTicket(selectedTicket)}>Yopish</Button> : null}<Button variant="light" onClick={() => setShowDetail(false)}>Bekor qilish</Button></Modal.Footer>
+        <Modal.Footer>{selectedTicket?.replyUrl ? <Button variant="outline-primary" onClick={() => { setShowDetail(false); handleOpenReply(selectedTicket); }}>Javob yozish</Button> : null}{selectedTicket?.closeUrl ? <Button variant="outline-danger" onClick={() => closeTicket(selectedTicket)}>Yopish</Button> : null}<Button variant="light" onClick={() => setShowDetail(false)}>Bekor qilish</Button></Modal.Footer>
       </Modal>
 
       <Modal show={showReply} onHide={() => setShowReply(false)} centered>

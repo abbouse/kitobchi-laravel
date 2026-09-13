@@ -417,7 +417,16 @@ const fulfillmentStatusLabel = (value?: string | null) => {
   } as Record<string, string>)[normalized] || value || 'Hali ishga tushmagan';
 };
 
+// BUG TUZATILDI (2026-09): 'in_delivery' ro'yxatda YO'Q edi — demak
+// buyurtma kuryerga berilib, allaqachon yo'lda bo'lsa ham, admin panelda
+// "Bekor qilish" tugmasi hali ham ko'rsatilar edi. Backend
+// (OrderService::cancelOrder) faqat to'lov holatini tekshiradi — kuryer
+// allaqachon jo'natilgan-jo'natilmaganini tekshirmaydi — shu sababli bu
+// SOF frontend/UI tekshiruvi haqiqiy himoya vazifasini bajaradi. Kuryer
+// yo'lda bo'lgan buyurtma uchun oddiy bekor qilish emas, balki mavjud
+// qaytarish/refund oqimlaridan foydalanish kerak.
 const canCancelOrder = (status?: string) => ![
+  'in_delivery',
   'delivered',
   'customer_received',
   'cancelled',

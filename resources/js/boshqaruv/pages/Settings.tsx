@@ -42,8 +42,29 @@ function submitForm(event: FormEvent<HTMLFormElement>, method: 'post' | 'put', u
   event.preventDefault();
   if (!url) return;
 
-  const form = event.currentTarget;
-  const data = Object.fromEntries(new FormData(form).entries());
+  // BUG TUZATILDI (2026-09): ilgari `Object.fromEntries(new
+  // FormData(form).entries())` ishlatilar edi. Bu "Kuryer km va bonus
+  // tizimi" bo'limidagi `courier_bonus_rules[0][from_km]` kabi
+  // kvadrat-qavsli (array) maydon nomlarini TO'G'RI ICHKARI massivga
+  // aylantirmaydi — ular tekis (flat) obyektga aylanib,
+  // "courier_bonus_rules[0][from_km]" degan LITERAL kalit bo'lib
+  // qolar edi. Backend (`SettingsController::updateCourierBonus`)
+  // esa `courier_bonus_rules` ni haqiqiy massiv deb kutadi — natijada
+  // u har doim bo'sh/aniqlanmagan bo'lib qolib, admin masofa
+  // bonuslarini kiritsa ham, HAR BIR saqlashda jim tarzda
+  // TOZALANIB (0 ga tushirilib) ketardi. Xuddi shu forma-elementi
+  // orqali yuborilgan boshqa (flat) maydonlar hech qanday
+  // muammosiz ishlagani uchun bu bug fақат shu bo'limda sezilardi.
+  //
+  // Tuzatish: FormData obyektini o'zini to'g'ridan-to'g'ri yuborish —
+  // bu holda kvadrat-qavsli nomlarni PHP/Laravel o'zi to'g'ri
+  // ichki massivga aylantiradi (odatdagi HTML forma-yuborish
+  // xulq-atvori). Bu yondashuv loyihaning boshqa ko'plab
+  // sahifalarida (masalan, Blogerlar.tsx, CourierOrders.tsx,
+  // SellerDetail.tsx) allaqachon ishlatilib, `router.put()` uchun
+  // ham to'g'ri ishlaydi (Inertia o'zi `_method` spoofingni
+  // FormData bilan avtomatik bajaradi).
+  const data = new FormData(event.currentTarget);
   const options = { preserveScroll: true };
 
   if (method === 'post') {

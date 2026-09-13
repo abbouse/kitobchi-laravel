@@ -1841,10 +1841,17 @@ class AdminController extends Controller
         }
 
         $publisher->update($data);
-        app(ProductModerationStateService::class)->markBooksPendingByIds(
-            Books::query()->where('publisher_id', $publisher->id)->pluck('id'),
-            'publisher_changed',
-        );
+        // ESLATMA (bug tuzatildi): bu yerda ilgari har qanday tahrirda
+        // (hatto logotip yoki manzil kabi mahsulotga aloqasi yo'q maydonlar
+        // uchun ham) nashriyotga bog'liq BARCHA kitoblar avtomatik
+        // moderatsiyaga (is_approved=0) qaytarilar edi. `books` jadvalida
+        // nashriyot nomi denormalizatsiya qilinmagan (u har doim
+        // `publisher()` relationi orqali jonli o'qiladi) — ya'ni nashriyotni
+        // tahrirlash kitobning o'zida HECH NARSANI o'zgartirmaydi, shuning
+        // uchun uni qayta moderatsiyaga yuborish noto'g'ri edi va faqat
+        // ombordan behuda chiqarib yuborardi. Solishtiring: updateAuthor()
+        // buni faqat $nameChanged bo'lsagina qiladi, chunki u yerda
+        // `books.author` haqiqatan ham denormalizatsiya qilingan.
 
         return back()->with('success', 'Nashriyot yangilandi.');
     }
@@ -1870,11 +1877,15 @@ class AdminController extends Controller
 
     public function updateBookCategory(Request $request, BookCategories $bookCategory): \Illuminate\Http\RedirectResponse
     {
+        // ESLATMA (bug tuzatildi): ilgari kategoriya nomi/OFD kodini
+        // tahrirlash shu kategoriyadagi BARCHA kitoblarni avtomatik
+        // moderatsiyaga (is_approved=0) qaytarar edi — garchi kitoblarning
+        // o'zida hech narsa o'zgarmagan bo'lsa ham (kategoriya nomi
+        // `books` jadvalida denormalizatsiya qilinmagan, har doim
+        // relationi orqali jonli o'qiladi). Bitta OFD kod tuzatilsa ham
+        // butun kategoriya ombordan chiqib ketardi — shuning uchun bu
+        // qayta-moderatsiyaga yuborish butunlay olib tashlandi.
         $bookCategory->forceFill($this->categoryData($request, 'book_categories'))->save();
-        app(ProductModerationStateService::class)->markBooksPendingByIds(
-            $bookCategory->books()->pluck('books.id'),
-            'category_changed',
-        );
 
         return back()->with('success', 'Kitob kategoriyasi yangilandi.');
     }
@@ -1899,11 +1910,10 @@ class AdminController extends Controller
 
     public function updateStationeryCategory(Request $request, StationeryCategory $stationeryCategory): \Illuminate\Http\RedirectResponse
     {
+        // ESLATMA (bug tuzatildi): yuqoridagi updateBookCategory() bilan bir
+        // xil sabab — kategoriya nomini tahrirlash shu kategoriyadagi barcha
+        // kanstovarlarni sababsiz moderatsiyaga qaytarardi.
         $stationeryCategory->forceFill($this->categoryData($request, 'stationery_categories'))->save();
-        app(ProductModerationStateService::class)->markStationeriesPendingByIds(
-            $stationeryCategory->stationeries()->pluck('stationeries.id'),
-            'category_changed',
-        );
 
         return back()->with('success', 'Kanstovar kategoriyasi yangilandi.');
     }
@@ -1961,12 +1971,24 @@ class AdminController extends Controller
         $book->update($data);
 
         // FILIAL STOCK: jami stock yangi songa keltiriladi
+        $stockWarning = null;
         if ($book->seller_id) {
             app(\App\Services\BranchStockService::class)->setTotalFromLegacy(
                 'book', (int) $book->id, 0, (int) $book->seller_id,
                 (int) $request->input('count'), null,
                 ['actor_type' => 'admin', 'note' => 'Admin: kitob tahriri']
             );
+        } else {
+            // BUG TUZATILDI (2026-09): bu kitobning do'koni (seller_id)
+            // yo'q — filial-stock tizimi (BranchStockService) faqat
+            // do'konga bog'liq joylashuvlar (seller_locations) orqali
+            // ishlaydi, "egasiz" (platforma) kitoblar uchun zaxirani
+            // saqlaydigan hech qanday joylashuv mavjud emas. Ilgari bu
+            // holatda forma kiritilgan `count` qiymati JIM tarzda hech
+            // qayerga yozilmasdan yo'qolib ketardi va admin bu haqda
+            // bilmasdi (muvaffaqiyat xabari ko'rsatilaverar edi). Endi
+            // kamida buni ochiq ogohlantiramiz.
+            $stockWarning = "Diqqat: bu kitobning do'koni (sotuvchisi) belgilanmagan, shu sabab zaxira miqdori (soni) saqlanmadi — egasiz (platforma) mahsulotlar uchun zaxira tizimi hali mavjud emas.";
         }
 
         // MUHIM: `markPending()` shart-sharoitsiz chaqiruvi ATAYLAB olib
@@ -1976,7 +1998,9 @@ class AdminController extends Controller
         // `ProductModerationObserver` moderatsiyaga aloqador maydonlar
         // haqiqatan o'zgarganda buni o'zi to'g'ri bajaradi.
 
-        return back()->with('success', 'Kitob yangilandi.');
+        $redirect = back()->with('success', 'Kitob yangilandi.');
+
+        return $stockWarning ? $redirect->with('error', $stockWarning) : $redirect;
     }
 
     public function updateStationery(Request $request, Stationery $stationery): \Illuminate\Http\RedirectResponse
@@ -2015,19 +2039,28 @@ class AdminController extends Controller
         $stationery->update($data);
 
         // FILIAL STOCK: jami stock yangi songa keltiriladi
+        $stockWarning = null;
         if ($stationery->seller_id) {
             app(\App\Services\BranchStockService::class)->setTotalFromLegacy(
                 'stationery', (int) $stationery->id, 0, (int) $stationery->seller_id,
                 (int) $request->input('stock'), null,
                 ['actor_type' => 'admin', 'note' => 'Admin: kanstovar tahriri']
             );
+        } else {
+            // BUG TUZATILDI (2026-09): yuqoridagi kitob tahriri izohiga
+            // qarang — egasiz (seller_id yo'q) mahsulotlar uchun zaxira
+            // tizimi mavjud emas, shu sabab kiritilgan `stock` qiymati
+            // jim tarzda yo'qolib ketardi. Endi ochiq ogohlantiramiz.
+            $stockWarning = "Diqqat: bu mahsulotning do'koni (sotuvchisi) belgilanmagan, shu sabab zaxira miqdori saqlanmadi — egasiz (platforma) mahsulotlar uchun zaxira tizimi hali mavjud emas.";
         }
 
         $this->syncStationeryVariants($request, $stationery);
         // MUHIM: yuqoridagi kitob tahriri izohiga qarang — `markPending()`
         // shart-sharoitsiz chaqiruvi shu sababdan olib tashlandi.
 
-        return back()->with('success', 'Kanselyariya mahsuloti yangilandi.');
+        $redirect = back()->with('success', 'Kanselyariya mahsuloti yangilandi.');
+
+        return $stockWarning ? $redirect->with('error', $stockWarning) : $redirect;
     }
 
     public function storePromocode(Request $request): \Illuminate\Http\RedirectResponse
@@ -4025,7 +4058,16 @@ PROMPT;
             'translations.*.location' => ['nullable', 'string', 'max:255'],
             'translations.*.description' => ['nullable', 'string'],
         ]);
-        $data['is_active'] = $request->boolean('is_active', true);
+        // BUG TUZATILDI (2026-09): `default: true` OLIB TASHLANDI. Ilgari
+        // frontenddagi checkbox uchun hidden-fallback yo'q edi, shu
+        // sababdan admin "Faol"ni o'chirib saqlasa ham, `is_active`
+        // maydoni so'rovda umuman yo'q bo'lib qolar va shu yerdagi
+        // `true` default qiymati vakansiyani xato ravishda qayta
+        // faollashtirib yuborardi. Frontendga endi hidden-fallback
+        // input qo'shildi (Settings.tsx Toggle bilan bir xil andoza),
+        // shu sabab `is_active` endi har doim so'rovda mavjud bo'ladi
+        // va default shart emas.
+        $data['is_active'] = $request->boolean('is_active');
 
         return $data;
     }
@@ -8189,11 +8231,32 @@ PROMPT;
                     $auditKind = $category;
                 }
 
+                // BUG TUZATILDI (2026-09): ilgari withdrawal (pul yechish)
+                // uchun holatga qarab IKKI XIL formula ishlatilar edi —
+                // 'pending' bo'lsa `-$amount` (to'liq, komissiyasiz), lekin
+                // 'approved' bo'lsa `-$netAmount` (komissiya olib
+                // tashlangan, kichikroq summa). Bu noto'g'ri: haqiqiy
+                // balans o'zgarishi (CourierTransactionController::
+                // requestWithdrawal(), qator ~79: `$lockedCourier->balance
+                // -= $amount`) SO'ROV BERILGAN payt (ya'ni 'pending'
+                // bosqichda) TO'LIQ `$amount` miqdorida sodir bo'ladi va
+                // keyinchalik 'approved' bo'lganda balansga QO'SHIMCHA
+                // ta'sir qilmaydi — komissiya faqat kuryerga naqd/bank
+                // orqali qo'lga tegadigan summadan (netAmount) ushlab
+                // qolinadi, balansning o'zidan emas. Shu sabab bu yerda
+                // 'approved' holatida `-$netAmount` ko'rsatish audit
+                // sahifasida balansdan haqiqatan yechilgan summani har bir
+                // tasdiqlangan pul yechish uchun komissiya miqdoricha
+                // KAMROQ ko'rsatib kelardi. (Rad etilgan — 'rejected' —
+                // so'rovlar uchun balans to'liq qaytariladi, shu sabab
+                // ularning ta'siri 0 bo'lib qolishi to'g'ri.)
                 $balanceEffect = 0.0;
-                if ($transaction->status === 'approved') {
+                if ($category === 'withdrawal') {
+                    if (in_array($transaction->status, ['pending', 'approved'], true)) {
+                        $balanceEffect = -$amount;
+                    }
+                } elseif ($transaction->status === 'approved') {
                     $balanceEffect = ($transaction->type === 'income') ? $netAmount : -$netAmount;
-                } elseif ($category === 'withdrawal' && $transaction->status === 'pending') {
-                    $balanceEffect = -$amount;
                 }
 
                 $diffAmount = round($actualCommission - $expectedCommission);
@@ -10071,6 +10134,15 @@ PROMPT;
 
     private function clearApiClientCache(): void
     {
+        // BUG TUZATILDI (2026-09): `apiClientsPayload()` keshi
+        // 'boshqaruv:api-clients:payload:v5' kaliti ostida saqlanadi
+        // (versiya v2->v3->v4->v5 ko'tarilgan), lekin bu yerda faqat
+        // ESKI (v4/v3/v2) kalitlar tozalanar edi — haqiqiy, hozir
+        // ishlatilayotgan v5 kaliti HECH QACHON tozalanmagan edi. Natija:
+        // API-klient qo'shish/tahrirlash/faollashtirish/kalitni
+        // yangilash/o'chirish yoki webhook qo'shishdan keyin admin panel
+        // hali ham eski (keshlangan) ro'yxatni ko'rsatardi — 5 daqiqagacha.
+        Cache::forget('boshqaruv:api-clients:payload:v5');
         Cache::forget('boshqaruv:api-clients:payload:v4');
         Cache::forget('boshqaruv:api-clients:payload:v3');
         Cache::forget('boshqaruv:api-clients:payload:v2');

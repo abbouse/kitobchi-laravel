@@ -62,6 +62,24 @@ class HubController extends Controller
 
     public function destroy(Hub $hub)
     {
+        // BUG TUZATILDI (2026-09): ilgari bu yerda HECH QANDAY
+        // tekshiruvsiz $hub->delete() chaqirilar edi. Migratsiyaga
+        // ko'ra (2026_05_13_100000_create_hub_fulfillment_tables.php):
+        //  - hub_staff.hub_id -> cascadeOnDelete(): hub o'chirilsa,
+        //    unga biriktirilgan BARCHA xodim (login) hisoblari ham
+        //    jismonan o'chib ketardi — hatto hozir ishlayotgan bo'lsa
+        //    ham.
+        //  - order_fulfillments.hub_id / courier_tasks.hub_id ->
+        //    nullOnDelete(): tarixiy buyurtma/kuryer yozuvlaridagi
+        //    "qaysi hub orqali o'tgani" ma'lumoti jim tarzda yo'qolib
+        //    ketardi (audit izi uzilardi).
+        // Endi hub faqat unga hech narsa (xodim, fulfillment, kuryer
+        // topshirig'i) biriktirilmagan bo'lsagina o'chiriladi; aks
+        // holda admin uni "faol emas" holatiga o'tkazishi kerak.
+        if ($hub->staff()->exists() || $hub->fulfillments()->exists() || $hub->courierTasks()->exists()) {
+            return back()->with('error', "Bu hub'ni o'chirib bo'lmaydi: unga xodimlar va/yoki buyurtmalar tarixi biriktirilgan. Buning o'rniga uni \"faol emas\" holatiga o'tkazing.");
+        }
+
         $hub->delete();
 
         return back()->with('success', "Hub o'chirildi.");

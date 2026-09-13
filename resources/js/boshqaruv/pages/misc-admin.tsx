@@ -100,7 +100,18 @@ export function Vakansiyalar() {
                   </div>
                 </div>
               ))}
-              <div className="col-12"><Form.Check type="switch" name="is_active" value="1" label="Faol" defaultChecked={editing ? editing.status === 'Active' : true} /></div>
+              <div className="col-12">
+                {/* BUG TUZATILDI (2026-09): ilgari faqat checkbox (hidden
+                    fallback'siz) yuborilardi — "Faol"ni O'CHIRIB saqlansa,
+                    unchecked checkbox FormData'ga UMUMAN kirmasdi, backend
+                    esa yo'q maydonni "true" deb hisoblab, vakansiyani
+                    xato ravishda qayta faollashtirib qo'yardi. Endi
+                    (Settings.tsx dagi Toggle komponenti bilan bir xil,
+                    loyihada sinovdan o'tgan) hidden-fallback + checkbox
+                    kombinatsiyasi ishlatiladi. */}
+                <input type="hidden" name="is_active" value="0" />
+                <Form.Check type="switch" name="is_active" value="1" label="Faol" defaultChecked={editing ? editing.status === 'Active' : true} />
+              </div>
             </div>
           </Modal.Body>
           <Modal.Footer><Button variant="light" onClick={() => setShowForm(false)}>Bekor qilish</Button><Button type="submit" className="btn-primary-gradient border-0">Saqlash</Button></Modal.Footer>
