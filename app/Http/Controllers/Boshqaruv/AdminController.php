@@ -13152,7 +13152,7 @@ PROMPT;
         }
 
         $sellerOrders = $sellerOrderModels
-            ->map(function (SellerOrder $sellerOrder) use ($order, $sellerSettlements, $canModerateRefunds, $canProcessRefunds) {
+            ->map(function (SellerOrder $sellerOrder) use ($order, $panelAdmin, $sellerSettlements, $canModerateRefunds, $canProcessRefunds) {
                 $commissionRule = $sellerOrder->seller
                     ? app(SellerCommissionService::class)->resolve(
                         $sellerOrder->seller,
