@@ -32,7 +32,7 @@ export default function SellerOrders() {
     sellerOrderPagination = { page: 1, totalPages: 1, from: 0, to: 0, total: 0 },
     sellerFilters = {}, sellerOrderFilters = {},
     reassignSellers = [],
-    admin,
+    auth,
   } = usePage<{
     sellers?: Seller[];
     sellerCounts?: Counts;
@@ -43,10 +43,16 @@ export default function SellerOrders() {
     sellerOrderPagination?: { page: number; totalPages: number; from: number; to: number; total: number };
     sellerFilters?: { tab?: string; search?: string }; sellerOrderFilters?: { tab?: string; search?: string };
     reassignSellers?: ReassignSellerOption[];
-    admin?: SharedAdmin;
+    // MUHIM (2026-09 bugfix): superadmin bayrog'i HandleInertiaRequests
+    // middleware orqali `auth.admin.isSuperAdmin` sifatida keladi
+    // (top-level 'admin' emas — Layout.tsx dagi bilan bir xil pattern).
+    // Ilgari noto'g'ri top-level 'admin' o'qilgani uchun bu yerda
+    // isSuperAdmin doim false bo'lib, "Do'konni almashtirish" tugmasi
+    // hech kimga chiqmasdi.
+    auth?: { admin?: SharedAdmin };
   }>().props;
 
-  const isSuperAdmin = !!admin?.isSuperAdmin;
+  const isSuperAdmin = !!auth?.admin?.isSuperAdmin;
 
   const [sellerTab, setSellerTab] = useState(sellerFilters.tab || 'pending');
   const [orderTab, setOrderTab] = useState(sellerOrderFilters.tab || 'all');

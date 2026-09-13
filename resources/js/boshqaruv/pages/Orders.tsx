@@ -451,20 +451,22 @@ interface PaginationMeta {
 export default function Orders() {
   const {
     orders = [], orderPagination = { page: 1, totalPages: 1, from: 0, to: 0, total: 0 }, orderCounts = {}, orderFilters = {},
-    reassignSellers = [], admin,
+    reassignSellers = [], auth,
   } = usePage<{
     orders?: Ord[];
     orderPagination?: PaginationMeta;
     orderCounts?: Record<string, number>;
     orderFilters?: { tab?: string; search?: string };
     // Do'kon-egalik almashtirish (2026-09): tanlov ro'yxati va
-    // superadminlikni bilish uchun — Layout.tsx/HandleInertiaRequests
-    // orqali har bir sahifaga uzatiladigan umumiy (shared) 'admin' propi
-    // (SellerOrders.tsx dagi bilan bir xil pattern).
+    // superadminlikni bilish uchun. MUHIM: superadmin bayrog'i
+    // HandleInertiaRequests middleware orqali `auth.admin.isSuperAdmin`
+    // sifatida keladi (TOP-LEVEL 'admin' emas — bu 2026-09'dagi bug
+    // tuzatildi: avval noto'g'ri top-level 'admin' o'qilardi, u hech
+    // qachon kelmagani uchun tugma hech kimga chiqmasdi).
     reassignSellers?: ReassignSellerOption[];
-    admin?: { isSuperAdmin?: boolean };
+    auth?: { admin?: { isSuperAdmin?: boolean } };
   }>().props;
-  const isSuperAdmin = !!admin?.isSuperAdmin;
+  const isSuperAdmin = !!auth?.admin?.isSuperAdmin;
   const [activeTab, setActiveTab] = useState(orderFilters.tab || 'pending');
   const [search, setSearch] = useState(orderFilters.search || '');
   const [showView, setShowView] = useState(false);
