@@ -265,9 +265,11 @@ export function ReassignSellerModal({ order, sellers, onHide, onSubmit }: {
           <div>
             <p className="text-muted mb-3">
               Seller order #{order.id} (asosiy buyurtma #{order.orderId || '—'}) hozir <strong>{order.seller}</strong> do'koniga tegishli.
-              Bu amal — do'kon buyurtmani hali kuryerga topshirmagan bo'lsa (qabul qilgan bo'lsa ham mumkin) — egalikni butunlay
-              boshqa do'konga o'tkazadi: narx, mahsulot, manzil o'zgarmaydi; eski do'konning ombor zaxirasi avtomatik qaytariladi;
-              yangi do'kon buyurtmani "yangi" sifatida ko'rib, o'zi qabul qilishi kerak bo'ladi.
+              Bu amal egalikni butunlay boshqa do'konga o'tkazadi: narx, mahsulot, manzil o'zgarmaydi; eski do'konning ombor
+              zaxirasi avtomatik qaytariladi. Agar buyurtma hali kuryerga topshirilmagan bo'lsa — yangi do'kon buni "yangi"
+              sifatida ko'rib, o'zi qabul qilishi kerak bo'ladi. Agar buyurtma ALLAQACHON kuryerga topshirilgan bo'lsa —
+              kuryer topshirig'i va uning narxi O'ZGARTIRILMAYDI (kuryerni xabardor qilish operator zimmasida), faqat
+              buyurtma egaligi (kim to'lov oladi) almashtiriladi.
             </p>
             <label className="form-label fw-semibold">Yangi do'kon</label>
             <select className="form-select" value={sellerId} onChange={(e) => setSellerId(e.target.value)}>

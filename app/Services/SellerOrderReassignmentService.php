@@ -6,7 +6,6 @@ use App\Enums\OrderStatusCode;
 use App\Enums\PaymentStatusCode;
 use App\Enums\SellerOrderStatusCode;
 use App\Models\Admin;
-use App\Models\CourierTask;
 use App\Models\Seller;
 use App\Models\SellerOrder;
 use App\Models\Sold;
@@ -28,13 +27,22 @@ use RuntimeException;
  *    manzil va h.k. o'zgarmaydi.
  *  - Ruxsat quyidagi real hayotiy holatga mo'ljallangan (2026-09,
  *    foydalanuvchi tasdiqlagan): mijoz A do'konidan buyurtma beradi, A
- *    buyurtmani QABUL QILADI, lekin keyin mahsulot omborida yo'qligi
- *    ma'lum bo'ladi va operatorlar uni B do'konidan topib yuboradi. Shu
- *    sabab reassignment SELLER_ORDER ACCEPTED bosqichida ham ruxsat
- *    etiladi — faqat kuryerga TOPSHIRILGANDAN keyin (yoki shu do'kon
- *    uchun kuryer topshirig'i allaqachon yaratilgan bo'lsa) taqiqlanadi,
- *    chunki shu paytdan boshlab logistika jismonan A do'koni bilan
- *    bog'langan bo'ladi.
+ *    buyurtmani QABUL QILADI (hatto KURYERGA TOPSHIRADI ham), lekin keyin
+ *    mahsulot omborida yo'qligi ma'lum bo'ladi va operatorlar uni B
+ *    do'konidan topib yuboradi. Shu sabab reassignment endi SELLER_ORDER
+ *    ACCEPTED va hatto HANDED_TO_COURIER bosqichida ham ruxsat etiladi.
+ *  - MUHIM (2026-09, foydalanuvchi aniq tasdiqlagan qaror): agar seller
+ *    order ALLAQACHON kuryerga topshirilgan bo'lsa, reassignment paytida
+ *    mavjud CourierTask/CourierOrder yozuvlari, kuryerning o'zi, va unga
+ *    tegishli narx/bonus HECH QANDAY o'zgartirilmaydi va qayta
+ *    hisoblanmaydi — ular eski (A) do'kon ma'lumoti bilan qolaveradi.
+ *    Kuryerni jismonan xabardor qilish operatorning o'zi zimmasida,
+ *    tizimdan tashqarida amalga oshiriladi. Bu holatda FAQAT buyurtma
+ *    egaligi (kim to'lov/komissiya olishi) almashtiriladi — shu sababli
+ *    bunday holatda seller order holati ham "handed_to_courier" bo'lib
+ *    QOLAVERADI (pastga, reassign() ichidagi izohga qarang) — faqat
+ *    hali kuryerga topshirilmagan (PAYMENT_PENDING/NEW/ACCEPTED)
+ *    bosqichdagi reassignmentlarda holat "yangi"ga qaytariladi.
  *  - Bosh buyurtma hali yetkazish/yakunlash bosqichiga o'tmagan bo'lishi
  *    kerak. Bu bilan moliyaviy hisob-kitob (baholar, komissiya, seller
  *    balansi — SellerOrderSettlementService::settleCompletedOrder() FAQAT
@@ -55,11 +63,13 @@ use RuntimeException;
  *    mahsulot yozuvi yo'q (har bir mahsulot yozuvi bitta seller_id'ga
  *    biriktirilgan); B jismoniy yetkazib berishni tashqi/qo'lda
  *    kelishuv asosida amalga oshiradi.
- *  - Yangi do'konga o'tkazilgan seller order holati "yangi" (NEW, yoki
- *    to'lov karta orqali hali kutilayotgan bo'lsa PAYMENT_PENDING) ga
+ *  - Yangi do'konga o'tkazilgan seller order holati odatda "yangi" (NEW,
+ *    yoki to'lov karta orqali hali kutilayotgan bo'lsa PAYMENT_PENDING) ga
  *    qaytariladi va accepted_at tozalanadi — chunki B bu buyurtmani hali
  *    umuman ko'rmagan/qabul qilmagan, uni birinchi marta ko'rayotgandek
- *    o'zi qabul qilishi kerak.
+ *    o'zi qabul qilishi kerak. YAGONA ISTISNO — yuqorida tasvirlangan
+ *    "allaqachon kuryerga topshirilgan" holat: unda holat o'zgartirilmaydi
+ *    (yuqoridagi izohga qarang).
  */
 class SellerOrderReassignmentService
 {
@@ -95,25 +105,40 @@ class SellerOrderReassignmentService
         }
 
         if (! $this->canReassignOrder($order, $sellerOrder, $oldSellerId)) {
-            throw new RuntimeException("Bu buyurtmani hozirgi bosqichida boshqa do'konga o'tkazib bo'lmaydi (seller kuryerga topshirgan, yoki bosh buyurtma yetkazish/yakunlash bosqichida).");
+            throw new RuntimeException("Bu buyurtmani hozirgi bosqichida boshqa do'konga o'tkazib bo'lmaydi (seller order bekor qilingan, yoki bosh buyurtma yetkazish/yakunlash bosqichida).");
         }
 
-        // Yangi seller-order holati: to'lov karta orqali hali kutilayotgan
-        // bo'lsa PAYMENT_PENDING, aks holda NEW — xuddi buyurtma birinchi
-        // marta yaratilgandagi kabi (AdminOrderStatusSyncService::
+        // MUHIM (2026-09, foydalanuvchi aniq tasdiqlagan qaror): agar
+        // seller order ALLAQACHON kuryerga topshirilgan bo'lsa — holat
+        // ("handed_to_courier") va accepted_at ATAYLAB O'ZGARTIRILMAYDI,
+        // chunki kuryer topshirig'i haqiqatan ham eskicha (A do'kon bilan)
+        // qolyapti, buni "yangi"ga qaytarish yolg'on ma'lumot bo'lardi.
+        // Faqat egalik (seller_id) almashtiriladi.
+        //
+        // Aks holda (hali PAYMENT_PENDING/NEW/ACCEPTED bosqichida) — yangi
+        // do'kon buyurtmani birinchi marta ko'rayotgandek "yangi" holatda
+        // qabul qilishi kerak: to'lov karta orqali hali kutilayotgan bo'lsa
+        // PAYMENT_PENDING, aks holda NEW (AdminOrderStatusSyncService::
         // mapMainToSeller() dagi bir xil qoidaga mos).
-        $paymentCode = PaymentStatusCode::fromLegacy($order->payment_status_code ?? $order->paymentStatus);
-        $newSellerOrderStatus = $paymentCode === PaymentStatusCode::CARD_PENDING
-            ? SellerOrderStatusCode::PAYMENT_PENDING
-            : SellerOrderStatusCode::NEW;
+        $currentStatus = SellerOrderStatusCode::fromLegacy($sellerOrder->status_code ?? $sellerOrder->status);
+        $alreadyHandedToCourier = $currentStatus === SellerOrderStatusCode::HANDED_TO_COURIER;
 
-        DB::transaction(function () use ($sellerOrder, $order, $oldSellerId, $newSellerId, $newSellerOrderStatus): void {
-            $sellerOrder->forceFill([
-                'seller_id' => $newSellerId,
-                'status' => $newSellerOrderStatus->legacy(),
-                'status_code' => $newSellerOrderStatus->value,
-                'accepted_at' => null,
-            ])->save();
+        $newSellerOrderStatus = null;
+        if (! $alreadyHandedToCourier) {
+            $paymentCode = PaymentStatusCode::fromLegacy($order->payment_status_code ?? $order->paymentStatus);
+            $newSellerOrderStatus = $paymentCode === PaymentStatusCode::CARD_PENDING
+                ? SellerOrderStatusCode::PAYMENT_PENDING
+                : SellerOrderStatusCode::NEW;
+        }
+
+        DB::transaction(function () use ($sellerOrder, $order, $oldSellerId, $newSellerId, $alreadyHandedToCourier, $newSellerOrderStatus): void {
+            $sellerOrder->seller_id = $newSellerId;
+            if (! $alreadyHandedToCourier) {
+                $sellerOrder->status = $newSellerOrderStatus->legacy();
+                $sellerOrder->status_code = $newSellerOrderStatus->value;
+                $sellerOrder->accepted_at = null;
+            }
+            $sellerOrder->save();
 
             $sellerOrder->items()
                 ->where('seller_id', $oldSellerId)
@@ -163,25 +188,33 @@ class SellerOrderReassignmentService
 
     private function canReassignOrder(Sold $order, SellerOrder $sellerOrder, int $oldSellerId): bool
     {
-        // Seller order hali kuryerga TOPSHIRILMAGAN bosqichda bo'lishi
-        // kerak. 2026-09 gacha bu yerda faqat PAYMENT_PENDING/NEW ruxsat
-        // etilgan edi — ammo real hayotda do'kon ko'pincha buyurtmani
-        // QABUL QILGANDAN keyin (tayyorlash jarayonida) mahsulot yo'qligini
-        // aniqlaydi. Shu sabab ACCEPTED ham endi ruxsat etilgan holatlar
-        // qatoriga qo'shildi — faqat HANDED_TO_COURIER dan keyin
-        // taqiqlanadi (o'sha paytdan boshlab logistika jismonan shu do'kon
-        // bilan bog'langan bo'ladi).
+        // Seller order hali BEKOR QILINMAGAN bo'lishi kerak — bekor
+        // qilingan (refund qilingan) seller orderni "almashtirish"
+        // ma'nosiz, u uchun mavjud bekor qilish/refund oqimi bor.
+        //
+        // 2026-09 gacha bu yerda HANDED_TO_COURIER taqiqlangan edi (va
+        // shu do'kon uchun CourierTask mavjudligi ham qo'shimcha to'siq
+        // edi) — chunki logistika jismonan shu do'kon bilan bog'langan
+        // deb hisoblangan. Foydalanuvchi aniq tasdiqlagan qaror bilan bu
+        // cheklov olib tashlandi: amalda mahsulot yo'qligi ko'pincha
+        // aynan kuryer allaqachon yo'lga chiqqandan keyin ham ma'lum
+        // bo'ladi, va bu holatda kuryer topshirig'ini o'zgartirish/qayta
+        // hisoblash SHART EMAS (operator buni tizimdan tashqarida hal
+        // qiladi) — faqat pul kim OLISHI (buyurtma egaligi) to'g'ri
+        // bo'lishi kerak. Shu sabab CourierTask tekshiruvi ham olib
+        // tashlandi.
         $sellerOrderStatus = SellerOrderStatusCode::fromLegacy($sellerOrder->status_code ?? $sellerOrder->status);
-        if (! in_array($sellerOrderStatus, [
-            SellerOrderStatusCode::PAYMENT_PENDING,
-            SellerOrderStatusCode::NEW,
-            SellerOrderStatusCode::ACCEPTED,
-        ], true)) {
+        if ($sellerOrderStatus === SellerOrderStatusCode::CANCELLED) {
             return false;
         }
 
         // Bosh buyurtma allaqachon yetkazish/yakunlash/bekor qilish
-        // bosqichida bo'lsa ham taqiqlanadi.
+        // bosqichida bo'lsa taqiqlanadi. Odatda bu yerga faqat "direct
+        // courier" rejimida va aynan OXIRGI seller order kuryerga
+        // topshirilgan paytda tushiladi (AdminOrderStatusSyncService::
+        // updateSellerOrder()) — hub orqali yuboriladigan buyurtmalarda
+        // HANDED_TO_COURIER bosqichida ham bosh buyurtma odatda hali
+        // "Qadoqlanmoqda" holatida qoladi.
         $orderStatus = OrderStatusCode::fromLegacy($order->status_code ?? $order->status);
         if (in_array($orderStatus, [
             OrderStatusCode::IN_DELIVERY,
@@ -193,13 +226,6 @@ class SellerOrderReassignmentService
             return false;
         }
 
-        // Qo'shimcha ehtiyot chorasi: shu do'kon uchun kuryer topshirig'i
-        // allaqachon yaratilgan bo'lsa (logistika boshlangan), taqiqlanadi.
-        $hasCourierTask = CourierTask::query()
-            ->where('order_id', $order->id)
-            ->where('seller_id', $oldSellerId)
-            ->exists();
-
-        return ! $hasCourierTask;
+        return true;
     }
 }
