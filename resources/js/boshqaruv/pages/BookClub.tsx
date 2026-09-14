@@ -1,3 +1,4 @@
+import { toneOf } from '../utils/tone';
 import { useEffect, useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Modal, Button } from 'react-bootstrap';
@@ -217,7 +218,7 @@ export default function BookClub() {
                     <span className="btn btn-sm btn-light"><i className="bi bi-heart-fill text-danger"></i> {post.likes}</span>
                     <button className="btn btn-sm btn-light" onClick={() => openDetail(post)}><i className="bi bi-chat"></i> {post.comments}</button>
                     <span className={`chip ${post.aiStatus === 'scored' ? 'chip-success' : post.aiStatus === 'failed' ? 'chip-danger' : 'chip-gray'}`}>AI: {post.aiStatus || '—'} {post.aiScore ?? ''}</span>
-                    <span className={`chip ${moderationChipClass(post.moderationStatus)}`}>Moderatsiya: {moderationLabel(post.moderationStatus)}</span>
+                    <span className={`st ${toneOf(moderationChipClass(post.moderationStatus))}`}><i></i>Moderatsiya: {moderationLabel(post.moderationStatus)}</span>
                     <button className="btn btn-sm btn-light ms-auto" onClick={() => openDetail(post)} title="Tafsilot"><i className="bi bi-eye"></i></button>
                     <button className="btn btn-sm btn-light" onClick={() => warn(post)} title="Ogohlantirish"><i className="bi bi-flag"></i></button>
                     <button className="btn btn-sm btn-light text-danger" onClick={() => destroy(post)} title="O'chirish"><i className="bi bi-trash"></i></button>
@@ -386,7 +387,7 @@ function CommentCard({ comment, onEdit, onDelete, onModerate }: { comment: Comme
           <div className="text-muted mt-2" style={{ whiteSpace: 'pre-line' }}>{comment.content}</div>
           <div className="d-flex gap-2 flex-wrap mt-2">
             <span className="chip chip-info">AI: {comment.aiStatus || '—'} {comment.aiScore ?? ''}</span>
-            {comment.moderationStatus ? <span className={`chip ${moderationChipClass(comment.moderationStatus)}`}>{moderationLabel(comment.moderationStatus)}</span> : null}
+            {comment.moderationStatus ? <span className={`st ${toneOf(moderationChipClass(comment.moderationStatus))}`}><i></i>{moderationLabel(comment.moderationStatus)}</span> : null}
             <button className={`btn btn-sm btn-light ${comment.hiddenByAi ? 'text-success' : 'text-secondary'}`} onClick={() => onModerate(comment.moderationUrl, !comment.hiddenByAi)} title={comment.hiddenByAi ? 'Qayta ochish' : 'Yashirish'}><i className={`bi ${comment.hiddenByAi ? 'bi-eye' : 'bi-eye-slash'}`}></i></button>
             <button className="btn btn-sm btn-light ms-auto" onClick={onEdit}><i className="bi bi-pencil"></i></button>
             <button className="btn btn-sm btn-light text-danger" onClick={() => onDelete(comment.destroyUrl)}><i className="bi bi-trash"></i></button>

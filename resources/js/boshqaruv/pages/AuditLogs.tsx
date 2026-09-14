@@ -1,3 +1,4 @@
+import { toneOf } from '../utils/tone';
 import { useState } from 'react';
 import { Modal } from 'react-bootstrap';
 import { router, usePage } from '@inertiajs/react';
@@ -71,9 +72,9 @@ export default function AuditLogs() {
             <tbody>
               {auditLogs.map((log) => (
                 <tr key={log.id}>
-                  <td className="fw-semibold text-primary">#{log.id}</td>
+                  <td className="cell-id">#{log.id}</td>
                   <td>{log.admin}<small className="d-block text-muted">{log.ip || '—'}</small></td>
-                  <td><span className={`chip ${methodChip(log.method)}`}>{log.method}</span></td>
+                  <td><span className={`st ${toneOf(methodChip(log.method))}`}><i></i>{log.method}</span></td>
                   <td><strong>{log.action || log.route || '—'}</strong><small className="d-block text-muted">{log.route || '—'}</small></td>
                   <td>{log.targetType ? <span className="chip chip-gray">{log.targetType} #{log.targetId || '—'}</span> : '—'}</td>
                   <td className="text-muted small">{log.path}</td>

@@ -49,7 +49,7 @@ export default function BookCategories() {
             <tbody>
               {pagination.paginated.map((category) => (
                 <tr key={category.id}>
-                  <td className="fw-semibold text-primary">#{category.id}</td>
+                  <td className="cell-id">#{category.id}</td>
                   <td><div className="fw-semibold">{category.icon ? `${category.icon} ` : ''}{category.name}</div><div className="text-muted small">{[category.nameRu, category.nameEn, category.nameJa].filter(Boolean).join(' / ')}</div></td>
                   <td className="text-muted">{category.slug || '—'}</td>
                   <td>{category.itemsCount} ta</td>

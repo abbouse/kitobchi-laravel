@@ -1,3 +1,4 @@
+import { toneOf } from '../utils/tone';
 import { useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Modal, Button } from 'react-bootstrap';
@@ -113,7 +114,7 @@ export default function SellerAiActions() {
                   <td>{action.file || '—'}</td>
                   <td><div className="fw-semibold">{action.actionType}</div><small className="text-muted">{action.summary || '—'}</small></td>
                   <td>{action.appliedCount || 0}/{action.itemsCount || 0}</td>
-                  <td><span className={`chip ${statusChip(action.status)}`}>{statusLabel(action.status)}</span></td>
+                  <td><span className={`st ${toneOf(statusChip(action.status))}`}><i></i>{statusLabel(action.status)}</span></td>
                   <td className="text-muted">{action.createdAt || '—'}</td>
                   <td><button className="btn btn-sm btn-light" onClick={() => setSelected(action)}><i className="bi bi-eye"></i></button></td>
                 </tr>

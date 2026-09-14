@@ -1,3 +1,4 @@
+import { toneOf } from '../utils/tone';
 import { useEffect, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { router, usePage } from '@inertiajs/react';
@@ -313,6 +314,44 @@ const normalizeStatus = (status?: string) => {
   } as Record<string, string>)[value] || value;
 };
 
+// Jadval katagi uchun qisqa yorliqlar: uzun jumlalar ("Mijoz olganda naqd
+// to'laydi") zich jadvalda qatorni yorib yuboradi, shuning uchun ro'yxatda
+// qisqasi, tafsilot panelida esa to'lig'i ko'rsatiladi.
+const paymentShort = (value?: string) => {
+  const normalized = String(value || '').toLowerCase();
+  return ({
+    cash_pending: 'Naqd',
+    card_pending: 'Karta · kutilmoqda',
+    held: 'Karta · HOLD',
+    paid: "To'landi",
+    cancelled: 'Bekor qilingan',
+  } as Record<string, string>)[normalized] || value || '—';
+};
+
+const paymentTone = (value?: string) => {
+  const normalized = String(value || '').toLowerCase();
+  if (normalized === 'paid') return 'ok';
+  if (normalized === 'held' || normalized === 'card_pending') return 'warn';
+  if (normalized === 'cancelled') return 'danger';
+  return 'neutral';
+};
+
+const deliveryShort = (value?: string) => {
+  const normalized = String(value || '').toLowerCase();
+  return ({ pickup: 'Olib ketish', postal: 'Pochta', delivery: 'Kuryer' } as Record<string, string>)[normalized] || value || '—';
+};
+
+// Holat rangi butun panelda bitta ma'noda: yashil — yakunlangan,
+// ko'k — jarayonda, sariq — kutilmoqda, qizil — muammo.
+const statusTone = (status?: string) => {
+  const normalized = String(status || '').toLowerCase();
+  if (['delivered', 'customer_received', 'c', 'completed'].includes(normalized)) return 'ok';
+  if (['in_delivery', 'shipping', 'b'].includes(normalized)) return 'info';
+  if (['packing', 'processing', 'p', 'pending', 'a'].includes(normalized)) return 'warn';
+  if (['cancelled', 'returned', 'f', 'r'].includes(normalized)) return 'danger';
+  return 'neutral';
+};
+
 const statusLabel = (status?: string) => {
   const normalized = normalizeStatus(status);
   if (normalized === 'returned') return 'Qaytgan';
@@ -621,64 +660,88 @@ export default function Orders() {
               {label} <span className="ms-1 opacity-75">{orderCounts[status] || 0}</span>
             </button>
           ))}
-          <form className="ms-auto d-flex gap-2" onSubmit={(event) => { event.preventDefault(); loadOrders(1); }}>
-            <input className="form-control form-control-sm" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="ID, mijoz yoki telefon" />
-            <button className="btn btn-sm btn-outline-secondary" title="Qidirish"><i className="bi bi-search"></i></button>
-          </form>
         </div>
+
+        <form className="toolbar" onSubmit={(event) => { event.preventDefault(); loadOrders(1); }}>
+          <div className="search-field" style={{ width: 'min(280px, 100%)' }}>
+            <i className="bi bi-search"></i>
+            <input
+              className="form-control form-control-sm"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="ID, mijoz yoki telefon"
+            />
+          </div>
+          <button className="btn btn-sm btn-light" type="submit">Qidirish</button>
+          {search ? (
+            <button className="btn btn-sm btn-ghost" type="button" onClick={() => { setSearch(''); loadOrders(1); }}>Tozalash</button>
+          ) : null}
+          <span className="ms-auto cell-sub">{orderPagination.total ? `${fmt(orderPagination.total)} ta buyurtma` : null}</span>
+        </form>
 
         <div className="table-responsive">
           <table className="data-table">
             <thead>
               <tr>
-                <th>Buyurtma ID</th>
+                <th>Buyurtma</th>
                 <th>Mijoz</th>
                 <th>Manba</th>
-                <th>Mahsulotlar</th>
-                <th>Summa</th>
+                <th className="right">Dona</th>
+                <th className="right">Summa</th>
                 <th>To'lov</th>
                 <th>Yetkazish</th>
-                <th>Sana</th>
-                <th>Status</th>
-                <th>Amallar</th>
+                <th>Holat</th>
+                <th className="right">Sana</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
-              {orders.map((order) => (
-                <tr key={order.id}>
-                  <td className="fw-semibold" style={{ color: '#0B0342' }}>{order.id}</td>
-                  <td>
-                    <div className="fw-semibold">{order.customer}</div>
-                    <div className="text-muted small">{order.user?.phone || ''}</div>
-                  </td>
-                  <td>
-                    <span className={`chip ${order.source === 'web' ? 'chip-purple' : 'chip-gray'}`}>
-                      {order.sourceLabel || (order.source === 'web' ? 'Veb-sayt' : 'Ilova')}
-                    </span>
-                  </td>
-                  <td>{order.items} dona</td>
-                  <td className="fw-semibold">{fmt(order.total)} so'm</td>
-                  <td>
-                    <span className="chip chip-gray">{paymentLabel(order.paymentStatus || order.payment)}</span>
-                    {order.splitStatus ? (
-                      <span className={`chip ms-1 ${order.splitStatus === 'overdue' ? 'chip-danger' : 'chip-purple'}`}>
-                        Nasiya{order.splitStatus === 'overdue' ? ' !' : ''}
+              {orders.map((order) => {
+                const payment = order.paymentStatus || order.payment;
+                // Bekor qilingan buyurtma diqqat talab qilmaydi — faqat hali
+                // hal qilinmagan to'lov muammolari belgilanadi.
+                const needsAttention = statusTone(order.status) !== 'danger'
+                  && (paymentTone(payment) === 'danger'
+                    || (paymentTone(payment) === 'warn' && statusTone(order.status) === 'warn'));
+                return (
+                  <tr
+                    key={order.id}
+                    className="is-clickable"
+                    data-flag={needsAttention ? 'warn' : undefined}
+                    onClick={() => handleOpenView(order)}
+                  >
+                    <td><span className="row-flag"></span><span className="cell-id">{order.id}</span></td>
+                    <td>
+                      <div className="cell-strong">{order.customer}</div>
+                      {order.user?.phone ? <div className="cell-sub">{order.user.phone}</div> : null}
+                    </td>
+                    <td className="cell-sub">{order.sourceLabel || (order.source === 'web' ? 'Veb-sayt' : 'Ilova')}</td>
+                    <td className="right money">{order.items}</td>
+                    <td className="right money">{fmt(order.total)}</td>
+                    <td>
+                      <span className={`st ${paymentTone(payment)}`}><i></i>{paymentShort(payment)}</span>
+                      {order.splitStatus ? (
+                        <div className={`cell-sub${order.splitStatus === 'overdue' ? ' text-danger' : ''}`}>
+                          Nasiya{order.splitStatus === 'overdue' ? ' · muddati o\u2018tgan' : ''}
+                        </div>
+                      ) : null}
+                    </td>
+                    <td className="cell-sub">{deliveryShort(order.deliveryType)}</td>
+                    <td><span className={`st ${statusTone(order.status)}`}><i></i>{statusLabel(order.status)}</span></td>
+                    <td className="right cell-sub"><span className="money">{order.date}</span></td>
+                    <td className="right" onClick={(event) => event.stopPropagation()}>
+                      <span className="row-actions">
+                        <button className="btn btn-sm" onClick={() => handleOpenView(order)} title="Ko'rish / boshqarish">
+                          <i className="bi bi-eye"></i>
+                        </button>
+                        <a className="btn btn-sm" href={order.receiptUrl || '#'} title="Chekni chop etish" target="_blank">
+                          <i className="bi bi-printer"></i>
+                        </a>
                       </span>
-                    ) : null}
-                  </td>
-                  <td><span className="chip chip-gray">{deliveryTypeLabel(order.deliveryType)}</span></td>
-                  <td className="text-muted">{order.date}</td>
-                  <td><span className={`chip ${statusChip(order.status)}`}>{statusLabel(order.status)}</span></td>
-                  <td>
-                    <button className="btn btn-sm btn-light me-1" onClick={() => handleOpenView(order)} title="Ko'rish / Boshqarish">
-                      <i className="bi bi-eye"></i>
-                    </button>
-                    <a className="btn btn-sm btn-light" href={order.receiptUrl || '#'} title="Chekni chop etish" target="_blank">
-                      <i className="bi bi-printer"></i>
-                    </a>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -702,7 +765,7 @@ export default function Orders() {
                       </div>
                       <div className="text-muted small">{selectedOrd.user?.phone || selectedOrd.user?.email || 'Kontakt yoq'}</div>
                     </div>
-                    <span className={`chip ${statusChip(selectedOrd.status)}`}>{statusLabel(selectedOrd.status)}</span>
+                    <span className={`st ${toneOf(statusChip(selectedOrd.status))}`}><i></i>{statusLabel(selectedOrd.status)}</span>
                   </div>
                   {normalizeStatus(selectedOrd.status) === 'returned' ? (
                     <div className="alert alert-warning py-2 small mb-3">
@@ -1499,7 +1562,7 @@ function SellerOrdersTable({
                 <div className="fw-semibold">{fmt(row.settlement?.currentNet || 0)} so'm</div>
                 <div className="text-muted small">{row.settlement?.label || 'Hisob-kitob kutilmoqda'}</div>
               </td>
-              <td><span className={`chip ${statusChip(row.status)}`}>{row.status || '—'}</span></td>
+              <td><span className={`st ${toneOf(statusChip(row.status))}`}><i></i>{row.status || '—'}</span></td>
               <td>
                 <div className="text-muted">{row.acceptedAt || '—'}</div>
                 <div className="text-muted small">{row.createdAt || ''}</div>

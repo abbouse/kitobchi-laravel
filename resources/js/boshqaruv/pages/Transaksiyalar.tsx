@@ -1,3 +1,4 @@
+import { toneOf } from '../utils/tone';
 import { useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Modal, Button } from 'react-bootstrap';
@@ -165,7 +166,7 @@ export default function Transaksiyalar() {
             <tbody>
               {transactions.map((item) => (
                 <tr key={item.id}>
-                  <td className="fw-semibold text-primary">#{item.id}</td>
+                  <td className="cell-id">#{item.id}</td>
                   <td><div className="fw-semibold">{item.user}</div><small className="text-muted">{item.phone}</small></td>
                   <td><span className="chip chip-gray">{item.type}</span></td>
                   <td className={`fw-bold ${item.amount >= 0 ? 'text-success' : 'text-danger'}`}>{item.amount >= 0 ? '+' : ''}{fmt(item.amount)} so'm</td>
@@ -173,7 +174,7 @@ export default function Transaksiyalar() {
                   <td><span className="chip chip-gray">{item.method || '—'}</span></td>
                   <td><small className="text-muted">{owner === 'courier' ? `Buyurtma #${item.orderId || '—'} · Kuryer #${item.courierOrderId || '—'}` : `Buyurtma #${item.orderId || '—'} · Sotuvchi #${item.sellerOrderId || '—'}`}</small></td>
                   <td className="text-muted">{item.date || '—'}</td>
-                  <td><span className={`chip ${statusChip(item.status)}`}>{item.status || '—'}</span></td>
+                  <td><span className={`st ${toneOf(statusChip(item.status))}`}><i></i>{item.status || '—'}</span></td>
                   <td>
                     <button className="btn btn-sm btn-light me-1" onClick={() => setSelected(item)}><i className="bi bi-eye"></i></button>
                     {statusChip(item.status) === 'chip-warning' && item.approveUrl ? (
@@ -199,7 +200,7 @@ export default function Transaksiyalar() {
             <div className="col-6"><small className="text-muted">{selected?.owner === 'courier' ? 'Kuryer' : 'Sotuvchi'}</small><div className="fw-semibold">{selected?.user}</div></div>
             <div className="col-6"><small className="text-muted">Telefon</small><div>{selected?.phone || '—'}</div></div>
             <div className="col-6"><small className="text-muted">Turi</small><div>{selected?.type} {selected?.category ? `· ${selected.category}` : ''}</div></div>
-            <div className="col-6"><small className="text-muted">Holat</small><div><span className={`chip ${statusChip(selected?.status)}`}>{selected?.status || '—'}</span></div></div>
+            <div className="col-6"><small className="text-muted">Holat</small><div><span className={`st ${toneOf(statusChip(selected?.status))}`}><i></i>{selected?.status || '—'}</span></div></div>
             <div className="col-6"><small className="text-muted">Summa</small><div className="fw-bold">{fmt(selected?.amount || 0)} so'm</div></div>
             <div className="col-6"><small className="text-muted">Yakuniy summa</small><div className="fw-bold text-success">{fmt(selected?.netAmount ?? selected?.amount ?? 0)} so'm</div></div>
             <div className="col-6"><small className="text-muted">Karta</small><div>{selected?.method || '—'}</div></div>

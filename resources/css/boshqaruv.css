@@ -850,6 +850,111 @@ code {
 .compact-table thead th,
 .compact-table tbody td { padding: 7px 10px; }
 
+/* ═══ Jadval katak tili ══════════════════════════════════════════════════
+   Prototipdagi qoidalar: ID va vaqt — mono; summa — mono va o'ngga
+   tekislangan; ikkinchi darajali ma'lumot — kichik va xira; holat — rangli
+   nuqta + matn (chip emas, chunki bir qatorda 4-5 ta chip bo'lsa jadval
+   "rang shovqini"ga aylanadi). */
+.data-table th.right, .data-table td.right,
+.table th.right, .table td.right { text-align: right; }
+
+.data-table .cell-id, .table .cell-id {
+  font-family: var(--kc-font-mono); font-variant-numeric: tabular-nums;
+  font-size: 12px; font-weight: 500; color: var(--kc-text);
+  white-space: nowrap;
+}
+.data-table .cell-strong, .table .cell-strong { font-weight: 500; color: var(--kc-text); }
+.data-table .cell-sub, .table .cell-sub {
+  font-size: 11.5px; color: var(--kc-text-muted); line-height: 1.35;
+}
+.data-table td.cell-sub, .table td.cell-sub { color: var(--kc-text-soft); font-size: 12px; }
+.data-table .money, .table .money {
+  font-family: var(--kc-font-mono); font-variant-numeric: tabular-nums;
+  font-size: 12.5px; white-space: nowrap;
+}
+
+/* Holat: nuqta + matn */
+.st { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; white-space: nowrap; color: var(--kc-text); }
+.st > i { width: 6px; height: 6px; border-radius: 50%; flex: none; display: block; background: var(--kc-neutral); }
+.st.ok > i { background: var(--kc-ok); }
+.st.info > i { background: var(--kc-info); }
+.st.warn > i { background: var(--kc-warn); }
+.st.danger > i { background: var(--kc-danger); }
+.st.neutral > i { background: var(--kc-neutral); }
+
+/* Diqqat talab qiladigan qatorlar uchun chap chekkadagi belgi */
+.row-flag {
+  display: inline-block; width: 2px; height: 20px; border-radius: 2px;
+  vertical-align: middle; margin-right: 9px; background: transparent;
+}
+tr[data-flag="warn"] .row-flag { background: var(--kc-warn); }
+tr[data-flag="danger"] .row-flag { background: var(--kc-danger); }
+
+/* Qator amallari — kichik, xira; qator ustiga kelganda to'liq ko'rinadi */
+.row-actions { display: inline-flex; gap: 3px; justify-content: flex-end; }
+.row-actions .btn {
+  min-height: 24px; width: 24px; padding: 0;
+  border-color: transparent; background: transparent;
+  color: var(--kc-text-muted);
+}
+tr:hover .row-actions .btn { color: var(--kc-text-soft); }
+.row-actions .btn:hover { background: var(--kc-bg-subtle); color: var(--kc-text); border-color: var(--kc-border-subtle); }
+.data-table tbody tr.is-clickable { cursor: pointer; }
+.data-table tbody tr.is-clickable:hover td { background: var(--kc-table-row-hover); }
+
+/* Jadval ichidagi amal tugmalari — 175 joyda btn-light ishlatilgan.
+   Ular endi "sokin": ramkasiz va xira, faqat qator ustiga kelganda
+   ajralib turadi. Shunda jadvalning o'zi birinchi o'ringa chiqadi. */
+.data-table td .btn-light,
+.table td .btn-light,
+.data-table td .btn-outline-secondary,
+.table td .btn-outline-secondary {
+  background: transparent;
+  border-color: transparent;
+  color: var(--kc-text-muted);
+}
+.data-table tbody tr:hover td .btn-light,
+.table tbody tr:hover td .btn-light { color: var(--kc-text-soft); }
+.data-table td .btn-light:hover,
+.table td .btn-light:hover,
+.data-table td .btn-outline-secondary:hover,
+.table td .btn-outline-secondary:hover {
+  background: var(--kc-bg-subtle);
+  border-color: var(--kc-border-subtle);
+  color: var(--kc-text);
+}
+
+/* Ro'yxatdagi sonli "chip"lar — miqdor rang bilan emas, mono raqam bilan
+   ko'rsatiladi (chip faqat holat uchun qoladi). */
+/* Jadval ichidagi avatar — zich qatorga mos kichik kvadrat */
+.data-table .resource-avatar,
+.table .resource-avatar {
+  width: 32px; height: 32px; font-size: 12px;
+  border-radius: var(--kc-radius-sm);
+}
+.data-table .resource-avatar.square,
+.table .resource-avatar.square { width: 32px; height: 32px; }
+
+.data-table td > .chip.chip-gray:only-child,
+.table td > .chip.chip-gray:only-child {
+  background: transparent; padding: 0;
+  font-family: var(--kc-font-mono); font-variant-numeric: tabular-nums;
+  font-size: 12.5px; color: var(--kc-text);
+}
+
+/* Panel ichidagi asboblar qatori (qidiruv + filtrlar) */
+.toolbar {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 12px 0 14px;
+}
+.toolbar .field, .toolbar .form-control, .toolbar .form-select { min-height: 30px; }
+.toolbar .search-field { position: relative; }
+.toolbar .search-field i {
+  position: absolute; left: 9px; top: 50%; transform: translateY(-50%);
+  color: var(--kc-text-muted); font-size: 13px; pointer-events: none;
+}
+.toolbar .search-field input { padding-left: 29px; }
+
 .table-responsive,
 .table-container {
   border-radius: var(--kc-radius-lg);

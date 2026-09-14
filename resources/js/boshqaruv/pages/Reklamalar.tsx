@@ -1,3 +1,4 @@
+import { toneOf } from '../utils/tone';
 import { useMemo, useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Modal, Button } from 'react-bootstrap';
@@ -81,7 +82,7 @@ export default function Reklamalar() {
                   <div className="fw-bold text-truncate">{ad.name}</div>
                   <div className="text-muted small text-truncate">{ad.sellerPhone || ad.type}</div>
                 </div>
-                <span className={`chip ${chip(ad.status)}`}>{ad.status || '—'}</span>
+                <span className={`st ${toneOf(chip(ad.status))}`}><i></i>{ad.status || '—'}</span>
               </div>
 
               {ad.image ? <img className="media-preview rounded mb-3" style={{ aspectRatio: '16/8' }} src={ad.image} alt={ad.name} /> : null}
@@ -114,7 +115,7 @@ export default function Reklamalar() {
             <div className="col-6"><small className="text-muted">Turi</small><div>{selected?.type || '—'}</div></div>
             <div className="col-6"><small className="text-muted">Budget</small><div className="fw-bold">{fmt(selected?.budget || 0)} so'm</div></div>
             <div className="col-6"><small className="text-muted">To'lov</small><div>{selected?.paymentStatus || '—'}</div></div>
-            <div className="col-6"><small className="text-muted">Status</small><div><span className={`chip ${chip(selected?.status)}`}>{selected?.status || '—'}</span></div></div>
+            <div className="col-6"><small className="text-muted">Status</small><div><span className={`st ${toneOf(chip(selected?.status))}`}><i></i>{selected?.status || '—'}</span></div></div>
           </div>
         </Modal.Body>
         <Modal.Footer>

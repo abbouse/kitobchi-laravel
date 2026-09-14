@@ -1,3 +1,4 @@
+import { toneOf } from '../utils/tone';
 import { useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Modal, Button, Form } from 'react-bootstrap';
@@ -147,7 +148,7 @@ export default function Tickets() {
             <tbody>
               {tickets.map((ticket) => (
                 <tr key={`${ticket.source || 'bot'}-${ticket.id}`}>
-                  <td className="fw-semibold text-primary">#{ticket.id}</td>
+                  <td className="cell-id">#{ticket.id}</td>
                   <td><span className={`chip ${ticket.source === 'seller' ? 'chip-purple' : 'chip-info'}`}>{ticket.sourceLabel || 'Support'}</span></td>
                   <td className="fw-semibold">{ticket.subject}</td>
                   <td>{ticket.user}</td>
@@ -155,7 +156,7 @@ export default function Tickets() {
                   <td>{ticket.messages}</td>
                   <td>{ticket.rating || '—'}</td>
                   <td className="text-muted">{ticket.date || '—'}</td>
-                  <td><span className={`chip ${statusChip(ticket.status)}`}>{statusLabel(ticket.status)}</span></td>
+                  <td><span className={`st ${toneOf(statusChip(ticket.status))}`}><i></i>{statusLabel(ticket.status)}</span></td>
                   <td>
                     <button className="btn btn-sm btn-light me-1" onClick={() => openDetail(ticket)}><i className="bi bi-eye"></i></button>
                     {/* BUG TUZATILDI (2026-09): ilgari bu tugma

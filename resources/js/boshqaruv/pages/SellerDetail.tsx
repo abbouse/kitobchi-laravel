@@ -1,3 +1,4 @@
+import { toneOf } from '../utils/tone';
 import { Fragment, FormEvent, useEffect, useState } from 'react';
 import { Link, router, usePage } from '@inertiajs/react';
 import PaginationControls from '../components/PaginationControls';
@@ -95,7 +96,7 @@ export default function SellerDetail() {
             <div>
               <div className="d-flex flex-wrap align-items-center gap-2">
                 <h1 className="page-title mb-0">{seller.name}</h1>
-                <span className={`chip ${sellerChip(seller.status)}`}>{sellerLabel(seller.status)}</span>
+                <span className={`st ${toneOf(sellerChip(seller.status))}`}><i></i>{sellerLabel(seller.status)}</span>
                 {seller.verified ? <span className="chip chip-info"><i className="bi bi-patch-check-fill me-1"></i>Tasdiqlangan</span> : null}
                 {seller.premium ? <span className="chip chip-purple"><i className="bi bi-gem me-1"></i>Premium</span> : null}
               </div>
@@ -174,7 +175,7 @@ function OverviewTab({ seller, onSeeOrders }: { seller: DetailProps; onSeeOrders
               <div className="small text-muted mb-1">Do'kon karmasi</div>
               <div className="d-flex flex-wrap align-items-center gap-2 mb-2">
                 <div className="fw-bold" style={{ fontSize: '2rem', lineHeight: 1 }}>{Math.round(seller.karma || seller.reputationScore || 0)}%</div>
-                <span className={`chip ${karmaChip(seller.karmaCode)}`}>{seller.karmaLabelUz || '—'}</span>
+                <span className={`st ${toneOf(karmaChip(seller.karmaCode))}`}><i></i>{seller.karmaLabelUz || '—'}</span>
               </div>
               <div className="text-muted small" style={{ maxWidth: 760 }}>{seller.karmaHintUz || "Do'kon sifati haqida tavsiya tayyorlanmoqda."}</div>
             </div>

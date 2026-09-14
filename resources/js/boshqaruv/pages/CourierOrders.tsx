@@ -1,3 +1,4 @@
+import { toneOf } from '../utils/tone';
 import { useMemo, useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Button, Modal } from 'react-bootstrap';
@@ -169,15 +170,15 @@ export default function CourierOrders() {
       {!isOrderPage ? <div className="card-panel">
         <div className="panel-head"><div><div className="panel-title">Kuryerlar jadvali</div><small className="text-muted">{courierPagination.total} ta kuryer topildi</small></div><input className="form-control form-control-sm" style={{ maxWidth: 280 }} value={courierSearch} onChange={(e) => setCourierSearch(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && load({ couriers_page: 1 })} placeholder="Ism, telefon, hudud yoki raqam" /></div>
         <div className="kc-tabs d-flex flex-wrap gap-2 mb-3">{courierTabs.map((tab) => <button key={tab.key} className={`kc-tab ${courierTab === tab.key ? 'active' : ''}`} onClick={() => { setCourierTab(tab.key); load({ couriers_page: 1, couriers_tab: tab.key }); }}>{tab.label}<span className="badge rounded-pill bg-light text-dark ms-2">{fmt(courierCounts[tab.key] || 0)}</span></button>)}</div>
-        <div className="table-responsive"><table className="data-table"><thead><tr><th>ID</th><th>Kuryer</th><th>Ish holati</th><th>Hudud</th><th>Transport</th><th>Buyurtma</th><th>Balans</th><th>Ogohlantirish</th><th>Holat</th><th>Amallar</th></tr></thead><tbody>
+        <div className="table-responsive"><table className="data-table"><thead><tr><th>ID</th><th>Kuryer</th><th>Ish holati</th><th>Hudud</th><th>Transport</th><th className="right">Buyurtma</th><th className="right">Balans</th><th>Ogohlantirish</th><th>Holat</th><th>Amallar</th></tr></thead><tbody>
           {couriers.map((courier) => <tr key={courier.id}>
-            <td className="fw-semibold text-primary">#{courier.id}</td>
+            <td className="cell-id">#{courier.id}</td>
             <td><div className="d-flex align-items-center gap-2"><Avatar row={courier} /><div><div className="fw-semibold">{courier.name}</div><small className="text-muted">{courier.phone || '—'}</small></div></div></td>
             <td><span className={`chip ${courier.isOnline ? 'chip-success' : 'chip-gray'}`}>{courier.isOnline ? 'Online' : 'Offline'}</span><small className="d-block text-muted">{courier.availabilityUpdatedAt || courier.location?.updatedAt || '—'}</small></td>
             <td>{courier.region || '—'}</td><td><div>{courier.transportLabel || courier.transport || '—'}</div><small className="text-muted">{courier.plate || courier.vehicle}</small></td>
-            <td><span className="chip chip-info">{courier.orders || 0}</span></td><td>{fmt(courier.balance || 0)} so'm</td>
+            <td className="right money">{courier.orders || 0}</td><td>{fmt(courier.balance || 0)} so'm</td>
             <td><span className={`chip ${(courier.warningCount || 0) > 0 ? 'chip-warning' : 'chip-gray'}`}>{courier.warningCount || 0}/3</span></td>
-            <td><span className={`chip ${chip(courier.status)}`}>{courierLabel(courier.status)}</span></td>
+            <td><span className={`st ${toneOf(chip(courier.status))}`}><i></i>{courierLabel(courier.status)}</span></td>
             <td><button className="btn btn-sm btn-light me-1" onClick={() => setSelectedCourier(courier)}><i className="bi bi-eye"></i></button>{courier.status !== 'approved' ? <button className="btn btn-sm btn-light me-1" onClick={() => patch(courier.actions?.approveUrl, {}, 'Kuryer tasdiqlansinmi?')}><i className="bi bi-check2-circle"></i></button> : null}<button className="btn btn-sm btn-light text-warning" onClick={() => warn(courier)}><i className="bi bi-exclamation-triangle"></i></button></td>
           </tr>)}{courierPagination.total === 0 ? <tr><td colSpan={10} className="text-center text-muted py-5">Kuryer topilmadi</td></tr> : null}
         </tbody></table></div><PaginationControls {...courierPagination} onPageChange={(page) => load({ couriers_page: page })} />

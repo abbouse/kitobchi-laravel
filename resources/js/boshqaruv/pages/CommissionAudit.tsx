@@ -109,7 +109,7 @@ export default function CommissionAudit() {
             <tbody>
               {commissionAuditRows.map((row) => (
                 <tr key={row.id}>
-                  <td className="fw-semibold text-primary">#{row.id}</td>
+                  <td className="cell-id">#{row.id}</td>
                   <td><strong>{row.seller}</strong><small className="d-block text-muted">{row.phone || '—'}</small></td>
                   <td><span className="chip chip-gray">#{row.orderId || '—'}</span><small className="d-block text-muted">{isCourier ? `CO #${row.courierOrderId || '—'} · TASK #${row.courierTaskId || '—'}` : `SELL #${row.sellerOrderId || '—'}`}</small></td>
                   <td>{money(row.amount)}</td>

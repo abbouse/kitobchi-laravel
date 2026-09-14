@@ -1,3 +1,4 @@
+import { toneOf } from '../utils/tone';
 import { useMemo, useState } from 'react';
 import { Link, router, usePage } from '@inertiajs/react';
 import { Modal, Button } from 'react-bootstrap';
@@ -140,11 +141,11 @@ export default function SellerOrders() {
         </div>
         <div className="table-responsive">
           <table className="data-table">
-            <thead><tr><th>ID</th><th>Do'kon</th><th>Tel</th><th>Viloyat</th><th>Karma</th><th>Mahsulot</th><th>Buyurtma</th><th>Ogohlantirish</th><th>Holat</th><th>Amallar</th></tr></thead>
+            <thead><tr><th>ID</th><th>Do'kon</th><th>Tel</th><th>Viloyat</th><th className="right">Karma</th><th className="right">Mahsulot</th><th className="right">Buyurtma</th><th className="right">Ogohlantirish</th><th>Holat</th><th>Amallar</th></tr></thead>
             <tbody>
               {sellers.map((seller) => (
                 <tr key={seller.id}>
-                  <td className="fw-semibold text-primary">#{seller.id}</td>
+                  <td className="cell-id">#{seller.id}</td>
                   <td>
                     <Link href={seller.actions?.detailUrl || '#'} className="d-flex align-items-center gap-2 text-reset text-decoration-none seller-row-link">
                       <div className="resource-avatar">{seller.photo ? <img src={seller.photo} alt="" /> : seller.name.slice(0, 2).toUpperCase()}</div>
@@ -160,10 +161,10 @@ export default function SellerOrders() {
                     <div className="fw-semibold">{Math.round(seller.karma || 0)}%</div>
                     <small className="text-muted d-block">{seller.karmaLabelUz || '—'}</small>
                   </td>
-                  <td><span className="chip chip-gray">{seller.products || 0}</span></td>
-                  <td><span className="chip chip-info">{seller.orders || 0}</span></td>
+                  <td className="right money">{seller.products || 0}</td>
+                  <td className="right money">{seller.orders || 0}</td>
                   <td><span className={`chip ${(seller.warningCount || 0) >= 3 ? 'chip-danger' : (seller.warningCount || 0) > 0 ? 'chip-warning' : 'chip-gray'}`}>{seller.warningCount || 0}/3</span></td>
-                  <td><span className={`chip ${sellerChip(seller.status)}`}>{sellerLabel(seller.status)}</span></td>
+                  <td><span className={`st ${toneOf(sellerChip(seller.status))}`}><i></i>{sellerLabel(seller.status)}</span></td>
                   <td>
                     <div className="d-flex align-items-center gap-1">
                       <Link href={seller.actions?.detailUrl || '#'} className="btn btn-sm btn-light" title="Ko'rish"><i className="bi bi-eye"></i></Link>
@@ -222,7 +223,7 @@ export default function SellerOrders() {
         </div>
         <div className="table-responsive">
           <table className="data-table">
-            <thead><tr><th>ID</th><th>Seller</th><th>Mijoz</th><th>Summa</th><th>Mahsulot</th><th>Holat</th><th>Sana</th><th>Amallar</th></tr></thead>
+            <thead><tr><th>ID</th><th>Seller</th><th>Mijoz</th><th className="right">Summa</th><th className="right">Mahsulot</th><th>Holat</th><th className="right">Sana</th><th></th></tr></thead>
             <tbody>
               {sellerOrders.map((order) => (
                 <tr key={order.id}>

@@ -546,7 +546,7 @@ export default function Hubs() {
                 <div className="p-3 rounded border" key={role.value}>
                   <div className="d-flex justify-content-between gap-3 mb-1">
                     <strong>{role.label}</strong>
-                    <span className="chip chip-gray">{role.permissions?.length || 0}</span>
+                    <span className="money">{role.permissions?.length || 0}</span>
                   </div>
                   <div className="small text-muted mb-2">{role.description || role.value}</div>
                   <div className="d-flex flex-wrap gap-1">

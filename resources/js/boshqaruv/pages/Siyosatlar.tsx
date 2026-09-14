@@ -360,7 +360,7 @@ export default function Siyosatlar() {
 
                 return (
                   <tr key={policy.id}>
-                    <td className="fw-semibold text-primary">#{policy.id}</td>
+                    <td className="cell-id">#{policy.id}</td>
                     <td>
                       <div className="fw-semibold">{policy.title}</div>
                       {policy.updatedAtLabel ? (

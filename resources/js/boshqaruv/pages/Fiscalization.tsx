@@ -1,3 +1,4 @@
+import { toneOf } from '../utils/tone';
 import { FormEvent, useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import PaginationControls from '../components/PaginationControls';
@@ -264,7 +265,7 @@ function CoverageRow({ label, icon, coverage, href }: { label: string; icon: str
 }
 
 function FiscalStatus({ row }: { row: FiscalRow }) {
-  return <div className="fiscal-status-wrap"><span className={`chip ${statusChip(row.status)}`}>{statusLabel(row.status)}</span>{row.receiptId ? <small>Receipt #{row.receiptId}</small> : null}</div>;
+  return <div className="fiscal-status-wrap"><span className={`st ${toneOf(statusChip(row.status))}`}><i></i>{statusLabel(row.status)}</span>{row.receiptId ? <small>Receipt #{row.receiptId}</small> : null}</div>;
 }
 
 function FiscalMessage({ row }: { row: FiscalRow }) {

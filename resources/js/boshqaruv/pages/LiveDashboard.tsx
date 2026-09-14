@@ -1,3 +1,4 @@
+import { toneOf } from '../utils/tone';
 import { useEffect, useMemo, useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
@@ -422,7 +423,7 @@ export default function LiveDashboard() {
                     <small>{row.customer || row.seller || row.courier || row.title} · {row.updated_at || ''}</small>
                   </span>
                   <em>{fmt(row.amount)} so'm</em>
-                  <strong className={`chip ${statusClass(row.status_code || row.status)}`}>{row.status}</strong>
+                  <strong className={`st ${toneOf(statusClass(row.status_code || row.status))}`}><i></i>{row.status}</strong>
                 </a>
               ))}
             </div>
