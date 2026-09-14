@@ -243,7 +243,6 @@ export default function Split() {
           <div className="col-xl-3 col-md-6" key={String(label)}>
             <div className="stat-card">
               <div className="d-flex gap-3 align-items-center">
-                <div className="stat-icon" style={{ background: String(color) }}><i className={`bi ${icon}`}></i></div>
                 <div>
                   <div className="stat-value">{String(value)}</div>
                   <div className="stat-label">{label}</div>
@@ -1016,9 +1015,9 @@ function InfoHint({ text, example }: { text: string; example?: string }) {
             top: 20,
             left: -120,
             width: 270,
-            background: '#1e293b',
-            color: '#f1f5f9',
-            borderRadius: 12,
+            background: 'var(--kc-ink)',
+            color: 'var(--kc-on-ink)',
+            borderRadius: 'var(--kc-radius)',
             padding: '10px 12px',
             fontSize: 12,
             fontWeight: 400,
@@ -1027,7 +1026,7 @@ function InfoHint({ text, example }: { text: string; example?: string }) {
             whiteSpace: 'normal',
             textTransform: 'none',
             letterSpacing: 'normal',
-            boxShadow: '0 10px 28px rgba(0,0,0,0.28)',
+            boxShadow: 'var(--kc-shadow-overlay)',
             cursor: 'pointer',
           }}
         >

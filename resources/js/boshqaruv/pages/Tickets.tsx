@@ -108,7 +108,6 @@ export default function Tickets() {
           <div className="col-xl-3 col-md-6" key={s.label}>
             <div className="stat-card">
               <div className="d-flex align-items-center gap-3">
-                <div className="stat-icon" style={{ background: s.color }}><i className={`bi ${s.icon}`}></i></div>
                 <div><div className="stat-value">{s.val}</div><div className="stat-label">{s.label}</div></div>
               </div>
             </div>

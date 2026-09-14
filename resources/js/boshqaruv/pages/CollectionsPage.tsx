@@ -975,14 +975,9 @@ export default function CollectionsPage() {
         ].map((stat) => (
           <div className="col-xl-3 col-md-6" key={stat.label}>
             <div className="stat-card">
-              <div className="d-flex align-items-center gap-3">
-                <div className="stat-icon" style={(stat as any).danger ? { background: '#FEE2E2', color: '#DC2626' } : undefined}>
-                  <i className={`bi ${stat.icon}`}></i>
-                </div>
-                <div>
-                  <div className="stat-value">{stat.value}</div>
-                  <div className="stat-label">{stat.label}</div>
-                </div>
+              <div>
+                <div className={`stat-value${(stat as any).danger ? ' text-danger' : ''}`}>{stat.value}</div>
+                <div className="stat-label">{stat.label}</div>
               </div>
             </div>
           </div>

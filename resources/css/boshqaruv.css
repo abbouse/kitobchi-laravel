@@ -204,12 +204,18 @@ code {
   z-index: 1030;
 }
 .sidebar .brand {
-  padding: 10px 16px;
-  display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 3px;
+  /* Balandlik topbar bilan aynan bir xil — ikki chiziq bir sathda tutashadi */
+  height: 53px;
+  padding: 0 16px;
+  display: flex; align-items: center; gap: 9px;
   border-bottom: 1px solid var(--kc-border-subtle);
-  min-height: 53px;
 }
-.sidebar .brand > div { display: flex; align-items: center; gap: 9px; }
+.sidebar .brand > div { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.sidebar .brand .brand-sub {
+  padding-left: 9px;
+  border-left: 1px solid var(--kc-border-subtle);
+  line-height: 1;
+}
 .sidebar .brand img { filter: none; }
 .sidebar .brand-logo {
   width: 26px; height: 26px;
@@ -440,6 +446,33 @@ code {
   letter-spacing: -.02em;
 }
 .stat-card .stat-trend { font-size: 11.5px; font-weight: 500; margin-top: 6px; font-family: var(--kc-font-mono); }
+/* Yorliq qiymatdan YUQORIDA turadi — sahifalar markupi o'zgarmaydi,
+   tartib :has() orqali almashtiriladi (eski tartib: qiymat, keyin yorliq). */
+.stat-card div:has(> .stat-value) { display: flex; flex-direction: column-reverse; align-items: flex-start; }
+.stat-card .stat-label {
+  margin-top: 0; margin-bottom: 6px;
+  font-family: var(--kc-font-mono);
+  font-size: 10px; text-transform: uppercase; letter-spacing: .09em;
+  color: var(--kc-text-muted);
+}
+.stat-card .stat-value { margin-top: 0; }
+
+/* KPI matn uslublari — sahifalardagi inline stillar o'rniga */
+.kpi-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; min-width: 0; }
+.kpi-label {
+  font-family: var(--kc-font-mono);
+  font-size: 10px; font-weight: 500;
+  text-transform: uppercase; letter-spacing: .09em;
+  color: var(--kc-text-muted);
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.kpi-value {
+  font-family: var(--kc-font-mono); font-variant-numeric: tabular-nums;
+  font-size: 21px; font-weight: 500; letter-spacing: -.02em; color: var(--kc-text);
+}
+.kpi-icon { color: var(--kc-text-muted); font-size: 15px; flex-shrink: 0; }
+.kpi-hint { font-size: 11px; color: var(--kc-text-muted); margin-top: 5px; }
+.min-w-0 { min-width: 0; }
 .stat-card .stat-trend.up { color: var(--kc-ok); }
 .stat-card .stat-trend.down { color: var(--kc-danger); }
 
@@ -825,9 +858,10 @@ textarea.form-control { min-height: 72px; }
 .resource-avatar {
   width: 56px; height: 56px; border-radius: 50%;
   display: grid; place-items: center; overflow: hidden;
-  font-size: 19px; font-weight: 600;
-  color: var(--kc-on-ink);
-  background: var(--kc-ink);
+  font-size: 18px; font-weight: 600;
+  color: var(--kc-text-soft);
+  background: var(--kc-bg-sunken);
+  border: 1px solid var(--kc-border-subtle);
   flex-shrink: 0;
 }
 .resource-avatar.square { width: 40px; height: 40px; border-radius: var(--kc-radius-sm); font-size: 15px; }
@@ -878,6 +912,13 @@ textarea.form-control { min-height: 72px; }
 .info-hint-text { font-size: 12px; line-height: 1.45; }
 
 /* Utility */
+/* Bootstrap radius/soya utilitalari dizayn tizimiga bo'ysundiriladi —
+   sahifalardagi rounded-3/rounded-4/shadow-sm larni qayta yozish shart emas */
+.rounded-1 { border-radius: var(--kc-radius-xs) !important; }
+.rounded-2 { border-radius: var(--kc-radius-sm) !important; }
+.rounded, .rounded-3 { border-radius: var(--kc-radius) !important; }
+.rounded-4, .rounded-5 { border-radius: var(--kc-radius-lg) !important; }
+.shadow-sm, .shadow, .shadow-lg { box-shadow: none !important; }
 .shadow-soft { box-shadow: none; }
 .rounded-xl { border-radius: var(--kc-radius-lg); }
 .text-muted { color: var(--kc-text-muted) !important; }

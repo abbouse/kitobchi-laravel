@@ -141,7 +141,6 @@ export default function Transaksiyalar() {
           <div className="col-xl-3 col-md-6" key={item.label}>
             <div className="stat-card">
               <div className="d-flex align-items-center gap-3">
-                <div className="stat-icon" style={{ background: item.color }}><i className={`bi ${item.icon}`}></i></div>
                 <div>
                   <div className="stat-value">{item.value}</div>
                   <div className="stat-label">{item.label}</div>

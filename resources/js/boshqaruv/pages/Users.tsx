@@ -53,7 +53,7 @@ export default function Users() {
         {[
           ['Jami', userCounts.all || 0, 'bi-people', '#0B0342'], ['Online', userCounts.online || 0, 'bi-broadcast', '#0F6A46'],
           ['Karta ulagan', userCounts.with_cards || 0, 'bi-credit-card', '#4A3A7A'], ['Bloklangan', userCounts.blocked || 0, 'bi-person-lock', '#A32A2E'],
-        ].map(([label, val, icon, color]) => <div className="col-xl-3 col-md-6" key={String(label)}><div className="stat-card"><div className="d-flex gap-3 align-items-center"><div className="stat-icon" style={{ background: String(color) }}><i className={`bi ${icon}`}></i></div><div><div className="stat-value">{val}</div><div className="stat-label">{label}</div></div></div></div></div>)}
+        ].map(([label, val, icon, color]) => <div className="col-xl-3 col-md-6" key={String(label)}><div className="stat-card"><div className="d-flex gap-3 align-items-center"><div><div className="stat-value">{val}</div><div className="stat-label">{label}</div></div></div></div></div>)}
       </div>
       <div className="card-panel">
         <div className="panel-head"><div><div className="panel-title">Foydalanuvchilar ro‘yxati</div><small className="text-muted">{userPagination.total} ta yozuv</small></div><form className="d-flex gap-2" onSubmit={(e) => { e.preventDefault(); loadUsers(); }}><input className="form-control form-control-sm" style={{ maxWidth: 280 }} value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Ism, telefon, email yoki ID" /><button className="btn btn-sm btn-outline-secondary"><i className="bi bi-search"></i></button></form></div>

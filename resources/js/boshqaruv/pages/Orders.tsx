@@ -593,7 +593,6 @@ export default function Orders() {
           <div className="col-xl col-md-6" key={item.label}>
             <div className="stat-card">
               <div className="d-flex align-items-center gap-3">
-                <div className="stat-icon" style={{ background: item.color }}><i className={`bi ${item.icon}`}></i></div>
                 <div>
                   <div className="stat-value">{item.val}</div>
                   <div className="stat-label">{item.label}</div>

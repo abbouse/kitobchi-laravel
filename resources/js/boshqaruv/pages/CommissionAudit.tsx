@@ -82,7 +82,6 @@ export default function CommissionAudit() {
           <div className="col-xl-3 col-md-6" key={String(label)}>
             <div className="stat-card">
               <div className="d-flex align-items-center gap-3">
-                <div className="stat-icon" style={{ background: String(color) }}><i className={`bi ${icon}`}></i></div>
                 <div><div className="stat-value">{fmt(Number(value))}</div><div className="stat-label">{label}</div></div>
               </div>
             </div>

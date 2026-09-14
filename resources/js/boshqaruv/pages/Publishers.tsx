@@ -77,7 +77,7 @@ export default function Publishers() {
             <tbody>
               {pagination.paginated.map((publisher, i) => (
                 <tr key={publisher.id}>
-                  <td><div className="d-flex align-items-center gap-2"><div className="resource-avatar square" style={{ background: `linear-gradient(135deg, hsl(${i * 49 + 200},70%,55%), hsl(${i * 49 + 240},70%,45%))` }}>{publisher.image ? <img src={publisher.image} alt={publisher.name} /> : <i className="bi bi-building"></i>}</div><div><div className="fw-semibold">{publisher.name}</div><div className="text-muted small">#{publisher.id}</div></div></div></td>
+                  <td><div className="d-flex align-items-center gap-2"><div className="resource-avatar square">{publisher.image ? <img src={publisher.image} alt={publisher.name} /> : <i className="bi bi-building"></i>}</div><div><div className="fw-semibold">{publisher.name}</div><div className="text-muted small">#{publisher.id}</div></div></div></td>
                   <td className="fw-semibold">{fmt(publisher.books)}</td>
                   <td><span className={`chip ${publisher.image ? 'chip-success' : 'chip-gray'}`}>{publisher.image ? 'Bor' : "Yo'q"}</span></td>
                   <td><div className="d-flex gap-2"><button className="btn btn-sm btn-light" onClick={() => openDetail(publisher)}><i className="bi bi-eye"></i></button><button className="btn btn-sm btn-light" onClick={() => setEditing(publisher)}><i className="bi bi-pencil"></i></button><button className="btn btn-sm btn-light text-danger" onClick={() => destroy(publisher)}><i className="bi bi-trash"></i></button></div></td>

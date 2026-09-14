@@ -235,7 +235,7 @@ export function LeafletMapPicker({
           ) : null}
         </div>
       ) : null}
-      <div ref={mapEl} style={{ height, borderRadius: 12, overflow: 'hidden', zIndex: 1 }} />
+      <div ref={mapEl} style={{ height, borderRadius: 'var(--kc-radius-lg)', overflow: 'hidden', zIndex: 1 }} />
       <div className="small text-muted mt-1">
         <i className="bi bi-info-circle me-1"></i>Xaritaga bosing yoki markerni sudrab joyni belgilang.
       </div>
@@ -333,7 +333,7 @@ export function LeafletZonesMap({
     return <div className="d-flex align-items-center justify-content-center text-muted small border rounded-3" style={{ height }}><span><i className="bi bi-geo me-1"></i>Radiusli zona hali qo'shilmagan</span></div>;
   }
 
-  return <div ref={mapEl} style={{ height, borderRadius: 12, overflow: 'hidden', zIndex: 1 }} />;
+  return <div ref={mapEl} style={{ height, borderRadius: 'var(--kc-radius-lg)', overflow: 'hidden', zIndex: 1 }} />;
 }
 
 /**
@@ -419,5 +419,5 @@ export function LeafletMapView({
     );
   }
 
-  return <div ref={mapEl} style={{ height, borderRadius: 12, overflow: 'hidden', zIndex: 1 }} />;
+  return <div ref={mapEl} style={{ height, borderRadius: 'var(--kc-radius-lg)', overflow: 'hidden', zIndex: 1 }} />;
 }

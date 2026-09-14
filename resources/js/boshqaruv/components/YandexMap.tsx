@@ -525,7 +525,7 @@ function YandexZoneEditorInner({
           Xaritaga bosib zona burchaklarini qo'ying. Tugatish uchun oxirgi nuqtaga ikki marta bosing. Keyin nuqtalarni sudrab tuzatishingiz mumkin.
         </div>
       ) : null}
-      <div ref={mapEl} style={{ height, borderRadius: 14, overflow: 'hidden' }} />
+      <div ref={mapEl} style={{ height, borderRadius: 'var(--kc-radius-lg)', overflow: 'hidden' }} />
     </div>
   );
 }
@@ -645,7 +645,7 @@ function YandexZonesOverviewInner({
     );
   }
 
-  return <div ref={mapEl} style={{ height, borderRadius: 14, overflow: 'hidden' }} />;
+  return <div ref={mapEl} style={{ height, borderRadius: 'var(--kc-radius-lg)', overflow: 'hidden' }} />;
 }
 
 // Tashqi eksportlar — har biri MapErrorBoundary bilan o'ralgan (xarita xatosi sahifani buzmasin).
@@ -765,7 +765,7 @@ function YandexPreviewMapInner({
         <i className="bi bi-cursor me-1 text-primary" />
         Xaritaga bosing yoki manzil qidiring — mos zonalar ajraladi, <b className="text-danger">g'olib qizil</b> bo'ladi.
       </div>
-      <div ref={mapEl} style={{ height, borderRadius: 14, overflow: 'hidden' }} />
+      <div ref={mapEl} style={{ height, borderRadius: 'var(--kc-radius-lg)', overflow: 'hidden' }} />
     </div>
   );
 }

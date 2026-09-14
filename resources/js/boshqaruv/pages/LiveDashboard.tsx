@@ -238,7 +238,7 @@ export default function LiveDashboard() {
         </div>
       </div>
 
-      <div className="mb-3 p-2 rounded d-flex align-items-center gap-2" style={{ background: 'linear-gradient(90deg, rgba(99,102,241,0.15), rgba(16,185,129,0.12))', border: '1px solid rgba(139,92,246,0.3)' }}>
+      <div className="mb-3 p-2 rounded d-flex align-items-center gap-2" style={{ background: 'var(--kc-bg-subtle)', border: '1px solid var(--kc-border-subtle)' }}>
         <i className={`bi ${lastError ? 'bi-exclamation-triangle' : 'bi-activity'}`} style={{ fontSize: 18, color: lastError ? '#DCAE63' : '#8FE3C1' }}></i>
         <span className="fw-bold small" style={{ color: lastError ? '#fcd34d' : '#8FE3C1' }}>{lastError ? 'Live ogohlantirish:' : 'Snapshot:'}</span>
         <span style={{ color: '#e2e8f0', fontSize: 13 }}>{lastError || `So'nggi yangilanish ${snapshot.generated_at}. Aktiv oqim: ${mainActive + sellerActive + courierActive} ta.`}</span>

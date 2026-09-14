@@ -807,8 +807,8 @@ function FunnelPanel({ funnel }: { funnel: DashboardPayload['funnel'] }) {
                   {stage.drop > 0 ? ` · −${stage.drop}%` : ''}
                 </span>
               </div>
-              <div className="progress" style={{ height: 22, background: '#f1f5f9' }}>
-                <div className="progress-bar" style={{ width: `${Math.max(3, stage.value / max * 100)}%`, background: stage.color, fontWeight: 600, fontSize: 12 }}>
+              <div className="progress" style={{ height: 20 }}>
+                <div className="progress-bar" style={{ width: `${Math.max(3, stage.value / max * 100)}%`, background: stage.color, fontSize: 11.5 }}>
                   {fmt(stage.value)}
                 </div>
               </div>
@@ -931,15 +931,15 @@ function SellerScorecard({ rows }: { rows: DashboardPayload['sellerScorecard'] }
 function Metric({ label, value = 0, icon, color, href, help }: { label: string; value?: number; icon: string; color: string; href: string; help?: string }) {
   return (
     <div className="col-xl-2 col-md-4 col-6">
-      <Link href={href} className="stat-card text-decoration-none d-block" style={{ padding: 14 }}>
-        <div className="d-flex justify-content-between align-items-start mb-1">
-          <div className="d-flex align-items-center gap-1" style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 11, color: '#565D6D', textTransform: 'uppercase', letterSpacing: 1 }}>{label}</div>
+      <Link href={href} className="stat-card text-decoration-none d-block h-100">
+        <div className="kpi-head">
+          <div className="d-flex align-items-center gap-1 min-w-0">
+            <span className="kpi-label">{label}</span>
             {help ? <InfoHint text={help} /> : null}
           </div>
-          <i className={`bi ${icon}`} style={{ color, fontSize: 18, flexShrink: 0 }}></i>
+          <i className={`bi ${icon} kpi-icon`}></i>
         </div>
-        <div className="text-body" style={{ fontSize: 22, fontWeight: 800 }}>{fmt(value)}</div>
+        <div className="kpi-value">{fmt(value)}</div>
       </Link>
     </div>
   );
@@ -948,19 +948,19 @@ function Metric({ label, value = 0, icon, color, href, help }: { label: string; 
 function PeriodCard({ label, value, delta, icon, color, help }: { label: string; value: string; delta: number | null; icon: string; color: string; help?: string }) {
   return (
     <div className="col-xl-3 col-md-6">
-      <div className="stat-card" style={{ padding: 14 }}>
-        <div className="d-flex justify-content-between align-items-start mb-1">
-          <div className="d-flex align-items-center gap-1">
-            <div style={{ fontSize: 11, color: '#565D6D', textTransform: 'uppercase', letterSpacing: 1 }}>{label}</div>
+      <div className="stat-card h-100">
+        <div className="kpi-head">
+          <div className="d-flex align-items-center gap-1 min-w-0">
+            <span className="kpi-label">{label}</span>
             {help ? <InfoHint text={help} /> : null}
           </div>
-          <i className={`bi ${icon}`} style={{ color, fontSize: 18 }}></i>
+          <i className={`bi ${icon} kpi-icon`}></i>
         </div>
-        <div className="text-body" style={{ fontSize: 22, fontWeight: 800 }}>{value}</div>
+        <div className="kpi-value">{value}</div>
         {delta === null ? (
-          <div className="text-muted" style={{ fontSize: 11 }}><i className="bi bi-infinity me-1"></i>Barcha davr</div>
+          <div className="kpi-hint"><i className="bi bi-infinity me-1"></i>Barcha davr</div>
         ) : (
-          <div className={`stat-trend ${delta >= 0 ? 'up' : 'down'}`} style={{ fontSize: 11 }}>
+          <div className={`stat-trend ${delta >= 0 ? 'up' : 'down'}`}>
             <i className={`bi ${delta >= 0 ? 'bi-arrow-up' : 'bi-arrow-down'}`}></i> {delta >= 0 ? '+' : ''}{delta.toFixed(1)}%
           </div>
         )}
@@ -972,15 +972,15 @@ function PeriodCard({ label, value, delta, icon, color, help }: { label: string;
 function CompactMetric({ label, value = 0, icon, color, href, help }: { label: string; value?: number; icon: string; color: string; href: string; help?: string }) {
   return (
     <div className="col-xl-2 col-md-4 col-6">
-      <Link href={href} className="stat-card text-decoration-none d-block h-100" style={{ padding: 14 }}>
-        <div className="d-flex justify-content-between align-items-start mb-1">
-          <div className="d-flex align-items-center gap-1" style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 11, color: '#565D6D', textTransform: 'uppercase', letterSpacing: 1 }}>{label}</div>
+      <Link href={href} className="stat-card text-decoration-none d-block h-100">
+        <div className="kpi-head">
+          <div className="d-flex align-items-center gap-1 min-w-0">
+            <span className="kpi-label">{label}</span>
             {help ? <InfoHint text={help} /> : null}
           </div>
-          <i className={`bi ${icon}`} style={{ color, fontSize: 18, flexShrink: 0 }}></i>
+          <i className={`bi ${icon} kpi-icon`}></i>
         </div>
-        <div className="text-body" style={{ fontSize: 22, fontWeight: 800 }}>{fmt(value)}</div>
+        <div className="kpi-value">{fmt(value)}</div>
       </Link>
     </div>
   );

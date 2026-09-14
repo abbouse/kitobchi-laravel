@@ -55,7 +55,7 @@ export default function AuditLogs() {
           ['Xatolik', auditLogTotals.failed || 0, 'bi-exclamation-triangle', '#A32A2E'],
         ].map(([label, value, icon, color]) => (
           <div className="col-md-4" key={String(label)}>
-            <div className="stat-card"><div className="d-flex align-items-center gap-3"><div className="stat-icon" style={{ background: String(color) }}><i className={`bi ${icon}`}></i></div><div><div className="stat-value">{fmt(Number(value))}</div><div className="stat-label">{label}</div></div></div></div>
+            <div className="stat-card"><div className="d-flex align-items-center gap-3"><div><div className="stat-value">{fmt(Number(value))}</div><div className="stat-label">{label}</div></div></div></div>
           </div>
         ))}
       </div>

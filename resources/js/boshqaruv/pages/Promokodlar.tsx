@@ -58,7 +58,7 @@ export default function Promokodlar() {
           { label: 'Faol', value: activeCount, icon: 'bi-check-circle', color: '#0F6A46' },
           { label: 'Ishlatilgan', value: usedTotal, icon: 'bi-bag-check', color: '#8A5709' },
           { label: 'Foizli kodlar', value: promocodes.filter((promo) => promo.type === 'percent').length, icon: 'bi-percent', color: '#4A3A7A' },
-        ].map((item) => <div className="col-xl-3 col-md-6" key={item.label}><div className="stat-card"><div className="d-flex align-items-center gap-3"><div className="stat-icon" style={{ background: item.color }}><i className={`bi ${item.icon}`}></i></div><div><div className="stat-value">{item.value}</div><div className="stat-label">{item.label}</div></div></div></div></div>)}
+        ].map((item) => <div className="col-xl-3 col-md-6" key={item.label}><div className="stat-card"><div className="d-flex align-items-center gap-3"><div><div className="stat-value">{item.value}</div><div className="stat-label">{item.label}</div></div></div></div></div>)}
       </div>
 
       <div className="card-panel">

@@ -82,7 +82,6 @@ export default function SellerAiActions() {
           <div className="col-xl-3 col-md-6" key={item.key}>
             <div className="stat-card">
               <div className="d-flex align-items-center gap-3">
-                <div className="stat-icon" style={{ background: item.color }}><i className={`bi ${item.icon}`}></i></div>
                 <div><div className="stat-value">{sellerAiActionCounts[item.key] || 0}</div><div className="stat-label">{item.label}</div></div>
               </div>
             </div>

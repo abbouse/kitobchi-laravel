@@ -337,7 +337,7 @@ export default function BookClub() {
 
 function Avatar({ name, src, seed = 1 }: { name: string; src?: string | null; seed?: number }) {
   return (
-    <div style={{ width: 48, height: 48, borderRadius: '50%', background: `linear-gradient(135deg, hsl(${seed * 70},70%,60%), hsl(${seed * 70 + 40},70%,50%))`, color: 'white', display: 'grid', placeItems: 'center', fontWeight: 700, flexShrink: 0, overflow: 'hidden' }}>
+    <div className="resource-avatar" style={{ width: 44, height: 44, fontSize: 15 }}>
       {src ? <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : name.split(' ').map(n => n[0]).join('').slice(0, 2)}
     </div>
   );

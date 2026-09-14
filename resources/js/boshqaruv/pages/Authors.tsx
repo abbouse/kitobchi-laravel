@@ -89,7 +89,7 @@ export default function Authors() {
             <div className="card-panel h-100 d-flex flex-column justify-content-between">
               <div>
                 <div className="d-flex align-items-center gap-3 mb-3">
-                  <div className="resource-avatar" style={{ background: `linear-gradient(135deg, hsl(${i * 47},70%,58%), hsl(${i * 47 + 35},70%,48%))` }}>
+                  <div className="resource-avatar">
                     {author.image ? <img src={author.image} alt={author.name} /> : initials(author.name)}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>

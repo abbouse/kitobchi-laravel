@@ -163,7 +163,7 @@ export default function CourierOrders() {
           ['Faol kuryer', courierCounts.approved || 0, 'bi-bicycle', '#0F6A46'],
           ['Online', onlineCount, 'bi-broadcast-pin', '#1D4585'],
           ['Kuryer balansi', `${fmt(totalBalance)} so'm`, 'bi-wallet2', '#4A3A7A'],
-        ]).map(([label, value, icon, color]) => <div className="col-xl-3 col-md-6" key={String(label)}><div className="stat-card"><div className="d-flex align-items-center gap-3"><div className="stat-icon" style={{ background: String(color) }}><i className={`bi ${icon}`}></i></div><div><div className="stat-value">{value}</div><div className="stat-label">{label}</div></div></div></div></div>)}
+        ]).map(([label, value, icon, color]) => <div className="col-xl-3 col-md-6" key={String(label)}><div className="stat-card"><div className="d-flex align-items-center gap-3"><div><div className="stat-value">{value}</div><div className="stat-label">{label}</div></div></div></div></div>)}
       </div>
 
       {!isOrderPage ? <div className="card-panel">

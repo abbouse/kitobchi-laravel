@@ -801,7 +801,6 @@ export function Logistika() {
           <div className="col-xl col-md-4 col-6" key={item.label}>
             <div className="stat-card">
               <div className="d-flex align-items-center gap-3">
-                <div className="stat-icon" style={{ background: item.color }}><i className={`bi ${item.icon}`}></i></div>
                 <div><div className="stat-value">{item.value}</div><div className="stat-label">{item.label}</div></div>
               </div>
             </div>
@@ -817,7 +816,7 @@ export function Logistika() {
         ].map((item) => (
           <div className="col-md-4" key={item.step}>
             <div className="card-panel h-100 d-flex align-items-start gap-3">
-              <div style={{ background: item.color, flexShrink: 0, width: 44, height: 44, borderRadius: 12, display: 'grid', placeItems: 'center', color: '#fff', fontSize: 20 }}><i className={`bi ${item.icon}`}></i></div>
+              <div className="stat-icon" style={{ flexShrink: 0 }}><i className={`bi ${item.icon}`}></i></div>
               <div>
                 <div className="fw-bold">{item.step}. {item.title}</div>
                 <div className="small text-muted">{item.text}</div>
