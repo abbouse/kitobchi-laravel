@@ -50,9 +50,9 @@ export default function AuditLogs() {
 
       <div className="row g-3 mb-3">
         {[
-          ['Jami', auditLogTotals.all || 0, 'bi-clipboard-data', '#4f46e5'],
-          ['Bugun', auditLogTotals.today || 0, 'bi-calendar2-day', '#10b981'],
-          ['Xatolik', auditLogTotals.failed || 0, 'bi-exclamation-triangle', '#ef4444'],
+          ['Jami', auditLogTotals.all || 0, 'bi-clipboard-data', '#0B0342'],
+          ['Bugun', auditLogTotals.today || 0, 'bi-calendar2-day', '#0F6A46'],
+          ['Xatolik', auditLogTotals.failed || 0, 'bi-exclamation-triangle', '#A32A2E'],
         ].map(([label, value, icon, color]) => (
           <div className="col-md-4" key={String(label)}>
             <div className="stat-card"><div className="d-flex align-items-center gap-3"><div className="stat-icon" style={{ background: String(color) }}><i className={`bi ${icon}`}></i></div><div><div className="stat-value">{fmt(Number(value))}</div><div className="stat-label">{label}</div></div></div></div>

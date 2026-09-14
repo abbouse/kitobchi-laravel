@@ -14,9 +14,9 @@ export type Ring = LatLon[];
 const TASHKENT: LatLon = [41.311081, 69.240562];
 
 const COLORS = {
-  radius: '#10b981',
-  polygon: '#4f46e5',
-  inactive: '#9ca3af',
+  radius: '#0F6A46',
+  polygon: '#0B0342',
+  inactive: '#8A92A2',
 };
 
 type ReadyState = 'loading' | 'ready' | 'disabled';
@@ -721,7 +721,7 @@ function YandexPreviewMapInner({
       const base = zone.color || (zone.scope === 'polygon' ? COLORS.polygon : COLORS.radius);
       const isMatch = matchedIds.has(zone.id);
       const isWinner = zone.id === winnerId;
-      const color = isWinner ? '#dc2626' : base;
+      const color = isWinner ? '#8E2226' : base;
       const dim = point != null && !isMatch;
       const stroke = isWinner ? 5 : isMatch ? 3 : 1;
       const fillA = dim ? '0d' : isMatch ? '33' : '1f';

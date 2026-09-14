@@ -154,15 +154,15 @@ export default function CourierOrders() {
       <div className="page-head"><div><h1 className="page-title">{isOrderPage ? 'Kuryer buyurtmalari' : 'Kuryerlar'}</h1><p className="page-subtitle">{isOrderPage ? 'Kuryer orderlari, statuslar, mijoz qidiruvi va jarimalar' : 'Kuryer profillari, online holat, lokatsiya, verifikatsiya va balans'}</p></div></div>
       <div className="row g-3 mb-4">
         {(isOrderPage ? [
-          ['Jami order', courierOrderCounts.all || 0, 'bi-truck', '#4f46e5'],
-          ["Yo'lda", courierOrderCounts.in_delivery || 0, 'bi-signpost-split', '#2563eb'],
-          ['Yetkazildi', courierOrderCounts.delivered || 0, 'bi-check-circle', '#10b981'],
-          ['Mijoz qabul qildi', courierOrderCounts.customer_received || 0, 'bi-bag-check', '#7c3aed'],
+          ['Jami order', courierOrderCounts.all || 0, 'bi-truck', '#0B0342'],
+          ["Yo'lda", courierOrderCounts.in_delivery || 0, 'bi-signpost-split', '#1D4585'],
+          ['Yetkazildi', courierOrderCounts.delivered || 0, 'bi-check-circle', '#0F6A46'],
+          ['Mijoz qabul qildi', courierOrderCounts.customer_received || 0, 'bi-bag-check', '#4A3A7A'],
         ] : [
-          ['Kutilmoqda', courierCounts.pending || 0, 'bi-hourglass-split', '#f59e0b'],
-          ['Faol kuryer', courierCounts.approved || 0, 'bi-bicycle', '#10b981'],
-          ['Online', onlineCount, 'bi-broadcast-pin', '#2563eb'],
-          ['Kuryer balansi', `${fmt(totalBalance)} so'm`, 'bi-wallet2', '#7c3aed'],
+          ['Kutilmoqda', courierCounts.pending || 0, 'bi-hourglass-split', '#8A5709'],
+          ['Faol kuryer', courierCounts.approved || 0, 'bi-bicycle', '#0F6A46'],
+          ['Online', onlineCount, 'bi-broadcast-pin', '#1D4585'],
+          ['Kuryer balansi', `${fmt(totalBalance)} so'm`, 'bi-wallet2', '#4A3A7A'],
         ]).map(([label, value, icon, color]) => <div className="col-xl-3 col-md-6" key={String(label)}><div className="stat-card"><div className="d-flex align-items-center gap-3"><div className="stat-icon" style={{ background: String(color) }}><i className={`bi ${icon}`}></i></div><div><div className="stat-value">{value}</div><div className="stat-label">{label}</div></div></div></div></div>)}
       </div>
 

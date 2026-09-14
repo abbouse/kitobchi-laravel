@@ -100,10 +100,10 @@ export default function Tickets() {
 
       <div className="row g-3 mb-4">
           {[
-          { label: 'Yangi', val: (ticketCounts.open || 0) + (ticketCounts.queue || 0), icon: 'bi-envelope-exclamation', color: '#f59e0b' },
-          { label: 'Javob berildi', val: ticketCounts.answered || 0, icon: 'bi-reply', color: '#3b82f6' },
-          { label: 'Yopilgan', val: ticketCounts.closed || 0, icon: 'bi-check2-circle', color: '#10b981' },
-          { label: 'Jami', val: ticketCounts.all || 0, icon: 'bi-headset', color: '#7c3aed' },
+          { label: 'Yangi', val: (ticketCounts.open || 0) + (ticketCounts.queue || 0), icon: 'bi-envelope-exclamation', color: '#8A5709' },
+          { label: 'Javob berildi', val: ticketCounts.answered || 0, icon: 'bi-reply', color: '#24509B' },
+          { label: 'Yopilgan', val: ticketCounts.closed || 0, icon: 'bi-check2-circle', color: '#0F6A46' },
+          { label: 'Jami', val: ticketCounts.all || 0, icon: 'bi-headset', color: '#4A3A7A' },
         ].map((s) => (
           <div className="col-xl-3 col-md-6" key={s.label}>
             <div className="stat-card">

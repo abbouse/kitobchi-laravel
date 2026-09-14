@@ -110,7 +110,7 @@ const STAGE_ORDER = ['inbound', 'qc', 'packing', 'dispatch', 'delivery'] as cons
 
 // Hub kartasidagi kichik pipeline chizig'i
 function PipelineBar({ pipeline, stages }: { pipeline?: HubPipeline; stages: FulfillmentStage[] }) {
-  const stageList = stages.length ? stages : STAGE_ORDER.map((k) => ({ key: k, label: k, icon: 'bi-dot', color: '#4f46e5' }));
+  const stageList = stages.length ? stages : STAGE_ORDER.map((k) => ({ key: k, label: k, icon: 'bi-dot', color: '#0B0342' }));
   const total = STAGE_ORDER.reduce((sum, key) => sum + (pipeline?.[key] || 0), 0);
 
   if (!pipeline || total === 0) {
@@ -332,7 +332,7 @@ export default function Hubs() {
           lat: hub.lat ?? null,
           lon: hub.lon ?? null,
           label: `<strong>${hub.name}</strong><br>${hub.code || ''}`,
-          color: hub.active ? '#10b981' : '#9ca3af',
+          color: hub.active ? '#0F6A46' : '#8A92A2',
         })),
     [hubs],
   );
@@ -356,10 +356,10 @@ export default function Hubs() {
 
       <div className="row g-3 mb-4">
         {[
-          { label: 'Jami hub', value: hubStats.total ?? hubs.length, icon: 'bi-building', color: '#4f46e5' },
-          { label: 'Faol hub', value: hubStats.active ?? hubs.filter((hub) => hub.active).length, icon: 'bi-check-circle', color: '#10b981' },
-          { label: 'Xodimlar', value: hubStats.staff ?? hubStaff.length, icon: 'bi-people', color: '#7c3aed' },
-          { label: 'Fulfillment', value: fmt(totalFulfillments), icon: 'bi-box-seam', color: '#f59e0b' },
+          { label: 'Jami hub', value: hubStats.total ?? hubs.length, icon: 'bi-building', color: '#0B0342' },
+          { label: 'Faol hub', value: hubStats.active ?? hubs.filter((hub) => hub.active).length, icon: 'bi-check-circle', color: '#0F6A46' },
+          { label: 'Xodimlar', value: hubStats.staff ?? hubStaff.length, icon: 'bi-people', color: '#4A3A7A' },
+          { label: 'Fulfillment', value: fmt(totalFulfillments), icon: 'bi-box-seam', color: '#8A5709' },
         ].map((item) => (
           <div className="col-xl-3 col-md-6" key={item.label}>
             <div className="stat-card">
@@ -385,7 +385,7 @@ export default function Hubs() {
           <span className="chip chip-info">{fmt(openTotal)} ta ochiq</span>
         </div>
         <div className="row g-2">
-          {(stages.length ? stages : STAGE_ORDER.map((k) => ({ key: k, label: k, icon: 'bi-dot', color: '#4f46e5' }))).map((stage) => (
+          {(stages.length ? stages : STAGE_ORDER.map((k) => ({ key: k, label: k, icon: 'bi-dot', color: '#0B0342' }))).map((stage) => (
             <div className="col-6 col-xl" key={stage.key}>
               <div className="p-3 rounded-3 h-100" style={{ background: `${stage.color}12` }}>
                 <div className="d-flex align-items-center gap-2 mb-1" style={{ color: stage.color }}>
@@ -606,7 +606,7 @@ export default function Hubs() {
             <div className="col-12"><small className="text-muted">Manzil</small><div>{selectedHub?.address || '—'}</div></div>
             {selectedHub?.lat && selectedHub?.lon ? (
               <div className="col-12">
-                <LeafletMapView markers={[{ lat: selectedHub.lat, lon: selectedHub.lon, label: selectedHub.name, color: selectedHub.active ? '#10b981' : '#9ca3af' }]} height={220} />
+                <LeafletMapView markers={[{ lat: selectedHub.lat, lon: selectedHub.lon, label: selectedHub.name, color: selectedHub.active ? '#0F6A46' : '#8A92A2' }]} height={220} />
               </div>
             ) : null}
             {selectedHub?.pipeline ? (

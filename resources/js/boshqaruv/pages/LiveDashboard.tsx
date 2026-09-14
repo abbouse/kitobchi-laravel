@@ -212,7 +212,7 @@ export default function LiveDashboard() {
           <div>
             <div className="d-flex align-items-center gap-2">
               <h3 style={{ color: '#f8fafc', fontWeight: 800, margin: 0 }}>Kitobchi Live Command Center</h3>
-              <span className="chip" style={{ background: isPaused ? 'rgba(245,158,11,0.2)' : 'rgba(16,185,129,0.2)', color: isPaused ? '#fcd34d' : '#6ee7b7', border: `1px solid ${isPaused ? '#f59e0b' : '#10b981'}`, fontSize: 10 }}>
+              <span className="chip" style={{ background: isPaused ? 'rgba(245,158,11,0.2)' : 'rgba(16,185,129,0.2)', color: isPaused ? '#fcd34d' : '#8FE3C1', border: `1px solid ${isPaused ? '#DCAE63' : '#63CE9F'}`, fontSize: 10 }}>
                 {!isPaused && <span className="live-pulse"></span>}
                 {isPaused ? 'PAUSED' : 'LIVE'}
               </span>
@@ -239,8 +239,8 @@ export default function LiveDashboard() {
       </div>
 
       <div className="mb-3 p-2 rounded d-flex align-items-center gap-2" style={{ background: 'linear-gradient(90deg, rgba(99,102,241,0.15), rgba(16,185,129,0.12))', border: '1px solid rgba(139,92,246,0.3)' }}>
-        <i className={`bi ${lastError ? 'bi-exclamation-triangle' : 'bi-activity'}`} style={{ fontSize: 18, color: lastError ? '#f59e0b' : '#6ee7b7' }}></i>
-        <span className="fw-bold small" style={{ color: lastError ? '#fcd34d' : '#6ee7b7' }}>{lastError ? 'Live ogohlantirish:' : 'Snapshot:'}</span>
+        <i className={`bi ${lastError ? 'bi-exclamation-triangle' : 'bi-activity'}`} style={{ fontSize: 18, color: lastError ? '#DCAE63' : '#8FE3C1' }}></i>
+        <span className="fw-bold small" style={{ color: lastError ? '#fcd34d' : '#8FE3C1' }}>{lastError ? 'Live ogohlantirish:' : 'Snapshot:'}</span>
         <span style={{ color: '#e2e8f0', fontSize: 13 }}>{lastError || `So'nggi yangilanish ${snapshot.generated_at}. Aktiv oqim: ${mainActive + sellerActive + courierActive} ta.`}</span>
       </div>
 
@@ -253,18 +253,18 @@ export default function LiveDashboard() {
 
       <div className="row g-2 mb-3">
         {[
-          { l: 'Jami daromad', v: fmt(snapshot.kpis.total_revenue) + " so'm", icon: 'bi-cash-stack', c: '#a855f7' },
-          { l: 'Bugungi daromad', v: fmt(snapshot.kpis.today_revenue) + " so'm", icon: 'bi-calendar2-day', c: '#10b981' },
-          { l: 'Oylik daromad', v: fmt(snapshot.kpis.month_revenue) + " so'm", icon: 'bi-calendar3', c: '#4f46e5' },
-          { l: 'Platform signal', v: fmt(netSignal) + " so'm", icon: 'bi-graph-up-arrow', c: '#059669' },
-          { l: 'Jami order', v: fmt(snapshot.kpis.total_orders), icon: 'bi-bag-check', c: '#10b981' },
+          { l: 'Jami daromad', v: fmt(snapshot.kpis.total_revenue) + " so'm", icon: 'bi-cash-stack', c: '#C3A6EE' },
+          { l: 'Bugungi daromad', v: fmt(snapshot.kpis.today_revenue) + " so'm", icon: 'bi-calendar2-day', c: '#63CE9F' },
+          { l: 'Oylik daromad', v: fmt(snapshot.kpis.month_revenue) + " so'm", icon: 'bi-calendar3', c: '#A9B8FF' },
+          { l: 'Platform signal', v: fmt(netSignal) + " so'm", icon: 'bi-graph-up-arrow', c: '#4FBF8E' },
+          { l: 'Jami order', v: fmt(snapshot.kpis.total_orders), icon: 'bi-bag-check', c: '#63CE9F' },
           { l: 'Bugungi order', v: fmt(snapshot.kpis.today_orders), icon: 'bi-lightning-charge', c: '#06b6d4' },
-          { l: 'Aktiv order', v: fmt(snapshot.kpis.active_orders), icon: 'bi-hourglass-split', c: '#f59e0b' },
-          { l: 'AOV', v: fmt(snapshot.kpis.avg_order_value) + " so'm", icon: 'bi-receipt', c: '#ec4899' },
-          { l: 'Seller oqimi', v: fmt(sellerActive), icon: 'bi-shop-window', c: '#7c3aed' },
-          { l: 'Kuryer oqimi', v: fmt(courierActive), icon: 'bi-bicycle', c: '#3b82f6' },
-          { l: 'Online user', v: fmt(snapshot.kpis.online_users), icon: 'bi-people', c: '#10b981' },
-          { l: 'Completion', v: snapshot.kpis.completion_rate.toFixed(1) + '%', icon: 'bi-bullseye', c: '#f59e0b' },
+          { l: 'Aktiv order', v: fmt(snapshot.kpis.active_orders), icon: 'bi-hourglass-split', c: '#DCAE63' },
+          { l: 'AOV', v: fmt(snapshot.kpis.avg_order_value) + " so'm", icon: 'bi-receipt', c: '#E39BC0' },
+          { l: 'Seller oqimi', v: fmt(sellerActive), icon: 'bi-shop-window', c: '#B9A9F0' },
+          { l: 'Kuryer oqimi', v: fmt(courierActive), icon: 'bi-bicycle', c: '#92B3F2' },
+          { l: 'Online user', v: fmt(snapshot.kpis.online_users), icon: 'bi-people', c: '#63CE9F' },
+          { l: 'Completion', v: snapshot.kpis.completion_rate.toFixed(1) + '%', icon: 'bi-bullseye', c: '#DCAE63' },
         ].map((kpi) => (
           <div className="col-xl-2 col-lg-3 col-md-4 col-6" key={kpi.l}>
             <div className="live-kpi" style={{ borderLeftColor: kpi.c }}>
@@ -280,13 +280,13 @@ export default function LiveDashboard() {
 
       <div className="row g-2 mb-3">
         {[
-          { l: 'Yakuniy savdo', v: fmt(snapshot.kpis.paid_orders), s: `${snapshot.kpis.paid_rate.toFixed(1)}% ulush`, c: '#10b981' },
-          { l: 'Seller komissiya', v: fmt(snapshot.kpis.commission) + " so'm", s: 'Tasdiqlangan tranzaksiya', c: '#7c3aed' },
+          { l: 'Yakuniy savdo', v: fmt(snapshot.kpis.paid_orders), s: `${snapshot.kpis.paid_rate.toFixed(1)}% ulush`, c: '#63CE9F' },
+          { l: 'Seller komissiya', v: fmt(snapshot.kpis.commission) + " so'm", s: 'Tasdiqlangan tranzaksiya', c: '#B9A9F0' },
           { l: 'Yetkazish daromadi', v: fmt(snapshot.kpis.delivery_income) + " so'm", s: 'Paid orderlar', c: '#06b6d4' },
-          { l: 'Kuryer payout', v: fmt(snapshot.kpis.courier_payout) + " so'm", s: 'Topshirilgan orderlar', c: '#f59e0b' },
-          { l: 'Promo + cashback', v: fmt(snapshot.kpis.promo_discount + snapshot.kpis.cashback) + " so'm", s: 'Chegirma xarajati', c: '#ef4444' },
-          { l: 'Chiqim + provider + soliq', v: fmt(snapshot.kpis.manual_expenses + snapshot.kpis.provider_fee + snapshot.kpis.tax) + " so'm", s: 'Marketplace xarajatlari', c: '#dc2626' },
-          { l: 'Net marja', v: snapshot.kpis.profit_margin.toFixed(1) + '%', s: `Cancel ${snapshot.kpis.cancellation_rate.toFixed(1)}%`, c: snapshot.kpis.profit_margin >= 0 ? '#10b981' : '#ef4444' },
+          { l: 'Kuryer payout', v: fmt(snapshot.kpis.courier_payout) + " so'm", s: 'Topshirilgan orderlar', c: '#DCAE63' },
+          { l: 'Promo + cashback', v: fmt(snapshot.kpis.promo_discount + snapshot.kpis.cashback) + " so'm", s: 'Chegirma xarajati', c: '#EC8A8D' },
+          { l: 'Chiqim + provider + soliq', v: fmt(snapshot.kpis.manual_expenses + snapshot.kpis.provider_fee + snapshot.kpis.tax) + " so'm", s: 'Marketplace xarajatlari', c: '#E07A7D' },
+          { l: 'Net marja', v: snapshot.kpis.profit_margin.toFixed(1) + '%', s: `Cancel ${snapshot.kpis.cancellation_rate.toFixed(1)}%`, c: snapshot.kpis.profit_margin >= 0 ? '#63CE9F' : '#EC8A8D' },
         ].map((item) => (
           <div className="col-xl-2 col-lg-4 col-md-6" key={item.l}>
             <div className="live-kpi" style={{ borderLeftColor: item.c }}>
@@ -373,19 +373,19 @@ export default function LiveDashboard() {
               <AreaChart data={snapshot.chart}>
                 <defs>
                   <linearGradient id="liveRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#ec4899" stopOpacity={0.55} />
-                    <stop offset="100%" stopColor="#4f46e5" stopOpacity={0} />
+                    <stop offset="0%" stopColor="#E39BC0" stopOpacity={0.55} />
+                    <stop offset="100%" stopColor="#A9B8FF" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="liveOrders" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#10b981" stopOpacity={0.45} />
-                    <stop offset="100%" stopColor="#059669" stopOpacity={0} />
+                    <stop offset="0%" stopColor="#63CE9F" stopOpacity={0.45} />
+                    <stop offset="100%" stopColor="#4FBF8E" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <XAxis dataKey="hour" tick={{ fill: '#94a3b8', fontSize: 10 }} interval={3} />
                 <YAxis hide />
                 <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8, fontSize: 12 }} formatter={(value: number, name) => name === 'revenue' ? `${fmt(value)} so'm` : fmt(value)} />
-                <Area type="monotone" dataKey="revenue" stroke="#ec4899" strokeWidth={2} fill="url(#liveRevenue)" />
-                <Area type="monotone" dataKey="orders" stroke="#10b981" strokeWidth={2} fill="url(#liveOrders)" />
+                <Area type="monotone" dataKey="revenue" stroke="#E39BC0" strokeWidth={2} fill="url(#liveRevenue)" />
+                <Area type="monotone" dataKey="orders" stroke="#63CE9F" strokeWidth={2} fill="url(#liveOrders)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -453,7 +453,7 @@ export default function LiveDashboard() {
               <SplitPanel title="To'lov holati" help="Orderlar to'lov holati bo'yicha guruhlanadi. Foiz jami order ichidagi ulush." rows={snapshot.payment_split.map((row) => ({ name: row.name, value: row.share, meta: `${fmt(row.count)} ta`, color: row.color }))} />
             </div>
             <div className="col-md-6">
-              <SplitPanel title="Yetkazish turi" help="Buyurtmalar delivery turi bo'yicha ajratiladi. Yonidagi summa shu turdagi orderlar tushumi." rows={snapshot.delivery_split.map((row, index) => ({ name: row.name, value: row.count, meta: `${fmt(row.revenue)} so'm`, color: ['#4f46e5', '#10b981', '#f59e0b', '#ec4899', '#06b6d4'][index % 5] }))} />
+              <SplitPanel title="Yetkazish turi" help="Buyurtmalar delivery turi bo'yicha ajratiladi. Yonidagi summa shu turdagi orderlar tushumi." rows={snapshot.delivery_split.map((row, index) => ({ name: row.name, value: row.count, meta: `${fmt(row.revenue)} so'm`, color: ['#A9B8FF', '#63CE9F', '#DCAE63', '#E39BC0', '#06b6d4'][index % 5] }))} />
             </div>
             <div className="col-12">
               <div className="card-panel">

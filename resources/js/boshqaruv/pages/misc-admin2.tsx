@@ -145,7 +145,7 @@ export function Shikoyatlar() {
           <thead><tr><th>ID</th><th>Foydalanuvchi</th><th>Sabab</th><th>Turi</th><th>Sana</th><th>Status</th><th>Amallar</th></tr></thead>
           <tbody>{complaints.map(complaint => (
             <tr key={complaint.id}>
-              <td className="fw-semibold" style={{ color: '#4f46e5' }}>#{complaint.id}</td>
+              <td className="fw-semibold" style={{ color: '#0B0342' }}>#{complaint.id}</td>
               <td className="fw-semibold">{complaint.user}</td>
               <td>{complaint.reason || complaint.comment || '—'}</td>
               <td><span className="chip chip-gray" style={{ fontSize: 9 }}>{complaintTypeLabel(complaint.type)}</span></td>
@@ -293,7 +293,7 @@ export function GiftSertifikatlar() {
           <thead><tr><th>ID</th><th>Kod</th><th>Summa</th><th>Xaridor</th><th>Qabul qiluvchi</th><th>Muddati</th><th>Status</th><th>Amallar</th></tr></thead>
           <tbody>{giftCertificates.map(certificate => (
             <tr key={certificate.id}>
-              <td className="fw-semibold" style={{ color: '#4f46e5' }}>#{certificate.id}</td>
+              <td className="fw-semibold" style={{ color: '#0B0342' }}>#{certificate.id}</td>
               <td className="fw-bold" style={{ fontFamily: 'monospace' }}>{certificate.code}</td>
               <td className="fw-bold text-success">{certificate.amount.toLocaleString()} so'm</td>
               <td>{certificate.buyer}</td>

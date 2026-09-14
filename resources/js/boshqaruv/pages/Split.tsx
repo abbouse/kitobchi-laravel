@@ -234,11 +234,11 @@ export default function Split() {
       {tab === 'users' ? (
       <div className="row g-3 mb-4">
         {[
-          ['Profil yozuvlari', splitSummary.profiles, 'bi-database-check', '#4f46e5'],
-          ['Mos userlar', splitSummary.eligible, 'bi-patch-check', '#10b981'],
-          ['Kartasi lock bo‘ladiganlar', splitSummary.locked, 'bi-lock', '#ef4444'],
-          ['Split bloklanganlar', splitSummary.blocked, 'bi-slash-circle', '#dc2626'],
-          ['Bo‘sh limitlar jami', `${fmt(splitSummary.totalAvailableLimit)} so'm`, 'bi-wallet2', '#0ea5e9'],
+          ['Profil yozuvlari', splitSummary.profiles, 'bi-database-check', '#0B0342'],
+          ['Mos userlar', splitSummary.eligible, 'bi-patch-check', '#0F6A46'],
+          ['Kartasi lock bo‘ladiganlar', splitSummary.locked, 'bi-lock', '#A32A2E'],
+          ['Split bloklanganlar', splitSummary.blocked, 'bi-slash-circle', '#8E2226'],
+          ['Bo‘sh limitlar jami', `${fmt(splitSummary.totalAvailableLimit)} so'm`, 'bi-wallet2', '#1E5C87'],
         ].map(([label, value, icon, color]) => (
           <div className="col-xl-3 col-md-6" key={String(label)}>
             <div className="stat-card">

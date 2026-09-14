@@ -67,11 +67,11 @@ export const weeklySales = [
 ];
 
 export const categoryShare = [
-  { name: 'Badiiy', value: 38, color: '#4f46e5', revenue: 18_513_790, profit: 7_405_516, margin: 40, returns: 4.2, units: 892 },
-  { name: 'Ilmiy', value: 22, color: '#7c3aed', revenue: 10_718_510, profit: 4_823_329, margin: 45, returns: 2.8, units: 412 },
-  { name: 'Bolalar', value: 18, color: '#ec4899', revenue: 8_769_690, profit: 3_507_876, margin: 40, returns: 5.1, units: 624 },
-  { name: 'Kanselyariya', value: 14, color: '#10b981', revenue: 6_820_870, profit: 2_728_348, margin: 40, returns: 3.5, units: 1845 },
-  { name: 'Darslik', value: 8, color: '#f59e0b', revenue: 3_897_640, profit: 1_169_292, margin: 30, returns: 6.8, units: 312 },
+  { name: 'Badiiy', value: 38, color: '#0B0342', revenue: 18_513_790, profit: 7_405_516, margin: 40, returns: 4.2, units: 892 },
+  { name: 'Ilmiy', value: 22, color: '#4A3A7A', revenue: 10_718_510, profit: 4_823_329, margin: 45, returns: 2.8, units: 412 },
+  { name: 'Bolalar', value: 18, color: '#8E3A63', revenue: 8_769_690, profit: 3_507_876, margin: 40, returns: 5.1, units: 624 },
+  { name: 'Kanselyariya', value: 14, color: '#0F6A46', revenue: 6_820_870, profit: 2_728_348, margin: 40, returns: 3.5, units: 1845 },
+  { name: 'Darslik', value: 8, color: '#8A5709', revenue: 3_897_640, profit: 1_169_292, margin: 30, returns: 6.8, units: 312 },
 ];
 
 export const topBooks = [
@@ -130,12 +130,12 @@ export const orders = [
 ];
 
 export const recentActivity = [
-  { icon: 'bi-bag-check', color: '#10b981', text: "Yangi buyurtma #ORD-8848 qabul qilindi", time: '2 daqiqa oldin', amount: 745000 },
-  { icon: 'bi-person-plus', color: '#4f46e5', text: "Yangi mijoz ro'yxatdan o'tdi", time: '8 daqiqa oldin', amount: 0 },
-  { icon: 'bi-truck', color: '#f59e0b', text: 'Buyurtma #ORD-8843 Hub-2 ga yetkazildi', time: '15 daqiqa oldin', amount: 0 },
-  { icon: 'bi-star', color: '#ec4899', text: 'Dilnoza R. 5 yulduzli sharh qoldirdi', time: '22 daqiqa oldin', amount: 0 },
-  { icon: 'bi-box-seam', color: '#7c3aed', text: "Hub-1 dan 24 ta buyurtma pochta orqali jo'natildi", time: '30 daqiqa oldin', amount: 0 },
-  { icon: 'bi-cash-stack', color: '#10b981', text: "Seller 'Kitob olami' ga 2,450,000 so'm to'landi", time: '45 daqiqa oldin', amount: 2450000 },
+  { icon: 'bi-bag-check', color: '#0F6A46', text: "Yangi buyurtma #ORD-8848 qabul qilindi", time: '2 daqiqa oldin', amount: 745000 },
+  { icon: 'bi-person-plus', color: '#0B0342', text: "Yangi mijoz ro'yxatdan o'tdi", time: '8 daqiqa oldin', amount: 0 },
+  { icon: 'bi-truck', color: '#8A5709', text: 'Buyurtma #ORD-8843 Hub-2 ga yetkazildi', time: '15 daqiqa oldin', amount: 0 },
+  { icon: 'bi-star', color: '#8E3A63', text: 'Dilnoza R. 5 yulduzli sharh qoldirdi', time: '22 daqiqa oldin', amount: 0 },
+  { icon: 'bi-box-seam', color: '#4A3A7A', text: "Hub-1 dan 24 ta buyurtma pochta orqali jo'natildi", time: '30 daqiqa oldin', amount: 0 },
+  { icon: 'bi-cash-stack', color: '#0F6A46', text: "Seller 'Kitob olami' ga 2,450,000 so'm to'landi", time: '45 daqiqa oldin', amount: 2450000 },
 ];
 
 export const regionalData = [
@@ -154,11 +154,11 @@ export const regionalData = [
 ];
 
 export const customerSegments = [
-  { segment: 'VIP (Top 5%)', count: 171, share: 5.0, revenue: 14_840_000, avgSpent: 868_000, orders: 18.2, retention: 94.5, color: '#f59e0b' },
-  { segment: 'Loyal', count: 892, share: 26.1, revenue: 16_920_000, avgSpent: 189_700, orders: 5.8, retention: 82.4, color: '#10b981' },
-  { segment: 'Occasional', count: 1428, share: 41.9, revenue: 11_420_000, avgSpent: 79_970, orders: 2.1, retention: 58.6, color: '#3b82f6' },
-  { segment: 'New (30 kun)', count: 384, share: 11.3, revenue: 3_840_000, avgSpent: 10_000, orders: 1.0, retention: 0, color: '#a855f7' },
-  { segment: 'Churned (60+ kun)', count: 537, share: 15.7, revenue: 1_890_000, avgSpent: 0, orders: 0, retention: 0, color: '#ef4444' },
+  { segment: 'VIP (Top 5%)', count: 171, share: 5.0, revenue: 14_840_000, avgSpent: 868_000, orders: 18.2, retention: 94.5, color: '#8A5709' },
+  { segment: 'Loyal', count: 892, share: 26.1, revenue: 16_920_000, avgSpent: 189_700, orders: 5.8, retention: 82.4, color: '#0F6A46' },
+  { segment: 'Occasional', count: 1428, share: 41.9, revenue: 11_420_000, avgSpent: 79_970, orders: 2.1, retention: 58.6, color: '#24509B' },
+  { segment: 'New (30 kun)', count: 384, share: 11.3, revenue: 3_840_000, avgSpent: 10_000, orders: 1.0, retention: 0, color: '#6B4E8E' },
+  { segment: 'Churned (60+ kun)', count: 537, share: 15.7, revenue: 1_890_000, avgSpent: 0, orders: 0, retention: 0, color: '#A32A2E' },
 ];
 
 export const topPerformers = {
@@ -179,11 +179,11 @@ export const topPerformers = {
 };
 
 export const conversionFunnel = [
-  { stage: 'Saytga tashrif', value: 56840, percent: 100, color: '#4f46e5' },
-  { stage: 'Mahsulot ko\'rish', value: 34120, percent: 60, color: '#7c3aed' },
-  { stage: 'Savatga qo\'shish', value: 8420, percent: 14.8, color: '#ec4899' },
-  { stage: 'Checkout boshlash', value: 4280, percent: 7.5, color: '#f59e0b' },
-  { stage: 'Xaridni yakunlash', value: 1944, percent: 3.42, color: '#10b981' },
+  { stage: 'Saytga tashrif', value: 56840, percent: 100, color: '#0B0342' },
+  { stage: 'Mahsulot ko\'rish', value: 34120, percent: 60, color: '#4A3A7A' },
+  { stage: 'Savatga qo\'shish', value: 8420, percent: 14.8, color: '#8E3A63' },
+  { stage: 'Checkout boshlash', value: 4280, percent: 7.5, color: '#8A5709' },
+  { stage: 'Xaridni yakunlash', value: 1944, percent: 3.42, color: '#0F6A46' },
 ];
 
 export const inventoryAlerts = [
@@ -195,8 +195,8 @@ export const inventoryAlerts = [
 ];
 
 export const appPlatformData = [
-  { platform: 'Android', activeUsers: 2684, orders: 904, revenue: 34_290_000, profit: 13_716_000, crashRate: 0.42, avgSession: '6m 18s', conversion: 3.7, appVersion: '2.8.4', color: '#10b981' },
-  { platform: 'iOS', activeUsers: 728, orders: 380, revenue: 14_430_500, profit: 5_772_200, crashRate: 0.18, avgSession: '7m 42s', conversion: 4.1, appVersion: '2.8.1', color: '#3b82f6' },
+  { platform: 'Android', activeUsers: 2684, orders: 904, revenue: 34_290_000, profit: 13_716_000, crashRate: 0.42, avgSession: '6m 18s', conversion: 3.7, appVersion: '2.8.4', color: '#0F6A46' },
+  { platform: 'iOS', activeUsers: 728, orders: 380, revenue: 14_430_500, profit: 5_772_200, crashRate: 0.18, avgSession: '7m 42s', conversion: 4.1, appVersion: '2.8.1', color: '#24509B' },
 ];
 
 export const appVersionData = [
@@ -207,14 +207,14 @@ export const appVersionData = [
 ];
 
 export const appEventFunnel = [
-  { stage: 'App launch', users: 56840, drop: 0, conversion: 100, problem: 'Bazaviy event', color: '#4f46e5' },
-  { stage: 'Home loaded', users: 53620, drop: 5.7, conversion: 94.3, problem: 'Sekin internet / cache', color: '#6366f1' },
-  { stage: 'Product list viewed', users: 34120, drop: 36.4, conversion: 60.0, problem: 'Home -> katalog o\'tish past', color: '#7c3aed' },
-  { stage: 'Product detail viewed', users: 18440, drop: 45.9, conversion: 32.4, problem: 'CTR past / rasm va narx optimizatsiya', color: '#a855f7' },
-  { stage: 'Added to cart', users: 8420, drop: 54.3, conversion: 14.8, problem: 'Narx yoki mavjudlik muammosi', color: '#ec4899' },
-  { stage: 'Checkout started', users: 4280, drop: 49.2, conversion: 7.5, problem: 'Yetkazish narxi va forma uzun', color: '#f59e0b' },
-  { stage: 'Payment method selected', users: 2580, drop: 39.7, conversion: 4.54, problem: 'Karta ulashdagi ishonch / naqd tanlash', color: '#06b6d4' },
-  { stage: 'Order completed', users: 1944, drop: 24.7, conversion: 3.42, problem: 'Karta xatosi va bekor qilish', color: '#10b981' },
+  { stage: 'App launch', users: 56840, drop: 0, conversion: 100, problem: 'Bazaviy event', color: '#0B0342' },
+  { stage: 'Home loaded', users: 53620, drop: 5.7, conversion: 94.3, problem: 'Sekin internet / cache', color: '#3A3475' },
+  { stage: 'Product list viewed', users: 34120, drop: 36.4, conversion: 60.0, problem: 'Home -> katalog o\'tish past', color: '#4A3A7A' },
+  { stage: 'Product detail viewed', users: 18440, drop: 45.9, conversion: 32.4, problem: 'CTR past / rasm va narx optimizatsiya', color: '#6B4E8E' },
+  { stage: 'Added to cart', users: 8420, drop: 54.3, conversion: 14.8, problem: 'Narx yoki mavjudlik muammosi', color: '#8E3A63' },
+  { stage: 'Checkout started', users: 4280, drop: 49.2, conversion: 7.5, problem: 'Yetkazish narxi va forma uzun', color: '#8A5709' },
+  { stage: 'Payment method selected', users: 2580, drop: 39.7, conversion: 4.54, problem: 'Karta ulashdagi ishonch / naqd tanlash', color: '#1B6273' },
+  { stage: 'Order completed', users: 1944, drop: 24.7, conversion: 3.42, problem: 'Karta xatosi va bekor qilish', color: '#0F6A46' },
 ];
 
 export const paymentData = [
@@ -230,12 +230,12 @@ export const paymentFailureReasons = [
 ];
 
 export const operationalQuality = [
-  { metric: 'Laravel API p95 latency', value: '186ms', target: '<250ms', status: 'Yaxshi', color: '#10b981' },
-  { metric: 'Order create error rate', value: '0.18%', target: '<0.5%', status: 'Yaxshi', color: '#10b981' },
-  { metric: 'Payment callback delay', value: '1.8s', target: '<3s', status: 'Yaxshi', color: '#10b981' },
-  { metric: 'Admin processing SLA', value: '12m', target: '<15m', status: 'Yaxshi', color: '#10b981' },
-  { metric: 'Courier assignment SLA', value: '26m', target: '<20m', status: 'Diqqat', color: '#f59e0b' },
-  { metric: 'Stock sync lag', value: '4m', target: '<5m', status: 'Yaxshi', color: '#10b981' },
+  { metric: 'Laravel API p95 latency', value: '186ms', target: '<250ms', status: 'Yaxshi', color: '#0F6A46' },
+  { metric: 'Order create error rate', value: '0.18%', target: '<0.5%', status: 'Yaxshi', color: '#0F6A46' },
+  { metric: 'Payment callback delay', value: '1.8s', target: '<3s', status: 'Yaxshi', color: '#0F6A46' },
+  { metric: 'Admin processing SLA', value: '12m', target: '<15m', status: 'Yaxshi', color: '#0F6A46' },
+  { metric: 'Courier assignment SLA', value: '26m', target: '<20m', status: 'Diqqat', color: '#8A5709' },
+  { metric: 'Stock sync lag', value: '4m', target: '<5m', status: 'Yaxshi', color: '#0F6A46' },
 ];
 
 export const cohortRetention = [

@@ -42,7 +42,7 @@ function BannerImageHint() {
             top: 24,
             left: -96,
             width: 310,
-            background: '#111827',
+            background: '#14161D',
             color: '#f8fafc',
             borderRadius: 14,
             padding: '12px 14px',
@@ -380,7 +380,7 @@ export function MarketNews() {
           <thead><tr><th>ID</th><th>Sarlavha</th><th>Action</th><th>Sana</th><th>Holat</th><th>Amallar</th></tr></thead>
           <tbody>{news.map(item => (
             <tr key={item.id}>
-              <td className="fw-semibold" style={{ color: '#4f46e5' }}>#{item.id}</td>
+              <td className="fw-semibold" style={{ color: '#0B0342' }}>#{item.id}</td>
               <td className="fw-semibold">{item.title}</td>
               <td><span className="chip chip-gray">{item.action || 'Yangilik'}</span></td>
               <td className="text-muted">{item.date || '—'}</td>
@@ -549,7 +549,7 @@ export function ChatKuzatuv() {
           <thead><tr><th>ID</th><th>Foydalanuvchi</th><th>Qabul qiluvchi</th><th>Turi</th><th>Xabarlar</th><th>Oxirgi</th><th>Amallar</th></tr></thead>
           <tbody>{conversations.map(c => (
             <tr key={c.id}>
-              <td className="fw-semibold" style={{ color: '#4f46e5' }}>#{c.id}</td>
+              <td className="fw-semibold" style={{ color: '#0B0342' }}>#{c.id}</td>
               <td><div className="fw-semibold">{c.user}</div><small className="text-muted">{c.phone || '—'}</small></td>
               <td>{c.agent}</td>
               <td><span className={`chip ${c.kind === 'seller' ? 'chip-purple' : 'chip-info'}`}>{chatKindLabel(c.kind)}</span></td>
@@ -790,7 +790,7 @@ export function PushNotifications() {
           <thead><tr><th>ID</th><th>Sarlavha</th><th>Matn</th><th>Target</th><th>Status</th><th>Sana</th><th>Amallar</th></tr></thead>
           <tbody>{notifications.map(notification => (
             <tr key={notification.id}>
-              <td className="fw-semibold" style={{ color: '#4f46e5' }}>#{notification.id}</td>
+              <td className="fw-semibold" style={{ color: '#0B0342' }}>#{notification.id}</td>
               <td>
                 <div className="fw-semibold">{notification.title}</div>
                 <div className="d-flex flex-wrap gap-1 mt-1">

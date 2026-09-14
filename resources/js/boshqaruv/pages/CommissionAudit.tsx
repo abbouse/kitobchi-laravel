@@ -74,10 +74,10 @@ export default function CommissionAudit() {
 
       <div className="row g-3 mb-3">
         {[
-          ['Yozuvlar', commissionAuditTotals.rows || 0, 'bi-list-check', '#4f46e5'],
-          ['Farq bor', commissionAuditTotals.mismatches || 0, 'bi-exclamation-triangle', '#ef4444'],
-          [isCourier ? 'Km formula' : 'Seller qoidasi', commissionAuditTotals.sellerSpecific || 0, isCourier ? 'bi-signpost-split' : 'bi-shop', '#10b981'],
-          ['Balansga qo‘shilgan', commissionAuditTotals.balanceAdded || 0, 'bi-wallet2', '#0ea5e9'],
+          ['Yozuvlar', commissionAuditTotals.rows || 0, 'bi-list-check', '#0B0342'],
+          ['Farq bor', commissionAuditTotals.mismatches || 0, 'bi-exclamation-triangle', '#A32A2E'],
+          [isCourier ? 'Km formula' : 'Seller qoidasi', commissionAuditTotals.sellerSpecific || 0, isCourier ? 'bi-signpost-split' : 'bi-shop', '#0F6A46'],
+          ['Balansga qo‘shilgan', commissionAuditTotals.balanceAdded || 0, 'bi-wallet2', '#1E5C87'],
         ].map(([label, value, icon, color]) => (
           <div className="col-xl-3 col-md-6" key={String(label)}>
             <div className="stat-card">

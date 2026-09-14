@@ -54,10 +54,10 @@ export default function Promokodlar() {
 
       <div className="row g-3 mb-4">
         {[
-          { label: 'Jami promokod', value: promocodes.length, icon: 'bi-ticket-perforated', color: '#4f46e5' },
-          { label: 'Faol', value: activeCount, icon: 'bi-check-circle', color: '#10b981' },
-          { label: 'Ishlatilgan', value: usedTotal, icon: 'bi-bag-check', color: '#f59e0b' },
-          { label: 'Foizli kodlar', value: promocodes.filter((promo) => promo.type === 'percent').length, icon: 'bi-percent', color: '#7c3aed' },
+          { label: 'Jami promokod', value: promocodes.length, icon: 'bi-ticket-perforated', color: '#0B0342' },
+          { label: 'Faol', value: activeCount, icon: 'bi-check-circle', color: '#0F6A46' },
+          { label: 'Ishlatilgan', value: usedTotal, icon: 'bi-bag-check', color: '#8A5709' },
+          { label: 'Foizli kodlar', value: promocodes.filter((promo) => promo.type === 'percent').length, icon: 'bi-percent', color: '#4A3A7A' },
         ].map((item) => <div className="col-xl-3 col-md-6" key={item.label}><div className="stat-card"><div className="d-flex align-items-center gap-3"><div className="stat-icon" style={{ background: item.color }}><i className={`bi ${item.icon}`}></i></div><div><div className="stat-value">{item.value}</div><div className="stat-label">{item.label}</div></div></div></div></div>)}
       </div>
 
@@ -67,7 +67,7 @@ export default function Promokodlar() {
             <thead><tr><th>ID</th><th>Kod</th><th>Chegirma</th><th>Turi</th><th>Order qoidasi</th><th>Ishlatilgan</th><th>Limit</th><th>Muddati</th><th>Status</th><th>Amallar</th></tr></thead>
             <tbody>{promocodes.map((promo) => {
               const percent = promo.max > 0 ? Math.min(100, Math.round((promo.used / promo.max) * 100)) : 0;
-              return <tr key={promo.id}><td className="fw-semibold text-primary">#{promo.id}</td><td className="fw-bold" style={{ fontFamily: 'monospace', letterSpacing: 1 }}>{promo.code}</td><td className="fw-bold text-success">{isPercentPromo(promo.type) ? `${promo.discount}%` : `${fmt(promo.discount)} so'm`}</td><td><span className="chip chip-purple">{promoTypeLabel(promo.type)}</span></td><td><span className="chip chip-gray">{orderRuleLabel(promo.eligibleOrderCount)}</span></td><td>{promo.used} / {promo.max || '∞'}</td><td><div className="progress" style={{ width: 90, height: 6 }}><div className="progress-bar" style={{ width: `${percent}%`, background: percent > 80 ? '#ef4444' : '#10b981' }}></div></div></td><td className="text-muted">{promo.expiresAt || '—'}</td><td><span className={`chip ${promo.status === 'Active' ? 'chip-success' : 'chip-gray'}`}>{promo.status}</span></td><td><button className="btn btn-sm btn-light me-1" onClick={() => setSelected(promo)}><i className="bi bi-eye"></i></button><button className="btn btn-sm btn-light me-1" onClick={() => setEditing(promo)}><i className="bi bi-pencil"></i></button><button className="btn btn-sm btn-light text-danger" onClick={() => destroy(promo)}><i className="bi bi-trash"></i></button></td></tr>;
+              return <tr key={promo.id}><td className="fw-semibold text-primary">#{promo.id}</td><td className="fw-bold" style={{ fontFamily: 'monospace', letterSpacing: 1 }}>{promo.code}</td><td className="fw-bold text-success">{isPercentPromo(promo.type) ? `${promo.discount}%` : `${fmt(promo.discount)} so'm`}</td><td><span className="chip chip-purple">{promoTypeLabel(promo.type)}</span></td><td><span className="chip chip-gray">{orderRuleLabel(promo.eligibleOrderCount)}</span></td><td>{promo.used} / {promo.max || '∞'}</td><td><div className="progress" style={{ width: 90, height: 6 }}><div className="progress-bar" style={{ width: `${percent}%`, background: percent > 80 ? '#A32A2E' : '#0F6A46' }}></div></div></td><td className="text-muted">{promo.expiresAt || '—'}</td><td><span className={`chip ${promo.status === 'Active' ? 'chip-success' : 'chip-gray'}`}>{promo.status}</span></td><td><button className="btn btn-sm btn-light me-1" onClick={() => setSelected(promo)}><i className="bi bi-eye"></i></button><button className="btn btn-sm btn-light me-1" onClick={() => setEditing(promo)}><i className="bi bi-pencil"></i></button><button className="btn btn-sm btn-light text-danger" onClick={() => destroy(promo)}><i className="bi bi-trash"></i></button></td></tr>;
             })}</tbody>
           </table>
         </div>

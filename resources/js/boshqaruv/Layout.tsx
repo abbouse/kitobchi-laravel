@@ -286,7 +286,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     <div className="app-shell">
       <aside className={`sidebar ${open ? 'open' : ''}`}>
         <div className="brand">
-          <img src="/images/logo/logo_white.png" alt="Kitobchi" style={{ width: 132, height: 'auto', display: 'block' }} />
+          {/* Sidebar oq fonda — yorug' rejimda qora, qorong'ida oq logotip ishlatiladi */}
+          <img
+            src={darkMode ? '/images/logo/logo_white.png' : '/images/logo/logo_black.png'}
+            alt="Kitobchi"
+            style={{ width: 104, height: 'auto', display: 'block' }}
+          />
+          <span className="brand-sub">Boshqaruv</span>
         </div>
 
         <nav className="nav-group">
@@ -315,13 +321,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <div className="sidebar-footer">
           <div className="avatar">{initials}</div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ color: 'white', fontWeight: 600, fontSize: 14 }}>{admin?.name || 'Admin'}</div>
-            <div style={{ color: '#a5b4fc', fontSize: 12 }}>
+            <div style={{ color: 'var(--kc-text)', fontWeight: 600, fontSize: 12.5 }}>{admin?.name || 'Admin'}</div>
+            <div style={{ color: 'var(--kc-text-muted)', fontSize: 11 }}>
               {admin?.role || 'Administrator'}
               {admin?.isReadOnly && <span className="badge bg-secondary ms-1" style={{ fontSize: 9 }}>faqat ko'rish</span>}
             </div>
           </div>
-          <button className="btn btn-sm" style={{ color: '#c7d2fe' }} title="Chiqish" onClick={() => router.post('/boshqaruv/logout')}>
+          <button className="btn btn-sm" title="Chiqish" onClick={() => router.post('/boshqaruv/logout')}>
             <i className="bi bi-box-arrow-right" style={{ fontSize: 18 }}></i>
           </button>
         </div>
@@ -347,8 +353,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           
           <div style={{ flex: 1 }}></div>
 
-          <div className="d-none d-xl-flex align-items-center gap-2 px-3 py-1 rounded-pill" style={{ background: 'var(--kc-bg-subtle)', border: '1px solid var(--kc-border-subtle)', fontSize: 12, fontWeight: 600 }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981', display: 'inline-block' }}></span>
+          <div className="d-none d-xl-flex align-items-center gap-2 px-2 py-1" style={{ border: '1px solid var(--kc-border-subtle)', borderRadius: 999, fontSize: 11.5, color: 'var(--kc-text-soft)' }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--kc-ok)', display: 'inline-block' }}></span>
             <span>Tizim barqaror</span>
           </div>
 
@@ -357,7 +363,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </button>
 
           <div className="d-flex align-items-center gap-2 ps-2 border-start">
-            <div className="avatar" style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg,#f472b6,#8b5cf6)', color: 'white', fontWeight: 700, display: 'grid', placeItems: 'center', fontSize: 13 }}>{initials}</div>
+            <div className="avatar">{initials}</div>
             <div className="d-none d-md-block">
               <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--kc-text)' }}>{admin?.name || 'Admin'}</div>
               <div style={{ fontSize: 11, color: 'var(--kc-text-muted)' }}>{admin?.email || 'admin@kitobchi.com'}</div>

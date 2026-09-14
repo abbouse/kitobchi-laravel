@@ -133,10 +133,10 @@ export default function Transaksiyalar() {
 
       <div className="row g-3 mb-4">
         {[
-          { label: `${ownerLabel} tranzaksiya`, value: transactionTotals.all || 0, icon: 'bi-receipt', color: '#4f46e5' },
-          { label: 'Tasdiqlangan', value: totals.approved, icon: 'bi-check-circle', color: '#10b981' },
-          { label: 'Kutilmoqda', value: totals.pending, icon: 'bi-hourglass-split', color: '#f59e0b' },
-          { label: 'Jami summa', value: `${fmt(totals.income)} so'm`, icon: 'bi-wallet2', color: '#0ea5e9' },
+          { label: `${ownerLabel} tranzaksiya`, value: transactionTotals.all || 0, icon: 'bi-receipt', color: '#0B0342' },
+          { label: 'Tasdiqlangan', value: totals.approved, icon: 'bi-check-circle', color: '#0F6A46' },
+          { label: 'Kutilmoqda', value: totals.pending, icon: 'bi-hourglass-split', color: '#8A5709' },
+          { label: 'Jami summa', value: `${fmt(totals.income)} so'm`, icon: 'bi-wallet2', color: '#1E5C87' },
         ].map((item) => (
           <div className="col-xl-3 col-md-6" key={item.label}>
             <div className="stat-card">

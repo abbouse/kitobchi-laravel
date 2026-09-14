@@ -56,7 +56,7 @@ export function MysteryBox() {
           <thead><tr><th>ID</th><th>Foydalanuvchi</th><th>Plan</th><th>Status</th><th>Keyingi yetkazish</th><th>Amallar</th></tr></thead>
           <tbody>{mysteryBox.subscriptions.map(s => (
             <tr key={s.id}>
-              <td className="fw-semibold" style={{ color: '#4f46e5' }}>#{s.id}</td>
+              <td className="fw-semibold" style={{ color: '#0B0342' }}>#{s.id}</td>
               <td className="fw-semibold">{s.user}</td>
               <td><span className="chip chip-purple" style={{ fontSize: 9 }}>{s.plan}</span></td>
               <td><span className={`chip ${s.status === 'active' ? 'chip-success' : s.status === 'paused' ? 'chip-warning' : 'chip-gray'}`} style={{ fontSize: 9 }}>{s.statusLabel || s.status}</span></td>
@@ -462,7 +462,7 @@ function RadiusMapPicker({
           <div className="position-relative d-flex align-items-center justify-content-center rounded-circle shadow" style={{
             width: 24,
             height: 24,
-            background: '#10b981',
+            background: '#0F6A46',
             color: '#fff',
             border: '3px solid #fff',
           }}>
@@ -528,7 +528,7 @@ function DeliveryRuleForm({ rule, services, action, onDone }: { rule?: DeliveryR
   const [polygon, setPolygon] = useState<Ring | null>(
     Array.isArray(rule?.polygon) && (rule?.polygon?.length ?? 0) >= 3 ? (rule!.polygon as Ring) : null,
   );
-  const [color, setColor] = useState(rule?.color || (rule?.scope === 'radius' ? '#10b981' : '#4f46e5'));
+  const [color, setColor] = useState(rule?.color || (rule?.scope === 'radius' ? '#0F6A46' : '#0B0342'));
 
   if (!action) return null;
 
@@ -683,7 +683,7 @@ export function Logistika() {
   const postalServices = deliveryServices.filter((service) => service.type === 'mail_service');
   const radiusRules = deliveryRules.filter((rule) => rule.scope === 'radius');
   const polygonRules = deliveryRules.filter((rule) => rule.scope === 'polygon');
-  const zoneColor = (rule: DeliveryRule) => rule.color || (rule.scope === 'polygon' ? '#4f46e5' : '#10b981');
+  const zoneColor = (rule: DeliveryRule) => rule.color || (rule.scope === 'polygon' ? '#0B0342' : '#0F6A46');
 
   // Client-side resolver uchun to'liq zona ma'lumoti (aqlli preview + overlap)
   const previewZones: ZoneLike[] = deliveryRules.map((rule) => ({
@@ -792,11 +792,11 @@ export function Logistika() {
 
       <div className="row g-3 mb-4">
         {[
-          { label: 'Xizmatlar', value: logisticsStats.services ?? deliveryServices.length, icon: 'bi-truck', color: '#4f46e5' },
-          { label: 'Faol xizmat', value: logisticsStats.activeServices ?? deliveryServices.filter((item) => item.active).length, icon: 'bi-check-circle', color: '#10b981' },
-          { label: 'Polygon zona', value: logisticsStats.polygonRules ?? polygonRules.length, icon: 'bi-pentagon', color: '#4f46e5' },
-          { label: 'Radius zona', value: logisticsStats.radiusRules ?? radiusRules.length, icon: 'bi-record-circle', color: '#10b981' },
-          { label: 'COD qoidalari', value: logisticsStats.codRules ?? deliveryRules.filter((item) => item.codAllowed).length, icon: 'bi-cash-coin', color: '#7c3aed' },
+          { label: 'Xizmatlar', value: logisticsStats.services ?? deliveryServices.length, icon: 'bi-truck', color: '#0B0342' },
+          { label: 'Faol xizmat', value: logisticsStats.activeServices ?? deliveryServices.filter((item) => item.active).length, icon: 'bi-check-circle', color: '#0F6A46' },
+          { label: 'Polygon zona', value: logisticsStats.polygonRules ?? polygonRules.length, icon: 'bi-pentagon', color: '#0B0342' },
+          { label: 'Radius zona', value: logisticsStats.radiusRules ?? radiusRules.length, icon: 'bi-record-circle', color: '#0F6A46' },
+          { label: 'COD qoidalari', value: logisticsStats.codRules ?? deliveryRules.filter((item) => item.codAllowed).length, icon: 'bi-cash-coin', color: '#4A3A7A' },
         ].map((item) => (
           <div className="col-xl col-md-4 col-6" key={item.label}>
             <div className="stat-card">
@@ -811,9 +811,9 @@ export function Logistika() {
 
       <div className="row g-3 mb-4">
         {[
-          { step: '1', title: 'Xizmat', icon: 'bi-truck', color: '#4f46e5', text: 'Kuryer yoki pochta kanali (Kitobchi kuryer, UzPost). Bir marta ochiladi.' },
-          { step: '2', title: 'Zona chegarasi', icon: 'bi-pentagon', color: '#7c3aed', text: 'Polygon qilib xaritada chizasiz yoki radius berasiz — narx, COD, ETA shu yerda.' },
-          { step: '3', title: 'Preview', icon: 'bi-calculator', color: '#10b981', text: 'Koordinata kiritib, checkoutda qaysi yetkazish chiqishini oldindan tekshirasiz.' },
+          { step: '1', title: 'Xizmat', icon: 'bi-truck', color: '#0B0342', text: 'Kuryer yoki pochta kanali (Kitobchi kuryer, UzPost). Bir marta ochiladi.' },
+          { step: '2', title: 'Zona chegarasi', icon: 'bi-pentagon', color: '#4A3A7A', text: 'Polygon qilib xaritada chizasiz yoki radius berasiz — narx, COD, ETA shu yerda.' },
+          { step: '3', title: 'Preview', icon: 'bi-calculator', color: '#0F6A46', text: 'Koordinata kiritib, checkoutda qaysi yetkazish chiqishini oldindan tekshirasiz.' },
         ].map((item) => (
           <div className="col-md-4" key={item.step}>
             <div className="card-panel h-100 d-flex align-items-start gap-3">
@@ -935,10 +935,10 @@ export function Logistika() {
                 ) : (
                   <div className="d-flex flex-column gap-2">
                     {previewMatches.map((zone, index) => (
-                      <div key={zone.id} className="p-2 rounded border d-flex justify-content-between align-items-center gap-2" style={{ borderColor: index === 0 ? '#dc2626' : '#e5e7eb', background: index === 0 ? '#fef2f2' : '#fff' }}>
+                      <div key={zone.id} className="p-2 rounded border d-flex justify-content-between align-items-center gap-2" style={{ borderColor: index === 0 ? '#8E2226' : '#e5e7eb', background: index === 0 ? '#fef2f2' : '#fff' }}>
                         <div>
                           <div className="fw-semibold d-flex align-items-center gap-2">
-                            <span style={{ width: 8, height: 8, borderRadius: 999, background: index === 0 ? '#dc2626' : (zone.color || '#9ca3af'), display: 'inline-block', flexShrink: 0 }}></span>
+                            <span style={{ width: 8, height: 8, borderRadius: 999, background: index === 0 ? '#8E2226' : (zone.color || '#8A92A2'), display: 'inline-block', flexShrink: 0 }}></span>
                             {zone.zoneName}
                             {index === 0 ? <span className="chip chip-danger">g'olib</span> : null}
                           </div>
@@ -1004,7 +1004,7 @@ export function Logistika() {
             <thead><tr><th>ID</th><th>Xizmat</th><th>Turi</th><th>Narx/kg</th><th>Bepuldan</th><th>Muddat</th><th>Mamlakat</th><th>Holat</th><th>Amallar</th></tr></thead>
             <tbody>{filteredServices.map(service => (
               <tr key={service.id}>
-                <td className="fw-semibold" style={{ color: '#4f46e5' }}>#{service.id}</td>
+                <td className="fw-semibold" style={{ color: '#0B0342' }}>#{service.id}</td>
                 <td className="fw-semibold">{service.name}</td>
                 <td><span className="chip chip-gray">{service.type || '—'}</span></td>
                 <td>{service.price === 0 ? <span className="chip chip-success">Bepul</span> : <span className="fw-semibold">{service.price.toLocaleString()} so'm</span>}</td>

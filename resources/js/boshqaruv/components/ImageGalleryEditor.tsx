@@ -98,7 +98,7 @@ export default function ImageGalleryEditor({
             <div
               key={item.url}
               className="position-relative"
-              style={{ width: cardHeight, height: cardHeight, border: '1px dashed #6366f1', borderRadius: 8, overflow: 'hidden' }}
+              style={{ width: cardHeight, height: cardHeight, border: '1px dashed #3A3475', borderRadius: 8, overflow: 'hidden' }}
               title={item.file.name}
             >
               <img src={item.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />

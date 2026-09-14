@@ -51,8 +51,8 @@ export default function Users() {
       </div>
       <div className="row g-3 mb-4">
         {[
-          ['Jami', userCounts.all || 0, 'bi-people', '#4f46e5'], ['Online', userCounts.online || 0, 'bi-broadcast', '#10b981'],
-          ['Karta ulagan', userCounts.with_cards || 0, 'bi-credit-card', '#7c3aed'], ['Bloklangan', userCounts.blocked || 0, 'bi-person-lock', '#ef4444'],
+          ['Jami', userCounts.all || 0, 'bi-people', '#0B0342'], ['Online', userCounts.online || 0, 'bi-broadcast', '#0F6A46'],
+          ['Karta ulagan', userCounts.with_cards || 0, 'bi-credit-card', '#4A3A7A'], ['Bloklangan', userCounts.blocked || 0, 'bi-person-lock', '#A32A2E'],
         ].map(([label, val, icon, color]) => <div className="col-xl-3 col-md-6" key={String(label)}><div className="stat-card"><div className="d-flex gap-3 align-items-center"><div className="stat-icon" style={{ background: String(color) }}><i className={`bi ${icon}`}></i></div><div><div className="stat-value">{val}</div><div className="stat-label">{label}</div></div></div></div></div>)}
       </div>
       <div className="card-panel">

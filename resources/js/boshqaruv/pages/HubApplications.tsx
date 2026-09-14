@@ -83,7 +83,7 @@ export default function HubApplications() {
             <tbody>
               {hubApplications.map((app) => (
                 <tr key={app.id}>
-                  <td className="fw-semibold" style={{ color: '#4f46e5' }}>#{app.id}</td>
+                  <td className="fw-semibold" style={{ color: '#0B0342' }}>#{app.id}</td>
                   <td className="fw-semibold">{app.name}</td>
                   <td><a href={`tel:${app.phone}`} style={{ textDecoration: 'none' }}>{app.phone}</a></td>
                   <td>{app.region}</td>

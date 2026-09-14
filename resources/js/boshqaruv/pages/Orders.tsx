@@ -584,11 +584,11 @@ export default function Orders() {
 
       <div className="row g-3 mb-4">
         {[
-          { label: 'Jami buyurtmalar', val: orderCounts.all || 0, icon: 'bi-receipt', color: '#4f46e5' },
-          { label: 'Yetkazilgan', val: orderCounts.paid || 0, icon: 'bi-check-circle', color: '#10b981' },
-          { label: 'Jarayonda', val: (orderCounts.pending || 0) + (orderCounts.shipped || 0), icon: 'bi-hourglass-split', color: '#f59e0b' },
-          { label: 'Qaytgan', val: orderCounts.returned || 0, icon: 'bi-arrow-counterclockwise', color: '#f97316' },
-          { label: 'Bekor qilingan', val: orderCounts.cancelled || 0, icon: 'bi-x-circle', color: '#ef4444' },
+          { label: 'Jami buyurtmalar', val: orderCounts.all || 0, icon: 'bi-receipt', color: '#0B0342' },
+          { label: 'Yetkazilgan', val: orderCounts.paid || 0, icon: 'bi-check-circle', color: '#0F6A46' },
+          { label: 'Jarayonda', val: (orderCounts.pending || 0) + (orderCounts.shipped || 0), icon: 'bi-hourglass-split', color: '#8A5709' },
+          { label: 'Qaytgan', val: orderCounts.returned || 0, icon: 'bi-arrow-counterclockwise', color: '#9A5210' },
+          { label: 'Bekor qilingan', val: orderCounts.cancelled || 0, icon: 'bi-x-circle', color: '#A32A2E' },
         ].map((item) => (
           <div className="col-xl col-md-6" key={item.label}>
             <div className="stat-card">
@@ -647,7 +647,7 @@ export default function Orders() {
             <tbody>
               {orders.map((order) => (
                 <tr key={order.id}>
-                  <td className="fw-semibold" style={{ color: '#4f46e5' }}>{order.id}</td>
+                  <td className="fw-semibold" style={{ color: '#0B0342' }}>{order.id}</td>
                   <td>
                     <div className="fw-semibold">{order.customer}</div>
                     <div className="text-muted small">{order.user?.phone || ''}</div>

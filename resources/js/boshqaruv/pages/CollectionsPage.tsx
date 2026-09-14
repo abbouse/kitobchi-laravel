@@ -472,7 +472,7 @@ export default function CollectionsPage() {
       <div
         key={node.key}
         className={`border rounded-4 p-2 mb-2 ${level === 2 ? 'ms-3' : ''}`}
-        style={{ borderColor: activeKey === node.key ? '#7c3aed' : undefined, background: activeKey === node.key ? '#faf5ff' : undefined }}
+        style={{ borderColor: activeKey === node.key ? '#4A3A7A' : undefined, background: activeKey === node.key ? '#faf5ff' : undefined }}
       >
         <div className="d-flex gap-2 align-items-center mb-2 flex-wrap">
           <span className={`chip ${isGroup ? 'chip-purple' : 'chip-gray'}`}>

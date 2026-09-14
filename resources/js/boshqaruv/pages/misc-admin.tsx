@@ -32,7 +32,7 @@ export function Vakansiyalar() {
           <thead><tr><th>ID</th><th>Vakansiya</th><th>Shart</th><th>Joylashuv</th><th>Arizalar</th><th>Holat</th><th>Amallar</th></tr></thead>
           <tbody>{vacancies.map(vacancy => (
             <tr key={vacancy.id}>
-              <td className="fw-semibold" style={{ color: '#4f46e5' }}>#{vacancy.id}</td>
+              <td className="fw-semibold" style={{ color: '#0B0342' }}>#{vacancy.id}</td>
               <td className="fw-semibold">{vacancy.title}</td>
               <td>{vacancy.contractType || '—'}</td>
               <td>{vacancy.location || '—'}</td>
@@ -152,7 +152,7 @@ export function KaryeraArizalari() {
           <thead><tr><th>ID</th><th>Nomzod</th><th>Vakansiya</th><th>Kontakt</th><th>Sana</th><th>Status</th><th>Amallar</th></tr></thead>
           <tbody>{applications.map(application => (
             <tr key={application.id}>
-              <td className="fw-semibold" style={{ color: '#4f46e5' }}>#{application.id}</td>
+              <td className="fw-semibold" style={{ color: '#0B0342' }}>#{application.id}</td>
               <td className="fw-semibold">{application.name}</td>
               <td>{application.vacancy}</td>
               <td className="text-muted small">{application.email}<br />{application.telegram}</td>
