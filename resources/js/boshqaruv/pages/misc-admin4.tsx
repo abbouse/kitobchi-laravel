@@ -125,7 +125,7 @@ export function Adminlar() {
             {selectedRole !== 'superadmin' && (
               <>
                 <Form.Label>Ruxsat berilgan bo'limlar</Form.Label>
-                <div className="row g-1 mb-2 p-2" style={{ background: '#f9fafb', borderRadius: 8, maxHeight: 220, overflowY: 'auto' }}>
+                <div className="row g-1 mb-2 p-2" style={{ background: 'var(--kc-bg-subtle)', borderRadius: 8, maxHeight: 220, overflowY: 'auto' }}>
                   {modules.map((m) => (
                     <div className="col-6" key={m.key}>
                       <Form.Check
@@ -246,7 +246,7 @@ export function ApiClients() {
                 <div className="d-flex flex-column gap-1" style={{ minWidth: 260 }}>
                   <div className="d-flex align-items-center gap-1">
                     <span className="badge bg-secondary-subtle text-dark border px-1" style={{ fontSize: 9 }}>ID</span>
-                    <code style={{ fontSize: 11, background: '#f3f4f6', padding: '2px 6px', borderRadius: 4 }}>{client.key}</code>
+                    <code style={{ fontSize: 11, background: 'var(--kc-bg-subtle)', padding: '2px 6px', borderRadius: 4 }}>{client.key}</code>
                     <button
                       type="button"
                       className="btn btn-sm btn-link p-0 text-muted"
@@ -259,7 +259,7 @@ export function ApiClients() {
                   {client.secret ? (
                     <div className="d-flex align-items-center gap-1">
                       <span className="badge bg-secondary-subtle text-dark border px-1" style={{ fontSize: 9 }}>Secret</span>
-                      <code style={{ fontSize: 11, background: '#f3f4f6', padding: '2px 6px', borderRadius: 4, letterSpacing: showSecret[client.id] ? 'normal' : '2px' }}>
+                      <code style={{ fontSize: 11, background: 'var(--kc-bg-subtle)', padding: '2px 6px', borderRadius: 4, letterSpacing: showSecret[client.id] ? 'normal' : '2px' }}>
                         {showSecret[client.id] ? client.secret : '••••••••••••••••'}
                       </code>
                       <button

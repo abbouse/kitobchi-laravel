@@ -179,11 +179,6 @@ interface Ord {
   } | null;
   paymentTransaction?: { id: number; provider?: string; providerCardId?: string; amount?: number; status?: string; date?: string } | null;
   paymentCard?: { provider?: string | null; providerCardId?: string | null; maskedNumber?: string | null; vendor?: string | null; cardName?: string | null; phone?: string | null };
-  // Admin uchun: karta to'lovini kutayotgan (CARD_PENDING) buyurtmani
-  // mijozning saqlangan kartasidan to'lashga urinish (2026-09).
-  canPayPendingCard?: boolean;
-  payPendingCardUrl?: string;
-  customerCards?: Array<{ id: number; maskedNumber?: string | null; vendor?: string | null; isDefault?: boolean }>;
   postalInfo?: {
     provider: string;
     providers: Array<{ code: string; name: string }>;
@@ -456,22 +451,20 @@ interface PaginationMeta {
 export default function Orders() {
   const {
     orders = [], orderPagination = { page: 1, totalPages: 1, from: 0, to: 0, total: 0 }, orderCounts = {}, orderFilters = {},
-    reassignSellers = [], auth,
+    reassignSellers = [], admin,
   } = usePage<{
     orders?: Ord[];
     orderPagination?: PaginationMeta;
     orderCounts?: Record<string, number>;
     orderFilters?: { tab?: string; search?: string };
     // Do'kon-egalik almashtirish (2026-09): tanlov ro'yxati va
-    // superadminlikni bilish uchun. MUHIM: superadmin bayrog'i
-    // HandleInertiaRequests middleware orqali `auth.admin.isSuperAdmin`
-    // sifatida keladi (TOP-LEVEL 'admin' emas — bu 2026-09'dagi bug
-    // tuzatildi: avval noto'g'ri top-level 'admin' o'qilardi, u hech
-    // qachon kelmagani uchun tugma hech kimga chiqmasdi).
+    // superadminlikni bilish uchun — Layout.tsx/HandleInertiaRequests
+    // orqali har bir sahifaga uzatiladigan umumiy (shared) 'admin' propi
+    // (SellerOrders.tsx dagi bilan bir xil pattern).
     reassignSellers?: ReassignSellerOption[];
-    auth?: { admin?: { isSuperAdmin?: boolean } };
+    admin?: { isSuperAdmin?: boolean };
   }>().props;
-  const isSuperAdmin = !!auth?.admin?.isSuperAdmin;
+  const isSuperAdmin = !!admin?.isSuperAdmin;
   const [activeTab, setActiveTab] = useState(orderFilters.tab || 'pending');
   const [search, setSearch] = useState(orderFilters.search || '');
   const [showView, setShowView] = useState(false);
@@ -582,17 +575,18 @@ export default function Orders() {
         </div>
       </div>
 
-      <div className="kpi-strip row g-3 mb-4">
+      <div className="row g-3 mb-4">
         {[
-          { label: 'Jami buyurtmalar', val: orderCounts.all || 0, icon: 'bi-receipt', color: '#0B0342' },
-          { label: 'Yetkazilgan', val: orderCounts.paid || 0, icon: 'bi-check-circle', color: '#0F6A46' },
-          { label: 'Jarayonda', val: (orderCounts.pending || 0) + (orderCounts.shipped || 0), icon: 'bi-hourglass-split', color: '#8A5709' },
-          { label: 'Qaytgan', val: orderCounts.returned || 0, icon: 'bi-arrow-counterclockwise', color: '#9A5210' },
-          { label: 'Bekor qilingan', val: orderCounts.cancelled || 0, icon: 'bi-x-circle', color: '#A32A2E' },
+          { label: 'Jami buyurtmalar', val: orderCounts.all || 0, icon: 'bi-receipt', color: '#4f46e5' },
+          { label: 'Yetkazilgan', val: orderCounts.paid || 0, icon: 'bi-check-circle', color: '#10b981' },
+          { label: 'Jarayonda', val: (orderCounts.pending || 0) + (orderCounts.shipped || 0), icon: 'bi-hourglass-split', color: '#f59e0b' },
+          { label: 'Qaytgan', val: orderCounts.returned || 0, icon: 'bi-arrow-counterclockwise', color: '#f97316' },
+          { label: 'Bekor qilingan', val: orderCounts.cancelled || 0, icon: 'bi-x-circle', color: '#ef4444' },
         ].map((item) => (
           <div className="col-xl col-md-6" key={item.label}>
             <div className="stat-card">
               <div className="d-flex align-items-center gap-3">
+                <div className="stat-icon" style={{ background: item.color }}><i className={`bi ${item.icon}`}></i></div>
                 <div>
                   <div className="stat-value">{item.val}</div>
                   <div className="stat-label">{item.label}</div>
@@ -604,7 +598,7 @@ export default function Orders() {
       </div>
 
       <div className="card-panel">
-        <div className="kc-tabs d-flex gap-2 mb-3 flex-wrap align-items-center">
+        <div className="d-flex gap-2 mb-3 flex-wrap align-items-center">
           {[
             ['all', 'Barchasi'],
             ['pending', 'Kutilmoqda'],
@@ -615,7 +609,7 @@ export default function Orders() {
           ].map(([status, label]) => (
             <button
               key={status}
-              className={`kc-tab ${activeTab === status ? 'active' : ''}`}
+              className={`btn btn-sm ${activeTab === status ? 'btn-primary-gradient' : 'btn-outline-secondary'}`}
               onClick={() => { setActiveTab(status); loadOrders(1, status); }}
             >
               {label} <span className="ms-1 opacity-75">{orderCounts[status] || 0}</span>
@@ -646,7 +640,7 @@ export default function Orders() {
             <tbody>
               {orders.map((order) => (
                 <tr key={order.id}>
-                  <td className="fw-semibold" style={{ color: '#0B0342' }}>{order.id}</td>
+                  <td className="fw-semibold" style={{ color: '#4f46e5' }}>{order.id}</td>
                   <td>
                     <div className="fw-semibold">{order.customer}</div>
                     <div className="text-muted small">{order.user?.phone || ''}</div>
@@ -685,7 +679,7 @@ export default function Orders() {
         <PaginationControls {...orderPagination} onPageChange={(page) => loadOrders(page)} />
       </div>
 
-      <Modal show={showView} onHide={() => setShowView(false)} centered size="xl" scrollable dialogClassName="kc-sheet">
+      <Modal show={showView} onHide={() => setShowView(false)} centered size="xl" scrollable>
         <Modal.Header closeButton>
           <Modal.Title className="fs-5 fw-bold">Buyurtma: {selectedOrd?.id}</Modal.Title>
         </Modal.Header>
@@ -712,7 +706,7 @@ export default function Orders() {
                     </div>
                   ) : null}
                   {selectedOrd.canSendUnreachablePush ? (
-                    <div className="alert alert-info py-2 px-3 mb-3 border-0 rounded-3" style={{ background: 'var(--kc-info-bg)', border: '1px solid var(--kc-info-bg)' }}>
+                    <div className="alert alert-info py-2 px-3 mb-3 border-0 rounded-3" style={{ background: '#eff6ff', border: '1px solid #bfdbfe' }}>
                       <div className="d-flex justify-content-between align-items-center">
                         <div>
                           <div className="fw-bold small text-primary">
@@ -1193,37 +1187,6 @@ export default function Orders() {
                         <Detail label="Settled" value={selectedOrd.courierOrder?.settledAt ? `${fmt(selectedOrd.courierOrder?.settledAmount || 0)} so'm · ${selectedOrd.courierOrder.settledAt}` : '—'} />
                         <Detail label="Kutish rejimi" value="O'chirilgan" />
                       </div>
-
-                      {selectedOrd.canPayPendingCard ? (
-                        <form
-                          className="rounded-3 border p-3 mt-3"
-                          onSubmit={(event) => submitForm(event, selectedOrd.payPendingCardUrl)}
-                        >
-                          <div className="fw-semibold mb-2">Kartadan to'lovga urinish</div>
-                          <div className="text-muted small mb-2">
-                            Bu buyurtma hali karta to'lovini kutmoqda. Mijozning saqlangan kartasidan
-                            to'lovga urinish mumkin — bosilgach, kartada summa bron qilinadi (hold),
-                            yakuniy yechib olish esa buyurtma seller/kuryerga topshirilganda odatdagidek
-                            avtomatik amalga oshadi.
-                          </div>
-                          {(selectedOrd.customerCards || []).length === 0 ? (
-                            <div className="text-muted small">Mijozning tasdiqlangan saqlangan kartasi topilmadi.</div>
-                          ) : (
-                            <>
-                              <label className="form-label small text-muted">Karta</label>
-                              <select name="card_id" className="form-select form-select-sm mb-2" required>
-                                {(selectedOrd.customerCards || []).map((card) => (
-                                  <option value={card.id} key={card.id}>
-                                    {[card.maskedNumber, card.vendor].filter(Boolean).join(' / ')}
-                                    {card.isDefault ? ' (asosiy)' : ''}
-                                  </option>
-                                ))}
-                              </select>
-                              <button className="btn btn-sm btn-primary-gradient">To'lovga urinish</button>
-                            </>
-                          )}
-                        </form>
-                      ) : null}
                     </div>
                   </div>
                 </div>

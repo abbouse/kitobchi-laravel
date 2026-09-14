@@ -119,7 +119,7 @@ function PipelineBar({ pipeline, stages }: { pipeline?: HubPipeline; stages: Ful
 
   return (
     <div>
-      <div className="d-flex rounded-pill overflow-hidden mb-2" style={{ height: 8, background: '#F1F3F5' }}>
+      <div className="d-flex rounded-pill overflow-hidden mb-2" style={{ height: 5, background: 'var(--kc-bg-sunken)' }}>
         {stageList.map((stage) => {
           const value = pipeline[stage.key as keyof HubPipeline] || 0;
           if (!value) return null;
@@ -137,7 +137,7 @@ function PipelineBar({ pipeline, stages }: { pipeline?: HubPipeline; stages: Ful
           );
         })}
         {pipeline.exceptions > 0 ? (
-          <span className="badge rounded-pill" style={{ background: '#FEE2E2', color: '#DC2626', fontWeight: 600 }}>
+          <span className="badge rounded-pill" style={{ background: 'var(--kc-danger-bg)', color: 'var(--kc-danger)', fontWeight: 500 }}>
             <i className="bi bi-exclamation-triangle me-1"></i>{pipeline.exceptions}
           </span>
         ) : null}
@@ -384,24 +384,26 @@ export default function Hubs() {
           <span className="chip chip-info">{fmt(openTotal)} ta ochiq</span>
         </div>
         <div className="row g-2">
-          {(stages.length ? stages : STAGE_ORDER.map((k) => ({ key: k, label: k, icon: 'bi-dot', color: '#0B0342' }))).map((stage) => (
-            <div className="col-6 col-xl" key={stage.key}>
-              <div className="p-3 rounded-3 h-100" style={{ background: `${stage.color}12` }}>
-                <div className="d-flex align-items-center gap-2 mb-1" style={{ color: stage.color }}>
-                  <i className={`bi ${stage.icon}`}></i>
-                  <span className="fw-bold fs-4">{fmt(totals[stage.key] || 0)}</span>
+          {/* Quvur bosqichlari: raqam har doim asosiy matn rangida (qorong'i rejimda
+              ham o'qiladi), bosqich ulushi esa ostidagi ingichka chiziqda ko'rinadi */}
+          {(stages.length ? stages : STAGE_ORDER.map((k) => ({ key: k, label: k, icon: 'bi-dot', color: '' }))).map((stage, index) => {
+            const value = totals[stage.key] || 0;
+            const share = openTotal > 0 ? Math.round((value / openTotal) * 100) : 0;
+            return (
+              <div className="col-6 col-xl" key={stage.key}>
+                <div className="stage-cell h-100">
+                  <div className="kpi-label">{index + 1} · {stage.label}</div>
+                  <div className="kpi-value">{fmt(value)}</div>
+                  <div className="stage-bar"><i style={{ width: `${value ? Math.max(share, 5) : 0}%` }}></i></div>
                 </div>
-                <div className="small text-muted">{stage.label}</div>
               </div>
-            </div>
-          ))}
+            );
+          })}
           <div className="col-6 col-xl">
-            <div className="p-3 rounded-3 h-100" style={{ background: (totals.exceptions || 0) > 0 ? '#FEE2E2' : '#F1F5F9' }}>
-              <div className="d-flex align-items-center gap-2 mb-1" style={{ color: (totals.exceptions || 0) > 0 ? '#DC2626' : '#64748B' }}>
-                <i className="bi bi-exclamation-triangle"></i>
-                <span className="fw-bold fs-4">{fmt(totals.exceptions || 0)}</span>
-              </div>
-              <div className="small text-muted">Exception</div>
+            <div className={`stage-cell h-100${(totals.exceptions || 0) > 0 ? ' is-alert' : ''}`}>
+              <div className="kpi-label">Exception</div>
+              <div className="kpi-value">{fmt(totals.exceptions || 0)}</div>
+              <div className="stage-bar"><i style={{ width: (totals.exceptions || 0) > 0 ? '100%' : '0%' }}></i></div>
             </div>
           </div>
         </div>
@@ -438,7 +440,7 @@ export default function Hubs() {
                     <div className="text-muted" style={{ fontSize: 12 }}>{item.updatedAt || ''}</div>
                   </div>
                   <div className="text-end">
-                    {item.hasException ? <span className="chip" style={{ background: '#FEE2E2', color: '#DC2626' }}>Exception</span> : <span className="chip chip-gray">{item.stageLabel}</span>}
+                    {item.hasException ? <span className="chip" style={{ background: 'var(--kc-danger-bg)', color: 'var(--kc-danger)' }}>Exception</span> : <span className="chip chip-gray">{item.stageLabel}</span>}
                   </div>
                 </div>
               ))}

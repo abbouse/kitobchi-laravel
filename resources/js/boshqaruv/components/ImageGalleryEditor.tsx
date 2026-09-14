@@ -58,7 +58,7 @@ export default function ImageGalleryEditor({
             <div
               key={url}
               className="position-relative"
-              style={{ width: cardHeight, height: cardHeight, border: '1px solid #e5e7eb', borderRadius: 8, overflow: 'hidden', background: '#f9fafb' }}
+              style={{ width: cardHeight, height: cardHeight, border: '1px solid var(--kc-border-subtle)', borderRadius: 8, overflow: 'hidden', background: '#f9fafb' }}
             >
               <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               {index === 0 ? (

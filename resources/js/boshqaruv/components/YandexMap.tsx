@@ -193,7 +193,7 @@ function MapFallback({ height, state }: { height: number; state: ReadyState }) {
   return (
     <div
       className="d-flex flex-column align-items-center justify-content-center text-center text-muted small border rounded-4 gap-2 p-3"
-      style={{ height, background: '#f8fafc' }}
+      style={{ height, background: 'var(--kc-bg-subtle)' }}
     >
       {state === 'loading' ? (
         <>
@@ -235,7 +235,7 @@ class MapErrorBoundary extends Component<{ height: number; children: ReactNode }
       return (
         <div
           className="d-flex flex-column align-items-center justify-content-center text-center text-muted small border rounded-4 gap-2 p-3"
-          style={{ height: this.props.height, background: '#f8fafc' }}
+          style={{ height: this.props.height, background: 'var(--kc-bg-subtle)' }}
         >
           <i className="bi bi-exclamation-triangle fs-4 text-warning" />
           <div className="fw-semibold text-dark">Xaritani ochishda xatolik</div>

@@ -42,9 +42,9 @@ function BannerImageHint() {
             top: 24,
             left: -96,
             width: 310,
-            background: 'var(--kc-ink)',
-            color: 'var(--kc-on-ink)',
-            borderRadius: 'var(--kc-radius)',
+            background: '#111827',
+            color: '#f8fafc',
+            borderRadius: 14,
             padding: '12px 14px',
             fontSize: 12,
             fontWeight: 400,
@@ -62,7 +62,7 @@ function BannerImageHint() {
             <span className="d-block">• yuqori va pastdan <strong>≥ 30 px</strong></span>
             (markazdagi ~1200 × 260 px maydonda).
           </span>
-          <span className="d-block mt-2" style={{ color: 'var(--kc-on-ink)', opacity: .72 }}>
+          <span className="d-block mt-2" style={{ color: '#cbd5e1' }}>
             Fonni to'liq chetgacha to'ldiring. Format WebP/JPG/PNG, 300–600 KB.
           </span>
         </span>
@@ -87,14 +87,12 @@ export function Reels() {
   };
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    // BUG TUZATILDI (2026-09): bu yerda ilgari boshqa (push-xabar)
-    // komponentidan noto'g'ri ko'chirilgan tekshiruv turgan edi —
-    // `pushText`/`setActiveLocale` bu komponentda UMUMAN mavjud emas
-    // (aniqlanmagan), shu sabab reel qo'shish/tahrirlash formasini
-    // yuborishning O'ZI `ReferenceError` bilan qulab tushar edi va
-    // funksiya butunlay ishlamas edi. Reel formasi uchun tegishli
-    // tekshiruv shart emas — sarlavha va tartib maydonlari allaqachon
-    // HTML `required` orqali tekshiriladi.
+    if (!pushText.uz.title.trim() || !pushText.uz.body.trim()) {
+      setActiveLocale('uz');
+      window.alert("Push yuborish uchun o'zbekcha sarlavha va matn majburiy.");
+      return;
+    }
+
     const data = Object.fromEntries(new FormData(event.currentTarget).entries());
     const options = { preserveScroll: true, onSuccess: () => { setEditing(null); setShowForm(false); } };
     editing?.updateUrl ? router.put(editing.updateUrl, data, options) : router.post(createUrl, data, options);
@@ -380,7 +378,7 @@ export function MarketNews() {
           <thead><tr><th>ID</th><th>Sarlavha</th><th>Action</th><th>Sana</th><th>Holat</th><th>Amallar</th></tr></thead>
           <tbody>{news.map(item => (
             <tr key={item.id}>
-              <td className="fw-semibold" style={{ color: '#0B0342' }}>#{item.id}</td>
+              <td className="fw-semibold" style={{ color: '#4f46e5' }}>#{item.id}</td>
               <td className="fw-semibold">{item.title}</td>
               <td><span className="chip chip-gray">{item.action || 'Yangilik'}</span></td>
               <td className="text-muted">{item.date || '—'}</td>
@@ -549,7 +547,7 @@ export function ChatKuzatuv() {
           <thead><tr><th>ID</th><th>Foydalanuvchi</th><th>Qabul qiluvchi</th><th>Turi</th><th>Xabarlar</th><th>Oxirgi</th><th>Amallar</th></tr></thead>
           <tbody>{conversations.map(c => (
             <tr key={c.id}>
-              <td className="fw-semibold" style={{ color: '#0B0342' }}>#{c.id}</td>
+              <td className="fw-semibold" style={{ color: '#4f46e5' }}>#{c.id}</td>
               <td><div className="fw-semibold">{c.user}</div><small className="text-muted">{c.phone || '—'}</small></td>
               <td>{c.agent}</td>
               <td><span className={`chip ${c.kind === 'seller' ? 'chip-purple' : 'chip-info'}`}>{chatKindLabel(c.kind)}</span></td>
@@ -790,7 +788,7 @@ export function PushNotifications() {
           <thead><tr><th>ID</th><th>Sarlavha</th><th>Matn</th><th>Target</th><th>Status</th><th>Sana</th><th>Amallar</th></tr></thead>
           <tbody>{notifications.map(notification => (
             <tr key={notification.id}>
-              <td className="fw-semibold" style={{ color: '#0B0342' }}>#{notification.id}</td>
+              <td className="fw-semibold" style={{ color: '#4f46e5' }}>#{notification.id}</td>
               <td>
                 <div className="fw-semibold">{notification.title}</div>
                 <div className="d-flex flex-wrap gap-1 mt-1">

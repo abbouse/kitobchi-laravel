@@ -995,7 +995,7 @@ function InfoHint({ text, example }: { text: string; example?: string }) {
     <span className="position-relative d-inline-block" style={{ verticalAlign: 'middle' }}>
       <i
         className="bi bi-info-circle ms-1"
-        style={{ color: '#94a3b8', fontSize: 12, cursor: 'pointer' }}
+        style={{ color: 'var(--kc-text-muted)', fontSize: 12, cursor: 'pointer' }}
         onClick={(event) => {
           event.preventDefault();
           event.stopPropagation();
@@ -1032,7 +1032,7 @@ function InfoHint({ text, example }: { text: string; example?: string }) {
         >
           {text}
           {example ? (
-            <span style={{ display: 'block', marginTop: 6, color: '#94a3b8' }}>
+            <span style={{ display: 'block', marginTop: 6, color: 'var(--kc-on-ink)', opacity: .72 }}>
               <i className="bi bi-lightbulb me-1"></i>Misol: {example}
             </span>
           ) : null}

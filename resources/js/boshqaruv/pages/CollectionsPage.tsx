@@ -472,7 +472,7 @@ export default function CollectionsPage() {
       <div
         key={node.key}
         className={`border rounded-4 p-2 mb-2 ${level === 2 ? 'ms-3' : ''}`}
-        style={{ borderColor: activeKey === node.key ? '#4A3A7A' : undefined, background: activeKey === node.key ? '#faf5ff' : undefined }}
+        style={{ borderColor: activeKey === node.key ? '#4A3A7A' : undefined, background: activeKey === node.key ? 'var(--kc-ink-tint)' : undefined }}
       >
         <div className="d-flex gap-2 align-items-center mb-2 flex-wrap">
           <span className={`chip ${isGroup ? 'chip-purple' : 'chip-gray'}`}>
@@ -989,7 +989,7 @@ export default function CollectionsPage() {
         <div className="row g-2 align-items-center">
           <div className="col-lg-5">
             <div className="position-relative">
-              <i className="bi bi-search position-absolute" style={{ left: 14, top: 11, color: '#9CA3AF' }}></i>
+              <i className="bi bi-search position-absolute" style={{ left: 14, top: 11, color: 'var(--kc-text-muted)' }}></i>
               <Form.Control
                 value={listQuery}
                 onChange={(event) => setListQuery(event.target.value)}
@@ -1059,9 +1059,9 @@ export default function CollectionsPage() {
                 <div className="d-flex flex-wrap gap-2 mb-3">
                   <span className="chip chip-gray">{collection.itemCount} ta mahsulot</span>
                   <span className="chip chip-gray">{collection.availableItemCount} ta tayyor</span>
-                  {outOfStock > 0 ? <span className="chip" style={{ background: '#FEE2E2', color: '#DC2626' }}>{outOfStock} ta tugagan</span> : null}
+                  {outOfStock > 0 ? <span className="chip" style={{ background: 'var(--kc-danger-bg)', color: 'var(--kc-danger)' }}>{outOfStock} ta tugagan</span> : null}
                   {collection.customTotalPrice ? <span className="chip chip-purple">Qo'lda narx</span> : null}
-                  {(collection.sections?.length ?? 0) > 0 ? <span className="chip" style={{ background: '#EDE9FE', color: '#6D28D9' }}><i className="bi bi-diagram-3 me-1"></i>{collection.sections!.length} bo'lim</span> : null}
+                  {(collection.sections?.length ?? 0) > 0 ? <span className="chip" style={{ background: 'var(--kc-ink-tint)', color: 'var(--kc-ink)' }}><i className="bi bi-diagram-3 me-1"></i>{collection.sections!.length} bo'lim</span> : null}
                   <span className="chip chip-gray">{fmt(collection.totalAmount)} so'm</span>
                 </div>
 
@@ -1087,7 +1087,7 @@ export default function CollectionsPage() {
                               {item.image ? (
                                 <img src={item.image} alt="" width={34} height={34} style={{ borderRadius: 8, objectFit: 'cover' }} />
                               ) : (
-                                <div style={{ width: 34, height: 34, borderRadius: 8, background: '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <div style={{ width: 34, height: 34, borderRadius: 8, background: 'var(--kc-bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                   <i className={`bi ${item.productType === 'stationery' ? 'bi-pencil' : 'bi-book'} text-muted`}></i>
                                 </div>
                               )}
@@ -1344,7 +1344,7 @@ export default function CollectionsPage() {
                         {product.image ? (
                           <img src={product.image} alt="" width={36} height={36} style={{ borderRadius: 8, objectFit: 'cover' }} />
                         ) : (
-                          <div style={{ width: 36, height: 36, borderRadius: 8, background: '#EEF0F3', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <div style={{ width: 36, height: 36, borderRadius: 8, background: 'var(--kc-bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             <i className={`bi ${product.productType === 'stationery' ? 'bi-pencil' : 'bi-book'} text-muted`}></i>
                           </div>
                         )}
@@ -1384,8 +1384,8 @@ export default function CollectionsPage() {
                         onDrop={() => onDrop(index)}
                         style={{
                           cursor: 'grab',
-                          background: dragIndex === index ? '#EEF2FF' : undefined,
-                          borderColor: !item.available ? '#FCA5A5' : undefined,
+                          background: dragIndex === index ? 'var(--kc-ink-tint)' : undefined,
+                          borderColor: !item.available ? 'var(--kc-danger)' : undefined,
                         }}
                       >
                         <div className="d-flex justify-content-between gap-2">

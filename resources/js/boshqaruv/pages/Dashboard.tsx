@@ -306,7 +306,7 @@ export default function Dashboard() {
         </div>
       ) : null}
 
-      <div className="row g-2 mb-3">
+      <div className="kpi-strip row g-2 mb-3">
         <Metric label="Buyurtmalar" value={dashboard.metrics.orders} icon="bi-receipt" color="#0B0342" href="/boshqaruv/orders" help={metricHelps.orders} />
         <Metric label="Yakuniy savdo" value={dashboard.metrics.paidOrders} icon="bi-credit-card" color="#0F6A46" href="/boshqaruv/orders" help={metricHelps.paidOrders} />
         <Metric label="Foydalanuvchilar" value={dashboard.metrics.users} icon="bi-people" color="#1B6273" href="/boshqaruv/users" help={metricHelps.users} />
@@ -315,7 +315,7 @@ export default function Dashboard() {
         <Metric label="Kuryerlar" value={dashboard.metrics.couriers} icon="bi-bicycle" color="#4A3A7A" href="/boshqaruv/couriers" help={metricHelps.couriers} />
       </div>
 
-      <div className="row g-2 mb-3">
+      <div className="kpi-strip row g-2 mb-3">
         <CompactMetric label="Premium user" value={dashboard.metrics.premiumUsers} icon="bi-stars" color="#4A3A7A" href="/boshqaruv/users" help={metricHelps.premiumUsers} />
         <CompactMetric label="Online user" value={dashboard.metrics.onlineUsers} icon="bi-broadcast" color="#0F6A46" href="/boshqaruv/users" help={metricHelps.onlineUsers} />
         <CompactMetric label="Kanselyariya" value={dashboard.metrics.stationeries} icon="bi-pencil-square" color="#8A5709" href="/boshqaruv/stationeries" help={metricHelps.stationeries} />
@@ -324,7 +324,7 @@ export default function Dashboard() {
         <CompactMetric label="Shikoyatlar" value={dashboard.metrics.complaints} icon="bi-exclamation-triangle" color="#A32A2E" href="/boshqaruv/shikoyatlar" help={metricHelps.complaints} />
       </div>
 
-      <div className="row g-2 mb-3">
+      <div className="kpi-strip row g-2 mb-3">
         <PeriodCard label="Daromad" value={money(current.revenue)} delta={previous ? change(current.revenue, previous.revenue) : null} icon="bi-cash-coin" color="#0B0342" help={periodHelps.revenue} />
         <PeriodCard label="Yakuniy savdolar" value={fmt(current.orders)} delta={previous ? change(current.orders, previous.orders) : null} icon="bi-bag-check" color="#0F6A46" help={periodHelps.orders} />
         <PeriodCard label="O'rtacha chek" value={money(current.aov)} delta={previous ? change(current.aov, previous.aov) : null} icon="bi-receipt" color="#8A5709" help={periodHelps.aov} />
@@ -824,9 +824,9 @@ function CohortPanel({ retention }: { retention: DashboardPayload['retention'] }
   const cohorts = retention.cohorts || [];
   const offsets = Array.from({ length: (retention.maxOffset ?? 5) + 1 }, (_, index) => index);
   const cellStyle = (value: number | null) => {
-    if (value === null || value === undefined) return { background: 'transparent', color: '#cbd5e1' };
+    if (value === null || value === undefined) return { background: 'transparent', color: 'var(--kc-text-muted)' };
     const alpha = Math.min(1, 0.12 + value / 100 * 0.88);
-    return { background: `rgba(79,70,229,${alpha})`, color: value > 45 ? '#fff' : '#1e293b' };
+    return { background: `rgba(var(--kc-ink-rgb), ${alpha})`, color: alpha > 0.55 ? 'var(--kc-on-ink)' : 'var(--kc-text)' };
   };
 
   return (

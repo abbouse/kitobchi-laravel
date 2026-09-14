@@ -211,13 +211,13 @@ export default function LiveDashboard() {
           <div className="live-brand-mark"><i className="bi bi-broadcast"></i></div>
           <div>
             <div className="d-flex align-items-center gap-2">
-              <h3 style={{ color: '#f8fafc', fontWeight: 800, margin: 0 }}>Kitobchi Live Command Center</h3>
-              <span className="chip" style={{ background: isPaused ? 'rgba(245,158,11,0.2)' : 'rgba(16,185,129,0.2)', color: isPaused ? '#fcd34d' : '#8FE3C1', border: `1px solid ${isPaused ? '#DCAE63' : '#63CE9F'}`, fontSize: 10 }}>
+              <h3 style={{ color: 'var(--kc-text)', fontWeight: 600, margin: 0, letterSpacing: '-.02em' }}>Kitobchi Live Command Center</h3>
+              <span className="chip" style={{ background: isPaused ? 'var(--kc-warn-bg)' : 'var(--kc-ok-bg)', color: isPaused ? '#fcd34d' : '#8FE3C1', border: `1px solid ${isPaused ? '#DCAE63' : '#63CE9F'}`, fontSize: 10 }}>
                 {!isPaused && <span className="live-pulse"></span>}
                 {isPaused ? 'PAUSED' : 'LIVE'}
               </span>
             </div>
-            <div style={{ color: '#94a3b8', fontSize: 11 }}>Buyurtma, seller, kuryer, to'lov va online mijozlar real monitoringi</div>
+            <div style={{ color: 'var(--kc-text-muted)', fontSize: 11 }}>Buyurtma, seller, kuryer, to'lov va online mijozlar real monitoringi</div>
           </div>
         </div>
 
@@ -230,7 +230,7 @@ export default function LiveDashboard() {
           <button className={`btn btn-sm ${isPaused ? 'btn-warning' : 'btn-outline-secondary'}`} onClick={() => setIsPaused(!isPaused)}>
             <i className={`bi ${isPaused ? 'bi-play-fill' : 'bi-pause-fill'}`}></i>
           </button>
-          <div className="px-2 py-1 rounded" style={{ background: '#1e293b', color: '#e2e8f0', fontSize: 12, border: '1px solid #334155' }}>
+          <div className="px-2 py-1 rounded" style={{ background: 'var(--kc-bg-subtle)', color: 'var(--kc-text)', fontSize: 12, border: '1px solid #334155' }}>
             <i className="bi bi-clock text-primary me-1"></i>{clock.toLocaleTimeString('uz-UZ')}
           </div>
           <button className="btn btn-outline-light btn-sm" onClick={goFull}><i className="bi bi-arrows-fullscreen"></i></button>
@@ -240,39 +240,39 @@ export default function LiveDashboard() {
 
       <div className="mb-3 p-2 rounded d-flex align-items-center gap-2" style={{ background: 'var(--kc-bg-subtle)', border: '1px solid var(--kc-border-subtle)' }}>
         <i className={`bi ${lastError ? 'bi-exclamation-triangle' : 'bi-activity'}`} style={{ fontSize: 18, color: lastError ? '#DCAE63' : '#8FE3C1' }}></i>
-        <span className="fw-bold small" style={{ color: lastError ? '#fcd34d' : '#8FE3C1' }}>{lastError ? 'Live ogohlantirish:' : 'Snapshot:'}</span>
-        <span style={{ color: '#e2e8f0', fontSize: 13 }}>{lastError || `So'nggi yangilanish ${snapshot.generated_at}. Aktiv oqim: ${mainActive + sellerActive + courierActive} ta.`}</span>
+        <span className="fw-bold small" style={{ color: lastError ? 'var(--kc-warn)' : 'var(--kc-ok)' }}>{lastError ? 'Live ogohlantirish:' : 'Snapshot:'}</span>
+        <span style={{ color: 'var(--kc-text)', fontSize: 13 }}>{lastError || `So'nggi yangilanish ${snapshot.generated_at}. Aktiv oqim: ${mainActive + sellerActive + courierActive} ta.`}</span>
       </div>
 
       {snapshot.financialRestricted ? (
         <div className="mb-3 p-2 rounded d-flex align-items-center gap-2" style={{ background: 'rgba(100,116,139,0.18)', border: '1px solid rgba(148,163,184,0.35)' }}>
-          <i className="bi bi-lock-fill" style={{ fontSize: 16, color: '#cbd5e1' }}></i>
-          <span style={{ color: '#e2e8f0', fontSize: 13 }}>Sizning rolingizda moliyaviy ko'rsatkichlar (daromad, tushum, foyda) 0 qilib ko'rsatiladi — faqat operatsion sonlar (order, mijoz, hudud bo'yicha oqim) ochiq. Kerak bo'lsa, "Moliya" ruxsatiga ega admindan so'rang.</span>
+          <i className="bi bi-lock-fill" style={{ fontSize: 16, color: 'var(--kc-text-soft)' }}></i>
+          <span style={{ color: 'var(--kc-text)', fontSize: 13 }}>Sizning rolingizda moliyaviy ko'rsatkichlar (daromad, tushum, foyda) 0 qilib ko'rsatiladi — faqat operatsion sonlar (order, mijoz, hudud bo'yicha oqim) ochiq. Kerak bo'lsa, "Moliya" ruxsatiga ega admindan so'rang.</span>
         </div>
       ) : null}
 
       <div className="row g-2 mb-3">
         {[
-          { l: 'Jami daromad', v: fmt(snapshot.kpis.total_revenue) + " so'm", icon: 'bi-cash-stack', c: '#C3A6EE' },
-          { l: 'Bugungi daromad', v: fmt(snapshot.kpis.today_revenue) + " so'm", icon: 'bi-calendar2-day', c: '#63CE9F' },
-          { l: 'Oylik daromad', v: fmt(snapshot.kpis.month_revenue) + " so'm", icon: 'bi-calendar3', c: '#A9B8FF' },
-          { l: 'Platform signal', v: fmt(netSignal) + " so'm", icon: 'bi-graph-up-arrow', c: '#4FBF8E' },
-          { l: 'Jami order', v: fmt(snapshot.kpis.total_orders), icon: 'bi-bag-check', c: '#63CE9F' },
-          { l: 'Bugungi order', v: fmt(snapshot.kpis.today_orders), icon: 'bi-lightning-charge', c: '#06b6d4' },
-          { l: 'Aktiv order', v: fmt(snapshot.kpis.active_orders), icon: 'bi-hourglass-split', c: '#DCAE63' },
-          { l: 'AOV', v: fmt(snapshot.kpis.avg_order_value) + " so'm", icon: 'bi-receipt', c: '#E39BC0' },
-          { l: 'Seller oqimi', v: fmt(sellerActive), icon: 'bi-shop-window', c: '#B9A9F0' },
-          { l: 'Kuryer oqimi', v: fmt(courierActive), icon: 'bi-bicycle', c: '#92B3F2' },
-          { l: 'Online user', v: fmt(snapshot.kpis.online_users), icon: 'bi-people', c: '#63CE9F' },
-          { l: 'Completion', v: snapshot.kpis.completion_rate.toFixed(1) + '%', icon: 'bi-bullseye', c: '#DCAE63' },
+          { l: 'Jami daromad', v: fmt(snapshot.kpis.total_revenue) + " so'm", icon: 'bi-cash-stack' },
+          { l: 'Bugungi daromad', v: fmt(snapshot.kpis.today_revenue) + " so'm", icon: 'bi-calendar2-day' },
+          { l: 'Oylik daromad', v: fmt(snapshot.kpis.month_revenue) + " so'm", icon: 'bi-calendar3' },
+          { l: 'Platform signal', v: fmt(netSignal) + " so'm", icon: 'bi-graph-up-arrow' },
+          { l: 'Jami order', v: fmt(snapshot.kpis.total_orders), icon: 'bi-bag-check' },
+          { l: 'Bugungi order', v: fmt(snapshot.kpis.today_orders), icon: 'bi-lightning-charge' },
+          { l: 'Aktiv order', v: fmt(snapshot.kpis.active_orders), icon: 'bi-hourglass-split' },
+          { l: 'AOV', v: fmt(snapshot.kpis.avg_order_value) + " so'm", icon: 'bi-receipt' },
+          { l: 'Seller oqimi', v: fmt(sellerActive), icon: 'bi-shop-window' },
+          { l: 'Kuryer oqimi', v: fmt(courierActive), icon: 'bi-bicycle' },
+          { l: 'Online user', v: fmt(snapshot.kpis.online_users), icon: 'bi-people' },
+          { l: 'Completion', v: snapshot.kpis.completion_rate.toFixed(1) + '%', icon: 'bi-bullseye' },
         ].map((kpi) => (
           <div className="col-xl-2 col-lg-3 col-md-4 col-6" key={kpi.l}>
-            <div className="live-kpi" style={{ borderLeftColor: kpi.c }}>
+            <div className="live-kpi">
               <div className="d-flex justify-content-between align-items-start">
                 <span className="d-inline-flex align-items-center gap-1">{kpi.l}<InfoHint tone="dark" text={liveKpiHelps[kpi.l]} /></span>
-                <i className={`bi ${kpi.icon}`} style={{ color: kpi.c }}></i>
+                <i className={`bi ${kpi.icon}`}></i>
               </div>
-              <strong style={{ color: kpi.c }}>{kpi.v}</strong>
+              <strong>{kpi.v}</strong>
             </div>
           </div>
         ))}
@@ -280,19 +280,19 @@ export default function LiveDashboard() {
 
       <div className="row g-2 mb-3">
         {[
-          { l: 'Yakuniy savdo', v: fmt(snapshot.kpis.paid_orders), s: `${snapshot.kpis.paid_rate.toFixed(1)}% ulush`, c: '#63CE9F' },
-          { l: 'Seller komissiya', v: fmt(snapshot.kpis.commission) + " so'm", s: 'Tasdiqlangan tranzaksiya', c: '#B9A9F0' },
-          { l: 'Yetkazish daromadi', v: fmt(snapshot.kpis.delivery_income) + " so'm", s: 'Paid orderlar', c: '#06b6d4' },
-          { l: 'Kuryer payout', v: fmt(snapshot.kpis.courier_payout) + " so'm", s: 'Topshirilgan orderlar', c: '#DCAE63' },
-          { l: 'Promo + cashback', v: fmt(snapshot.kpis.promo_discount + snapshot.kpis.cashback) + " so'm", s: 'Chegirma xarajati', c: '#EC8A8D' },
-          { l: 'Chiqim + provider + soliq', v: fmt(snapshot.kpis.manual_expenses + snapshot.kpis.provider_fee + snapshot.kpis.tax) + " so'm", s: 'Marketplace xarajatlari', c: '#E07A7D' },
-          { l: 'Net marja', v: snapshot.kpis.profit_margin.toFixed(1) + '%', s: `Cancel ${snapshot.kpis.cancellation_rate.toFixed(1)}%`, c: snapshot.kpis.profit_margin >= 0 ? '#63CE9F' : '#EC8A8D' },
+          { l: 'Yakuniy savdo', v: fmt(snapshot.kpis.paid_orders), s: `${snapshot.kpis.paid_rate.toFixed(1)}% ulush` },
+          { l: 'Seller komissiya', v: fmt(snapshot.kpis.commission) + " so'm", s: 'Tasdiqlangan tranzaksiya' },
+          { l: 'Yetkazish daromadi', v: fmt(snapshot.kpis.delivery_income) + " so'm", s: 'Paid orderlar' },
+          { l: 'Kuryer payout', v: fmt(snapshot.kpis.courier_payout) + " so'm", s: 'Topshirilgan orderlar' },
+          { l: 'Promo + cashback', v: fmt(snapshot.kpis.promo_discount + snapshot.kpis.cashback) + " so'm", s: 'Chegirma xarajati' },
+          { l: 'Chiqim + provider + soliq', v: fmt(snapshot.kpis.manual_expenses + snapshot.kpis.provider_fee + snapshot.kpis.tax) + " so'm", s: 'Marketplace xarajatlari' },
+          { l: 'Net marja', v: snapshot.kpis.profit_margin.toFixed(1) + '%', s: `Cancel ${snapshot.kpis.cancellation_rate.toFixed(1)}%`, tone: snapshot.kpis.profit_margin >= 0 ? 'ok' : 'danger' },
         ].map((item) => (
           <div className="col-xl-2 col-lg-4 col-md-6" key={item.l}>
-            <div className="live-kpi" style={{ borderLeftColor: item.c }}>
+            <div className={`live-kpi${item.tone ? ` is-${item.tone}` : ''}`}>
               <span className="d-inline-flex align-items-center gap-1">{item.l}<InfoHint tone="dark" text={liveFinanceHelps[item.l]} /></span>
-              <strong style={{ color: item.c }}>{item.v}</strong>
-              <small style={{ color: '#94a3b8' }}>{item.s}</small>
+              <strong>{item.v}</strong>
+              <small style={{ color: 'var(--kc-text-muted)' }}>{item.s}</small>
             </div>
           </div>
         ))}
@@ -342,7 +342,7 @@ export default function LiveDashboard() {
                         <span>{fmt(region.value)} ta</span>
                       </div>
                       <div className="live-region-track">
-                        <i style={{ width: `${Math.max(4, orderShare)}%`, background: region.color }}></i>
+                        <i style={{ width: `${Math.max(4, orderShare)}%` }}></i>
                       </div>
                       <small>{fmt(region.revenue)} so'm · {revenueShare.toFixed(1)}% tushum</small>
                     </div>
@@ -354,7 +354,7 @@ export default function LiveDashboard() {
             <div className="live-region-heat">
               {snapshot.regions.slice(0, 6).map((region) => {
                 const intensity = regionTotalOrders > 0 ? Math.max(0.16, region.value / regionTotalOrders) : 0.16;
-                return <span key={region.name} style={{ background: `color-mix(in srgb, ${region.color} ${Math.min(85, intensity * 160)}%, rgba(15,23,42,.82))` }}>{region.name.slice(0, 10)}</span>;
+                return <span key={region.name} style={{ background: `rgba(var(--kc-ink-rgb), ${Math.min(0.34, intensity * 0.55).toFixed(2)})` }}>{region.name.slice(0, 10)}</span>;
               })}
             </div>
           </div>
@@ -373,19 +373,19 @@ export default function LiveDashboard() {
               <AreaChart data={snapshot.chart}>
                 <defs>
                   <linearGradient id="liveRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#E39BC0" stopOpacity={0.55} />
+                    <stop offset="0%" stopColor="#A9B8FF" stopOpacity={0.28} />
                     <stop offset="100%" stopColor="#A9B8FF" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="liveOrders" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#63CE9F" stopOpacity={0.45} />
-                    <stop offset="100%" stopColor="#4FBF8E" stopOpacity={0} />
+                    <stop offset="0%" stopColor="#63CE9F" stopOpacity={0.22} />
+                    <stop offset="100%" stopColor="#63CE9F" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <XAxis dataKey="hour" tick={{ fill: '#94a3b8', fontSize: 10 }} interval={3} />
+                <XAxis dataKey="hour" interval={3} />
                 <YAxis hide />
-                <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8, fontSize: 12 }} formatter={(value: number, name) => name === 'revenue' ? `${fmt(value)} so'm` : fmt(value)} />
-                <Area type="monotone" dataKey="revenue" stroke="#E39BC0" strokeWidth={2} fill="url(#liveRevenue)" />
-                <Area type="monotone" dataKey="orders" stroke="#63CE9F" strokeWidth={2} fill="url(#liveOrders)" />
+                <Tooltip contentStyle={{ background: 'var(--kc-bg-card)', border: '1px solid var(--kc-border-subtle)', borderRadius: 'var(--kc-radius)', fontSize: 12, color: 'var(--kc-text)' }} formatter={(value: number, name) => name === 'revenue' ? `${fmt(value)} so'm` : fmt(value)} />
+                <Area type="monotone" dataKey="revenue" stroke="#A9B8FF" strokeWidth={1.6} fill="url(#liveRevenue)" />
+                <Area type="monotone" dataKey="orders" stroke="#63CE9F" strokeWidth={1.6} fill="url(#liveOrders)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -508,7 +508,7 @@ function SplitPanel({ title, rows, help }: { title: string; rows: { name: string
         const width = row.value <= 100 && title.includes("To'lov") ? row.value : row.value / total * 100;
         return (
           <div key={row.name} className="mb-2">
-            <div className="d-flex justify-content-between" style={{ fontSize: 11, color: '#cbd5e1' }}>
+            <div className="d-flex justify-content-between" style={{ fontSize: 11, color: 'var(--kc-text-soft)' }}>
               <span>{row.name}</span>
               <span>{row.meta}</span>
             </div>

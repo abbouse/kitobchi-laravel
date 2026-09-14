@@ -436,7 +436,7 @@ function RadiusMapPicker({
         style={{
           height,
           cursor: 'crosshair',
-          background: '#eef2f7',
+          background: 'var(--kc-bg-subtle)',
         }}
       >
         {tiles.map((tile) => (
@@ -848,7 +848,7 @@ export function Logistika() {
             </div>
             <div className="d-flex flex-wrap gap-2 mb-2">
               <div className="position-relative flex-fill" style={{ minWidth: 180 }}>
-                <i className="bi bi-search position-absolute" style={{ left: 12, top: 9, color: '#9CA3AF' }}></i>
+                <i className="bi bi-search position-absolute" style={{ left: 12, top: 9, color: 'var(--kc-text-muted)' }}></i>
                 <input className="form-control form-control-sm" style={{ paddingLeft: 32 }} placeholder="Zona, xizmat yoki hudud bo'yicha" value={ruleQuery} onChange={(event) => setRuleQuery(event.target.value)} />
               </div>
               <div className="btn-group btn-group-sm">
@@ -992,7 +992,7 @@ export function Logistika() {
           </div>
           <div className="d-flex gap-2 align-items-center">
             <div className="position-relative" style={{ width: 200 }}>
-              <i className="bi bi-search position-absolute" style={{ left: 12, top: 9, color: '#9CA3AF' }}></i>
+              <i className="bi bi-search position-absolute" style={{ left: 12, top: 9, color: 'var(--kc-text-muted)' }}></i>
               <input className="form-control form-control-sm" style={{ paddingLeft: 32 }} placeholder="Xizmat qidirish" value={serviceQuery} onChange={(event) => setServiceQuery(event.target.value)} />
             </div>
             <button className="btn btn-sm btn-light" onClick={() => setEditingService(null)}><i className="bi bi-plus-circle me-1"></i>Xizmat qo'shish</button>

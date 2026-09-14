@@ -4561,8 +4561,8 @@ PROMPT;
         }
 
         $platforms = [
-            'android' => ['name' => 'Android', 'icon' => 'bi-android2', 'color' => '#10b981'],
-            'ios' => ['name' => 'iOS', 'icon' => 'bi-apple', 'color' => '#111827'],
+            'android' => ['name' => 'Android', 'icon' => 'bi-android2', 'color' => '#0F6A46'],
+            'ios' => ['name' => 'iOS', 'icon' => 'bi-apple', 'color' => '#14161D'],
         ];
         $versionColumn = collect(['app_version', 'version', 'app_build'])
             ->first(fn ($column) => Schema::hasColumn('connected_devices', $column));
@@ -7862,11 +7862,11 @@ PROMPT;
     private function fulfillmentStageMap(): array
     {
         return [
-            'inbound' => ['label' => 'Kelayotgan', 'icon' => 'bi-truck', 'color' => '#2563EB', 'statuses' => ['picked_from_seller', 'arrived_at_hub']],
-            'qc' => ['label' => 'Nazorat (QC)', 'icon' => 'bi-clipboard-check', 'color' => '#7C3AED', 'statuses' => ['qc_checked']],
-            'packing' => ['label' => 'Qadoqlash', 'icon' => 'bi-box-seam', 'color' => '#D97706', 'statuses' => ['packed']],
-            'dispatch' => ['label' => 'Jo‘natish', 'icon' => 'bi-send', 'color' => '#059669', 'statuses' => ['labeled', 'dispatched_to_post', 'assigned_last_mile']],
-            'delivery' => ['label' => 'Yetkazishda', 'icon' => 'bi-geo-alt', 'color' => '#0891B2', 'statuses' => ['out_for_delivery']],
+            'inbound' => ['label' => 'Kelayotgan', 'icon' => 'bi-truck', 'color' => '#24509B', 'statuses' => ['picked_from_seller', 'arrived_at_hub']],
+            'qc' => ['label' => 'Nazorat (QC)', 'icon' => 'bi-clipboard-check', 'color' => '#4A3A7A', 'statuses' => ['qc_checked']],
+            'packing' => ['label' => 'Qadoqlash', 'icon' => 'bi-box-seam', 'color' => '#9A5210', 'statuses' => ['packed']],
+            'dispatch' => ['label' => 'Jo‘natish', 'icon' => 'bi-send', 'color' => '#0C5C3C', 'statuses' => ['labeled', 'dispatched_to_post', 'assigned_last_mile']],
+            'delivery' => ['label' => 'Yetkazishda', 'icon' => 'bi-geo-alt', 'color' => '#1B6273', 'statuses' => ['out_for_delivery']],
         ];
     }
 
@@ -11413,7 +11413,7 @@ PROMPT;
 
     private function dashboardCategoryShare(?Carbon $start = null, ?Carbon $end = null): array
     {
-        $colors = ['#4f46e5', '#10b981', '#f59e0b', '#ec4899', '#06b6d4', '#7c3aed', '#ef4444', '#14b8a6'];
+        $colors = ['#4f46e5', '#0F6A46', '#8A5709', '#8E3A63', '#1B6273', '#4A3A7A', '#A32A2E', '#14b8a6'];
         $totals = $this->paidOrderItemAggregates($start, $end)['categories'];
 
         $sum = array_sum($totals);
@@ -11473,7 +11473,7 @@ PROMPT;
 
     private function liveRegionStats(?Carbon $start = null, ?Carbon $end = null): array
     {
-        $colors = ['#a855f7', '#6366f1', '#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#06b6d4', '#f43f5e'];
+        $colors = ['#6B4E8E', '#3A3475', '#3b82f6', '#0F6A46', '#8A5709', '#8E3A63', '#1B6273', '#8E2226'];
         $coords = [
             ['x' => 72, 'y' => 35], ['x' => 50, 'y' => 55], ['x' => 35, 'y' => 60], ['x' => 85, 'y' => 45],
             ['x' => 92, 'y' => 40], ['x' => 82, 'y' => 32], ['x' => 20, 'y' => 45], ['x' => 45, 'y' => 70],
@@ -11927,9 +11927,9 @@ PROMPT;
         $pending = max(0, $total - $paid - $cancelled);
 
         return [
-            ['name' => 'To\'langan', 'count' => (int) $paid, 'share' => round($paid / $total * 100, 1), 'color' => '#10b981'],
-            ['name' => 'Kutilmoqda', 'count' => $pending, 'share' => round($pending / $total * 100, 1), 'color' => '#f59e0b'],
-            ['name' => "To'lov bekor qilingan", 'count' => $cancelled, 'share' => round($cancelled / $total * 100, 1), 'color' => '#ef4444'],
+            ['name' => 'To\'langan', 'count' => (int) $paid, 'share' => round($paid / $total * 100, 1), 'color' => '#0F6A46'],
+            ['name' => 'Kutilmoqda', 'count' => $pending, 'share' => round($pending / $total * 100, 1), 'color' => '#8A5709'],
+            ['name' => "To'lov bekor qilingan", 'count' => $cancelled, 'share' => round($cancelled / $total * 100, 1), 'color' => '#A32A2E'],
         ];
     }
 
@@ -11996,10 +11996,10 @@ PROMPT;
 
             return [
                 'stages' => [
-                    ['key' => 'views', 'label' => "Ko'rishlar", 'value' => $views, 'rate' => 100.0, 'drop' => 0.0, 'color' => '#6366f1'],
-                    ['key' => 'orders', 'label' => 'Buyurtma', 'value' => $orders, 'rate' => $rate($orders, $views), 'drop' => $views > 0 ? $rate($views - $orders, $views) : 0.0, 'color' => '#8b5cf6'],
-                    ['key' => 'paid', 'label' => "To'langan", 'value' => $paid, 'rate' => $rate($paid, $orders), 'drop' => $orders > 0 ? $rate($orders - $paid, $orders) : 0.0, 'color' => '#0ea5e9'],
-                    ['key' => 'completed', 'label' => 'Yakunlangan', 'value' => $completed, 'rate' => $rate($completed, $paid), 'drop' => $paid > 0 ? $rate($paid - $completed, $paid) : 0.0, 'color' => '#10b981'],
+                    ['key' => 'views', 'label' => "Ko'rishlar", 'value' => $views, 'rate' => 100.0, 'drop' => 0.0, 'color' => '#3A3475'],
+                    ['key' => 'orders', 'label' => 'Buyurtma', 'value' => $orders, 'rate' => $rate($orders, $views), 'drop' => $views > 0 ? $rate($views - $orders, $views) : 0.0, 'color' => '#5B4A8C'],
+                    ['key' => 'paid', 'label' => "To'langan", 'value' => $paid, 'rate' => $rate($paid, $orders), 'drop' => $orders > 0 ? $rate($orders - $paid, $orders) : 0.0, 'color' => '#1E5C87'],
+                    ['key' => 'completed', 'label' => 'Yakunlangan', 'value' => $completed, 'rate' => $rate($completed, $paid), 'drop' => $paid > 0 ? $rate($paid - $completed, $paid) : 0.0, 'color' => '#0F6A46'],
                 ],
                 'uniqueViewers' => $viewers,
                 'cartUsers' => $cartUsers,

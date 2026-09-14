@@ -196,7 +196,7 @@ export function Shikoyatlar() {
                     {selected.content.images?.length ? (
                       <div className="d-flex flex-wrap gap-2 mt-3">
                         {selected.content.images.map((image) => (
-                          <img key={image} src={image} alt="" style={{ width: 92, height: 92, objectFit: 'cover', borderRadius: 16, border: '1px solid #e5e7eb' }} />
+                          <img key={image} src={image} alt="" style={{ width: 92, height: 92, objectFit: 'cover', borderRadius: 'var(--kc-radius)', border: '1px solid var(--kc-border-subtle)' }} />
                         ))}
                       </div>
                     ) : null}

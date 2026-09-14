@@ -84,16 +84,106 @@
   --kc-card-shadow: none;
   --kc-topbar-bg: var(--kc-bg-card);
 
-  /* Bootstrap ko'prigi */
-  --bs-body-bg: var(--kc-bg-page);
-  --bs-body-color: var(--kc-text);
-  --bs-border-color: var(--kc-border-subtle);
-  --bs-secondary-color: var(--kc-text-soft);
-  --bs-border-radius: var(--kc-radius);
-  --bs-link-color: var(--kc-ink);
-  --bs-link-hover-color: var(--kc-ink-hover);
+  /* RGB variantlar — Bootstrap utilitalari (bg-*, text-*, border-*) ular orqali ishlaydi */
+  --kc-ink-rgb: 11, 3, 66;
+  --kc-bg-page-rgb: 244, 246, 248;
+  --kc-bg-card-rgb: 255, 255, 255;
+  --kc-bg-subtle-rgb: 239, 241, 245;
+  --kc-bg-sunken-rgb: 231, 234, 240;
+  --kc-text-rgb: 20, 22, 29;
+  --kc-text-soft-rgb: 86, 93, 109;
+  --kc-text-muted-rgb: 138, 146, 162;
+  --kc-ok-rgb: 15, 106, 70;
+  --kc-info-rgb: 36, 80, 155;
+  --kc-warn-rgb: 138, 87, 9;
+  --kc-danger-rgb: 163, 42, 46;
+  --kc-neutral-rgb: 90, 97, 114;
 }
 
+/* ═══ Bootstrap ko'prigi ══════════════════════════════════════════════════
+   Panelda 690 dan ortiq joyda text-muted, bg-light, text-danger kabi
+   Bootstrap utilitalari ishlatilgan. Ularni birma-bir qayta yozish o'rniga
+   Bootstrap'ning o'z o'zgaruvchilari dizayn tokenlariga ulanadi — shunda
+   har bir utilita ikkala rejimda ham avtomatik to'g'ri rangni oladi.
+   Shu sababli qorong'i rejimda oq blok yoki o'qilmaydigan matn qolmaydi. */
+:root,
+[data-bs-theme="light"] {
+  --bs-body-bg: var(--kc-bg-page);
+  --bs-body-bg-rgb: var(--kc-bg-page-rgb);
+  --bs-body-color: var(--kc-text);
+  --bs-body-color-rgb: var(--kc-text-rgb);
+  --bs-emphasis-color: var(--kc-text);
+  --bs-emphasis-color-rgb: var(--kc-text-rgb);
+  --bs-heading-color: var(--kc-text);
+
+  --bs-secondary-color: var(--kc-text-muted);
+  --bs-secondary-color-rgb: var(--kc-text-muted-rgb);
+  --bs-secondary-bg: var(--kc-bg-subtle);
+  --bs-secondary-bg-rgb: var(--kc-bg-subtle-rgb);
+  --bs-tertiary-color: var(--kc-text-muted);
+  --bs-tertiary-color-rgb: var(--kc-text-muted-rgb);
+  --bs-tertiary-bg: var(--kc-bg-subtle);
+  --bs-tertiary-bg-rgb: var(--kc-bg-subtle-rgb);
+
+  --bs-border-color: var(--kc-border-subtle);
+  --bs-border-color-translucent: var(--kc-border-subtle);
+  --bs-border-radius: var(--kc-radius);
+  --bs-border-radius-sm: var(--kc-radius-sm);
+  --bs-border-radius-lg: var(--kc-radius-lg);
+  --bs-border-radius-xl: var(--kc-radius-lg);
+  --bs-border-radius-2xl: var(--kc-radius-lg);
+
+  --bs-link-color: var(--kc-ink);
+  --bs-link-color-rgb: var(--kc-ink-rgb);
+  --bs-link-hover-color: var(--kc-ink-hover);
+  --bs-link-hover-color-rgb: var(--kc-ink-rgb);
+  --bs-code-color: var(--kc-ink);
+  --bs-highlight-bg: var(--kc-warn-bg);
+
+  --bs-primary: var(--kc-ink);          --bs-primary-rgb: var(--kc-ink-rgb);
+  --bs-secondary: var(--kc-neutral);    --bs-secondary-rgb: var(--kc-neutral-rgb);
+  --bs-success: var(--kc-ok);           --bs-success-rgb: var(--kc-ok-rgb);
+  --bs-info: var(--kc-info);            --bs-info-rgb: var(--kc-info-rgb);
+  --bs-warning: var(--kc-warn);         --bs-warning-rgb: var(--kc-warn-rgb);
+  --bs-danger: var(--kc-danger);        --bs-danger-rgb: var(--kc-danger-rgb);
+  --bs-light: var(--kc-bg-subtle);      --bs-light-rgb: var(--kc-bg-subtle-rgb);
+  --bs-dark: var(--kc-text);            --bs-dark-rgb: var(--kc-text-rgb);
+  --bs-white: var(--kc-bg-card);        --bs-white-rgb: var(--kc-bg-card-rgb);
+  --bs-black: var(--kc-text);           --bs-black-rgb: var(--kc-text-rgb);
+
+  --bs-primary-bg-subtle: var(--kc-ink-tint);
+  --bs-success-bg-subtle: var(--kc-ok-bg);
+  --bs-info-bg-subtle: var(--kc-info-bg);
+  --bs-warning-bg-subtle: var(--kc-warn-bg);
+  --bs-danger-bg-subtle: var(--kc-danger-bg);
+  --bs-secondary-bg-subtle: var(--kc-neutral-bg);
+  --bs-light-bg-subtle: var(--kc-bg-subtle);
+  --bs-dark-bg-subtle: var(--kc-bg-sunken);
+
+  --bs-primary-border-subtle: var(--kc-border-subtle);
+  --bs-success-border-subtle: var(--kc-ok-bg);
+  --bs-info-border-subtle: var(--kc-info-bg);
+  --bs-warning-border-subtle: var(--kc-warn-bg);
+  --bs-danger-border-subtle: var(--kc-danger-bg);
+  --bs-secondary-border-subtle: var(--kc-border-subtle);
+
+  --bs-primary-text-emphasis: var(--kc-ink);
+  --bs-success-text-emphasis: var(--kc-ok);
+  --bs-info-text-emphasis: var(--kc-info);
+  --bs-warning-text-emphasis: var(--kc-warn);
+  --bs-danger-text-emphasis: var(--kc-danger);
+  --bs-secondary-text-emphasis: var(--kc-text-soft);
+
+  --bs-form-control-bg: var(--kc-input-bg);
+  --bs-form-control-disabled-bg: var(--kc-bg-subtle);
+  --bs-box-shadow: none;
+  --bs-box-shadow-sm: none;
+  --bs-box-shadow-lg: var(--kc-shadow-overlay);
+}
+
+/* Qorong'i rejim ikki yo'l bilan yoqiladi: body klassi (panelning o'zi) va
+   html[data-bs-theme] (Bootstrap komponentlari uchun) — ikkalasi ham qamrab olinadi */
+:root[data-bs-theme="dark"],
 body.boshqaruv-dark {
   color-scheme: dark;
 
@@ -132,6 +222,78 @@ body.boshqaruv-dark {
   --kc-table-border: #252A37;
 
   --kc-shadow-overlay: 0 18px 48px -14px rgba(0, 0, 0, .7), 0 2px 6px rgba(0, 0, 0, .4);
+
+  --kc-ink-rgb: 169, 184, 255;
+  --kc-bg-page-rgb: 13, 15, 21;
+  --kc-bg-card-rgb: 20, 23, 31;
+  --kc-bg-subtle-rgb: 27, 31, 42;
+  --kc-bg-sunken-rgb: 34, 39, 53;
+  --kc-text-rgb: 231, 234, 241;
+  --kc-text-soft-rgb: 154, 162, 179;
+  --kc-text-muted-rgb: 107, 115, 133;
+  --kc-ok-rgb: 99, 206, 159;
+  --kc-info-rgb: 146, 179, 242;
+  --kc-warn-rgb: 220, 174, 99;
+  --kc-danger-rgb: 236, 138, 141;
+  --kc-neutral-rgb: 153, 161, 178;
+
+  /* Bootstrap ko'prigi — yorug' rejimdagi bilan bir xil nomlar, qiymatlar
+     tokenlardan kelgani uchun avtomatik qorong'i variantga o'tadi */
+  --bs-body-bg: var(--kc-bg-page);
+  --bs-body-bg-rgb: var(--kc-bg-page-rgb);
+  --bs-body-color: var(--kc-text);
+  --bs-body-color-rgb: var(--kc-text-rgb);
+  --bs-emphasis-color: var(--kc-text);
+  --bs-emphasis-color-rgb: var(--kc-text-rgb);
+  --bs-heading-color: var(--kc-text);
+  --bs-secondary-color: var(--kc-text-muted);
+  --bs-secondary-color-rgb: var(--kc-text-muted-rgb);
+  --bs-secondary-bg: var(--kc-bg-subtle);
+  --bs-secondary-bg-rgb: var(--kc-bg-subtle-rgb);
+  --bs-tertiary-color: var(--kc-text-muted);
+  --bs-tertiary-color-rgb: var(--kc-text-muted-rgb);
+  --bs-tertiary-bg: var(--kc-bg-subtle);
+  --bs-tertiary-bg-rgb: var(--kc-bg-subtle-rgb);
+  --bs-border-color: var(--kc-border-subtle);
+  --bs-border-color-translucent: var(--kc-border-subtle);
+  --bs-link-color: var(--kc-ink);
+  --bs-link-color-rgb: var(--kc-ink-rgb);
+  --bs-link-hover-color: var(--kc-ink-hover);
+  --bs-link-hover-color-rgb: var(--kc-ink-rgb);
+  --bs-code-color: var(--kc-ink);
+  --bs-highlight-bg: var(--kc-warn-bg);
+  --bs-primary: var(--kc-ink);          --bs-primary-rgb: var(--kc-ink-rgb);
+  --bs-secondary: var(--kc-neutral);    --bs-secondary-rgb: var(--kc-neutral-rgb);
+  --bs-success: var(--kc-ok);           --bs-success-rgb: var(--kc-ok-rgb);
+  --bs-info: var(--kc-info);            --bs-info-rgb: var(--kc-info-rgb);
+  --bs-warning: var(--kc-warn);         --bs-warning-rgb: var(--kc-warn-rgb);
+  --bs-danger: var(--kc-danger);        --bs-danger-rgb: var(--kc-danger-rgb);
+  --bs-light: var(--kc-bg-subtle);      --bs-light-rgb: var(--kc-bg-subtle-rgb);
+  --bs-dark: var(--kc-bg-sunken);       --bs-dark-rgb: var(--kc-bg-sunken-rgb);
+  --bs-white: var(--kc-bg-card);        --bs-white-rgb: var(--kc-bg-card-rgb);
+  --bs-black: var(--kc-bg-page);        --bs-black-rgb: var(--kc-bg-page-rgb);
+  --bs-primary-bg-subtle: var(--kc-ink-tint);
+  --bs-success-bg-subtle: var(--kc-ok-bg);
+  --bs-info-bg-subtle: var(--kc-info-bg);
+  --bs-warning-bg-subtle: var(--kc-warn-bg);
+  --bs-danger-bg-subtle: var(--kc-danger-bg);
+  --bs-secondary-bg-subtle: var(--kc-neutral-bg);
+  --bs-light-bg-subtle: var(--kc-bg-subtle);
+  --bs-dark-bg-subtle: var(--kc-bg-sunken);
+  --bs-primary-border-subtle: var(--kc-border-subtle);
+  --bs-success-border-subtle: var(--kc-ok-bg);
+  --bs-info-border-subtle: var(--kc-info-bg);
+  --bs-warning-border-subtle: var(--kc-warn-bg);
+  --bs-danger-border-subtle: var(--kc-danger-bg);
+  --bs-secondary-border-subtle: var(--kc-border-subtle);
+  --bs-primary-text-emphasis: var(--kc-ink);
+  --bs-success-text-emphasis: var(--kc-ok);
+  --bs-info-text-emphasis: var(--kc-info);
+  --bs-warning-text-emphasis: var(--kc-warn);
+  --bs-danger-text-emphasis: var(--kc-danger);
+  --bs-secondary-text-emphasis: var(--kc-text-soft);
+  --bs-form-control-bg: var(--kc-input-bg);
+  --bs-form-control-disabled-bg: var(--kc-bg-subtle);
 }
 
 /* ═══ Asos ═══════════════════════════════════════════════════════════════ */
@@ -299,7 +461,7 @@ code {
   border: 1px solid var(--kc-border-subtle);
   background: var(--kc-bg-subtle);
   color: var(--kc-text);
-  padding: 0 46px 0 30px;
+  padding: 0 62px 0 30px;
   border-radius: var(--kc-radius);
   font-size: 12.5px;
   transition: background .12s ease, border-color .12s ease;
@@ -505,6 +667,44 @@ code {
   background: transparent;
   height: 100%;
 }
+
+/* ═══ Quvur bosqichlari (Hub fulfillment) ═══════════════════════════════ */
+.stage-cell {
+  padding: 12px 14px;
+  border-radius: var(--kc-radius);
+  background: var(--kc-bg-subtle);
+}
+.stage-cell .kpi-value { margin-top: 2px; }
+.stage-cell .stage-bar {
+  height: 3px; margin-top: 9px; border-radius: 2px;
+  background: var(--kc-bg-sunken); overflow: hidden;
+}
+.stage-cell .stage-bar i { display: block; height: 100%; border-radius: 2px; background: var(--kc-ink); }
+.stage-cell.is-alert { background: var(--kc-danger-bg); }
+.stage-cell.is-alert .kpi-value,
+.stage-cell.is-alert .kpi-label { color: var(--kc-danger); }
+.stage-cell.is-alert .stage-bar i { background: var(--kc-danger); }
+
+/* ═══ Recharts diagrammalari ═════════════════════════════════════════════
+   Diagramma ranglari komponent proplarida berilgan — CSS ularni bosib
+   o'tadi, shuning uchun o'q, to'r va tooltip ikkala rejimda ham o'qiladi. */
+.recharts-cartesian-grid line { stroke: var(--kc-border-subtle); }
+.recharts-cartesian-axis-line,
+.recharts-cartesian-axis-tick-line { stroke: var(--kc-border); }
+.recharts-cartesian-axis-tick text,
+.recharts-label,
+.recharts-text { fill: var(--kc-text-muted); font-family: var(--kc-font-mono); font-size: 10px; }
+.recharts-tooltip-wrapper .recharts-default-tooltip {
+  background: var(--kc-bg-card) !important;
+  border: 1px solid var(--kc-border-subtle) !important;
+  border-radius: var(--kc-radius) !important;
+  color: var(--kc-text) !important;
+  box-shadow: var(--kc-shadow-overlay);
+  font-size: 12px !important;
+}
+.recharts-tooltip-item { color: var(--kc-text) !important; }
+.recharts-legend-item-text { color: var(--kc-text-soft) !important; font-size: 11.5px; }
+.recharts-reference-line line { stroke: var(--kc-text-muted); }
 
 /* ═══ Filtr tablari ══════════════════════════════════════════════════════
    Oldin: to'ldirilgan/oq tugmalar qatori. Endi: ostiga chizilgan tab —
@@ -1126,7 +1326,16 @@ textarea.form-control { min-height: 72px; }
   display: block; margin-top: 7px;
   font-family: var(--kc-font-mono); font-variant-numeric: tabular-nums;
   font-size: 17px; font-weight: 500; color: var(--kc-text);
+  letter-spacing: -.02em;
 }
+.live-kpi i { color: var(--kc-text-muted); font-size: 14px; }
+.live-kpi small { display: block; margin-top: 4px; font-size: 11px; }
+/* Rang faqat ma'no tashiganda (masalan, marja manfiy bo'lsa) */
+.live-kpi.is-ok { border-left-color: var(--kc-ok); }
+.live-kpi.is-ok strong { color: var(--kc-ok); }
+.live-kpi.is-danger { border-left-color: var(--kc-danger); }
+.live-kpi.is-danger strong { color: var(--kc-danger); }
+.live-region-track i { background: var(--kc-ink); }
 .live-status-panel {
   background: var(--kc-bg-card);
   border: 1px solid var(--kc-border-subtle);
@@ -1211,7 +1420,7 @@ textarea.form-control { min-height: 72px; }
 .live-feed-row b, .live-feed-row small { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .live-feed-row small { color: var(--kc-text-muted); font-size: 11px; }
 .live-feed-row em {
-  color: var(--kc-ok); font-style: normal; font-weight: 500; font-size: 12px;
+  color: var(--kc-text); font-style: normal; font-weight: 500; font-size: 12px;
   font-family: var(--kc-font-mono); font-variant-numeric: tabular-nums;
 }
 .live-rank-row {
@@ -1227,7 +1436,7 @@ textarea.form-control { min-height: 72px; }
 .live-rank-row b, .live-rank-row small { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .live-rank-row b { color: var(--kc-text); }
 .live-rank-row small { color: var(--kc-text-muted); font-size: 11px; }
-.live-rank-row strong { color: var(--kc-ok); font-size: 11px; font-family: var(--kc-font-mono); }
+.live-rank-row strong { color: var(--kc-text); font-size: 11.5px; font-family: var(--kc-font-mono); font-variant-numeric: tabular-nums; }
 .live-online-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .live-online-list div { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .live-online-list img, .live-online-list i {
@@ -1301,9 +1510,11 @@ textarea.form-control { min-height: 72px; }
 
 /* ═══ Moslashuvchanlik ═══════════════════════════════════════════════════ */
 
-.sidebar-toggle { display: none; }
+.sidebar-toggle,
+.topbar .sidebar-toggle { display: none; }
 @media (max-width: 900px) {
-  .sidebar-toggle { display: grid; }
+  .sidebar-toggle,
+  .topbar .sidebar-toggle { display: grid; }
   .login-wrap { grid-template-columns: 1fr; }
   .login-left { display: none; }
   .login-right { padding: 32px 20px; }

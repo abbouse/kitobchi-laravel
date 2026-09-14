@@ -209,7 +209,7 @@ export function LeafletMapPicker({
     <div>
       {search ? (
         <div className="position-relative mb-2">
-          <i className="bi bi-geo-alt position-absolute" style={{ left: 12, top: 10, color: '#9CA3AF' }}></i>
+          <i className="bi bi-geo-alt position-absolute" style={{ left: 12, top: 10, color: 'var(--kc-text-muted)' }}></i>
           <input
             className="form-control"
             style={{ paddingLeft: 34 }}
