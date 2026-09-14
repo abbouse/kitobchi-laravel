@@ -72,7 +72,7 @@ export default function CommissionAudit() {
         <button className={`btn btn-sm ${owner === 'courier' ? 'btn-primary-gradient' : 'btn-light'}`} onClick={() => goOwner('courier')}>Kuryer audit</button>
       </div>
 
-      <div className="row g-3 mb-3">
+      <div className="kpi-strip row g-3 mb-3">
         {[
           ['Yozuvlar', commissionAuditTotals.rows || 0, 'bi-list-check', '#0B0342'],
           ['Farq bor', commissionAuditTotals.mismatches || 0, 'bi-exclamation-triangle', '#A32A2E'],

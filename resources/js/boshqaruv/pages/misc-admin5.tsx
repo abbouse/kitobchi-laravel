@@ -790,7 +790,7 @@ export function Logistika() {
         </div>
       </div>
 
-      <div className="row g-3 mb-4">
+      <div className="kpi-strip row g-3 mb-4">
         {[
           { label: 'Xizmatlar', value: logisticsStats.services ?? deliveryServices.length, icon: 'bi-truck', color: '#0B0342' },
           { label: 'Faol xizmat', value: logisticsStats.activeServices ?? deliveryServices.filter((item) => item.active).length, icon: 'bi-check-circle', color: '#0F6A46' },

@@ -961,7 +961,7 @@ export default function CollectionsPage() {
         </Modal.Footer>
       </Modal>
 
-      <div className="row g-3 mb-4">
+      <div className="kpi-strip row g-3 mb-4">
         {[
           { label: 'Jami to‘plam', value: collections.length, icon: 'bi-collection' },
           { label: 'Faol', value: collections.filter((item) => item.isActive).length, icon: 'bi-check-circle' },

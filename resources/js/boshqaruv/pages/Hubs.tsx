@@ -354,7 +354,7 @@ export default function Hubs() {
         <button className="btn btn-primary-gradient" onClick={() => setEditingHub(null)}><i className="bi bi-plus-circle me-1"></i>Hub qo'shish</button>
       </div>
 
-      <div className="row g-3 mb-4">
+      <div className="kpi-strip row g-3 mb-4">
         {[
           { label: 'Jami hub', value: hubStats.total ?? hubs.length, icon: 'bi-building', color: '#0B0342' },
           { label: 'Faol hub', value: hubStats.active ?? hubs.filter((hub) => hub.active).length, icon: 'bi-check-circle', color: '#0F6A46' },

@@ -48,7 +48,7 @@ export default function AuditLogs() {
         </div>
       </div>
 
-      <div className="row g-3 mb-3">
+      <div className="kpi-strip row g-3 mb-3">
         {[
           ['Jami', auditLogTotals.all || 0, 'bi-clipboard-data', '#0B0342'],
           ['Bugun', auditLogTotals.today || 0, 'bi-calendar2-day', '#0F6A46'],

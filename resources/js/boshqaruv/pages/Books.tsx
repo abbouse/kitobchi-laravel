@@ -153,7 +153,7 @@ export default function Books() {
         </form>
       </div>
 
-      <div className="row g-3 mb-4">
+      <div className="kpi-strip row g-3 mb-4">
         {[
           { key: 'pending', label: 'Moderatsiyada', val: bookCounts.pending || 0, hint: 'Avval ko‘rib chiqilishi kerak', color: '#8A5709' },
           { key: 'active', label: 'Faol kitoblar', val: bookCounts.active || 0, hint: 'Xaridorga ko‘rinayotganlar', color: '#0F6A46' },
@@ -181,7 +181,7 @@ export default function Books() {
             <div className="panel-title">Kitoblar</div>
             <small className="text-muted">{bookPagination.total} ta kitob topildi</small>
           </div>
-          <div className="d-flex gap-2 flex-wrap">
+          <div className="kc-tabs d-flex gap-2 flex-wrap">
             {[
               ['pending', 'Moderatsiya'],
               ['active', 'Faol'],
@@ -191,7 +191,7 @@ export default function Books() {
               <button
                 key={key}
                 type="button"
-                className={`btn btn-sm ${activeTab === key ? 'btn-primary-gradient' : 'btn-light'}`}
+                className={`kc-tab ${activeTab === key ? 'active' : ''}`}
                 onClick={() => { setActiveTab(key); loadBooks(1, key); }}
               >
                 {label} <span className="badge rounded-pill bg-light text-dark ms-2">{bookCounts[key] || 0}</span>
@@ -276,7 +276,7 @@ export default function Books() {
         onConfirm={confirmReject}
       />
 
-      <Modal show={showView} onHide={() => setShowView(false)} centered size="xl" scrollable>
+      <Modal show={showView} onHide={() => setShowView(false)} centered size="xl" scrollable dialogClassName="kc-sheet">
         <Modal.Header closeButton>
           <Modal.Title className="fs-5 fw-bold">Kitob: {selectedBook?.title}</Modal.Title>
         </Modal.Header>

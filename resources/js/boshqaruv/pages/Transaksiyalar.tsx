@@ -131,7 +131,7 @@ export default function Transaksiyalar() {
         <input className="form-control form-control-sm" style={{ maxWidth: 360 }} value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && go({ transactions_page: 1 })} placeholder={`${ownerLabel}, telefon, order ID yoki summa`} />
       </div>
 
-      <div className="row g-3 mb-4">
+      <div className="kpi-strip row g-3 mb-4">
         {[
           { label: `${ownerLabel} tranzaksiya`, value: transactionTotals.all || 0, icon: 'bi-receipt', color: '#0B0342' },
           { label: 'Tasdiqlangan', value: totals.approved, icon: 'bi-check-circle', color: '#0F6A46' },

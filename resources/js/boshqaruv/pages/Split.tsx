@@ -215,11 +215,11 @@ export default function Split() {
         ) : null}
       </div>
 
-      <div className="d-flex gap-2 flex-wrap mb-3">
+      <div className="kc-tabs d-flex gap-2 flex-wrap mb-3">
         {tabs.map(([key, label, icon]) => (
           <button
             key={key}
-            className={`btn btn-sm ${tab === key ? 'btn-primary-gradient' : 'btn-light'}`}
+            className={`kc-tab ${tab === key ? 'active' : ''}`}
             onClick={() => setTab(key)}
           >
             <i className={`bi ${icon} me-1`}></i>
@@ -232,7 +232,7 @@ export default function Split() {
       </div>
 
       {tab === 'users' ? (
-      <div className="row g-3 mb-4">
+      <div className="kpi-strip row g-3 mb-4">
         {[
           ['Profil yozuvlari', splitSummary.profiles, 'bi-database-check', '#0B0342'],
           ['Mos userlar', splitSummary.eligible, 'bi-patch-check', '#0F6A46'],

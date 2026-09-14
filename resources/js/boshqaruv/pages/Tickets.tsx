@@ -98,7 +98,7 @@ export default function Tickets() {
         </div>
       </div>
 
-      <div className="row g-3 mb-4">
+      <div className="kpi-strip row g-3 mb-4">
           {[
           { label: 'Yangi', val: (ticketCounts.open || 0) + (ticketCounts.queue || 0), icon: 'bi-envelope-exclamation', color: '#8A5709' },
           { label: 'Javob berildi', val: ticketCounts.answered || 0, icon: 'bi-reply', color: '#24509B' },
@@ -116,7 +116,7 @@ export default function Tickets() {
       </div>
 
       <div className="card-panel">
-        <div className="d-flex gap-2 mb-3 flex-wrap">
+        <div className="kc-tabs d-flex gap-2 mb-3 flex-wrap">
           {[
             ['all', 'Barcha murojaatlar', ticketCounts.all || 0],
             ['user', 'Mijoz supporti', ticketCounts.user || 0],
@@ -124,16 +124,16 @@ export default function Tickets() {
           ].map(([source, label, count]) => (
             <button
               key={String(source)}
-              className={`btn btn-sm ${activeSource === source ? 'btn-primary-gradient' : 'btn-outline-secondary'}`}
+              className={`kc-tab ${activeSource === source ? 'active' : ''}`}
               onClick={() => { setActiveSource(String(source)); loadTickets(1, activeTab, search, String(source)); }}
             >
               {label} <span className="ms-1 opacity-75">{count}</span>
             </button>
           ))}
         </div>
-        <div className="d-flex gap-2 mb-3 flex-wrap">
+        <div className="kc-tabs d-flex gap-2 mb-3 flex-wrap">
           {['all', 'open', 'answered', 'waiting', 'queue', 'active', 'closed', 'rated'].map((s) => (
-            <button key={s} className={`btn btn-sm ${activeTab === s ? 'btn-primary-gradient' : 'btn-outline-secondary'}`} onClick={() => { setActiveTab(s); loadTickets(1, s); }}>{statusLabel(s)} <span className="ms-1 opacity-75">{ticketCounts[s] || 0}</span></button>
+            <button key={s} className={`kc-tab ${activeTab === s ? 'active' : ''}`} onClick={() => { setActiveTab(s); loadTickets(1, s); }}>{statusLabel(s)} <span className="ms-1 opacity-75">{ticketCounts[s] || 0}</span></button>
           ))}
           <form className="ms-auto input-group" style={{ maxWidth: 260 }} onSubmit={(event) => { event.preventDefault(); loadTickets(); }}>
             <span className="input-group-text bg-white"><i className="bi bi-search text-muted"></i></span>
@@ -180,7 +180,7 @@ export default function Tickets() {
         <PaginationControls {...ticketPagination} onPageChange={(page) => loadTickets(page)} />
       </div>
 
-      <Modal show={showDetail} onHide={() => setShowDetail(false)} centered size="xl">
+      <Modal show={showDetail} onHide={() => setShowDetail(false)} centered size="xl" dialogClassName="kc-sheet">
         <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">Murojaat #{selectedTicket?.id}</Modal.Title></Modal.Header>
         <Modal.Body>
           {loadingDetail ? <div className="text-muted py-5 text-center">Yuklanmoqda...</div> : !detail ? <div className="text-muted py-5 text-center">Ma'lumot yuklanmadi</div> : (

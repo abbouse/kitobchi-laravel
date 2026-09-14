@@ -55,7 +55,7 @@ export default function Reklamalar() {
         </div>
       </div>
 
-      <div className="row g-3 mb-4">
+      <div className="kpi-strip row g-3 mb-4">
         {[
           { label: 'Jami reklama', value: ads.length, icon: 'bi-megaphone', color: '#0B0342' },
           { label: 'Moderatsiyada', value: pending, icon: 'bi-hourglass-split', color: '#8A5709' },

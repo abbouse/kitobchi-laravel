@@ -106,14 +106,14 @@ export default function Stationeries() {
           </form>
         </div>
 
-        <div className="d-flex flex-wrap gap-2 mb-3">
+        <div className="kc-tabs d-flex flex-wrap gap-2 mb-3">
           {[
             ['pending', 'Moderatsiya'],
             ['active', 'Tasdiqlangan'],
             ['rejected', 'Rad etilgan'],
             ['all', 'Barchasi'],
           ].map(([key, label]) => (
-            <button className={`btn btn-sm ${tab === key ? 'btn-primary-gradient' : 'btn-light'}`} key={key} onClick={() => { setTab(key); loadItems(1, key); }}>
+            <button className={`kc-tab ${tab === key ? 'active' : ''}`} key={key} onClick={() => { setTab(key); loadItems(1, key); }}>
               {label}<span className="badge rounded-pill bg-light text-dark ms-2">{stationeryCounts[key] || 0}</span>
             </button>
           ))}
@@ -178,7 +178,7 @@ export default function Stationeries() {
         onConfirm={confirmReject}
       />
 
-      <Modal show={!!selected} onHide={() => setSelected(null)} centered size="xl" scrollable>
+      <Modal show={!!selected} onHide={() => setSelected(null)} centered size="xl" scrollable dialogClassName="kc-sheet">
         <Modal.Header closeButton>
           <Modal.Title className="fs-5 fw-bold">{selected?.name}</Modal.Title>
         </Modal.Header>

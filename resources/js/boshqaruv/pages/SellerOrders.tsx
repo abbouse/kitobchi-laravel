@@ -100,7 +100,7 @@ export default function SellerOrders() {
         </div>
       </div>
 
-      <div className="row g-3 mb-4">
+      <div className="kpi-strip row g-3 mb-4">
         {[
           { label: 'Kutilmoqda', value: sellerCounts.pending || 0, icon: 'bi-hourglass-split', color: '#8A5709' },
           { label: 'Faol', value: sellerCounts.approved || 0, icon: 'bi-shop', color: '#0F6A46' },
@@ -130,9 +130,9 @@ export default function SellerOrders() {
             <input className="form-control form-control-sm" style={{ maxWidth: 280 }} value={sellerSearch} onChange={(e) => setSellerSearch(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && load({ sellers_page: 1 })} placeholder="Do'kon, telefon yoki hudud" />
           </div>
         </div>
-        <div className="d-flex flex-wrap gap-2 mb-3">
+        <div className="kc-tabs d-flex flex-wrap gap-2 mb-3">
           {sellerTabs.map((item) => (
-            <button key={item.key} className={`btn btn-sm ${sellerTab === item.key ? 'btn-primary-gradient' : 'btn-light'}`} onClick={() => { setSellerTab(item.key); load({ sellers_page: 1, sellers_tab: item.key }); }}>
+            <button key={item.key} className={`kc-tab ${sellerTab === item.key ? 'active' : ''}`} onClick={() => { setSellerTab(item.key); load({ sellers_page: 1, sellers_tab: item.key }); }}>
               <i className={`bi ${item.icon} me-1`}></i>{item.label}
               <span className="badge rounded-pill bg-light text-dark ms-2">{fmt(sellerCounts[item.key] || 0)}</span>
             </button>
@@ -213,9 +213,9 @@ export default function SellerOrders() {
           </div>
           <input className="form-control form-control-sm" style={{ maxWidth: 280 }} value={orderSearch} onChange={(e) => setOrderSearch(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && load({ seller_orders_page: 1 })} placeholder="ID, seller yoki mijoz" />
         </div>
-        <div className="d-flex flex-wrap gap-2 mb-3">
+        <div className="kc-tabs d-flex flex-wrap gap-2 mb-3">
           {orderStatusTabs.map((item) => (
-            <button key={item.key} className={`btn btn-sm ${orderTab === item.key ? 'btn-primary-gradient' : 'btn-light'}`} onClick={() => { setOrderTab(item.key); load({ seller_orders_page: 1, seller_orders_tab: item.key }); }}>
+            <button key={item.key} className={`kc-tab ${orderTab === item.key ? 'active' : ''}`} onClick={() => { setOrderTab(item.key); load({ seller_orders_page: 1, seller_orders_tab: item.key }); }}>
               {item.label}<span className="badge rounded-pill bg-light text-dark ms-2">{fmt(sellerOrderCounts[item.key] || 0)}</span>
             </button>
           ))}
@@ -268,7 +268,7 @@ function OrderModal({ order, statuses, onHide, onPatch }: {
   onPatch: (url?: string, message?: string, payload?: Record<string, string>) => void;
 }) {
   return (
-    <Modal show={!!order} onHide={onHide} centered size="lg">
+    <Modal show={!!order} onHide={onHide} centered size="lg" dialogClassName="kc-sheet">
       <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">Seller order #{order?.id}</Modal.Title></Modal.Header>
       <Modal.Body>
         {!order ? null : (

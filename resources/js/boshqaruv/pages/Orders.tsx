@@ -582,7 +582,7 @@ export default function Orders() {
         </div>
       </div>
 
-      <div className="row g-3 mb-4">
+      <div className="kpi-strip row g-3 mb-4">
         {[
           { label: 'Jami buyurtmalar', val: orderCounts.all || 0, icon: 'bi-receipt', color: '#0B0342' },
           { label: 'Yetkazilgan', val: orderCounts.paid || 0, icon: 'bi-check-circle', color: '#0F6A46' },
@@ -604,7 +604,7 @@ export default function Orders() {
       </div>
 
       <div className="card-panel">
-        <div className="d-flex gap-2 mb-3 flex-wrap align-items-center">
+        <div className="kc-tabs d-flex gap-2 mb-3 flex-wrap align-items-center">
           {[
             ['all', 'Barchasi'],
             ['pending', 'Kutilmoqda'],
@@ -615,7 +615,7 @@ export default function Orders() {
           ].map(([status, label]) => (
             <button
               key={status}
-              className={`btn btn-sm ${activeTab === status ? 'btn-primary-gradient' : 'btn-outline-secondary'}`}
+              className={`kc-tab ${activeTab === status ? 'active' : ''}`}
               onClick={() => { setActiveTab(status); loadOrders(1, status); }}
             >
               {label} <span className="ms-1 opacity-75">{orderCounts[status] || 0}</span>
@@ -685,7 +685,7 @@ export default function Orders() {
         <PaginationControls {...orderPagination} onPageChange={(page) => loadOrders(page)} />
       </div>
 
-      <Modal show={showView} onHide={() => setShowView(false)} centered size="xl" scrollable>
+      <Modal show={showView} onHide={() => setShowView(false)} centered size="xl" scrollable dialogClassName="kc-sheet">
         <Modal.Header closeButton>
           <Modal.Title className="fs-5 fw-bold">Buyurtma: {selectedOrd?.id}</Modal.Title>
         </Modal.Header>

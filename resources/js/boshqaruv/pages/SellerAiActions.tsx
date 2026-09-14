@@ -72,7 +72,7 @@ export default function SellerAiActions() {
         </div>
       </div>
 
-      <div className="row g-3 mb-4">
+      <div className="kpi-strip row g-3 mb-4">
         {[
           { key: 'preview', label: 'Preview', icon: 'bi-eye', color: '#8A5709' },
           { key: 'applied', label: 'Bajarilgan', icon: 'bi-check2-circle', color: '#0F6A46' },
@@ -90,9 +90,9 @@ export default function SellerAiActions() {
       </div>
 
       <div className="card-panel">
-        <div className="d-flex gap-2 mb-3 flex-wrap">
+        <div className="kc-tabs d-flex gap-2 mb-3 flex-wrap">
           {['all', 'preview', 'applied', 'rolled_back', 'failed', 'cancelled'].map((item) => (
-            <button key={item} className={`btn btn-sm ${status === item ? 'btn-primary-gradient' : 'btn-outline-secondary'}`} onClick={() => { setStatus(item); load(1, item); }}>
+            <button key={item} className={`kc-tab ${status === item ? 'active' : ''}`} onClick={() => { setStatus(item); load(1, item); }}>
               {statusLabel(item)} <span className="ms-1 opacity-75">{sellerAiActionCounts[item] || 0}</span>
             </button>
           ))}

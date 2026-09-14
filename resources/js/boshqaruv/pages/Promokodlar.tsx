@@ -52,7 +52,7 @@ export default function Promokodlar() {
         <button className="btn btn-primary-gradient" onClick={() => setEditing(emptyPromo)}><i className="bi bi-plus-lg me-1"></i>Promokod qo'shish</button>
       </div>
 
-      <div className="row g-3 mb-4">
+      <div className="kpi-strip row g-3 mb-4">
         {[
           { label: 'Jami promokod', value: promocodes.length, icon: 'bi-ticket-perforated', color: '#0B0342' },
           { label: 'Faol', value: activeCount, icon: 'bi-check-circle', color: '#0F6A46' },

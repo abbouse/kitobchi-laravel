@@ -49,7 +49,7 @@ export default function Users() {
       <div className="page-head">
         <div><h1 className="page-title">Foydalanuvchilar</h1><p className="page-subtitle">Profil, online holat, kartalar, premium, bloklash va xarid tarixi boshqaruvi</p></div>
       </div>
-      <div className="row g-3 mb-4">
+      <div className="kpi-strip row g-3 mb-4">
         {[
           ['Jami', userCounts.all || 0, 'bi-people', '#0B0342'], ['Online', userCounts.online || 0, 'bi-broadcast', '#0F6A46'],
           ['Karta ulagan', userCounts.with_cards || 0, 'bi-credit-card', '#4A3A7A'], ['Bloklangan', userCounts.blocked || 0, 'bi-person-lock', '#A32A2E'],
@@ -57,7 +57,7 @@ export default function Users() {
       </div>
       <div className="card-panel">
         <div className="panel-head"><div><div className="panel-title">Foydalanuvchilar ro‘yxati</div><small className="text-muted">{userPagination.total} ta yozuv</small></div><form className="d-flex gap-2" onSubmit={(e) => { e.preventDefault(); loadUsers(); }}><input className="form-control form-control-sm" style={{ maxWidth: 280 }} value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Ism, telefon, email yoki ID" /><button className="btn btn-sm btn-outline-secondary"><i className="bi bi-search"></i></button></form></div>
-        <div className="d-flex flex-wrap gap-2 mb-3">{tabs.map(([key, label]) => <button className={`btn btn-sm ${tab === key ? 'btn-primary-gradient' : 'btn-light'}`} key={key} onClick={() => { setTab(key); loadUsers(1, key); }}>{label}<span className="badge rounded-pill bg-light text-dark ms-2">{fmt(userCounts[key] || 0)}</span></button>)}</div>
+        <div className="kc-tabs d-flex flex-wrap gap-2 mb-3">{tabs.map(([key, label]) => <button className={`kc-tab ${tab === key ? 'active' : ''}`} key={key} onClick={() => { setTab(key); loadUsers(1, key); }}>{label}<span className="badge rounded-pill bg-light text-dark ms-2">{fmt(userCounts[key] || 0)}</span></button>)}</div>
         <div className="table-responsive"><table className="data-table"><thead><tr><th>ID</th><th>Foydalanuvchi</th><th>Telefon</th><th>Buyurtma</th><th>Sarflangan</th><th>Karta</th><th>Oxirgi aktivlik</th><th>Status</th><th>Amallar</th></tr></thead><tbody>
           {users.map((user) => <tr key={user.id}>
             <td className="fw-semibold text-primary">#{user.id}</td><td><div className="d-flex align-items-center gap-2"><Avatar user={user} /><div><div className="fw-semibold">{user.name}</div><small className="text-muted">A'zo bo'lgan: {user.joinedLabel || user.joined || '—'}</small></div></div></td>
@@ -77,7 +77,7 @@ function ProfileModal({ user, detail, loading, onHide, reload }: { user: UserRow
   const p = detail?.profile || {}; const s = detail?.stats || {};
   const split = detail?.splitProfile || null;
   const post = (url?: string, data: Record<string, string> = {}) => url && router.post(url, data, { preserveScroll: true, onSuccess: reload });
-  return <Modal show={!!user} onHide={onHide} centered size="xl"><Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">{user?.name}</Modal.Title></Modal.Header><Modal.Body>
+  return <Modal show={!!user} onHide={onHide} centered size="xl" dialogClassName="kc-sheet"><Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">{user?.name}</Modal.Title></Modal.Header><Modal.Body>
     {loading ? <div className="text-center py-5 text-muted">Profil yuklanmoqda...</div> : !detail ? <div className="text-danger">Profilni yuklab bo‘lmadi.</div> : <div className="row g-3">
       <div className="col-12"><div className="detail-panel"><div className="d-flex flex-wrap align-items-center gap-3"><Avatar user={{ ...user!, avatar: String(p.avatar || '') }} large /><div><h4 className="mb-1">{String(p.name || '')}</h4><div className="text-muted">{String(p.email || 'Email yo‘q')} · {String(p.phone || 'Telefon yo‘q')}</div><div className="d-flex flex-wrap gap-2 mt-2"><Status user={user!} />{p.phoneVerified ? <span className="chip chip-success">Telefon tasdiqlangan</span> : <span className="chip chip-warning">Telefon tasdiqlanmagan</span>}{p.verified ? <span className="chip chip-info">Verified badge</span> : null}{p.premium ? <span className="chip chip-warning">Premium</span> : null}{p.support ? <span className="chip chip-info">Support</span> : null}</div></div></div></div></div>
       <Info title="Profil ma'lumotlari" rows={[['Telefon', p.phone], ['Telefon tasdig‘i', p.phoneVerified ? 'Tasdiqlangan' : 'Tasdiqlanmagan'], ['Telefon tasdiqlangan sana', p.phoneVerifiedAt], ['Verified badge', p.verified ? 'Yoqilgan' : 'O‘chiq'], ['Email', p.email], ['Username', p.username], ['Telegram ID', p.telegramId], ['Til', p.locale], ['Daraja', p.position], ['Role title', p.roleTitle], ['Staff roli', p.staffRole], ['AI limiti', p.aiLimit], ['Oxirgi faollik', p.lastSeenAt], ['Ro‘yxatdan o‘tgan', p.joined], ['Spent time', `${fmt(Number(p.spentSeconds || 0))} sec`], ['Bio', p.bio]]} />

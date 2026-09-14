@@ -65,7 +65,7 @@ export default function Products() {
         </div>
       </div>
 
-      <div className="row g-3 mb-4">
+      <div className="kpi-strip row g-3 mb-4">
         {[
           { label: 'Jami mahsulot', value: products.length, icon: 'bi-box-seam', color: '#0B0342' },
           { label: 'Ombor jami', value: fmt(totalStock), icon: 'bi-stack', color: '#0F6A46' },

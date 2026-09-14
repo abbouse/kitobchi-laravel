@@ -473,6 +473,103 @@ code {
 .kpi-icon { color: var(--kc-text-muted); font-size: 15px; flex-shrink: 0; }
 .kpi-hint { font-size: 11px; color: var(--kc-text-muted); margin-top: 5px; }
 .min-w-0 { min-width: 0; }
+
+/* ═══ KPI qatori ═════════════════════════════════════════════════════════
+   Alohida suzib turgan kartochkalar o'rniga — bitta panel, ichi ingichka
+   chiziqlar bilan bo'lingan. Bootstrap ustunlari grid'ga aylantiriladi;
+   manfiy margin chetdagi chiziqlarni panel ramkasi ostiga yashiradi,
+   shuning uchun qator o'ralganda ham ortiqcha chiziq ko'rinmaydi. */
+.kpi-strip {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+  border: 1px solid var(--kc-border-subtle);
+  border-radius: var(--kc-radius-lg);
+  background: var(--kc-bg-card);
+  overflow: hidden;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+.kpi-strip > [class*="col"] {
+  width: auto !important;
+  max-width: none !important;
+  flex: none !important;
+  padding: 0 !important;
+  border-left: 1px solid var(--kc-border-subtle);
+  border-top: 1px solid var(--kc-border-subtle);
+  margin-left: -1px;
+  margin-top: -1px;
+}
+.kpi-strip .stat-card {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent;
+  height: 100%;
+}
+
+/* ═══ Filtr tablari ══════════════════════════════════════════════════════
+   Oldin: to'ldirilgan/oq tugmalar qatori. Endi: ostiga chizilgan tab —
+   tanlangan bo'lim darhol ko'zga tashlanadi, qator esa yengil ko'rinadi. */
+.kc-tabs {
+  display: flex; flex-wrap: wrap;
+  gap: 0 !important;
+  border-bottom: 1px solid var(--kc-border-subtle);
+  align-items: stretch;
+}
+.kc-tab {
+  border: 0; background: none; cursor: pointer;
+  padding: 8px 11px 9px;
+  font-size: 12.5px; font-weight: 400;
+  color: var(--kc-text-soft);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.kc-tab:hover { color: var(--kc-text); }
+.kc-tab.active { color: var(--kc-text); font-weight: 600; border-bottom-color: var(--kc-ink); }
+.kc-tab > span,
+.kc-tab .badge {
+  font-family: var(--kc-font-mono); font-variant-numeric: tabular-nums;
+  font-size: 10.5px; font-weight: 500;
+  background: transparent !important;
+  color: var(--kc-text-muted) !important;
+  padding: 0 !important; margin-left: 2px !important;
+  opacity: 1 !important;
+  border-radius: 0 !important;
+}
+.kc-tab.active > span,
+.kc-tab.active .badge { color: var(--kc-ink) !important; }
+.kc-tabs form, .kc-tabs .ms-auto { align-self: center; }
+
+/* ═══ Yon panel (sheet) ══════════════════════════════════════════════════
+   Tafsilot oynalari markazdagi modal o'rniga o'ng chetdan chiqadi: jadval
+   orqada ko'rinib turadi va operator qator-qator ko'zdan kechiraveradi.
+   Bootstrap Modal'ning o'zi ishlatiladi — faqat joylashuvi o'zgaradi. */
+.modal-dialog.kc-sheet {
+  position: fixed; top: 0; right: 0; bottom: 0; left: auto;
+  margin: 0 !important;
+  width: min(560px, 100vw);
+  max-width: none;
+  height: 100%;
+  display: flex; align-items: stretch;
+  transform: translateX(22px);
+  transition: transform .2s ease;
+}
+.modal-dialog.kc-sheet.modal-xl { width: min(760px, 100vw); }
+.modal.show .modal-dialog.kc-sheet { transform: none; }
+.modal-dialog.kc-sheet .modal-content {
+  width: 100%; height: 100%;
+  border-radius: 0;
+  border: 0;
+  border-left: 1px solid var(--kc-border-subtle);
+  box-shadow: var(--kc-shadow-overlay);
+}
+.modal-dialog.kc-sheet .modal-body { overflow-y: auto; }
+.modal-dialog.kc-sheet .modal-header,
+.modal-dialog.kc-sheet .modal-footer { flex-shrink: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .modal-dialog.kc-sheet { transition: none; transform: none; }
+}
 .stat-card .stat-trend.up { color: var(--kc-ok); }
 .stat-card .stat-trend.down { color: var(--kc-danger); }
 
