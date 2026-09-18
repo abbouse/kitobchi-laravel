@@ -809,10 +809,10 @@ function FunnelPanel({ funnel }: { funnel: DashboardPayload['funnel'] }) {
                   {stage.drop > 0 ? ` · −${stage.drop}%` : ''}
                 </span>
               </div>
-              <div className="progress" style={{ height: 20 }}>
-                <div className="progress-bar" style={{ width: `${Math.max(3, stage.value / max * 100)}%`, background: stage.color, fontSize: 11.5 }}>
-                  {fmt(stage.value)}
-                </div>
+              {/* Raqam yuqoridagi qatorda allaqachon bor — chiziq ichida
+                  takrorlanmaydi (rangli fonda o'qilmay qolardi). */}
+              <div className="progress" style={{ height: 8 }}>
+                <div className="progress-bar" style={{ width: `${Math.max(2, stage.value / max * 100)}%`, background: stage.color }} />
               </div>
             </div>
           ))}

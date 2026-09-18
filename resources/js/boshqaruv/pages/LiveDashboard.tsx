@@ -207,7 +207,7 @@ export default function LiveDashboard() {
 
   return (
     <div className="fs-live p-3 p-xl-4" style={{ minHeight: '100vh' }}>
-      <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2 pb-2 border-bottom" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
+      <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2 pb-2 border-bottom" style={{ borderColor: 'var(--kc-border-subtle)' }}>
         <div className="d-flex align-items-center gap-2">
           <div className="live-brand-mark"><i className="bi bi-broadcast"></i></div>
           <div>
@@ -246,7 +246,7 @@ export default function LiveDashboard() {
       </div>
 
       {snapshot.financialRestricted ? (
-        <div className="mb-3 p-2 rounded d-flex align-items-center gap-2" style={{ background: 'rgba(100,116,139,0.18)', border: '1px solid rgba(148,163,184,0.35)' }}>
+        <div className="mb-3 p-2 rounded d-flex align-items-center gap-2" style={{ background: 'var(--kc-neutral-bg)', border: '1px solid var(--kc-border)' }}>
           <i className="bi bi-lock-fill" style={{ fontSize: 16, color: 'var(--kc-text-soft)' }}></i>
           <span style={{ color: 'var(--kc-text)', fontSize: 13 }}>Sizning rolingizda moliyaviy ko'rsatkichlar (daromad, tushum, foyda) 0 qilib ko'rsatiladi — faqat operatsion sonlar (order, mijoz, hudud bo'yicha oqim) ochiq. Kerak bo'lsa, "Moliya" ruxsatiga ega admindan so'rang.</span>
         </div>
@@ -513,7 +513,7 @@ function SplitPanel({ title, rows, help }: { title: string; rows: { name: string
               <span>{row.name}</span>
               <span>{row.meta}</span>
             </div>
-            <div className="progress" style={{ height: 7, background: 'rgba(255,255,255,0.06)' }}>
+            <div className="progress" style={{ height: 7, background: 'var(--kc-bg-sunken)' }}>
               <div className="progress-bar" style={{ width: `${Math.max(3, width)}%`, background: row.color }}></div>
             </div>
           </div>

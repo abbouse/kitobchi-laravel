@@ -50,7 +50,7 @@ export default function StationeryCategories() {
               {pagination.paginated.map((category) => (
                 <tr key={category.id}>
                   <td className="cell-id">#{category.id}</td>
-                  <td><div className="d-flex align-items-center gap-2"><div className="thumb-square" style={{ width: 32, height: 32 }}>{categoryImageUrl(category.icon) ? <img src={categoryImageUrl(category.icon)!} alt="" /> : <span className="cell-sub">{(category.name || '?').slice(0, 1).toUpperCase()}</span>}</div><div><div className="cell-strong">{category.name}</div><div className="text-muted small">{[category.nameRu, category.nameEn, category.nameJa].filter(Boolean).join(' / ')}</div></div></div></td>
+                  <td><div className="d-flex align-items-center gap-2"><div className="thumb-square" style={{ width: 32, height: 32 }}>{categoryImageUrl(category.icon) ? <img src={categoryImageUrl(category.icon)!} alt="" /> : <span className="thumb-monogram">{(category.name || '?').slice(0, 1).toUpperCase()}</span>}</div><div><div className="cell-strong">{category.name}</div><div className="text-muted small">{[category.nameRu, category.nameEn, category.nameJa].filter(Boolean).join(' / ')}</div></div></div></td>
                   <td className="text-muted">{category.slug || '—'}</td>
                   <td>{category.itemsCount} ta</td>
                   <td><button className={`chip border-0 ${category.active ? 'chip-success' : 'chip-gray'}`} onClick={() => toggle(category)}>{category.active ? 'Faol' : 'Nofaol'}</button></td>

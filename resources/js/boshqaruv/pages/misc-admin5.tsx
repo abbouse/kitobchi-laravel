@@ -456,15 +456,15 @@ function RadiusMapPicker({
             height: radiusPx * 2,
             left: -radiusPx,
             top: -radiusPx,
-            background: 'rgba(16,185,129,.16)',
-            border: '1px solid rgba(16,185,129,.35)',
+            background: 'color-mix(in srgb, var(--kc-ok) 16%, transparent)',
+            border: '1px solid color-mix(in srgb, var(--kc-ok) 38%, transparent)',
           }} />
           <div className="position-relative d-flex align-items-center justify-content-center rounded-circle shadow" style={{
             width: 24,
             height: 24,
             background: 'var(--kc-ok)',
-            color: '#fff',
-            border: '3px solid #fff',
+            color: 'var(--kc-bg-card)',
+            border: '3px solid var(--kc-bg-card)',
           }}>
             <i className="bi bi-geo-alt-fill" style={{ fontSize: 11 }} />
           </div>
@@ -934,7 +934,7 @@ export function Logistika() {
                 ) : (
                   <div className="d-flex flex-column gap-2">
                     {previewMatches.map((zone, index) => (
-                      <div key={zone.id} className="p-2 rounded border d-flex justify-content-between align-items-center gap-2" style={{ borderColor: index === 0 ? 'var(--kc-cat-dred)' : 'var(--kc-border-subtle)', background: index === 0 ? 'var(--kc-danger-bg)' : '#fff' }}>
+                      <div key={zone.id} className="p-2 rounded border d-flex justify-content-between align-items-center gap-2" style={{ borderColor: index === 0 ? 'var(--kc-cat-dred)' : 'var(--kc-border-subtle)', background: index === 0 ? 'var(--kc-danger-bg)' : 'var(--kc-bg-card)' }}>
                         <div>
                           <div className="fw-semibold d-flex align-items-center gap-2">
                             <span style={{ width: 8, height: 8, borderRadius: 999, background: index === 0 ? 'var(--kc-cat-dred)' : (zone.color || 'var(--kc-text-muted)'), display: 'inline-block', flexShrink: 0 }}></span>
