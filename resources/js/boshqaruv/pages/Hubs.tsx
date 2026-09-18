@@ -110,7 +110,7 @@ const STAGE_ORDER = ['inbound', 'qc', 'packing', 'dispatch', 'delivery'] as cons
 
 // Hub kartasidagi kichik pipeline chizig'i
 function PipelineBar({ pipeline, stages }: { pipeline?: HubPipeline; stages: FulfillmentStage[] }) {
-  const stageList = stages.length ? stages : STAGE_ORDER.map((k) => ({ key: k, label: k, icon: 'bi-dot', color: '#0B0342' }));
+  const stageList = stages.length ? stages : STAGE_ORDER.map((k) => ({ key: k, label: k, icon: 'bi-dot', color: 'var(--kc-cat-indigo)' }));
   const total = STAGE_ORDER.reduce((sum, key) => sum + (pipeline?.[key] || 0), 0);
 
   if (!pipeline || total === 0) {
@@ -131,7 +131,7 @@ function PipelineBar({ pipeline, stages }: { pipeline?: HubPipeline; stages: Ful
           const value = pipeline[stage.key as keyof HubPipeline] || 0;
           if (!value) return null;
           return (
-            <span key={stage.key} className="badge rounded-pill" style={{ background: `${stage.color}18`, color: stage.color, fontWeight: 600 }}>
+            <span key={stage.key} className="badge rounded-pill" style={{ background: `color-mix(in srgb, ${stage.color} 14%, transparent)`, color: stage.color, fontWeight: 600 }}>
               <i className={`bi ${stage.icon} me-1`}></i>{value}
             </span>
           );
@@ -332,7 +332,7 @@ export default function Hubs() {
           lat: hub.lat ?? null,
           lon: hub.lon ?? null,
           label: `<strong>${hub.name}</strong><br>${hub.code || ''}`,
-          color: hub.active ? '#0F6A46' : '#8A92A2',
+          color: hub.active ? 'var(--kc-ok)' : 'var(--kc-text-muted)',
         })),
     [hubs],
   );
@@ -356,10 +356,10 @@ export default function Hubs() {
 
       <div className="kpi-strip row g-3 mb-4">
         {[
-          { label: 'Jami hub', value: hubStats.total ?? hubs.length, icon: 'bi-building', color: '#0B0342' },
-          { label: 'Faol hub', value: hubStats.active ?? hubs.filter((hub) => hub.active).length, icon: 'bi-check-circle', color: '#0F6A46' },
-          { label: 'Xodimlar', value: hubStats.staff ?? hubStaff.length, icon: 'bi-people', color: '#4A3A7A' },
-          { label: 'Fulfillment', value: fmt(totalFulfillments), icon: 'bi-box-seam', color: '#8A5709' },
+          { label: 'Jami hub', value: hubStats.total ?? hubs.length, icon: 'bi-building', color: 'var(--kc-cat-indigo)' },
+          { label: 'Faol hub', value: hubStats.active ?? hubs.filter((hub) => hub.active).length, icon: 'bi-check-circle', color: 'var(--kc-ok)' },
+          { label: 'Xodimlar', value: hubStats.staff ?? hubStaff.length, icon: 'bi-people', color: 'var(--kc-cat-violet)' },
+          { label: 'Fulfillment', value: fmt(totalFulfillments), icon: 'bi-box-seam', color: 'var(--kc-warn)' },
         ].map((item) => (
           <div className="col-xl-3 col-md-6" key={item.label}>
             <div className="stat-card">
@@ -465,9 +465,9 @@ export default function Hubs() {
               </div>
 
               <div className="row g-2 text-center mb-3">
-                <div className="col-4"><div className="fw-bold text-primary">{hub.staff || 0}</div><small className="text-muted">Xodim</small></div>
-                <div className="col-4"><div className="fw-bold text-success">{hub.fulfillments || 0}</div><small className="text-muted">Order</small></div>
-                <div className="col-4"><div className="fw-bold text-warning">{hub.courierTasks || 0}</div><small className="text-muted">Kuryer</small></div>
+                <div className="col-4"><div className="fw-bold">{hub.staff || 0}</div><small className="text-muted">Xodim</small></div>
+                <div className="col-4"><div className="fw-bold">{hub.fulfillments || 0}</div><small className="text-muted">Order</small></div>
+                <div className="col-4"><div className="fw-bold">{hub.courierTasks || 0}</div><small className="text-muted">Kuryer</small></div>
               </div>
 
               <div className="mb-3">
@@ -607,7 +607,7 @@ export default function Hubs() {
             <div className="col-12"><small className="text-muted">Manzil</small><div>{selectedHub?.address || '—'}</div></div>
             {selectedHub?.lat && selectedHub?.lon ? (
               <div className="col-12">
-                <LeafletMapView markers={[{ lat: selectedHub.lat, lon: selectedHub.lon, label: selectedHub.name, color: selectedHub.active ? '#0F6A46' : '#8A92A2' }]} height={220} />
+                <LeafletMapView markers={[{ lat: selectedHub.lat, lon: selectedHub.lon, label: selectedHub.name, color: selectedHub.active ? 'var(--kc-ok)' : 'var(--kc-text-muted)' }]} height={220} />
               </div>
             ) : null}
             {selectedHub?.pipeline ? (

@@ -5,13 +5,15 @@
    ishlatiladigan asbob — shuning uchun ko'p ma'lumot, kam bezak.
 
    Qoidalar:
-     1. Yagona brend rangi — #0B0342 (marketplace bilan bir xil). Gradient yo'q.
-     2. Bloklar 1px chiziq bilan ajratiladi; soya faqat ustidan chiqadigan
+     1. Yagona brend rangi — indigo #4338CA (qorong'ida #8B93F8). Gradient yo'q.
+     2. Kontrast nazorat ostida: asosiy matn 12–14:1, xira matn 4.8:1 dan
+        past emas. Qorong'ida sof oq ishlatilmaydi — u "halation" beradi.
+     3. Bloklar 1px chiziq bilan ajratiladi; soya faqat ustidan chiqadigan
         oynalar (modal, dropdown, toast) uchun.
-     3. Rang holatni bildiradi: yashil/ko'k/sariq/qizil — har biri butun
+     4. Rang holatni bildiradi: yashil/ko'k/sariq/qizil — har biri butun
         panelda bitta ma'noda.
-     4. Barcha raqamlar (summa, ID, vaqt) — mono shrift + tabular-nums.
-     5. Radius 5–10px, bo'shliq 4 ning karralari.
+     5. Barcha raqamlar (summa, ID, vaqt) — mono shrift + tabular-nums.
+     6. Radius 5–10px, bo'shliq 4 ning karralari.
 
    Yorug'/qorong'i rejim faqat shu fayldagi tokenlar orqali boshqariladi —
    komponent qoidalarida qattiq rang yozilmaydi.
@@ -25,52 +27,67 @@
   --kc-font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
   /* Brend */
-  --kc-ink: #0B0342;
-  --kc-ink-hover: #180B63;
-  --kc-ink-tint: rgba(11, 3, 66, .065);
-  --kc-ink-tint-2: rgba(11, 3, 66, .12);
+  --kc-ink: #4338CA;
+  --kc-ink-hover: #3A30B0;
+  --kc-ink-tint: rgba(67, 56, 202, .085);
+  --kc-ink-tint-2: rgba(67, 56, 202, .17);
   --kc-on-ink: #ffffff;
 
   /* Sirtlar */
-  --kc-bg-page: #F4F6F8;
+  --kc-bg-page: #F4F5FB;
   --kc-bg-card: #FFFFFF;
-  --kc-bg-subtle: #EFF1F5;
-  --kc-bg-hover: #F4F6F8;
-  --kc-bg-sunken: #E7EAF0;
+  --kc-bg-subtle: #EDEFF9;
+  --kc-bg-hover: #F4F5FB;
+  --kc-bg-sunken: #E4E7F5;
 
   /* Chiziqlar */
-  --kc-border: #CBD1DB;
-  --kc-border-subtle: #E1E5EC;
+  --kc-border: #C9CEE4;
+  --kc-border-subtle: #E0E3F0;
 
   /* Matn */
-  --kc-text: #14161D;
-  --kc-text-soft: #565D6D;
-  --kc-text-muted: #8A92A2;
+  --kc-text: #16172A;
+  --kc-text-soft: #535873;
+  --kc-text-muted: #656A81;
 
   /* Holat ranglari */
-  --kc-ok: #0F6A46;      --kc-ok-bg: #E4F1EA;
-  --kc-info: #24509B;    --kc-info-bg: #E7EDF8;
-  --kc-warn: #8A5709;    --kc-warn-bg: #F9EFDD;
-  --kc-danger: #A32A2E;  --kc-danger-bg: #FAE9E9;
-  --kc-neutral: #5A6172; --kc-neutral-bg: #ECEEF3;
+  --kc-ok: #15764D;      --kc-ok-bg: #E3F1EA;
+  --kc-info: #2456A8;    --kc-info-bg: #E6EDF9;
+  --kc-warn: #9A6207;    --kc-warn-bg: #F8EFDC;
+  --kc-danger: #B03236;  --kc-danger-bg: #FAE9EA;
+  --kc-neutral: #5B6079; --kc-neutral-bg: #ECEDF6;
+  /* Diagramma / kategoriya ranglari — mavzuga qarab almashadi */
+  --kc-cat-indigo: #4338CA;
+  --kc-cat-violet: #6532C4;
+  --kc-cat-dviolet: #4C2E9E;
+  --kc-cat-navy: #234F97;
+  --kc-cat-steel: #1D5A8A;
+  --kc-cat-teal: #12626F;
+  --kc-cat-green: #15764D;
+  --kc-cat-dgreen: #0F5D3D;
+  --kc-cat-amber: #9A6207;
+  --kc-cat-orange: #92500F;
+  --kc-cat-plum: #962E68;
+  --kc-cat-red: #B03236;
+  --kc-cat-dred: #8A1F24;
+
 
   /* Maydonlar */
   --kc-input-bg: #FFFFFF;
-  --kc-input-border: #D6DBE4;
-  --kc-input-text: #14161D;
+  --kc-input-border: #D5D9EA;
+  --kc-input-text: #16172A;
 
   /* Jadval */
   --kc-table-head-bg: #FFFFFF;
-  --kc-table-head-text: #8A92A2;
-  --kc-table-row-hover: #F4F6F8;
-  --kc-table-border: #E1E5EC;
+  --kc-table-head-text: #656A81;
+  --kc-table-row-hover: #F4F5FB;
+  --kc-table-border: #E0E3F0;
 
   /* Geometriya */
   --kc-radius-xs: 3px;
   --kc-radius-sm: 5px;
   --kc-radius: 7px;
   --kc-radius-lg: 10px;
-  --kc-shadow-overlay: 0 18px 48px -14px rgba(10, 14, 30, .30), 0 2px 6px rgba(10, 14, 30, .06);
+  --kc-shadow-overlay: 0 18px 48px -14px rgba(16, 18, 42, .28), 0 2px 6px rgba(16, 18, 42, .06);
 
   /* ── Eski nomlar (mavjud sahifalar buzilmasligi uchun saqlanadi) ── */
   --brand: var(--kc-ink);
@@ -85,19 +102,19 @@
   --kc-topbar-bg: var(--kc-bg-card);
 
   /* RGB variantlar — Bootstrap utilitalari (bg-*, text-*, border-*) ular orqali ishlaydi */
-  --kc-ink-rgb: 11, 3, 66;
-  --kc-bg-page-rgb: 244, 246, 248;
+  --kc-ink-rgb: 67, 56, 202;
+  --kc-bg-page-rgb: 244, 245, 251;
   --kc-bg-card-rgb: 255, 255, 255;
-  --kc-bg-subtle-rgb: 239, 241, 245;
-  --kc-bg-sunken-rgb: 231, 234, 240;
-  --kc-text-rgb: 20, 22, 29;
-  --kc-text-soft-rgb: 86, 93, 109;
-  --kc-text-muted-rgb: 138, 146, 162;
-  --kc-ok-rgb: 15, 106, 70;
-  --kc-info-rgb: 36, 80, 155;
-  --kc-warn-rgb: 138, 87, 9;
-  --kc-danger-rgb: 163, 42, 46;
-  --kc-neutral-rgb: 90, 97, 114;
+  --kc-bg-subtle-rgb: 237, 239, 249;
+  --kc-bg-sunken-rgb: 228, 231, 245;
+  --kc-text-rgb: 22, 23, 42;
+  --kc-text-soft-rgb: 83, 88, 115;
+  --kc-text-muted-rgb: 101, 106, 129;
+  --kc-ok-rgb: 21, 118, 77;
+  --kc-info-rgb: 36, 86, 168;
+  --kc-warn-rgb: 154, 98, 7;
+  --kc-danger-rgb: 176, 50, 54;
+  --kc-neutral-rgb: 91, 96, 121;
 }
 
 /* ═══ Bootstrap ko'prigi ══════════════════════════════════════════════════
@@ -187,55 +204,70 @@
 body.boshqaruv-dark {
   color-scheme: dark;
 
-  --kc-ink: #A9B8FF;
-  --kc-ink-hover: #C2CDFF;
-  --kc-ink-tint: rgba(169, 184, 255, .10);
-  --kc-ink-tint-2: rgba(169, 184, 255, .20);
-  --kc-on-ink: #0B0342;
+  --kc-ink: #8B93F8;
+  --kc-ink-hover: #A6ACFA;
+  --kc-ink-tint: rgba(139, 147, 248, .15);
+  --kc-ink-tint-2: rgba(139, 147, 248, .26);
+  --kc-on-ink: #14161F;
 
-  --kc-bg-page: #0D0F15;
-  --kc-bg-card: #14171F;
-  --kc-bg-subtle: #1B1F2A;
-  --kc-bg-hover: #1B1F2A;
-  --kc-bg-sunken: #222735;
+  --kc-bg-page: #14161F;
+  --kc-bg-card: #1B1E2B;
+  --kc-bg-subtle: #232738;
+  --kc-bg-hover: #232738;
+  --kc-bg-sunken: #2A2F42;
 
-  --kc-border: #343B4C;
-  --kc-border-subtle: #252A37;
+  --kc-border: #3A4059;
+  --kc-border-subtle: #2C3145;
 
-  --kc-text: #E7EAF1;
-  --kc-text-soft: #9AA2B3;
-  --kc-text-muted: #6B7385;
+  --kc-text: #DEE1EC;
+  --kc-text-soft: #A5ABBF;
+  --kc-text-muted: #878DA2;
 
-  --kc-ok: #63CE9F;      --kc-ok-bg: rgba(15, 106, 70, .24);
-  --kc-info: #92B3F2;    --kc-info-bg: rgba(36, 80, 155, .26);
-  --kc-warn: #DCAE63;    --kc-warn-bg: rgba(138, 87, 9, .26);
-  --kc-danger: #EC8A8D;  --kc-danger-bg: rgba(163, 42, 46, .26);
-  --kc-neutral: #99A1B2; --kc-neutral-bg: rgba(120, 130, 150, .18);
+  --kc-ok: #5FC79A;      --kc-ok-bg: rgba(21, 118, 77, .26);
+  --kc-info: #93B2F2;    --kc-info-bg: rgba(36, 86, 168, .28);
+  --kc-warn: #D6A85F;    --kc-warn-bg: rgba(154, 98, 7, .26);
+  --kc-danger: #E88C8C;  --kc-danger-bg: rgba(176, 50, 54, .26);
+  --kc-neutral: #9AA0B5; --kc-neutral-bg: rgba(124, 133, 160, .18);
+  /* Diagramma / kategoriya ranglari — qorong'i fonda ochroq variantlar */
+  --kc-cat-indigo: #8B93F8;
+  --kc-cat-violet: #AE9BF5;
+  --kc-cat-dviolet: #9D8BEE;
+  --kc-cat-navy: #93B2F2;
+  --kc-cat-steel: #8FB6DE;
+  --kc-cat-teal: #5FBFD0;
+  --kc-cat-green: #5FC79A;
+  --kc-cat-dgreen: #57BE90;
+  --kc-cat-amber: #D6A85F;
+  --kc-cat-orange: #D99A63;
+  --kc-cat-plum: #E58BB8;
+  --kc-cat-red: #E88C8C;
+  --kc-cat-dred: #DC7D80;
 
-  --kc-input-bg: #10131A;
-  --kc-input-border: #343B4C;
-  --kc-input-text: #E7EAF1;
 
-  --kc-table-head-bg: #14171F;
-  --kc-table-head-text: #6B7385;
-  --kc-table-row-hover: #1B1F2A;
-  --kc-table-border: #252A37;
+  --kc-input-bg: #171A25;
+  --kc-input-border: #3A4059;
+  --kc-input-text: #DEE1EC;
 
-  --kc-shadow-overlay: 0 18px 48px -14px rgba(0, 0, 0, .7), 0 2px 6px rgba(0, 0, 0, .4);
+  --kc-table-head-bg: #1B1E2B;
+  --kc-table-head-text: #878DA2;
+  --kc-table-row-hover: #232738;
+  --kc-table-border: #2C3145;
 
-  --kc-ink-rgb: 169, 184, 255;
-  --kc-bg-page-rgb: 13, 15, 21;
-  --kc-bg-card-rgb: 20, 23, 31;
-  --kc-bg-subtle-rgb: 27, 31, 42;
-  --kc-bg-sunken-rgb: 34, 39, 53;
-  --kc-text-rgb: 231, 234, 241;
-  --kc-text-soft-rgb: 154, 162, 179;
-  --kc-text-muted-rgb: 107, 115, 133;
-  --kc-ok-rgb: 99, 206, 159;
-  --kc-info-rgb: 146, 179, 242;
-  --kc-warn-rgb: 220, 174, 99;
-  --kc-danger-rgb: 236, 138, 141;
-  --kc-neutral-rgb: 153, 161, 178;
+  --kc-shadow-overlay: 0 18px 48px -14px rgba(0, 0, 0, .62), 0 2px 6px rgba(0, 0, 0, .34);
+
+  --kc-ink-rgb: 139, 147, 248;
+  --kc-bg-page-rgb: 20, 22, 31;
+  --kc-bg-card-rgb: 27, 30, 43;
+  --kc-bg-subtle-rgb: 35, 39, 56;
+  --kc-bg-sunken-rgb: 42, 47, 66;
+  --kc-text-rgb: 222, 225, 236;
+  --kc-text-soft-rgb: 165, 171, 191;
+  --kc-text-muted-rgb: 135, 141, 162;
+  --kc-ok-rgb: 95, 199, 154;
+  --kc-info-rgb: 147, 178, 242;
+  --kc-warn-rgb: 214, 168, 95;
+  --kc-danger-rgb: 232, 140, 140;
+  --kc-neutral-rgb: 154, 160, 181;
 
   /* Bootstrap ko'prigi — yorug' rejimdagi bilan bir xil nomlar, qiymatlar
      tokenlardan kelgani uchun avtomatik qorong'i variantga o'tadi */
@@ -1369,29 +1401,68 @@ textarea.form-control { min-height: 72px; }
    card-panel / stat-card / data-table avtomatik qorong'i ko'rinishga o'tadi. */
 
 .fs-live {
-  --kc-ink: #A9B8FF;
-  --kc-ink-tint: rgba(169, 184, 255, .10);
-  --kc-ink-tint-2: rgba(169, 184, 255, .20);
-  --kc-on-ink: #0B0342;
-  --kc-bg-page: #0D0F15;
-  --kc-bg-card: #14171F;
-  --kc-bg-subtle: #1B1F2A;
-  --kc-bg-hover: #1B1F2A;
-  --kc-bg-sunken: #222735;
-  --kc-border: #343B4C;
-  --kc-border-subtle: #252A37;
-  --kc-text: #E7EAF1;
-  --kc-text-soft: #9AA2B3;
-  --kc-text-muted: #6B7385;
-  --kc-ok: #63CE9F;      --kc-ok-bg: rgba(15, 106, 70, .24);
-  --kc-info: #92B3F2;    --kc-info-bg: rgba(36, 80, 155, .26);
-  --kc-warn: #DCAE63;    --kc-warn-bg: rgba(138, 87, 9, .26);
-  --kc-danger: #EC8A8D;  --kc-danger-bg: rgba(163, 42, 46, .26);
-  --kc-neutral: #99A1B2; --kc-neutral-bg: rgba(120, 130, 150, .18);
-  --kc-table-head-bg: #14171F;
-  --kc-table-head-text: #6B7385;
-  --kc-table-row-hover: #1B1F2A;
-  --kc-table-border: #252A37;
+  --kc-ink: #8B93F8;
+  --kc-ink-hover: #A6ACFA;
+  --kc-ink-tint: rgba(139, 147, 248, .15);
+  --kc-ink-tint-2: rgba(139, 147, 248, .26);
+  --kc-on-ink: #14161F;
+  --kc-bg-page: #14161F;
+  --kc-bg-card: #1B1E2B;
+  --kc-bg-subtle: #232738;
+  --kc-bg-hover: #232738;
+  --kc-bg-sunken: #2A2F42;
+  --kc-border: #3A4059;
+  --kc-border-subtle: #2C3145;
+  --kc-text: #DEE1EC;
+  --kc-text-soft: #A5ABBF;
+  --kc-text-muted: #878DA2;
+  --kc-ok: #5FC79A;      --kc-ok-bg: rgba(21, 118, 77, .26);
+  --kc-info: #93B2F2;    --kc-info-bg: rgba(36, 86, 168, .28);
+  --kc-warn: #D6A85F;    --kc-warn-bg: rgba(154, 98, 7, .26);
+  --kc-danger: #E88C8C;  --kc-danger-bg: rgba(176, 50, 54, .26);
+  --kc-neutral: #9AA0B5; --kc-neutral-bg: rgba(124, 133, 160, .18);
+  /* Diagramma / kategoriya ranglari — qorong'i fonda ochroq variantlar */
+  --kc-cat-indigo: #8B93F8;
+  --kc-cat-violet: #AE9BF5;
+  --kc-cat-dviolet: #9D8BEE;
+  --kc-cat-navy: #93B2F2;
+  --kc-cat-steel: #8FB6DE;
+  --kc-cat-teal: #5FBFD0;
+  --kc-cat-green: #5FC79A;
+  --kc-cat-dgreen: #57BE90;
+  --kc-cat-amber: #D6A85F;
+  --kc-cat-orange: #D99A63;
+  --kc-cat-plum: #E58BB8;
+  --kc-cat-red: #E88C8C;
+  --kc-cat-dred: #DC7D80;
+
+  --kc-input-bg: #171A25;
+  --kc-input-border: #3A4059;
+  --kc-input-text: #DEE1EC;
+  --kc-table-head-bg: #1B1E2B;
+  --kc-table-head-text: #878DA2;
+  --kc-table-row-hover: #232738;
+  --kc-table-border: #2C3145;
+  --kc-shadow-overlay: 0 18px 48px -14px rgba(0, 0, 0, .62), 0 2px 6px rgba(0, 0, 0, .34);
+  --kc-ink-rgb: 139, 147, 248;
+  --kc-text-rgb: 222, 225, 236;
+  --kc-text-muted-rgb: 135, 141, 162;
+  --kc-bg-card-rgb: 27, 30, 43;
+  /* Bootstrap yordamchi klasslari ham shu blok ichida qorong'i qolsin */
+  --bs-body-bg: #14161F;
+  --bs-body-color: #DEE1EC;
+  --bs-body-color-rgb: 222, 225, 236;
+  --bs-secondary-color: #878DA2;
+  --bs-secondary-color-rgb: 135, 141, 162;
+  --bs-secondary-bg: #232738;
+  --bs-tertiary-color: #878DA2;
+  --bs-tertiary-bg: #232738;
+  --bs-border-color: #2C3145;
+  --bs-border-color-translucent: #2C3145;
+  --bs-emphasis-color: #DEE1EC;
+  --bs-heading-color: #DEE1EC;
+  --bs-link-color: #8B93F8;
+  --bs-link-hover-color: #A6ACFA;
   background: var(--kc-bg-page);
   color: var(--kc-text);
   min-height: 100vh;

@@ -51,8 +51,8 @@ export default function Users() {
       </div>
       <div className="kpi-strip row g-3 mb-4">
         {[
-          ['Jami', fmt(userCounts.all || 0), 'bi-people', '#0B0342'], ['Online', fmt(userCounts.online || 0), 'bi-broadcast', '#0F6A46'],
-          ['Karta ulagan', fmt(userCounts.with_cards || 0), 'bi-credit-card', '#4A3A7A'], ['Bloklangan', fmt(userCounts.blocked || 0), 'bi-person-lock', '#A32A2E'],
+          ['Jami', fmt(userCounts.all || 0), 'bi-people', 'var(--kc-cat-indigo)'], ['Online', fmt(userCounts.online || 0), 'bi-broadcast', 'var(--kc-ok)'],
+          ['Karta ulagan', fmt(userCounts.with_cards || 0), 'bi-credit-card', 'var(--kc-cat-violet)'], ['Bloklangan', fmt(userCounts.blocked || 0), 'bi-person-lock', 'var(--kc-danger)'],
         ].map(([label, val, icon, color]) => <div className="col-xl-3 col-md-6" key={String(label)}><div className="stat-card"><div className="d-flex gap-3 align-items-center"><div><div className="stat-value">{val}</div><div className="stat-label">{label}</div></div></div></div></div>)}
       </div>
       <div className="card-panel">

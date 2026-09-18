@@ -134,10 +134,10 @@ export default function Transaksiyalar() {
 
       <div className="kpi-strip row g-3 mb-4">
         {[
-          { label: `${ownerLabel} tranzaksiya`, value: transactionTotals.all || 0, icon: 'bi-receipt', color: '#0B0342' },
-          { label: 'Tasdiqlangan', value: totals.approved, icon: 'bi-check-circle', color: '#0F6A46' },
-          { label: 'Kutilmoqda', value: totals.pending, icon: 'bi-hourglass-split', color: '#8A5709' },
-          { label: 'Jami summa', value: `${fmt(totals.income)} so'm`, icon: 'bi-wallet2', color: '#1E5C87' },
+          { label: `${ownerLabel} tranzaksiya`, value: transactionTotals.all || 0, icon: 'bi-receipt', color: 'var(--kc-cat-indigo)' },
+          { label: 'Tasdiqlangan', value: totals.approved, icon: 'bi-check-circle', color: 'var(--kc-ok)' },
+          { label: 'Kutilmoqda', value: totals.pending, icon: 'bi-hourglass-split', color: 'var(--kc-warn)' },
+          { label: 'Jami summa', value: `${fmt(totals.income)} so'm`, icon: 'bi-wallet2', color: 'var(--kc-cat-steel)' },
         ].map((item) => (
           <div className="col-xl-3 col-md-6" key={item.label}>
             <div className="stat-card">

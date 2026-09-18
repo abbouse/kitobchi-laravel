@@ -91,8 +91,8 @@ export function LeafletMapPicker({
     if (rKm && rKm > 0) {
       circleRef.current = L.circle(center, {
         radius: rKm * 1000,
-        color: '#0F6A46',
-        fillColor: '#0F6A46',
+        color: '#15764D',
+        fillColor: '#15764D',
         fillOpacity: 0.14,
         weight: 1,
       }).addTo(map);
@@ -147,8 +147,8 @@ export function LeafletMapPicker({
       } else {
         circleRef.current = window.L.circle(center, {
           radius: rKm * 1000,
-          color: '#0F6A46',
-          fillColor: '#0F6A46',
+          color: '#15764D',
+          fillColor: '#15764D',
           fillOpacity: 0.14,
           weight: 1,
         }).addTo(mapRef.current);
@@ -284,7 +284,7 @@ export function LeafletZonesMap({
     const bounds: Array<[number, number]> = [];
 
     points.forEach((p) => {
-      const color = p.color || '#0F6A46';
+      const color = p.color || '#15764D';
       if (p.radiusKm && p.radiusKm > 0) {
         const circle = L.circle([p.lat, p.lon], {
           radius: p.radiusKm * 1000,
@@ -375,7 +375,7 @@ export function LeafletMapView({
     points.forEach((p) => {
       const icon = L.divIcon({
         className: '',
-        html: `<div style="width:16px;height:16px;border-radius:50%;background:${p.color || '#0B0342'};border:2px solid #fff;box-shadow:0 0 0 2px ${p.color || '#0B0342'}55"></div>`,
+        html: `<div style="width:16px;height:16px;border-radius:50%;background:${p.color || '#4338CA'};border:2px solid #fff;box-shadow:0 0 0 2px ${p.color || '#4338CA'}55"></div>`,
         iconSize: [16, 16],
         iconAnchor: [8, 8],
       });

@@ -75,10 +75,10 @@ export default function SellerAiActions() {
 
       <div className="kpi-strip row g-3 mb-4">
         {[
-          { key: 'preview', label: 'Preview', icon: 'bi-eye', color: '#8A5709' },
-          { key: 'applied', label: 'Bajarilgan', icon: 'bi-check2-circle', color: '#0F6A46' },
-          { key: 'rolled_back', label: 'Rollback', icon: 'bi-arrow-counterclockwise', color: '#24509B' },
-          { key: 'all', label: 'Jami', icon: 'bi-robot', color: '#4A3A7A' },
+          { key: 'preview', label: 'Preview', icon: 'bi-eye', color: 'var(--kc-warn)' },
+          { key: 'applied', label: 'Bajarilgan', icon: 'bi-check2-circle', color: 'var(--kc-ok)' },
+          { key: 'rolled_back', label: 'Rollback', icon: 'bi-arrow-counterclockwise', color: 'var(--kc-info)' },
+          { key: 'all', label: 'Jami', icon: 'bi-robot', color: 'var(--kc-cat-violet)' },
         ].map((item) => (
           <div className="col-xl-3 col-md-6" key={item.key}>
             <div className="stat-card">

@@ -58,10 +58,10 @@ export default function Reklamalar() {
 
       <div className="kpi-strip row g-3 mb-4">
         {[
-          { label: 'Jami reklama', value: ads.length, icon: 'bi-megaphone', color: '#0B0342' },
-          { label: 'Moderatsiyada', value: pending, icon: 'bi-hourglass-split', color: '#8A5709' },
-          { label: 'Tasdiqlangan', value: ads.filter((ad) => chip(ad.status) === 'chip-success').length, icon: 'bi-check-circle', color: '#0F6A46' },
-          { label: 'Budget', value: `${fmt(totalBudget)} so'm`, icon: 'bi-cash-stack', color: '#4A3A7A' },
+          { label: 'Jami reklama', value: ads.length, icon: 'bi-megaphone', color: 'var(--kc-cat-indigo)' },
+          { label: 'Moderatsiyada', value: pending, icon: 'bi-hourglass-split', color: 'var(--kc-warn)' },
+          { label: 'Tasdiqlangan', value: ads.filter((ad) => chip(ad.status) === 'chip-success').length, icon: 'bi-check-circle', color: 'var(--kc-ok)' },
+          { label: 'Budget', value: `${fmt(totalBudget)} so'm`, icon: 'bi-cash-stack', color: 'var(--kc-cat-violet)' },
         ].map((item) => (
           <div className="col-xl-3 col-md-6" key={item.label}>
             <div className="stat-card">

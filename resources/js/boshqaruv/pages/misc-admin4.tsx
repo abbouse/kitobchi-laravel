@@ -87,7 +87,7 @@ export function Adminlar() {
           <thead><tr><th>ID</th><th>Ism</th><th>Email</th><th>Rol</th><th>Ruxsatlar</th><th>Oxirgi kirish</th><th>Holat</th><th>Amallar</th></tr></thead>
           <tbody>{admins.map(admin => (
             <tr key={admin.id}>
-              <td className="fw-semibold" style={{ color: '#0B0342' }}>#{admin.id}</td>
+              <td className="fw-semibold" style={{ color: 'var(--kc-cat-indigo)' }}>#{admin.id}</td>
               <td className="fw-semibold">{admin.name}</td>
               <td className="text-muted">{admin.email}</td>
               <td>
@@ -240,7 +240,7 @@ export function ApiClients() {
           <thead><tr><th>ID</th><th>Nomi</th><th>Credentials (App ID & Secret)</th><th>So'rovlar</th><th>Limit</th><th>Holat</th><th>Amallar</th></tr></thead>
           <tbody>{apiClients.map(client => (
             <tr key={client.id}>
-              <td className="fw-semibold" style={{ color: '#0B0342' }}>#{client.id}</td>
+              <td className="fw-semibold" style={{ color: 'var(--kc-cat-indigo)' }}>#{client.id}</td>
               <td className="fw-semibold">{client.name}{client.sellerName ? <div className="text-muted small"><i className="bi bi-shop me-1"></i>{client.sellerName}</div> : (client.sellerId ? <div className="text-muted small"><i className="bi bi-shop me-1"></i>#{client.sellerId}</div> : null)}</td>
               <td>
                 <div className="d-flex flex-column gap-1" style={{ minWidth: 260 }}>

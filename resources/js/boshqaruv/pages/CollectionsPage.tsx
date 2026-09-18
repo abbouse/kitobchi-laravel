@@ -472,7 +472,7 @@ export default function CollectionsPage() {
       <div
         key={node.key}
         className={`border rounded-4 p-2 mb-2 ${level === 2 ? 'ms-3' : ''}`}
-        style={{ borderColor: activeKey === node.key ? '#4A3A7A' : undefined, background: activeKey === node.key ? 'var(--kc-ink-tint)' : undefined }}
+        style={{ borderColor: activeKey === node.key ? 'var(--kc-cat-violet)' : undefined, background: activeKey === node.key ? 'var(--kc-ink-tint)' : undefined }}
       >
         <div className="d-flex gap-2 align-items-center mb-2 flex-wrap">
           <span className={`chip ${isGroup ? 'chip-purple' : 'chip-gray'}`}>
@@ -514,7 +514,7 @@ export default function CollectionsPage() {
             {node.items.length > 0 ? (
               <div className="mb-2">
                 {node.items.map((item, index) => (
-                  <div key={`${item.productType}-${item.productId}-${index}`} className="d-flex align-items-center gap-2 small border rounded-3 p-1 mb-1" style={{ borderColor: !item.available ? '#FCA5A5' : undefined }}>
+                  <div key={`${item.productType}-${item.productId}-${index}`} className="d-flex align-items-center gap-2 small border rounded-3 p-1 mb-1" style={{ borderColor: !item.available ? 'var(--kc-danger)' : undefined }}>
                     {item.image ? <img src={item.image} alt="" width={24} height={24} style={{ borderRadius: 4, objectFit: 'cover' }} /> : null}
                     <span className="text-truncate flex-fill">{item.name}</span>
                     <div className="input-group input-group-sm" style={{ width: 96 }}>

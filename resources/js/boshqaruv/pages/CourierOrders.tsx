@@ -155,15 +155,15 @@ export default function CourierOrders() {
       <div className="page-head"><div><h1 className="page-title">{isOrderPage ? 'Kuryer buyurtmalari' : 'Kuryerlar'}</h1><p className="page-subtitle">{isOrderPage ? 'Kuryer orderlari, statuslar, mijoz qidiruvi va jarimalar' : 'Kuryer profillari, online holat, lokatsiya, verifikatsiya va balans'}</p></div></div>
       <div className="kpi-strip row g-3 mb-4">
         {(isOrderPage ? [
-          ['Jami order', courierOrderCounts.all || 0, 'bi-truck', '#0B0342'],
-          ["Yo'lda", courierOrderCounts.in_delivery || 0, 'bi-signpost-split', '#1D4585'],
-          ['Yetkazildi', courierOrderCounts.delivered || 0, 'bi-check-circle', '#0F6A46'],
-          ['Mijoz qabul qildi', courierOrderCounts.customer_received || 0, 'bi-bag-check', '#4A3A7A'],
+          ['Jami order', courierOrderCounts.all || 0, 'bi-truck', 'var(--kc-cat-indigo)'],
+          ["Yo'lda", courierOrderCounts.in_delivery || 0, 'bi-signpost-split', 'var(--kc-cat-navy)'],
+          ['Yetkazildi', courierOrderCounts.delivered || 0, 'bi-check-circle', 'var(--kc-ok)'],
+          ['Mijoz qabul qildi', courierOrderCounts.customer_received || 0, 'bi-bag-check', 'var(--kc-cat-violet)'],
         ] : [
-          ['Kutilmoqda', courierCounts.pending || 0, 'bi-hourglass-split', '#8A5709'],
-          ['Faol kuryer', courierCounts.approved || 0, 'bi-bicycle', '#0F6A46'],
-          ['Online', onlineCount, 'bi-broadcast-pin', '#1D4585'],
-          ['Kuryer balansi', `${fmt(totalBalance)} so'm`, 'bi-wallet2', '#4A3A7A'],
+          ['Kutilmoqda', courierCounts.pending || 0, 'bi-hourglass-split', 'var(--kc-warn)'],
+          ['Faol kuryer', courierCounts.approved || 0, 'bi-bicycle', 'var(--kc-ok)'],
+          ['Online', onlineCount, 'bi-broadcast-pin', 'var(--kc-cat-navy)'],
+          ['Kuryer balansi', `${fmt(totalBalance)} so'm`, 'bi-wallet2', 'var(--kc-cat-violet)'],
         ]).map(([label, value, icon, color]) => <div className="col-xl-3 col-md-6" key={String(label)}><div className="stat-card"><div className="d-flex align-items-center gap-3"><div><div className="stat-value">{value}</div><div className="stat-label">{label}</div></div></div></div></div>)}
       </div>
 

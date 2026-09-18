@@ -623,11 +623,11 @@ export default function Orders() {
 
       <div className="kpi-strip row g-3 mb-4">
         {[
-          { label: 'Jami buyurtmalar', val: orderCounts.all || 0, icon: 'bi-receipt', color: '#0B0342' },
-          { label: 'Yetkazilgan', val: orderCounts.paid || 0, icon: 'bi-check-circle', color: '#0F6A46' },
-          { label: 'Jarayonda', val: (orderCounts.pending || 0) + (orderCounts.shipped || 0), icon: 'bi-hourglass-split', color: '#8A5709' },
-          { label: 'Qaytgan', val: orderCounts.returned || 0, icon: 'bi-arrow-counterclockwise', color: '#9A5210' },
-          { label: 'Bekor qilingan', val: orderCounts.cancelled || 0, icon: 'bi-x-circle', color: '#A32A2E' },
+          { label: 'Jami buyurtmalar', val: orderCounts.all || 0, icon: 'bi-receipt', color: 'var(--kc-cat-indigo)' },
+          { label: 'Yetkazilgan', val: orderCounts.paid || 0, icon: 'bi-check-circle', color: 'var(--kc-ok)' },
+          { label: 'Jarayonda', val: (orderCounts.pending || 0) + (orderCounts.shipped || 0), icon: 'bi-hourglass-split', color: 'var(--kc-warn)' },
+          { label: 'Qaytgan', val: orderCounts.returned || 0, icon: 'bi-arrow-counterclockwise', color: 'var(--kc-cat-orange)' },
+          { label: 'Bekor qilingan', val: orderCounts.cancelled || 0, icon: 'bi-x-circle', color: 'var(--kc-danger)' },
         ].map((item) => (
           <div className="col-xl col-md-6" key={item.label}>
             <div className="stat-card">

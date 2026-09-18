@@ -213,7 +213,7 @@ export default function LiveDashboard() {
           <div>
             <div className="d-flex align-items-center gap-2">
               <h3 style={{ color: 'var(--kc-text)', fontWeight: 600, margin: 0, letterSpacing: '-.02em' }}>Kitobchi Live Command Center</h3>
-              <span className="chip" style={{ background: isPaused ? 'var(--kc-warn-bg)' : 'var(--kc-ok-bg)', color: isPaused ? '#fcd34d' : '#8FE3C1', border: `1px solid ${isPaused ? '#DCAE63' : '#63CE9F'}`, fontSize: 10 }}>
+              <span className="chip" style={{ background: isPaused ? 'var(--kc-warn-bg)' : 'var(--kc-ok-bg)', color: isPaused ? 'var(--kc-warn)' : 'var(--kc-ok)', border: `1px solid ${isPaused ? 'var(--kc-warn)' : 'var(--kc-ok)'}`, fontSize: 10 }}>
                 {!isPaused && <span className="live-pulse"></span>}
                 {isPaused ? 'PAUSED' : 'LIVE'}
               </span>
@@ -231,7 +231,7 @@ export default function LiveDashboard() {
           <button className={`btn btn-sm ${isPaused ? 'btn-warning' : 'btn-outline-secondary'}`} onClick={() => setIsPaused(!isPaused)}>
             <i className={`bi ${isPaused ? 'bi-play-fill' : 'bi-pause-fill'}`}></i>
           </button>
-          <div className="px-2 py-1 rounded" style={{ background: 'var(--kc-bg-subtle)', color: 'var(--kc-text)', fontSize: 12, border: '1px solid #334155' }}>
+          <div className="px-2 py-1 rounded" style={{ background: 'var(--kc-bg-subtle)', color: 'var(--kc-text)', fontSize: 12, border: '1px solid var(--kc-border)' }}>
             <i className="bi bi-clock text-primary me-1"></i>{clock.toLocaleTimeString('uz-UZ')}
           </div>
           <button className="btn btn-outline-light btn-sm" onClick={goFull}><i className="bi bi-arrows-fullscreen"></i></button>
@@ -240,7 +240,7 @@ export default function LiveDashboard() {
       </div>
 
       <div className="mb-3 p-2 rounded d-flex align-items-center gap-2" style={{ background: 'var(--kc-bg-subtle)', border: '1px solid var(--kc-border-subtle)' }}>
-        <i className={`bi ${lastError ? 'bi-exclamation-triangle' : 'bi-activity'}`} style={{ fontSize: 18, color: lastError ? '#DCAE63' : '#8FE3C1' }}></i>
+        <i className={`bi ${lastError ? 'bi-exclamation-triangle' : 'bi-activity'}`} style={{ fontSize: 18, color: lastError ? 'var(--kc-warn)' : 'var(--kc-ok)' }}></i>
         <span className="fw-bold small" style={{ color: lastError ? 'var(--kc-warn)' : 'var(--kc-ok)' }}>{lastError ? 'Live ogohlantirish:' : 'Snapshot:'}</span>
         <span style={{ color: 'var(--kc-text)', fontSize: 13 }}>{lastError || `So'nggi yangilanish ${snapshot.generated_at}. Aktiv oqim: ${mainActive + sellerActive + courierActive} ta.`}</span>
       </div>
@@ -374,19 +374,19 @@ export default function LiveDashboard() {
               <AreaChart data={snapshot.chart}>
                 <defs>
                   <linearGradient id="liveRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#A9B8FF" stopOpacity={0.28} />
-                    <stop offset="100%" stopColor="#A9B8FF" stopOpacity={0} />
+                    <stop offset="0%" stopColor="#8B93F8" stopOpacity={0.28} />
+                    <stop offset="100%" stopColor="#8B93F8" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="liveOrders" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#63CE9F" stopOpacity={0.22} />
-                    <stop offset="100%" stopColor="#63CE9F" stopOpacity={0} />
+                    <stop offset="0%" stopColor="#5FC79A" stopOpacity={0.22} />
+                    <stop offset="100%" stopColor="#5FC79A" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <XAxis dataKey="hour" interval={3} />
                 <YAxis hide />
                 <Tooltip contentStyle={{ background: 'var(--kc-bg-card)', border: '1px solid var(--kc-border-subtle)', borderRadius: 'var(--kc-radius)', fontSize: 12, color: 'var(--kc-text)' }} formatter={(value: number, name) => name === 'revenue' ? `${fmt(value)} so'm` : fmt(value)} />
-                <Area type="monotone" dataKey="revenue" stroke="#A9B8FF" strokeWidth={1.6} fill="url(#liveRevenue)" />
-                <Area type="monotone" dataKey="orders" stroke="#63CE9F" strokeWidth={1.6} fill="url(#liveOrders)" />
+                <Area type="monotone" dataKey="revenue" stroke="#8B93F8" strokeWidth={1.6} fill="url(#liveRevenue)" />
+                <Area type="monotone" dataKey="orders" stroke="#5FC79A" strokeWidth={1.6} fill="url(#liveOrders)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -454,7 +454,7 @@ export default function LiveDashboard() {
               <SplitPanel title="To'lov holati" help="Orderlar to'lov holati bo'yicha guruhlanadi. Foiz jami order ichidagi ulush." rows={snapshot.payment_split.map((row) => ({ name: row.name, value: row.share, meta: `${fmt(row.count)} ta`, color: row.color }))} />
             </div>
             <div className="col-md-6">
-              <SplitPanel title="Yetkazish turi" help="Buyurtmalar delivery turi bo'yicha ajratiladi. Yonidagi summa shu turdagi orderlar tushumi." rows={snapshot.delivery_split.map((row, index) => ({ name: row.name, value: row.count, meta: `${fmt(row.revenue)} so'm`, color: ['#A9B8FF', '#63CE9F', '#DCAE63', '#E39BC0', '#06b6d4'][index % 5] }))} />
+              <SplitPanel title="Yetkazish turi" help="Buyurtmalar delivery turi bo'yicha ajratiladi. Yonidagi summa shu turdagi orderlar tushumi." rows={snapshot.delivery_split.map((row, index) => ({ name: row.name, value: row.count, meta: `${fmt(row.revenue)} so'm`, color: ['#8B93F8', '#5FC79A', '#D6A85F', '#E58BB8', '#5FBFD0'][index % 5] }))} />
             </div>
             <div className="col-12">
               <div className="card-panel">

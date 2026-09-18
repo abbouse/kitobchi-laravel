@@ -1,3 +1,4 @@
+import { usePalette, categoryColor } from '../utils/palette';
 import { useState } from 'react';
 import { Link, router, usePage } from '@inertiajs/react';
 import {
@@ -177,6 +178,7 @@ const financialHelps: Record<string, string> = {
 };
 
 export default function Dashboard() {
+  const palette = usePalette();
   const { dashboard = emptyDashboard } = usePage<{ dashboard?: DashboardPayload }>().props;
   const [chartMetric, setChartMetric] = useState<'revenue' | 'profit' | 'orders'>('revenue');
   const [showCustomRange, setShowCustomRange] = useState(dashboard.range.key === 'custom');
@@ -307,28 +309,28 @@ export default function Dashboard() {
       ) : null}
 
       <div className="kpi-strip row g-2 mb-3">
-        <Metric label="Buyurtmalar" value={dashboard.metrics.orders} icon="bi-receipt" color="#0B0342" href="/boshqaruv/orders" help={metricHelps.orders} />
-        <Metric label="Yakuniy savdo" value={dashboard.metrics.paidOrders} icon="bi-credit-card" color="#0F6A46" href="/boshqaruv/orders" help={metricHelps.paidOrders} />
-        <Metric label="Foydalanuvchilar" value={dashboard.metrics.users} icon="bi-people" color="#1B6273" href="/boshqaruv/users" help={metricHelps.users} />
-        <Metric label="Kitoblar" value={dashboard.metrics.books} icon="bi-book" color="#8A5709" href="/boshqaruv/books" help={metricHelps.books} />
-        <Metric label="Sotuvchilar" value={dashboard.metrics.sellers} icon="bi-shop" color="#8E3A63" href="/boshqaruv/sellers" help={metricHelps.sellers} />
-        <Metric label="Kuryerlar" value={dashboard.metrics.couriers} icon="bi-bicycle" color="#4A3A7A" href="/boshqaruv/couriers" help={metricHelps.couriers} />
+        <Metric label="Buyurtmalar" value={dashboard.metrics.orders} icon="bi-receipt" href="/boshqaruv/orders" help={metricHelps.orders} />
+        <Metric label="Yakuniy savdo" value={dashboard.metrics.paidOrders} icon="bi-credit-card" href="/boshqaruv/orders" help={metricHelps.paidOrders} />
+        <Metric label="Foydalanuvchilar" value={dashboard.metrics.users} icon="bi-people" href="/boshqaruv/users" help={metricHelps.users} />
+        <Metric label="Kitoblar" value={dashboard.metrics.books} icon="bi-book" href="/boshqaruv/books" help={metricHelps.books} />
+        <Metric label="Sotuvchilar" value={dashboard.metrics.sellers} icon="bi-shop" href="/boshqaruv/sellers" help={metricHelps.sellers} />
+        <Metric label="Kuryerlar" value={dashboard.metrics.couriers} icon="bi-bicycle" href="/boshqaruv/couriers" help={metricHelps.couriers} />
       </div>
 
       <div className="kpi-strip row g-2 mb-3">
-        <CompactMetric label="Premium user" value={dashboard.metrics.premiumUsers} icon="bi-stars" color="#4A3A7A" href="/boshqaruv/users" help={metricHelps.premiumUsers} />
-        <CompactMetric label="Online user" value={dashboard.metrics.onlineUsers} icon="bi-broadcast" color="#0F6A46" href="/boshqaruv/users" help={metricHelps.onlineUsers} />
-        <CompactMetric label="Kanselyariya" value={dashboard.metrics.stationeries} icon="bi-pencil-square" color="#8A5709" href="/boshqaruv/stationeries" help={metricHelps.stationeries} />
-        <CompactMetric label="Pending seller" value={dashboard.metrics.pendingSellers} icon="bi-hourglass-split" color="#8E3A63" href="/boshqaruv/sellers" help={metricHelps.pendingSellers} />
-        <CompactMetric label="Support ticket" value={dashboard.metrics.tickets} icon="bi-headset" color="#1B6273" href="/boshqaruv/tickets" help={metricHelps.tickets} />
-        <CompactMetric label="Shikoyatlar" value={dashboard.metrics.complaints} icon="bi-exclamation-triangle" color="#A32A2E" href="/boshqaruv/shikoyatlar" help={metricHelps.complaints} />
+        <CompactMetric label="Premium user" value={dashboard.metrics.premiumUsers} icon="bi-stars" href="/boshqaruv/users" help={metricHelps.premiumUsers} />
+        <CompactMetric label="Online user" value={dashboard.metrics.onlineUsers} icon="bi-broadcast" href="/boshqaruv/users" help={metricHelps.onlineUsers} />
+        <CompactMetric label="Kanselyariya" value={dashboard.metrics.stationeries} icon="bi-pencil-square" href="/boshqaruv/stationeries" help={metricHelps.stationeries} />
+        <CompactMetric label="Pending seller" value={dashboard.metrics.pendingSellers} icon="bi-hourglass-split" href="/boshqaruv/sellers" help={metricHelps.pendingSellers} />
+        <CompactMetric label="Support ticket" value={dashboard.metrics.tickets} icon="bi-headset" href="/boshqaruv/tickets" help={metricHelps.tickets} />
+        <CompactMetric label="Shikoyatlar" value={dashboard.metrics.complaints} icon="bi-exclamation-triangle" href="/boshqaruv/shikoyatlar" help={metricHelps.complaints} />
       </div>
 
       <div className="kpi-strip row g-2 mb-3">
-        <PeriodCard label="Daromad" value={money(current.revenue)} delta={previous ? change(current.revenue, previous.revenue) : null} icon="bi-cash-coin" color="#0B0342" help={periodHelps.revenue} />
-        <PeriodCard label="Yakuniy savdolar" value={fmt(current.orders)} delta={previous ? change(current.orders, previous.orders) : null} icon="bi-bag-check" color="#0F6A46" help={periodHelps.orders} />
-        <PeriodCard label="O'rtacha chek" value={money(current.aov)} delta={previous ? change(current.aov, previous.aov) : null} icon="bi-receipt" color="#8A5709" help={periodHelps.aov} />
-        <PeriodCard label="Yangi userlar" value={fmt(current.users)} delta={previous ? change(current.users, previous.users) : null} icon="bi-person-plus" color="#8E3A63" help={periodHelps.users} />
+        <PeriodCard label="Daromad" value={money(current.revenue)} delta={previous ? change(current.revenue, previous.revenue) : null} icon="bi-cash-coin" help={periodHelps.revenue} />
+        <PeriodCard label="Yakuniy savdolar" value={fmt(current.orders)} delta={previous ? change(current.orders, previous.orders) : null} icon="bi-bag-check" help={periodHelps.orders} />
+        <PeriodCard label="O'rtacha chek" value={money(current.aov)} delta={previous ? change(current.aov, previous.aov) : null} icon="bi-receipt" help={periodHelps.aov} />
+        <PeriodCard label="Yangi userlar" value={fmt(current.users)} delta={previous ? change(current.users, previous.users) : null} icon="bi-person-plus" help={periodHelps.users} />
       </div>
 
       <UnitEconomics data={dashboard.unitEconomics} monthly={dashboard.unitEconomicsMonthly} />
@@ -358,15 +360,15 @@ export default function Dashboard() {
                   <AreaChart data={dashboard.salesByMonth} margin={{ left: 4, right: 18, top: 8, bottom: 0 }}>
                     <defs>
                       <linearGradient id="dashRevenue" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#0B0342" stopOpacity={0.45} />
-                        <stop offset="100%" stopColor="#0B0342" stopOpacity={0} />
+                        <stop offset="0%" stopColor={palette.indigo} stopOpacity={0.45} />
+                        <stop offset="100%" stopColor={palette.indigo} stopOpacity={0} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#eef0f4" vertical={false} />
-                    <XAxis dataKey="month" stroke="#94a3b8" fontSize={11} interval={0} minTickGap={10} />
-                    <YAxis stroke="#94a3b8" fontSize={11} width={54} tickFormatter={(value) => chartMetric === 'orders' ? fmt(Number(value)) : compact(Number(value))} />
+                    <CartesianGrid strokeDasharray="3 3" stroke={palette.grid} vertical={false} />
+                    <XAxis dataKey="month" stroke={palette.line} tick={{ fill: palette.muted }} fontSize={11} interval={0} minTickGap={10} />
+                    <YAxis stroke={palette.line} tick={{ fill: palette.muted }} fontSize={11} width={54} tickFormatter={(value) => chartMetric === 'orders' ? fmt(Number(value)) : compact(Number(value))} />
                     <Tooltip formatter={(value: number) => chartMetric === 'orders' ? fmt(value) : money(value)} />
-                    <Area type="monotone" dataKey={chartMetric} stroke={chartMetric === 'revenue' ? '#0B0342' : chartMetric === 'profit' ? '#0F6A46' : '#8A5709'} fill={chartMetric === 'revenue' ? 'url(#dashRevenue)' : 'transparent'} strokeWidth={2} />
+                    <Area type="monotone" dataKey={chartMetric} stroke={chartMetric === 'revenue' ? palette.indigo : chartMetric === 'profit' ? palette.green : palette.amber} fill={chartMetric === 'revenue' ? 'url(#dashRevenue)' : 'transparent'} strokeWidth={2} />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
@@ -385,14 +387,14 @@ export default function Dashboard() {
                 <ResponsiveContainer width="100%" height={190}>
                   <PieChart>
                     <Pie data={dashboard.categoryShare} dataKey="value" innerRadius={52} outerRadius={78} paddingAngle={3}>
-                      {dashboard.categoryShare.map((row) => <Cell key={row.name} fill={row.color} />)}
+                      {dashboard.categoryShare.map((row, index) => <Cell key={row.name} fill={categoryColor(palette, index)} />)}
                     </Pie>
                     <Tooltip formatter={(value: number) => `${value}%`} />
                   </PieChart>
                 </ResponsiveContainer>
-                {dashboard.categoryShare.map((row) => (
+                {dashboard.categoryShare.map((row, index) => (
                   <div key={row.name} className="d-flex justify-content-between py-2 border-bottom small">
-                    <span><i className="bi bi-circle-fill me-2" style={{ color: row.color }}></i>{row.name}</span>
+                    <span><i className="bi bi-circle-fill me-2" style={{ color: categoryColor(palette, index) }}></i>{row.name}</span>
                     <strong>{row.value}% · {money(row.revenue)}</strong>
                   </div>
                 ))}
@@ -451,14 +453,14 @@ export default function Dashboard() {
 function BusinessKpis({ dashboard }: { dashboard: DashboardPayload }) {
   const b = dashboard.business;
   const rows = [
-    { label: 'Yakuniy savdo ulushi', value: `${b.paidRate || 0}%`, meta: 'Yakuniy savdo / jami', icon: 'bi-credit-card', color: '#0F6A46', help: businessHelps['Yakuniy savdo ulushi'] },
-    { label: 'Yakunlash ulushi', value: `${b.completionRate || 0}%`, meta: 'Yakunlangan / jami', icon: 'bi-check2-circle', color: '#0B0342', help: businessHelps['Yakunlash ulushi'] },
-    { label: 'Bekor ulushi', value: `${b.cancellationRate || 0}%`, meta: 'Bekor va qaytgan', icon: 'bi-x-circle', color: '#A32A2E', help: businessHelps['Bekor ulushi'] },
-    { label: 'Qayta xaridor', value: `${b.repeatBuyerRate || 0}%`, meta: `${fmt(b.repeatBuyers)} foydalanuvchi`, icon: 'bi-arrow-repeat', color: '#4A3A7A', help: businessHelps['Qayta xaridor'] },
-    { label: 'Xaridorlar', value: fmt(b.buyingUsers), meta: 'Paid order qilgan', icon: 'bi-people', color: '#1B6273', help: businessHelps.Xaridorlar },
-    { label: 'Karta ulangan', value: fmt(b.cardUsers), meta: 'Tasdiqlangan karta', icon: 'bi-credit-card-2-front', color: '#8E3A63', help: businessHelps['Karta ulangan'] },
-    { label: "Order / xaridor", value: String(b.avgOrdersPerBuyer || 0), meta: "O'rtacha chastota", icon: 'bi-bag-check', color: '#8A5709', help: businessHelps["Order / xaridor"] },
-    { label: "Daromad / xaridor", value: money(b.avgRevenuePerBuyer), meta: "O'rtacha paid revenue", icon: 'bi-cash-stack', color: '#0C5C3C', help: businessHelps["Daromad / xaridor"] },
+    { label: 'Yakuniy savdo ulushi', value: `${b.paidRate || 0}%`, meta: 'Yakuniy savdo / jami', icon: 'bi-credit-card', help: businessHelps['Yakuniy savdo ulushi'] },
+    { label: 'Yakunlash ulushi', value: `${b.completionRate || 0}%`, meta: 'Yakunlangan / jami', icon: 'bi-check2-circle', help: businessHelps['Yakunlash ulushi'] },
+    { label: 'Bekor ulushi', value: `${b.cancellationRate || 0}%`, meta: 'Bekor va qaytgan', icon: 'bi-x-circle', help: businessHelps['Bekor ulushi'] },
+    { label: 'Qayta xaridor', value: `${b.repeatBuyerRate || 0}%`, meta: `${fmt(b.repeatBuyers)} foydalanuvchi`, icon: 'bi-arrow-repeat', help: businessHelps['Qayta xaridor'] },
+    { label: 'Xaridorlar', value: fmt(b.buyingUsers), meta: 'Paid order qilgan', icon: 'bi-people', help: businessHelps.Xaridorlar },
+    { label: 'Karta ulangan', value: fmt(b.cardUsers), meta: 'Tasdiqlangan karta', icon: 'bi-credit-card-2-front', help: businessHelps['Karta ulangan'] },
+    { label: "Order / xaridor", value: String(b.avgOrdersPerBuyer || 0), meta: "O'rtacha chastota", icon: 'bi-bag-check', help: businessHelps["Order / xaridor"] },
+    { label: "Daromad / xaridor", value: money(b.avgRevenuePerBuyer), meta: "O'rtacha paid revenue", icon: 'bi-cash-stack', help: businessHelps["Daromad / xaridor"] },
   ];
 
   return (
@@ -473,12 +475,12 @@ function BusinessKpis({ dashboard }: { dashboard: DashboardPayload }) {
         {rows.map((row) => (
           <div className="col-xl-3 col-md-6" key={row.label}>
             <div className="mini-stat h-100">
-              <i className={`bi ${row.icon}`} style={{ color: row.color }}></i>
+              <i className={`bi ${row.icon}`} style={{ color: 'var(--kc-text-muted)' }}></i>
               <span>
                 <span className="d-inline-flex align-items-center gap-1">{row.label}<InfoHint text={row.help} /></span>
                 <small className="d-block text-muted">{row.meta}</small>
               </span>
-              <strong style={{ color: row.color }}>{row.value}</strong>
+              <strong>{row.value}</strong>
             </div>
           </div>
         ))}
@@ -552,10 +554,10 @@ function formatDuration(seconds = 0) {
 type UnitEconomicsMonth = DashboardPayload['unitEconomicsMonthly']['months'][number];
 
 function UnitEconomics({ data, monthly }: { data: DashboardPayload['unitEconomics']; monthly: DashboardPayload['unitEconomicsMonthly'] }) {
-  const ratioTone = data.ltvCacRatio >= 3 ? '#0F6A46' : data.ltvCacRatio >= 1 ? '#8A5709' : '#A32A2E';
-  const refundTone = data.refundRate > 5 ? '#A32A2E' : data.refundRate > 2 ? '#8A5709' : '#0F6A46';
-  const cancelTone = data.cancelRate > 15 ? '#A32A2E' : data.cancelRate > 8 ? '#8A5709' : '#0F6A46';
-  const marginTone = data.marginPct >= 0 ? '#0C5C3C' : '#A32A2E';
+  const ratioTone = data.ltvCacRatio >= 3 ? 'var(--kc-ok)' : data.ltvCacRatio >= 1 ? 'var(--kc-warn)' : 'var(--kc-danger)';
+  const refundTone = data.refundRate > 5 ? 'var(--kc-danger)' : data.refundRate > 2 ? 'var(--kc-warn)' : 'var(--kc-ok)';
+  const cancelTone = data.cancelRate > 15 ? 'var(--kc-danger)' : data.cancelRate > 8 ? 'var(--kc-warn)' : 'var(--kc-ok)';
+  const marginTone = data.marginPct >= 0 ? 'var(--kc-cat-dgreen)' : 'var(--kc-danger)';
   const months = monthly?.months || [];
 
   const inputRows: Array<{ label: string; get: (m: UnitEconomicsMonth) => string }> = [
@@ -583,15 +585,15 @@ function UnitEconomics({ data, monthly }: { data: DashboardPayload['unitEconomic
   ];
 
   const cards = [
-    { l: 'CAC', icon: 'bi-cash-coin', v: data.hasMarketingData ? money(data.cac) : '—', s: data.hasMarketingData ? `${fmt(data.newBuyers)} yangi xaridor` : 'Marketing xarajat kiritilmagan', c: '#3A3475', help: "Customer Acquisition Cost: davrdagi marketing xarajati / yangi xaridorlar. Marketing xarajati Chiqimlar bo'limidagi \"Marketing va reklama\" kategoriyasidan olinadi." },
-    { l: 'LTV (margin)', icon: 'bi-gem', v: money(data.ltv), s: `ARPU ${money(data.arpu)}`, c: '#0F6A46', help: "Lifetime Value: har bir xaridorga to'g'ri keladigan umumiy platforma marjasi (contribution / jami xaridorlar). ARPU — o'rtacha yalpi tushum/xaridor." },
+    { l: 'CAC', icon: 'bi-cash-coin', v: data.hasMarketingData ? money(data.cac) : '—', s: data.hasMarketingData ? `${fmt(data.newBuyers)} yangi xaridor` : 'Marketing xarajat kiritilmagan', c: '', help: "Customer Acquisition Cost: davrdagi marketing xarajati / yangi xaridorlar. Marketing xarajati Chiqimlar bo'limidagi \"Marketing va reklama\" kategoriyasidan olinadi." },
+    { l: 'LTV (margin)', icon: 'bi-gem', v: money(data.ltv), s: `ARPU ${money(data.arpu)}`, c: '', help: "Lifetime Value: har bir xaridorga to'g'ri keladigan umumiy platforma marjasi (contribution / jami xaridorlar). ARPU — o'rtacha yalpi tushum/xaridor." },
     { l: 'LTV : CAC', icon: 'bi-speedometer2', v: data.hasMarketingData ? `${data.ltvCacRatio}×` : '—', s: data.ltvCacRatio >= 3 ? "Sog'lom (≥3)" : data.ltvCacRatio >= 1 ? "O'rtacha" : 'Past', c: ratioTone, help: "Investor uchun asosiy nisbat. ≥3 sog'lom, 1–3 o'rtacha, <1 — mijoz jalb qilish zarar keltiryapti." },
-    { l: 'Payback', icon: 'bi-arrow-repeat', v: data.hasMarketingData && data.paybackOrders > 0 ? `${data.paybackOrders} order` : '—', s: 'CAC ni qoplash', c: '#4A3A7A', help: 'CAC ni qoplash uchun bitta xaridordan necha order kerak (CAC / contribution-per-order).' },
+    { l: 'Payback', icon: 'bi-arrow-repeat', v: data.hasMarketingData && data.paybackOrders > 0 ? `${data.paybackOrders} order` : '—', s: 'CAC ni qoplash', c: '', help: 'CAC ni qoplash uchun bitta xaridordan necha order kerak (CAC / contribution-per-order).' },
     { l: 'Margin / order', icon: 'bi-cash-stack', v: money(data.contributionPerOrder), s: `Gross ${money(data.grossPerOrder)}`, c: marginTone, help: "Har bir yakuniy orderdan qoladigan platforma marjasi (soliqdan oldingi contribution). Gross — o'rtacha order summasi." },
     { l: 'Gross margin', icon: 'bi-percent', v: `${data.marginPct}%`, s: 'Contribution / tushum', c: marginTone, help: 'Contribution margin yalpi tushumga nisbatan foizda. Manfiy bo\'lsa xarajat tushumdan oshgan.' },
     { l: 'Refund rate', icon: 'bi-arrow-return-left', v: `${data.refundRate}%`, s: `${fmt(data.refundOrders)} order · ${money(data.refundAmount)}`, c: refundTone, help: 'Qaytarilgan (refund) orderlar ulushi va summasi. Sold.refund_total_amount asosida.' },
     { l: 'Cancel rate', icon: 'bi-x-circle', v: `${data.cancelRate}%`, s: 'Bekor + qaytgan', c: cancelTone, help: 'Davrda yaratilgan orderlardan bekor qilingan yoki qaytganlari ulushi.' },
-    { l: 'Repeat', icon: 'bi-arrow-repeat', v: `${data.repeatRate}%`, s: `${fmt(data.repeatBuyers)} qaytgan xaridor`, c: '#8E3A63', help: "Bir martadan ko'p xarid qilgan xaridorlar ulushi (lifetime)." },
+    { l: 'Repeat', icon: 'bi-arrow-repeat', v: `${data.repeatRate}%`, s: `${fmt(data.repeatBuyers)} qaytgan xaridor`, c: '', help: "Bir martadan ko'p xarid qilgan xaridorlar ulushi (lifetime)." },
   ];
 
   return (
@@ -610,12 +612,12 @@ function UnitEconomics({ data, monthly }: { data: DashboardPayload['unitEconomic
         {cards.map((card) => (
           <div className="col-xl-2 col-lg-3 col-md-4 col-6" key={card.l}>
             <div className="mini-stat h-100">
-              <i className={`bi ${card.icon}`} style={{ color: card.c }}></i>
+              <i className={`bi ${card.icon}`} style={{ color: card.c || 'var(--kc-text-muted)' }}></i>
               <span>
                 <span className="d-inline-flex align-items-center gap-1">{card.l}<InfoHint text={card.help} /></span>
                 <small className="d-block text-muted">{card.s}</small>
               </span>
-              <strong style={{ color: card.c }}>{card.v}</strong>
+              <strong style={card.c ? { color: card.c } : undefined}>{card.v}</strong>
             </div>
           </div>
         ))}
@@ -677,20 +679,20 @@ function PartnerEconomics({ data }: { data: DashboardPayload['partnerEconomics']
   }
 
   const s = data.summary;
-  const ratioTone = s.ltvCacRatio === null ? '#565D6D' : s.ltvCacRatio >= 3 ? '#0F6A46' : s.ltvCacRatio >= 1 ? '#8A5709' : '#A32A2E';
-  const churnTone = s.churnRateMrr > 5 ? '#A32A2E' : s.churnRateMrr > 2 ? '#8A5709' : '#0F6A46';
-  const netTone = s.netRetention === null ? '#565D6D' : s.netRetention >= 100 ? '#0C5C3C' : '#8A5709';
+  const ratioTone = s.ltvCacRatio === null ? 'var(--kc-text-soft)' : s.ltvCacRatio >= 3 ? 'var(--kc-ok)' : s.ltvCacRatio >= 1 ? 'var(--kc-warn)' : 'var(--kc-danger)';
+  const churnTone = s.churnRateMrr > 5 ? 'var(--kc-danger)' : s.churnRateMrr > 2 ? 'var(--kc-warn)' : 'var(--kc-ok)';
+  const netTone = s.netRetention === null ? 'var(--kc-text-soft)' : s.netRetention >= 100 ? 'var(--kc-cat-dgreen)' : 'var(--kc-warn)';
 
   const cards: Array<{ l: string; icon: string; v: string; s: string; c: string; help: string }> = [
-    { l: 'Faol hamkor', icon: 'bi-people-fill', v: fmt(data.currentPartners), s: `MRR ${money(data.currentMrr)}`, c: '#0B0342', help: "Joriy oyda faol (to'lovi o'tgan) premium sotuvchilar soni va ularning umumiy oylik takrorlanuvchi daromadi (MRR)." },
-    { l: 'ARPC', icon: 'bi-cash-coin', v: money(s.arpc), s: 'Hamkor boshiga MRR', c: '#0F6A46', help: "Average Revenue Per Customer — faol hamkor boshiga o'rtacha oylik daromad, oylik jadval o'rtachasi." },
-    { l: 'CAC', icon: 'bi-magnet', v: data.hasMarketingData && s.cac !== null ? money(s.cac) : '—', s: 'Marketing / yangi hamkor', c: '#3A3475', help: "Marketing xarajati / davrdagi yangi premium hamkorlar. Chiqimlar bo'limida marketing kategoriyasi kiritilishi kerak." },
-    { l: 'CAC Payback', icon: 'bi-hourglass-split', v: s.cacPaybackMonths !== null ? `${s.cacPaybackMonths} oy` : '—', s: 'CAC ni qoplash muddati', c: '#4A3A7A', help: 'CAC ni ARPC bilan qoplash uchun kerak bo\'ladigan oylar soni (CAC / ARPC).' },
+    { l: 'Faol hamkor', icon: 'bi-people-fill', v: fmt(data.currentPartners), s: `MRR ${money(data.currentMrr)}`, c: '', help: "Joriy oyda faol (to'lovi o'tgan) premium sotuvchilar soni va ularning umumiy oylik takrorlanuvchi daromadi (MRR)." },
+    { l: 'ARPC', icon: 'bi-cash-coin', v: money(s.arpc), s: 'Hamkor boshiga MRR', c: '', help: "Average Revenue Per Customer — faol hamkor boshiga o'rtacha oylik daromad, oylik jadval o'rtachasi." },
+    { l: 'CAC', icon: 'bi-magnet', v: data.hasMarketingData && s.cac !== null ? money(s.cac) : '—', s: 'Marketing / yangi hamkor', c: '', help: "Marketing xarajati / davrdagi yangi premium hamkorlar. Chiqimlar bo'limida marketing kategoriyasi kiritilishi kerak." },
+    { l: 'CAC Payback', icon: 'bi-hourglass-split', v: s.cacPaybackMonths !== null ? `${s.cacPaybackMonths} oy` : '—', s: 'CAC ni qoplash muddati', c: '', help: 'CAC ni ARPC bilan qoplash uchun kerak bo\'ladigan oylar soni (CAC / ARPC).' },
     { l: 'Churn · MRR', icon: 'bi-graph-down-arrow', v: pct(s.churnRateMrr), s: "Oylik, MRR bo'yicha", c: churnTone, help: "Oy davomida bekor bo'lgan MRR / oy boshidagi MRR, oylar bo'yicha o'rtacha." },
     { l: 'Churn · hamkor', icon: 'bi-person-dash', v: pct(s.churnRateCount), s: "Oylik, soni bo'yicha", c: churnTone, help: "Oy davomida ketgan hamkorlar soni / oy boshidagi hamkorlar soni, oylar bo'yicha o'rtacha." },
-    { l: 'Gross Retention', icon: 'bi-shield-check', v: pct(s.grossRetention), s: 'Churn hisobga olib', c: '#0C5C3C', help: "(Oy boshi MRR − bekor bo'lgan MRR) / oy boshi MRR. 100% dan yuqori bo'lmaydi." },
+    { l: 'Gross Retention', icon: 'bi-shield-check', v: pct(s.grossRetention), s: 'Churn hisobga olib', c: '', help: "(Oy boshi MRR − bekor bo'lgan MRR) / oy boshi MRR. 100% dan yuqori bo'lmaydi." },
     { l: 'Net Retention', icon: 'bi-arrow-up-right-circle', v: pct(s.netRetention), s: 'Upgrade/downgrade bilan', c: netTone, help: "Mavjud hamkorlarning joriy MRR'si / ularning oy boshidagi MRR'si. 100% dan yuqori bo'lsa — mavjud hamkorlar ko'proq to'lamoqda." },
-    { l: 'Lifetime', icon: 'bi-infinity', v: s.lifetimeMonths !== null ? `${s.lifetimeMonths} oy` : '—', s: '1 / churn rate', c: '#1E5C87', help: "Hamkorning o'rtacha faollik davomiyligi (oyda): 1 / churn rate (soni bo'yicha)." },
+    { l: 'Lifetime', icon: 'bi-infinity', v: s.lifetimeMonths !== null ? `${s.lifetimeMonths} oy` : '—', s: '1 / churn rate', c: '', help: "Hamkorning o'rtacha faollik davomiyligi (oyda): 1 / churn rate (soni bo'yicha)." },
     { l: 'LTV : CAC', icon: 'bi-speedometer2', v: s.ltvCacRatio !== null ? `${s.ltvCacRatio}×` : '—', s: s.ltv !== null ? `LTV ${money(s.ltv)}` : 'LTV —', c: ratioTone, help: "Lifetime Value (ARPC × Lifetime) / CAC. ≥3 sog'lom signal, <1 — hamkor jalb qilish zarar keltiryapti." },
   ];
 
@@ -734,12 +736,12 @@ function PartnerEconomics({ data }: { data: DashboardPayload['partnerEconomics']
         {cards.map((card) => (
           <div className="col-xl-2 col-lg-3 col-md-4 col-6" key={card.l}>
             <div className="mini-stat h-100">
-              <i className={`bi ${card.icon}`} style={{ color: card.c }}></i>
+              <i className={`bi ${card.icon}`} style={{ color: card.c || 'var(--kc-text-muted)' }}></i>
               <span>
                 <span className="d-inline-flex align-items-center gap-1">{card.l}<InfoHint text={card.help} /></span>
                 <small className="d-block text-muted">{card.s}</small>
               </span>
-              <strong style={{ color: card.c }}>{card.v}</strong>
+              <strong style={card.c ? { color: card.c } : undefined}>{card.v}</strong>
             </div>
           </div>
         ))}
@@ -928,7 +930,7 @@ function SellerScorecard({ rows }: { rows: DashboardPayload['sellerScorecard'] }
   );
 }
 
-function Metric({ label, value = 0, icon, color, href, help }: { label: string; value?: number; icon: string; color: string; href: string; help?: string }) {
+function Metric({ label, value = 0, icon, href, help }: { label: string; value?: number; icon: string; href: string; help?: string }) {
   return (
     <div className="col-xl-2 col-md-4 col-6">
       <Link href={href} className="stat-card text-decoration-none d-block h-100">
@@ -945,7 +947,7 @@ function Metric({ label, value = 0, icon, color, href, help }: { label: string; 
   );
 }
 
-function PeriodCard({ label, value, delta, icon, color, help }: { label: string; value: string; delta: number | null; icon: string; color: string; help?: string }) {
+function PeriodCard({ label, value, delta, icon, help }: { label: string; value: string; delta: number | null; icon: string; help?: string }) {
   return (
     <div className="col-xl-3 col-md-6">
       <div className="stat-card h-100">
@@ -969,7 +971,7 @@ function PeriodCard({ label, value, delta, icon, color, help }: { label: string;
   );
 }
 
-function CompactMetric({ label, value = 0, icon, color, href, help }: { label: string; value?: number; icon: string; color: string; href: string; help?: string }) {
+function CompactMetric({ label, value = 0, icon, href, help }: { label: string; value?: number; icon: string; href: string; help?: string }) {
   return (
     <div className="col-xl-2 col-md-4 col-6">
       <Link href={href} className="stat-card text-decoration-none d-block h-100">
@@ -990,19 +992,26 @@ function DistributionPanel({ title, rows, help }: { title: string; rows: Array<{
   return <div className="col-xl-4"><div className="card-panel h-100"><div className="d-flex align-items-center gap-2 mb-3"><div className="panel-title">{title}</div>{help ? <InfoHint text={help} /> : null}</div>{rows.length ? rows.slice(0, 8).map((row) => <div className="d-flex justify-content-between gap-3 py-2 border-bottom small" key={row.name}><span className="text-muted text-truncate">{row.name}</span><strong className="text-nowrap">{row.value}</strong></div>) : <div className="text-muted small">Ma'lumot topilmadi.</div>}</div></div>;
 }
 
+// Real P&L qatorlari: rang faqat ishorani bildiradi — kirim, chiqim yoki
+// yakuniy natija. Har bir qatorga alohida rang berilmaydi.
+function toneOfRow(row: { raw: number; isResult?: boolean }): string {
+  if (row.isResult) return row.raw >= 0 ? 'var(--kc-ink)' : 'var(--kc-danger)';
+  return Number(row.raw) >= 0 ? 'var(--kc-ok)' : 'var(--kc-danger)';
+}
+
 function FinancialPanel({ dashboard }: { dashboard: DashboardPayload }) {
   const f = dashboard.financial;
   const rows = [
-    { label: 'Yakuniy savdo tushumi', raw: f.grossRevenue, color: '#0F6A46' },
-    { label: 'Delivery income', raw: f.deliveryIncome, color: '#0B0342' },
-    { label: 'Seller commission', raw: f.commission, color: '#4A3A7A' },
-    { label: 'Promo discount', raw: -f.promoDiscount, color: '#A32A2E' },
-    { label: 'Cashback', raw: -f.cashback, color: '#A32A2E' },
-    { label: 'Courier payout', raw: -f.courierPayout, color: '#8A5709' },
-    { label: 'Kiritilgan chiqimlar', raw: -f.manualExpenses, color: '#A32A2E' },
-    { label: 'Provider komissiyasi', raw: -f.providerFee, color: '#9A5210' },
-    { label: 'Soliq', raw: -f.tax, color: '#8E2226' },
-    { label: 'Marketplace marjasi', raw: f.platformProfit, color: '#0C5C3C' },
+    { label: 'Yakuniy savdo tushumi', raw: f.grossRevenue },
+    { label: 'Delivery income', raw: f.deliveryIncome },
+    { label: 'Seller commission', raw: f.commission },
+    { label: 'Promo discount', raw: -f.promoDiscount },
+    { label: 'Cashback', raw: -f.cashback },
+    { label: 'Courier payout', raw: -f.courierPayout },
+    { label: 'Kiritilgan chiqimlar', raw: -f.manualExpenses },
+    { label: 'Provider komissiyasi', raw: -f.providerFee },
+    { label: 'Soliq', raw: -f.tax },
+    { label: 'Marketplace marjasi', raw: f.platformProfit, isResult: true },
   ];
 
   return (
@@ -1019,9 +1028,9 @@ function FinancialPanel({ dashboard }: { dashboard: DashboardPayload }) {
           {rows.map((row) => (
             <div className="col-md-6" key={row.label}>
               <div className="mini-stat">
-                <i className="bi bi-dot" style={{ color: row.color }}></i>
+                <i className="bi bi-dot" style={{ color: toneOfRow(row) }}></i>
                 <span className="d-inline-flex align-items-center gap-1">{row.label}<InfoHint text={financialHelps[row.label]} /></span>
-                <strong style={{ color: row.color }}>{money(Number(row.raw))}</strong>
+                <strong style={{ color: toneOfRow(row) }}>{money(Number(row.raw))}</strong>
               </div>
             </div>
           ))}

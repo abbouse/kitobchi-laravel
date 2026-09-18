@@ -103,10 +103,10 @@ export default function SellerOrders() {
 
       <div className="kpi-strip row g-3 mb-4">
         {[
-          { label: 'Kutilmoqda', value: sellerCounts.pending || 0, icon: 'bi-hourglass-split', color: '#8A5709' },
-          { label: 'Faol', value: sellerCounts.approved || 0, icon: 'bi-shop', color: '#0F6A46' },
-          { label: 'Bekor qilingan', value: sellerCounts.rejected || 0, icon: 'bi-x-octagon', color: '#A32A2E' },
-          { label: "To'lanadigan balans", value: `${fmt(totalBalance)} so'm`, icon: 'bi-wallet2', color: '#4A3A7A' },
+          { label: 'Kutilmoqda', value: sellerCounts.pending || 0, icon: 'bi-hourglass-split', color: 'var(--kc-warn)' },
+          { label: 'Faol', value: sellerCounts.approved || 0, icon: 'bi-shop', color: 'var(--kc-ok)' },
+          { label: 'Bekor qilingan', value: sellerCounts.rejected || 0, icon: 'bi-x-octagon', color: 'var(--kc-danger)' },
+          { label: "To'lanadigan balans", value: `${fmt(totalBalance)} so'm`, icon: 'bi-wallet2', color: 'var(--kc-cat-violet)' },
         ].map((item) => (
           <div className="col-xl-3 col-md-6" key={item.label}>
             <div className="stat-card">

@@ -67,10 +67,10 @@ export default function Products() {
 
       <div className="kpi-strip row g-3 mb-4">
         {[
-          { label: 'Jami mahsulot', value: products.length, icon: 'bi-box-seam', color: '#0B0342' },
-          { label: 'Ombor jami', value: fmt(totalStock), icon: 'bi-stack', color: '#0F6A46' },
-          { label: 'Kam qolgan', value: lowStock, icon: 'bi-exclamation-triangle', color: '#8A5709' },
-          { label: 'Moderatsiyada', value: products.filter((product) => !product.approved).length, icon: 'bi-shield-check', color: '#4A3A7A' },
+          { label: 'Jami mahsulot', value: products.length, icon: 'bi-box-seam', color: 'var(--kc-cat-indigo)' },
+          { label: 'Ombor jami', value: fmt(totalStock), icon: 'bi-stack', color: 'var(--kc-ok)' },
+          { label: 'Kam qolgan', value: lowStock, icon: 'bi-exclamation-triangle', color: 'var(--kc-warn)' },
+          { label: 'Moderatsiyada', value: products.filter((product) => !product.approved).length, icon: 'bi-shield-check', color: 'var(--kc-cat-violet)' },
         ].map((item) => (
           <div className="col-xl-3 col-md-6" key={item.label}>
             <div className="stat-card">
