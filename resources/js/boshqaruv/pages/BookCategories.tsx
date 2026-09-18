@@ -1,3 +1,4 @@
+import CategoryImageField, { categoryImageUrl } from '../components/CategoryImageField';
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { router, usePage } from '@inertiajs/react';
@@ -50,7 +51,7 @@ export default function BookCategories() {
               {pagination.paginated.map((category) => (
                 <tr key={category.id}>
                   <td className="cell-id">#{category.id}</td>
-                  <td><div className="fw-semibold">{category.icon ? `${category.icon} ` : ''}{category.name}</div><div className="text-muted small">{[category.nameRu, category.nameEn, category.nameJa].filter(Boolean).join(' / ')}</div></td>
+                  <td><div className="d-flex align-items-center gap-2"><div className="thumb-square" style={{ width: 32, height: 32 }}>{categoryImageUrl(category.icon) ? <img src={categoryImageUrl(category.icon)!} alt="" /> : <span className="cell-sub">{(category.name || '?').slice(0, 1).toUpperCase()}</span>}</div><div><div className="cell-strong">{category.name}</div><div className="text-muted small">{[category.nameRu, category.nameEn, category.nameJa].filter(Boolean).join(' / ')}</div></div></div></td>
                   <td className="text-muted">{category.slug || '—'}</td>
                   <td>{category.itemsCount} ta</td>
                   <td><button className={`chip border-0 ${category.active ? 'chip-success' : 'chip-gray'}`} onClick={() => toggle(category)}>{category.active ? 'Faol' : 'Nofaol'}</button></td>
@@ -89,7 +90,7 @@ function CategoryFormModal({ category, baseUrl, onHide }: { category: Partial<Ca
           <Field name="name_ru" label="Nomi RU" defaultValue={category?.nameRu} required />
           <Field name="name_en" label="Nomi EN" defaultValue={category?.nameEn} />
           <Field name="name_ja" label="Nomi JA" defaultValue={category?.nameJa} />
-          <Field name="icon" label="Icon" defaultValue={category?.icon} />
+          <CategoryImageField current={category?.icon} />
           <div className="col-md-6 d-flex align-items-end"><label className="form-check mb-2"><input className="form-check-input" type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} /><span className="form-check-label ms-2">Faol</span></label></div>
           <Field name="ofd_ikpu_code" label="OFD IKPU (MXIK) kodi" defaultValue={category?.ofdIkpuCode} />
           <Field name="ofd_package_code" label="OFD qadoq kodi" defaultValue={category?.ofdPackageCode} />

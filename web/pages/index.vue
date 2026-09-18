@@ -50,11 +50,16 @@
               <div class="w-20 h-20 md:w-30 md:h-30 rounded-full overflow-hidden border-2 border-transparent group-hover/item:border-primary-500 transition-all duration-300 bg-secondary-100 flex items-center justify-center shadow-xs">
                 <div class="relative w-full h-full flex items-center justify-center p-3">
                   <img
-                    :src="cat.image || '/images/logo/logo_blue.png'"
+                    v-if="cat.image"
+                    :src="cat.image"
                     :alt="cat.name"
                     class="w-full h-full object-contain transform transition-transform duration-500 group-hover/item:scale-110"
                     loading="lazy"
                   />
+                  <span
+                    v-else
+                    class="font-bold text-primary-500 text-xl md:text-3xl leading-none select-none transition-transform duration-500 group-hover/item:scale-110"
+                  >{{ cat.letter }}</span>
                 </div>
               </div>
               <span class="font-medium md:font-semibold group-hover/item:font-bold group-hover/item:underline text-xs md:text-sm leading-tight text-center text-neutral-900 group-hover/item:text-primary-500 transition-all duration-300 truncate max-w-full">
@@ -322,20 +327,23 @@ const banners = computed(() => {
 
 const categories = computed(() => {
   const books = catRes.value?.data?.book || []
-  if (Array.isArray(books) && books.length > 0) {
-    return books.map((c: any) => {
-      let icon = c.icon || ''
-      if (icon && !icon.startsWith('http')) {
-        icon = `/storage/${icon}`
-      }
-      return {
-        id: c.id,
-        name: c.name_uz || c.name || 'Katalog',
-        image: icon || '/images/logo/logo_blue.png'
-      }
-    })
-  }
-  return []
+  if (!Array.isArray(books) || books.length === 0) return []
+
+  return books.map((c: any) => {
+    const raw = String(c.icon || '')
+    // Eski ma'lumotlarda `icon` emoji bo'lishi mumkin — u rasm yo'li emas,
+    // shuning uchun faqat nuqta yoki slash bor qiymat rasm deb qaraladi.
+    const isPath = raw !== '' && /[/.]/.test(raw)
+    const name = c.name_uz || c.name || 'Katalog'
+    return {
+      id: c.id,
+      name,
+      // Rasm bo'lmasa umumiy logotip emas, kategoriya nomining bosh harfi
+      // ko'rsatiladi — shunda kataloglar qatori bo'sh ko'rinmaydi.
+      image: isPath ? (raw.startsWith('http') ? raw : `/storage/${raw}`) : '',
+      letter: String(name).trim().charAt(0).toUpperCase() || '#'
+    }
+  })
 })
 
 const newBooks = computed(() => {

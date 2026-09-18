@@ -1835,7 +1835,7 @@ class SearchController extends Controller
                         ->get();
 
                     $statCats = StationeryCategory::where('is_active', 1)
-                        ->select('id', 'name_uz', 'name_ru', 'name_en')
+                        ->select('id', 'name_uz', 'name_ru', 'name_en', 'icon')
                         ->orderBy('name_uz')
                         ->get();
 

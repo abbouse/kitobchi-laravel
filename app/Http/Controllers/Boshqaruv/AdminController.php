@@ -5804,7 +5804,11 @@ PROMPT;
             'name_ru' => ['required', 'string', 'max:255'],
             'name_en' => ['nullable', 'string', 'max:255'],
             'name_ja' => ['nullable', 'string', 'max:255'],
-            'icon' => ['nullable', 'string', 'max:32'],
+            // `icon` endi rasm yo'lini saqlaydi (masalan categories/ab12.png).
+            // Eski qiymatlar (emoji) ham buzilmasligi uchun uzunlik oshirildi.
+            'icon' => ['nullable', 'string', 'max:255'],
+            'icon_image' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp,svg', 'max:2048'],
+            'icon_remove' => ['nullable', 'boolean'],
             'is_active' => ['nullable', 'boolean'],
             // OFD fiskalizatsiya — kategoriya darajasidagi kodlar
             'ofd_ikpu_code' => ['nullable', 'string', 'max:20'],
@@ -5820,8 +5824,15 @@ PROMPT;
             'is_active' => $request->boolean('is_active'),
         ];
 
+        // Rasm faqat yangi fayl yuklanganda yoki "o'chirish" belgilanganda
+        // o'zgaradi — aks holda tahrirlash paytida mavjud rasm yo'qolib
+        // ketardi (forma faylni qayta yubormaydi).
         if (Schema::hasColumn($table, 'icon')) {
-            $data['icon'] = $validated['icon'] ?? null;
+            if ($request->hasFile('icon_image')) {
+                $data['icon'] = $request->file('icon_image')->store('categories', 'public');
+            } elseif ($request->boolean('icon_remove')) {
+                $data['icon'] = null;
+            }
         }
 
         if (Schema::hasColumn($table, 'ofd_ikpu_code') && $request->has('ofd_ikpu_code')) {

@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 class BookCategories extends Model
 {
     use HasFactory;
-    protected $fillable = ['name_ru', 'name_en', 'name_uz', 'name_ja', 'slug', 'is_active', 'ofd_ikpu_code', 'ofd_package_code'];
+    protected $fillable = ['name_ru', 'name_en', 'name_uz', 'name_ja', 'slug', 'icon', 'is_active', 'ofd_ikpu_code', 'ofd_package_code'];
 
     /** Kategoriya o'zgarsa allCategories keshini tozalaymiz. */
     protected static function booted(): void
