@@ -135,52 +135,57 @@ class ApiDocsController extends Controller
         return [
             'getting-started' => [
                 'title' => 'Boshlash',
-                'description' => 'Client API bilan birinchi so‘rovni yuborish va integratsiya tartibini tushunish.',
+                'description' => 'Client API bilan birinchi so‘rovni yuborish, arxitektura tamoyillari va integratsiya tartibini tushunish.',
                 'group' => 'Asosiy qo‘llanma',
             ],
             'authentication' => [
                 'title' => 'Autentifikatsiya',
-                'description' => 'App ID, secret, headerlar va xavfsiz saqlash qoidalari.',
+                'description' => 'App ID, secret kalitlar, headerlar, imzolash va xavfsiz saqlash qoidalari.',
                 'group' => 'Asosiy qo‘llanma',
             ],
             'rate-limits' => [
                 'title' => 'Limit va cache',
-                'description' => 'So‘rov limitlari, response cache, ETag va 304 javoblari.',
+                'description' => 'So‘rov limitlari (Rate Limiting), response cache, ETag va 304 Not Modified optimizatsiyasi.',
                 'group' => 'Asosiy qo‘llanma',
             ],
             'pagination' => [
                 'title' => 'Sahifalash va filtr',
-                'description' => 'page, q va sort parametrlari, meta bloki va bo‘sh natijalar.',
+                'description' => 'page, per_page, q va sort parametrlari, meta bloki, filtrlar va bo‘sh natijalar bilan ishlash.',
                 'group' => 'Asosiy qo‘llanma',
             ],
             'products' => [
                 'title' => 'Mahsulotlar API',
-                'description' => 'Kitob, kanselyariya, tavsiyalar va seller mahsulotlarini olish.',
+                'description' => 'Kitob, kanselyariya, mualliflar, nashriyotlar, tavsiyalar va seller mahsulotlarini olish.',
                 'group' => 'Endpointlar',
             ],
             'search' => [
                 'title' => 'Qidiruv API',
-                'description' => 'Global qidiruv, autocomplete, trend so‘rovlar va kategoriyalar.',
+                'description' => 'Global qidiruv, autocomplete takliflari, trend so‘rovlar va kategoriyalar bo‘yicha filtr.',
                 'group' => 'Endpointlar',
             ],
             'seller' => [
                 'title' => 'Seller API (yozish)',
-                'description' => 'Do‘konga bog‘langan kalit orqali o‘z zaxirangizni boshqaring — ISBN yoki shtrix-kod bo‘yicha.',
+                'description' => 'Do‘konga bog‘langan kalit orqali o‘z zaxirangizni boshqaring — ISBN yoki shtrix-kod bo‘yicha yangilash.',
                 'group' => 'Endpointlar',
             ],
             'webhooks' => [
                 'title' => 'Webhooklar',
-                'description' => 'Hodisalarga obuna bo‘lish, imzo (HMAC) tekshiruvi va qayta yuborish siyosati.',
+                'description' => 'Hodisalarga obuna bo‘lish, xavfsizlik uchun imzo (HMAC) tekshiruvi va qayta yuborish siyosati.',
+                'group' => 'Endpointlar',
+            ],
+            'deeplink' => [
+                'title' => 'Deep Link generator',
+                'description' => 'Mobil ilova URL schemelari, Web, Play Market va App Store havolalarini generatsiya qilish.',
                 'group' => 'Endpointlar',
             ],
             'errors' => [
                 'title' => 'Xatolar',
-                'description' => 'Status kodlar, xato formatlari va integratsiyada tekshiriladigan holatlar.',
+                'description' => 'HTTP status kodlar, xato JSON formatlari va integratsiyada tekshiriladigan xavfsizlik holatlari.',
                 'group' => 'Qo‘shimcha',
             ],
             'changelog' => [
                 'title' => 'O‘zgarishlar',
-                'description' => 'API versiyasi va kelajakdagi breaking change siyosati.',
+                'description' => 'API versiyalash tarixi, yangilanishlar va kelajakdagi breaking change siyosati.',
                 'group' => 'Qo‘shimcha',
             ],
         ];
@@ -197,49 +202,67 @@ class ApiDocsController extends Controller
     private function toc(string $slug): array
     {
         return match ($slug) {
+            'getting-started' => [
+                ['id' => 'overview', 'label' => 'Umumiy tushuncha'],
+                ['id' => 'architecture', 'label' => 'Arxitektura va oqim'],
+                ['id' => 'first-request', 'label' => 'Birinchi so‘rov'],
+                ['id' => 'response-format', 'label' => 'Javob formati'],
+                ['id' => 'best-practices', 'label' => 'Tavsiyalar'],
+            ],
             'authentication' => [
-                ['id' => 'headers', 'label' => 'Headerlar'],
-                ['id' => 'secrets', 'label' => 'Secret saqlash'],
-                ['id' => 'abilities', 'label' => 'Ruxsatlar'],
+                ['id' => 'headers', 'label' => 'Zarur headerlar'],
+                ['id' => 'credentials', 'label' => 'App ID va Secret'],
+                ['id' => 'secrets', 'label' => 'Secret saqlash xavfsizligi'],
+                ['id' => 'abilities', 'label' => 'Ruxsatlar (Abilities)'],
             ],
             'rate-limits' => [
-                ['id' => 'limits', 'label' => 'Limitlar'],
-                ['id' => 'cache', 'label' => 'Cache'],
-                ['id' => 'etag', 'label' => 'ETag'],
+                ['id' => 'limits', 'label' => 'Limitlar va headerlar'],
+                ['id' => 'cache', 'label' => 'Response cache'],
+                ['id' => 'etag', 'label' => 'ETag va 304 javoblar'],
             ],
             'pagination' => [
-                ['id' => 'params', 'label' => 'Parametrlar'],
-                ['id' => 'meta', 'label' => 'Meta bloki'],
+                ['id' => 'params', 'label' => 'Parametrlar (page, per_page)'],
+                ['id' => 'meta', 'label' => 'Meta bloki va navigatsiya'],
+                ['id' => 'filtering', 'label' => 'Filtr va qidiruv (q, sort)'],
+                ['id' => 'empty-results', 'label' => 'Bo‘sh natijalar'],
             ],
             'products' => [
-                ['id' => 'products-list', 'label' => 'Ro‘yxat'],
+                ['id' => 'products-list', 'label' => 'Mahsulotlar ro‘yxati'],
+                ['id' => 'products-book-detail', 'label' => 'Kitob tafsiloti'],
+                ['id' => 'products-stationery-detail', 'label' => 'Kanselyariya tafsiloti'],
                 ['id' => 'products-recommendation', 'label' => 'Tavsiyalar'],
-                ['id' => 'products-sellers-list', 'label' => 'Sellerlar'],
-                ['id' => 'products-seller-code', 'label' => 'Shtrix-kod'],
+                ['id' => 'products-sellers-list', 'label' => 'Sellerlar ro‘yxati'],
+                ['id' => 'products-seller-code', 'label' => 'Shtrix-kod / ISBN'],
             ],
             'search' => [
                 ['id' => 'search-global', 'label' => 'Global qidiruv'],
-                ['id' => 'search-suggestions', 'label' => 'Autocomplete'],
-                ['id' => 'search-trending', 'label' => 'Trendlar'],
+                ['id' => 'search-suggestions', 'label' => 'Autocomplete takliflari'],
+                ['id' => 'search-trending', 'label' => 'Trend so‘rovlar'],
                 ['id' => 'search-categories', 'label' => 'Kategoriyalar'],
+                ['id' => 'search-category', 'label' => 'Kategoriya mahsulotlari'],
             ],
             'seller' => [
                 ['id' => 'seller-stock-update', 'label' => 'Zaxirani yangilash'],
                 ['id' => 'seller-my-products', 'label' => 'Mening mahsulotlarim'],
             ],
             'webhooks' => [
-                ['id' => 'events', 'label' => 'Hodisalar'],
-                ['id' => 'signature', 'label' => 'Imzo tekshiruvi'],
-                ['id' => 'retries', 'label' => 'Qayta yuborish'],
+                ['id' => 'events', 'label' => 'Hodisalar turlari'],
+                ['id' => 'signature', 'label' => 'HMAC imzo tekshiruvi'],
+                ['id' => 'retries', 'label' => 'Qayta yuborish siyosati'],
+            ],
+            'deeplink' => [
+                ['id' => 'deeplink-helper', 'label' => 'Deep Link generator'],
             ],
             'errors' => [
-                ['id' => 'statuses', 'label' => 'Status kodlar'],
-                ['id' => 'format', 'label' => 'Xato formati'],
+                ['id' => 'statuses', 'label' => 'HTTP status kodlar'],
+                ['id' => 'format', 'label' => 'Xato JSON formati'],
+                ['id' => 'common-errors', 'label' => 'Asosiy xato holatlari'],
                 ['id' => 'checklist', 'label' => 'Tekshiruv ro‘yxati'],
             ],
             'changelog' => [
-                ['id' => 'versioning', 'label' => 'Versioning'],
-                ['id' => 'current', 'label' => 'Joriy versiya'],
+                ['id' => 'versioning', 'label' => 'Versiyalash siyosati'],
+                ['id' => 'v1-release', 'label' => 'v1.0.0 relizi'],
+                ['id' => 'future', 'label' => 'Kelajakdagi rejalar'],
             ],
             default => [
                 ['id' => 'overview', 'label' => 'Umumiy tushuncha'],
@@ -370,6 +393,7 @@ class ApiDocsController extends Controller
                     ],
                     'query_params' => [
                         ['name' => 'page', 'type' => 'integer', 'required' => false, 'desc' => 'Sahifa raqami (1 dan boshlanadi).', 'example' => 1],
+                        ['name' => 'per_page', 'type' => 'integer', 'required' => false, 'desc' => 'Sahifadagi elementlar soni (maksimal 100).', 'example' => 20],
                         ['name' => 'q', 'type' => 'string', 'required' => false, 'desc' => 'Nom bo‘yicha filtr.', 'example' => null],
                         ['name' => 'sort', 'type' => 'string', 'required' => false, 'desc' => 'Tartiblash: popular, new, price_asc, price_desc.', 'example' => null],
                     ],
@@ -486,6 +510,7 @@ class ApiDocsController extends Controller
                     'query_params' => [
                         ['name' => 'q', 'type' => 'string', 'required' => true, 'desc' => 'Qidiruv matni.', 'example' => 'python'],
                         ['name' => 'page', 'type' => 'integer', 'required' => false, 'desc' => 'Sahifa raqami.', 'example' => 1],
+                        ['name' => 'per_page', 'type' => 'integer', 'required' => false, 'desc' => 'Sahifadagi elementlar soni.', 'example' => 20],
                     ],
                     'response' => [
                         'status' => 'success',
@@ -827,7 +852,7 @@ class ApiDocsController extends Controller
                         'required' => (bool) ($param['required'] ?? false),
                         'description' => $param['desc'] ?? '',
                         'schema' => ['type' => $param['type'] ?? 'string'],
-                        'example' => $param['example'],
+                        'example' => $param['example'] ?? null,
                     ];
                 }
 
