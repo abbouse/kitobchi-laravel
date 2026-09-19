@@ -163,12 +163,12 @@ export default function Books() {
           <div className="col-xl-3 col-md-6" key={item.key}>
             <button
               type="button"
-              className="stat-card text-start w-100 border-0"
+              className={`stat-card text-start w-100 border-0${activeTab === item.key ? ' is-selected' : ''}`}
               onClick={() => { setActiveTab(item.key); loadBooks(1, item.key); }}
-              style={{ outline: activeTab === item.key ? `2px solid ${item.color}` : undefined }}
+              aria-pressed={activeTab === item.key}
             >
               <div className="stat-label">{item.label}</div>
-              <div className="stat-value">{item.val}</div>
+              <div className="stat-value" style={{ color: item.color }}>{item.val}</div>
               <div className="text-muted small mt-1">{item.hint}</div>
             </button>
           </div>

@@ -704,6 +704,16 @@ code {
   height: 100%;
 }
 
+/* Tanlangan KPI kartasi: tanlov belgisi butun panelda bitta — brend rangi.
+   Ilgari holat rangi (yashil/qizil) ishlatilardi, u "muvaffaqiyat" deb
+   o'qilardi, "tanlangan" deb emas. */
+.stat-card.is-selected {
+  outline: 2px solid var(--kc-ink);
+  outline-offset: -1px;
+  background: var(--kc-ink-tint);
+}
+.stat-card.is-selected .stat-label { color: var(--kc-ink); }
+
 /* ═══ Quvur bosqichlari (Hub fulfillment) ═══════════════════════════════ */
 .stage-cell {
   padding: 12px 14px;
@@ -904,6 +914,13 @@ code {
   font-size: 11.5px; color: var(--kc-text-muted); line-height: 1.35;
 }
 .data-table td.cell-sub, .table td.cell-sub { color: var(--kc-text-soft); font-size: 12px; }
+.data-table .num, .table .num,
+.data-table td.num, .table td.num,
+.data-table th.num, .table th.num {
+  font-family: var(--kc-font-mono); font-variant-numeric: tabular-nums;
+  text-align: right; white-space: nowrap;
+}
+
 .data-table .money, .table .money {
   font-family: var(--kc-font-mono); font-variant-numeric: tabular-nums;
   font-size: 12.5px; white-space: nowrap;
@@ -1817,6 +1834,33 @@ textarea.form-control { min-height: 72px; }
 .progress { background: var(--kc-bg-sunken); }
 .progress-bar { color: var(--kc-on-ink); font-size: 11px; }
 
+
+
+/* ═══ Bo'sh holat ════════════════════════════════════════════════════════
+   19 ta sahifada bir xil markup ishlatiladi: colspan li, markazlashtirilgan
+   katak. Ilgari har biri shunchaki xira matn edi — endi dizayni bir joydan
+   beriladi, ikkala mavzuda ham bir xil ko'rinadi. */
+.data-table tbody td[colspan].text-center,
+.table tbody td[colspan].text-center {
+  padding: 38px 16px !important;
+  color: var(--kc-text-muted);
+  font-size: 12.5px;
+  border-bottom: 0;
+}
+.data-table tbody td[colspan].text-center::before,
+.table tbody td[colspan].text-center::before {
+  content: "\f42d";
+  font-family: "bootstrap-icons";
+  display: block;
+  width: 38px; height: 38px; line-height: 38px;
+  margin: 0 auto 10px;
+  border-radius: var(--kc-radius);
+  background: var(--kc-bg-subtle);
+  color: var(--kc-text-muted);
+  font-size: 16px;
+  font-weight: 400;
+}
+.data-table tbody tr:only-child td[colspan] { border-bottom: 0; }
 
 /* ═══ Mayda tafsilotlar ══════════════════════════════════════════════════
    Brauzerning o'z ranglari qolib ketadigan joylar: matn ajratish, avtomatik

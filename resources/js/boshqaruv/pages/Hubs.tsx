@@ -570,16 +570,16 @@ export default function Hubs() {
         </div>
         <div className="table-responsive">
           <table className="data-table">
-            <thead><tr><th>Hub</th><th>Kod</th><th>Hudud</th><th>Xodim</th><th>Fulfillment</th><th>Kuryer task</th><th>Qo'llab-quvvatlaydi</th><th>Amallar</th></tr></thead>
+            <thead><tr><th>Hub</th><th>Kod</th><th>Hudud</th><th className="num">Xodim</th><th className="num">Fulfillment</th><th className="num">Kuryer task</th><th>Qo'llab-quvvatlaydi</th><th>Amallar</th></tr></thead>
             <tbody>
               {hubs.map((hub) => (
                 <tr key={hub.id}>
                   <td className="fw-semibold">{hub.name}</td>
                   <td>{hub.code || '—'}</td>
                   <td>{[hub.city, hub.region].filter(Boolean).join(', ') || '—'}</td>
-                  <td>{hub.staff || 0}</td>
-                  <td>{hub.fulfillments || 0}</td>
-                  <td>{hub.courierTasks || 0}</td>
+                  <td className="num">{hub.staff || 0}</td>
+                  <td className="num">{hub.fulfillments || 0}</td>
+                  <td className="num">{hub.courierTasks || 0}</td>
                   <td>
                     <span className="chip chip-gray">
                       {[hub.supportsFirstMile ? 'First' : null, hub.supportsLastMile ? 'Last' : null, hub.supportsPostal ? 'Postal' : null].filter(Boolean).join(' / ') || '—'}
