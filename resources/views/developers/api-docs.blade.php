@@ -10,895 +10,700 @@
     'group'       => $page['group'] ?? 'API',
   ])->values();
 
-  $iconSvgs = [
-    'rocket'  => '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>',
-    'key'     => '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg>',
-    'gauge'   => '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg>',
-    'layers'  => '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>',
-    'book'    => '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>',
-    'search'  => '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
-    'store'   => '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/><path d="M2 7h20"/><path d="M22 7v3a2 2 0 0 1-2 2a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 16 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 12 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 8 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 4 12a2 2 0 0 1-2-2V7"/></svg>',
-    'zap'     => '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
-    'alert'   => '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
-    'history' => '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>',
-  ];
+  // Method badge'ni sidebar uchun endpoint guruhlari
+  $epGroups = ['products', 'search', 'seller', 'deeplink'];
 @endphp
 <!DOCTYPE html>
 <html lang="uz" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{{ $currentPage['title'] }} — Kitobchi Developer API</title>
+  <title>{{ $currentPage['title'] }} — Kitobchi API Reference</title>
   <meta name="description" content="{{ $currentPage['description'] }}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;1,14..32,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
-    /* ── Design Tokens ─────────────────────────────────────────────────── */
+    /* ── Tokens ─────────────────────────────────────────────────── */
     :root {
-      --bg:           #f9fafb;
-      --bg2:          #f3f4f6;
-      --panel:        #ffffff;
-      --panel2:       #f9fafb;
-      --border:       #e5e7eb;
-      --border2:      #f3f4f6;
-      --text:         #111827;
-      --text2:        #374151;
-      --muted:        #6b7280;
-      --faint:        #9ca3af;
-      --accent:       #2563eb;
-      --accent2:      #1d4ed8;
-      --accent-soft:  rgba(37,99,235,0.08);
-      --accent-muted: rgba(37,99,235,0.15);
-      --code-bg:      #0d1117;
-      --code-text:    #e6edf3;
-      --code-border:  rgba(255,255,255,0.08);
-      --shadow-sm:    0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
-      --shadow-md:    0 4px 16px rgba(0,0,0,.07),0 2px 4px rgba(0,0,0,.04);
-      --shadow-lg:    0 10px 40px rgba(0,0,0,.12),0 4px 8px rgba(0,0,0,.06);
-      --radius:       10px;
-      --sidebar-w:    260px;
-      --toc-w:        220px;
-      --header-h:     56px;
-      color-scheme:   light;
+      --white:       #ffffff;
+      --bg:          #f9fafb;
+      --bg-hover:    #f3f4f6;
+      --panel:       #ffffff;
+      --border:      rgba(0,0,0,0.07);
+      --border-med:  rgba(0,0,0,0.10);
+      --text:        #111827;
+      --text-2:      #374151;
+      --muted:       #6b7280;
+      --faint:       #9ca3af;
+      --accent:      #18181b;
+      --link:        #2563eb;
+      --link-hover:  #1d4ed8;
+      --code-bg:     #18181b;
+      --code-text:   #e5e7eb;
+      --sidebar-w:   252px;
+      --toc-w:       200px;
+      --header-h:    54px;
+      color-scheme: light;
     }
     html[data-theme="dark"] {
-      --bg:           #0a0c10;
-      --bg2:          #111318;
-      --panel:        #131720;
-      --panel2:       #1a1f2e;
-      --border:       #1e2535;
-      --border2:      #252d3d;
-      --text:         #f0f4ff;
-      --text2:        #cbd5e1;
-      --muted:        #8892a4;
-      --faint:        #556070;
-      --accent:       #4f83f7;
-      --accent2:      #6b97ff;
-      --accent-soft:  rgba(79,131,247,0.1);
-      --accent-muted: rgba(79,131,247,0.2);
-      --code-bg:      #060912;
-      --code-text:    #d1dced;
-      --code-border:  rgba(255,255,255,0.06);
-      --shadow-sm:    0 1px 3px rgba(0,0,0,.3);
-      --shadow-md:    0 4px 16px rgba(0,0,0,.4);
-      --shadow-lg:    0 10px 40px rgba(0,0,0,.5);
-      color-scheme:   dark;
+      --bg:          #0a0b0d;
+      --bg-hover:    #111318;
+      --panel:       #111318;
+      --border:      rgba(255,255,255,0.07);
+      --border-med:  rgba(255,255,255,0.10);
+      --text:        #f4f4f5;
+      --text-2:      #d1d5db;
+      --muted:       #9ca3af;
+      --faint:       #6b7280;
+      --accent:      #f4f4f5;
+      --link:        #60a5fa;
+      --link-hover:  #93c5fd;
+      --code-bg:     #0d0d0f;
+      --code-text:   #d4d4d8;
+      color-scheme: dark;
     }
 
-    /* ── Reset & Base ─────────────────────────────────────────────────── */
+    /* ── Reset ──────────────────────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: smooth; font-size: 16px; }
+    html { scroll-behavior: smooth; }
     body {
-      font-family: 'Geist', system-ui, -apple-system, sans-serif;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
       background: var(--bg);
       color: var(--text);
-      line-height: 1.6;
       -webkit-font-smoothing: antialiased;
     }
     a { color: inherit; text-decoration: none; }
-    svg { display: block; flex-shrink: 0; }
+    button { font-family: inherit; cursor: pointer; }
 
-    /* ── Scrollbar ─────────────────────────────────────────────────────── */
-    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    /* ── Scrollbar ──────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
     ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
-    ::-webkit-scrollbar-thumb:hover { background: var(--faint); }
+    ::-webkit-scrollbar-thumb { background: var(--border-med); border-radius: 99px; }
 
-    /* ── Top Header ────────────────────────────────────────────────────── */
-    .site-header {
+    /* ── Header ─────────────────────────────────────────────────── */
+    .hd {
       position: sticky; top: 0; z-index: 50;
       height: var(--header-h);
-      display: flex; align-items: center; gap: 0;
-      background: color-mix(in srgb, var(--panel) 85%, transparent);
-      backdrop-filter: blur(20px) saturate(180%);
-      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      display: flex; align-items: center;
+      background: color-mix(in srgb, var(--panel) 90%, transparent);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
       border-bottom: 1px solid var(--border);
     }
-    .header-brand {
-      display: flex; align-items: center; gap: 10px;
-      padding: 0 20px; height: 100%;
-      border-right: 1px solid var(--border);
-      flex-shrink: 0; width: var(--sidebar-w);
-    }
-    .header-brand img { height: 22px; width: auto; display: block; }
-    html[data-theme="dark"] .logo-light { display: none; }
-    html[data-theme="light"] .logo-dark  { display: none; }
-    .api-badge {
-      font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em;
-      text-transform: uppercase;
-      padding: 2px 7px; border-radius: 99px;
-      background: var(--accent-soft); color: var(--accent);
-      border: 1px solid var(--accent-muted);
-      flex-shrink: 0;
-    }
-
-    .header-center {
-      flex: 1; display: flex; align-items: center; padding: 0 20px;
-    }
-    .search-trigger {
+    .hd-brand {
+      width: var(--sidebar-w);
       display: flex; align-items: center; gap: 9px;
-      height: 36px; width: 100%; max-width: 420px;
-      border: 1px solid var(--border); border-radius: 8px;
-      background: var(--panel2); color: var(--muted);
-      padding: 0 12px; font-size: 13px;
-      cursor: pointer; transition: all 0.15s;
-      font-family: inherit;
+      padding: 0 20px; flex-shrink: 0;
+      border-right: 1px solid var(--border); height: 100%;
     }
-    .search-trigger:hover { border-color: var(--accent); background: var(--panel); }
-    .search-trigger svg { color: var(--faint); }
-    .search-trigger .search-hint { margin-left: auto; }
-    .search-hint {
-      display: inline-flex; align-items: center; gap: 4px;
-      font-size: 11.5px; color: var(--faint);
+    .hd-brand img { height: 26px; width: 26px; border-radius: 8px; display: block; }
+    .hd-ver {
+      font-size: 11px; font-weight: 600; color: var(--faint);
+      padding: 2px 6px; border-radius: 4px;
+      border: 1px solid var(--border); background: var(--bg);
     }
-    .search-hint kbd {
-      font-family: 'Geist Mono', monospace;
-      font-size: 10px; padding: 1px 5px;
-      border: 1px solid var(--border);
-      border-radius: 4px; background: var(--panel);
-    }
-
-    .header-actions {
+    .hd-center { flex: 1; padding: 0 20px; }
+    .hd-search {
       display: flex; align-items: center; gap: 8px;
-      padding: 0 16px; flex-shrink: 0;
+      height: 34px; max-width: 380px;
+      border: 1px solid var(--border-med); border-radius: 8px;
+      background: var(--bg); color: var(--muted);
+      padding: 0 12px; font-size: 13px; font-family: inherit;
+      transition: border-color 0.15s;
     }
-    .hbtn {
-      display: inline-flex; align-items: center; gap: 6px;
+    .hd-search:hover { border-color: var(--faint); }
+    .hd-search svg { flex-shrink: 0; }
+    .hd-search .kbds { margin-left: auto; display: flex; gap: 3px; }
+    .hd-search kbd {
+      font-family: 'JetBrains Mono', monospace; font-size: 10px;
+      padding: 1px 5px; border-radius: 4px;
+      border: 1px solid var(--border-med); background: var(--panel);
+      color: var(--faint);
+    }
+    .hd-right {
+      display: flex; align-items: center; gap: 6px; padding: 0 20px;
+    }
+    .hd-btn {
+      display: inline-flex; align-items: center; gap: 5px;
       height: 32px; padding: 0 11px; border-radius: 7px;
-      font-size: 12.5px; font-weight: 600; font-family: inherit;
-      border: 1px solid var(--border); background: var(--panel);
-      color: var(--text2); cursor: pointer; transition: all 0.15s;
-      text-decoration: none;
+      border: 1px solid var(--border-med); background: var(--panel);
+      color: var(--text-2); font-size: 12.5px; font-weight: 500;
+      transition: all 0.12s;
     }
-    .hbtn:hover { border-color: var(--accent); color: var(--accent); }
-    .hbtn.primary {
-      background: var(--accent); color: #fff; border-color: transparent;
+    .hd-btn:hover { border-color: var(--faint); color: var(--text); }
+    .hd-btn-icon { width: 32px; padding: 0; justify-content: center; }
+    .hd-btn-primary {
+      background: var(--accent); color: var(--white);
+      border-color: transparent;
     }
-    .hbtn.primary:hover { background: var(--accent2); color: #fff; }
-    .hbtn-icon {
-      width: 32px; height: 32px; padding: 0;
-      justify-content: center;
-    }
+    html[data-theme="dark"] .hd-btn-primary { color: var(--bg); }
+    .hd-btn-primary:hover { opacity: 0.88; color: var(--white); }
+    html[data-theme="dark"] .hd-btn-primary:hover { color: var(--bg); }
 
-    /* ── Page Layout ───────────────────────────────────────────────────── */
-    .page-layout {
+    /* ── Layout ─────────────────────────────────────────────────── */
+    .layout {
       display: grid;
       grid-template-columns: var(--sidebar-w) minmax(0,1fr) var(--toc-w);
       min-height: calc(100vh - var(--header-h));
     }
 
-    /* ── Left Sidebar ──────────────────────────────────────────────────── */
+    /* ── Sidebar ─────────────────────────────────────────────────── */
     .sidebar {
       position: sticky; top: var(--header-h);
       height: calc(100vh - var(--header-h));
-      overflow-y: auto; border-right: 1px solid var(--border);
-      background: var(--panel); padding: 20px 12px 40px;
+      overflow-y: auto; padding: 16px 0 40px;
+      border-right: 1px solid var(--border);
     }
-    .nav-section { margin-bottom: 8px; }
-    .nav-group-label {
-      font-size: 10.5px; font-weight: 700; letter-spacing: 0.07em;
-      text-transform: uppercase; color: var(--faint);
-      padding: 10px 10px 6px; display: block;
+    .nav-group { margin-bottom: 4px; }
+    .nav-group-title {
+      display: block;
+      font-size: 11px; font-weight: 600;
+      letter-spacing: 0.04em; text-transform: uppercase;
+      color: var(--faint); padding: 10px 16px 4px;
     }
-    .nav-group-label:first-child { padding-top: 2px; }
-    .nav-link {
-      display: flex; align-items: center; gap: 9px;
-      padding: 7px 10px; border-radius: 7px;
-      color: var(--muted); font-size: 13.5px; font-weight: 500;
-      transition: all 0.12s; position: relative;
+    .nav-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 5px 16px; color: var(--muted); font-size: 13.5px;
+      transition: color 0.12s, background 0.12s; border-radius: 0;
     }
-    .nav-link:hover { color: var(--text); background: var(--bg2); }
-    .nav-link.active {
-      color: var(--accent); background: var(--accent-soft); font-weight: 600;
+    .nav-item:hover { color: var(--text); background: var(--bg-hover); }
+    .nav-item.active {
+      color: var(--text); font-weight: 500;
+      background: var(--bg-hover);
     }
-    .nav-link.active::before {
-      content: ''; position: absolute; left: 0; top: 50%; transform: translateY(-50%);
-      width: 2.5px; height: 18px; background: var(--accent); border-radius: 0 2px 2px 0;
+    .nav-item.active::before {
+      content: ''; position: absolute; left: 0;
+      width: 2px; height: 20px; background: var(--accent);
+      border-radius: 0 1px 1px 0;
     }
-    .nav-link-icon { color: var(--faint); transition: color 0.12s; }
-    .nav-link:hover .nav-link-icon,
-    .nav-link.active .nav-link-icon { color: var(--accent); }
-    .nav-link-badge {
-      margin-left: auto; font-size: 10px; font-weight: 700;
-      padding: 1px 6px; border-radius: 99px;
-      background: var(--accent-soft); color: var(--accent);
+    .nav-item { position: relative; }
+    .nav-badge {
+      margin-left: auto; font-size: 10px; font-weight: 600;
+      padding: 1px 6px; border-radius: 3px;
     }
-    .nav-link-badge.soon {
-      background: var(--bg2); color: var(--faint);
+    .nav-badge-soon { background: var(--bg-hover); color: var(--faint); border: 1px solid var(--border); }
+    .nav-badge-write { background: rgba(245,158,11,0.08); color: #92400e; border: 1px solid rgba(245,158,11,0.2); }
+    html[data-theme="dark"] .nav-badge-write { color: #fbbf24; border-color: rgba(245,158,11,0.2); }
+
+    /* ── Main ────────────────────────────────────────────────────── */
+    .main {
+      padding: 36px 48px 80px;
+      max-width: 780px; width: 100%; margin: 0 auto; min-width: 0;
     }
 
-    /* ── Main Content ──────────────────────────────────────────────────── */
-    .main-content {
-      padding: 40px 52px 80px;
-      max-width: 820px; width: 100%; margin: 0 auto;
-      min-width: 0;
-    }
-
+    /* Breadcrumb */
     .breadcrumb {
       display: flex; align-items: center; gap: 6px;
-      font-size: 12.5px; color: var(--faint); margin-bottom: 24px;
+      font-size: 12px; color: var(--faint); margin-bottom: 22px;
     }
-    .breadcrumb a { color: var(--muted); transition: color 0.12s; }
-    .breadcrumb a:hover { color: var(--accent); }
-    .breadcrumb-sep { color: var(--border); }
+    .breadcrumb a:hover { color: var(--link); }
+    .breadcrumb-sep { color: var(--border-med); }
 
-    .page-title {
-      font-size: 34px; font-weight: 800; letter-spacing: -0.025em;
-      line-height: 1.15; margin-bottom: 12px; color: var(--text);
+    /* Headings */
+    .page-h1 {
+      font-size: 28px; font-weight: 600; letter-spacing: -0.018em;
+      line-height: 1.2; color: var(--text); margin-bottom: 12px;
     }
     .page-lead {
-      font-size: 16px; line-height: 1.75; color: var(--muted);
-      margin-bottom: 36px; max-width: 640px;
+      font-size: 15px; color: var(--muted); line-height: 1.7;
+      margin-bottom: 32px; max-width: 620px;
     }
-
-    /* Content sections */
-    .doc-section {
-      padding: 32px 0; border-top: 1px solid var(--border);
-      scroll-margin-top: calc(var(--header-h) + 20px);
+    hr.divider {
+      border: none; border-top: 1px solid var(--border);
+      margin: 28px 0;
     }
-    .doc-section:first-of-type { border-top: none; padding-top: 0; }
-
     .doc-h2 {
-      font-size: 22px; font-weight: 700; letter-spacing: -0.015em;
-      margin-bottom: 14px; color: var(--text);
+      font-size: 17px; font-weight: 600; letter-spacing: -0.01em;
+      color: var(--text); margin: 28px 0 10px;
+      scroll-margin-top: calc(var(--header-h) + 16px);
     }
+    .doc-h2:first-child { margin-top: 0; }
     .doc-h3 {
-      font-size: 16px; font-weight: 700;
-      margin: 22px 0 10px; color: var(--text);
+      font-size: 14px; font-weight: 600; color: var(--text);
+      margin: 20px 0 8px;
+      scroll-margin-top: calc(var(--header-h) + 16px);
     }
     .doc-p {
-      font-size: 14.5px; line-height: 1.75; color: var(--muted);
-      margin-bottom: 14px;
+      font-size: 14px; line-height: 1.7; color: var(--muted);
+      margin-bottom: 12px;
     }
     .doc-p:last-child { margin-bottom: 0; }
-    .doc-ul {
-      list-style: none; padding: 0;
-      display: flex; flex-direction: column; gap: 6px;
-      margin: 12px 0;
-    }
-    .doc-ul li {
-      display: flex; gap: 9px; align-items: flex-start;
-      font-size: 14px; color: var(--muted); line-height: 1.6;
-    }
-    .doc-ul li::before {
-      content: '—'; color: var(--faint); flex-shrink: 0; margin-top: 1px;
-    }
+    .doc-p strong { color: var(--text-2); }
+    .doc-p a { color: var(--link); }
+    .doc-p a:hover { color: var(--link-hover); text-decoration: underline; }
 
     /* Inline code */
     .ic {
-      font-family: 'Geist Mono', monospace;
-      font-size: 12.5px; padding: 1px 6px;
-      background: var(--bg2); border: 1px solid var(--border);
-      border-radius: 5px; color: var(--text2);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px; padding: 1.5px 5px;
+      background: var(--bg-hover);
+      border: 1px solid var(--border-med);
+      border-radius: 4px; color: var(--text-2);
       white-space: nowrap;
     }
 
-    /* Callouts */
-    .callout {
-      display: flex; gap: 12px; align-items: flex-start;
-      padding: 14px 18px; border-radius: 9px;
-      border: 1px solid; font-size: 13.5px; line-height: 1.6;
-      margin: 18px 0;
+    /* Note / callout — minimal, no color */
+    .note {
+      font-size: 13.5px; line-height: 1.65;
+      padding: 12px 16px; margin: 16px 0;
+      border-radius: 8px;
+      border: 1px solid var(--border-med);
+      background: var(--bg);
+      color: var(--muted);
     }
-    .callout-info  { border-color: #dbeafe; background: #eff6ff; color: #1e40af; }
-    .callout-warn  { border-color: #fde68a; background: #fffbeb; color: #92400e; }
-    .callout-tip   { border-color: #d1fae5; background: #ecfdf5; color: #065f46; }
-    .callout-error { border-color: #fecaca; background: #fef2f2; color: #991b1b; }
-    html[data-theme="dark"] .callout-info  { border-color: #1e3a5f; background: #0f2040; color: #93c5fd; }
-    html[data-theme="dark"] .callout-warn  { border-color: #78350f; background: #451a03; color: #fcd34d; }
-    html[data-theme="dark"] .callout-tip   { border-color: #064e3b; background: #022c22; color: #6ee7b7; }
-    html[data-theme="dark"] .callout-error { border-color: #7f1d1d; background: #450a0a; color: #fca5a5; }
-    .callout-icon { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+    .note strong { color: var(--text-2); }
+    .note a { color: var(--link); }
 
     /* Code block */
-    .code-block {
-      position: relative; border-radius: 10px;
-      background: var(--code-bg); border: 1px solid var(--code-border);
-      overflow: hidden; margin: 16px 0;
-      box-shadow: var(--shadow-md);
+    .codeblock {
+      position: relative; margin: 14px 0;
+      background: var(--code-bg);
+      border-radius: 10px; overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.06);
     }
-    .code-block-head {
+    .codeblock-header {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 9px 14px;
-      background: rgba(255,255,255,0.04);
-      border-bottom: 1px solid var(--code-border);
+      padding: 8px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
     }
-    .code-block-lang {
-      font-size: 11.5px; font-weight: 600; color: #6b7a96;
-      font-family: 'Geist Mono', monospace;
+    .codeblock-title {
+      font-size: 11.5px; font-weight: 500;
+      color: rgba(255,255,255,0.35);
+      font-family: 'JetBrains Mono', monospace;
     }
-    .code-block pre {
-      padding: 16px 18px; margin: 0;
-      font: 13px/1.75 'Geist Mono', monospace;
-      color: var(--code-text); overflow-x: auto;
-      white-space: pre;
+    .codeblock pre {
+      margin: 0; padding: 16px;
+      font: 13px/1.7 'JetBrains Mono', monospace;
+      color: var(--code-text); overflow-x: auto; white-space: pre;
     }
-    .code-copy-btn {
-      font-family: inherit; font-size: 11.5px; font-weight: 600;
-      background: rgba(255,255,255,0.07); color: #6b7a96;
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 6px; padding: 4px 10px;
-      cursor: pointer; transition: all 0.15s;
+    .copy-btn {
+      font-size: 11.5px; font-weight: 500; font-family: inherit;
+      background: rgba(255,255,255,0.07);
+      color: rgba(255,255,255,0.35);
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 5px; padding: 3px 9px;
+      transition: all 0.12s;
     }
-    .code-copy-btn:hover { background: rgba(255,255,255,0.12); color: #e6edf3; }
-    .code-copy-btn.copied { color: #56d364; border-color: #56d364; }
+    .copy-btn:hover { color: rgba(255,255,255,0.7); background: rgba(255,255,255,0.11); }
+    .copy-btn.ok { color: #34d399; border-color: rgba(52,211,153,0.3); }
 
     /* Table */
     .doc-table {
       width: 100%; border-collapse: collapse;
-      font-size: 13.5px; margin: 16px 0;
-      border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+      font-size: 13px; margin: 14px 0;
+      border: 1px solid var(--border-med);
+      border-radius: 9px; overflow: hidden;
       background: var(--panel);
-      box-shadow: var(--shadow-sm);
     }
     .doc-table th {
-      padding: 10px 14px; background: var(--bg2);
-      color: var(--text2); font-weight: 700; font-size: 12px;
+      padding: 9px 14px;
+      background: var(--bg); color: var(--text-2);
+      font-weight: 600; font-size: 11.5px;
       text-transform: uppercase; letter-spacing: 0.04em;
-      border-bottom: 1px solid var(--border); text-align: left;
+      border-bottom: 1px solid var(--border-med);
+      text-align: left;
     }
     .doc-table td {
-      padding: 11px 14px; border-bottom: 1px solid var(--border2);
-      color: var(--muted); vertical-align: top; line-height: 1.6;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      color: var(--muted); vertical-align: top; line-height: 1.5;
     }
     .doc-table tr:last-child td { border-bottom: none; }
-    .doc-table td code { font-family: 'Geist Mono', monospace; font-size: 12px; }
+    .doc-table code { font-family: 'JetBrains Mono', monospace; font-size: 11.5px; }
 
-    /* Type chip */
-    .type-chip {
+    /* Type / required chips */
+    .chip {
       display: inline-flex; align-items: center;
-      font-family: 'Geist Mono', monospace; font-size: 11.5px; font-weight: 600;
-      padding: 2px 7px; border-radius: 5px;
-      background: var(--accent-soft); color: var(--accent);
-      white-space: nowrap;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px; font-weight: 500;
+      padding: 1.5px 6px; border-radius: 4px; white-space: nowrap;
     }
-    .type-chip.green  { background: rgba(34,197,94,.1);  color: #16a34a; }
-    .type-chip.yellow { background: rgba(234,179,8,.1);  color: #a16207; }
-    .type-chip.red    { background: rgba(239,68,68,.1);  color: #dc2626; }
-    .type-chip.gray   { background: var(--bg2); color: var(--faint); }
-    html[data-theme="dark"] .type-chip.green  { background: rgba(34,197,94,.12);  color: #4ade80; }
-    html[data-theme="dark"] .type-chip.yellow { background: rgba(234,179,8,.12);  color: #fbbf24; }
-    html[data-theme="dark"] .type-chip.red    { background: rgba(239,68,68,.12);  color: #f87171; }
+    .chip-type { background: var(--bg-hover); color: var(--muted); border: 1px solid var(--border); }
+    .chip-req  { background: rgba(239,68,68,0.07); color: #dc2626; border: 1px solid rgba(239,68,68,0.15); }
+    .chip-opt  { background: var(--bg-hover); color: var(--faint); border: 1px solid var(--border); }
+    html[data-theme="dark"] .chip-req { color: #fca5a5; border-color: rgba(239,68,68,0.2); }
 
-    /* Status badge */
-    .status-badge {
-      display: inline-flex; align-items: center; gap: 6px;
-      font-size: 12.5px; font-weight: 700;
-      padding: 4px 10px; border-radius: 99px;
-    }
-    .status-badge::before {
-      content: ''; width: 6px; height: 6px; border-radius: 50%;
-    }
-    .status-badge.ok    { background: rgba(34,197,94,.1); color: #15803d; }
-    .status-badge.ok::before { background: #22c55e; }
-    .status-badge.err   { background: rgba(239,68,68,.1); color: #b91c1c; }
-    .status-badge.err::before { background: #ef4444; }
-    html[data-theme="dark"] .status-badge.ok  { background: rgba(34,197,94,.12); color: #4ade80; }
-    html[data-theme="dark"] .status-badge.err { background: rgba(239,68,68,.12); color: #f87171; }
-
-    /* ── Endpoint Card ─────────────────────────────────────────────────── */
-    .ep-card {
-      border: 1px solid var(--border); border-radius: 12px;
-      background: var(--panel); margin: 20px 0;
-      overflow: hidden; scroll-margin-top: calc(var(--header-h) + 20px);
-      box-shadow: var(--shadow-sm);
-      transition: box-shadow 0.2s;
-    }
-    .ep-card:hover { box-shadow: var(--shadow-md); }
-
-    .ep-header {
-      display: flex; align-items: center; gap: 10px;
-      padding: 12px 16px;
-      background: var(--panel2);
-      border-bottom: 1px solid var(--border);
-    }
-    .method-badge {
+    /* Method badges */
+    .method {
       display: inline-flex; align-items: center; justify-content: center;
-      min-width: 54px; height: 25px; border-radius: 6px;
-      font-size: 11.5px; font-weight: 800; letter-spacing: 0.04em;
-      flex-shrink: 0;
+      min-width: 50px; height: 22px; border-radius: 4px;
+      font-size: 10.5px; font-weight: 700; letter-spacing: 0.04em;
+      font-family: 'JetBrains Mono', monospace;
     }
-    .method-GET    { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
-    .method-POST   { background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; }
-    .method-PUT    { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
-    .method-PATCH  { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
-    .method-DELETE { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
-    html[data-theme="dark"] .method-GET    { background:rgba(34,197,94,.14);  color:#4ade80; border-color:rgba(34,197,94,.25); }
-    html[data-theme="dark"] .method-POST   { background:rgba(99,102,241,.16); color:#a5b4fc; border-color:rgba(99,102,241,.3); }
-    html[data-theme="dark"] .method-PUT,
-    html[data-theme="dark"] .method-PATCH  { background:rgba(245,158,11,.14); color:#fbbf24; border-color:rgba(245,158,11,.25); }
-    html[data-theme="dark"] .method-DELETE { background:rgba(239,68,68,.14);  color:#f87171; border-color:rgba(239,68,68,.25); }
+    .m-GET    { background: rgba(16,185,129,0.08); color: #059669; }
+    .m-POST   { background: rgba(59,130,246,0.08); color: #2563eb; }
+    .m-PUT    { background: rgba(245,158,11,0.08); color: #b45309; }
+    .m-PATCH  { background: rgba(245,158,11,0.08); color: #b45309; }
+    .m-DELETE { background: rgba(239,68,68,0.08);  color: #dc2626; }
+    html[data-theme="dark"] .m-GET    { color: #34d399; background: rgba(16,185,129,0.1); }
+    html[data-theme="dark"] .m-POST   { color: #93c5fd; background: rgba(59,130,246,0.1); }
+    html[data-theme="dark"] .m-PUT,
+    html[data-theme="dark"] .m-PATCH  { color: #fbbf24; background: rgba(245,158,11,0.1); }
+    html[data-theme="dark"] .m-DELETE { color: #fca5a5; background: rgba(239,68,68,0.1); }
 
-    .ep-path {
-      font-family: 'Geist Mono', monospace; font-size: 13px; font-weight: 600;
-      color: var(--text); word-break: break-all; flex: 1;
+    /* Checklist (plain, no emoji) */
+    .checklist { list-style: none; padding: 0; margin: 12px 0; }
+    .checklist li {
+      display: grid; grid-template-columns: 18px 1fr;
+      gap: 10px; padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13.5px; color: var(--muted); line-height: 1.5;
+      align-items: start;
     }
-    .ep-meta { margin-left: auto; display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
-    .ep-tag {
-      font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 99px;
-      background: var(--bg2); color: var(--faint); border: 1px solid var(--border);
-    }
-    .ep-tag.write { background: rgba(245,158,11,.1); color: #b45309; border-color: rgba(245,158,11,.25); }
-    html[data-theme="dark"] .ep-tag.write { background:rgba(245,158,11,.14); color:#fbbf24; border-color:rgba(245,158,11,.25); }
-    .ep-tag.cached { background: rgba(34,197,94,.1); color: #15803d; border-color: rgba(34,197,94,.25); }
-    html[data-theme="dark"] .ep-tag.cached { background:rgba(34,197,94,.12); color:#4ade80; border-color:rgba(34,197,94,.25); }
+    .checklist li:last-child { border-bottom: none; }
+    .checklist li svg { margin-top: 2px; color: var(--faint); flex-shrink: 0; }
 
-    .ep-body { padding: 18px 20px; }
-    .ep-title { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
-    .ep-summary { font-size: 13.5px; color: var(--muted); line-height: 1.65; margin-bottom: 18px; }
-    .ep-summary a { color: var(--accent); }
-
-    /* ── Code Tabs ─────────────────────────────────────────────────────── */
-    .code-tabs {
-      border-radius: 10px; overflow: hidden;
-      border: 1px solid var(--code-border);
-      background: var(--code-bg); margin: 14px 0;
-      box-shadow: var(--shadow-md);
+    /* Simple numbered steps */
+    .steps { display: flex; flex-direction: column; gap: 0; margin: 14px 0; }
+    .step {
+      display: grid; grid-template-columns: 28px 1fr;
+      gap: 14px; padding: 16px 0;
+      border-bottom: 1px solid var(--border); align-items: start;
     }
-    .code-tabs-bar {
-      display: flex; align-items: center;
-      padding: 6px 10px; gap: 2px;
-      background: rgba(255,255,255,0.04);
-      border-bottom: 1px solid var(--code-border);
-    }
-    .code-tabs-langs { display: flex; gap: 2px; flex: 1; }
-    .ctab {
-      font: 600 12px 'Geist', sans-serif;
-      color: #6b7a96; background: transparent; border: none;
-      padding: 5px 11px; border-radius: 6px; cursor: pointer;
-      transition: all 0.12s;
-    }
-    .ctab:hover { color: #c8d3e8; }
-    .ctab.active { background: rgba(255,255,255,0.12); color: #e6edf3; }
-    .ctab-copy {
-      font: 600 11.5px 'Geist', sans-serif;
-      background: rgba(255,255,255,0.07); color: #6b7a96;
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 6px; padding: 4px 10px;
-      cursor: pointer; transition: all 0.15s; flex-shrink: 0;
-    }
-    .ctab-copy:hover { color: #c8d3e8; background: rgba(255,255,255,0.12); }
-    .ctab-copy.copied { color: #56d364; border-color: rgba(86,211,100,0.4); }
-    .code-pane { display: none; }
-    .code-pane.active { display: block; }
-    .code-pane pre {
-      margin: 0; padding: 16px 18px;
-      font: 13px/1.75 'Geist Mono', monospace;
-      color: var(--code-text); overflow-x: auto; white-space: pre;
-    }
-
-    /* ── Response Section ──────────────────────────────────────────────── */
-    .ep-response-head {
-      display: flex; align-items: center; justify-content: space-between;
-      margin: 18px 0 8px;
-    }
-    .ep-response-label {
-      font-size: 12.5px; font-weight: 700; color: var(--text2);
-      display: flex; align-items: center; gap: 8px;
-    }
-    .response-200 {
-      font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 99px;
-      background: rgba(34,197,94,.1); color: #15803d;
-    }
-    html[data-theme="dark"] .response-200 { background:rgba(34,197,94,.12); color:#4ade80; }
-
-    /* ── Try It Console ────────────────────────────────────────────────── */
-    .try-console {
-      margin-top: 18px; border-radius: 10px;
-      border: 1.5px dashed var(--border); background: var(--panel2);
-      overflow: hidden;
-    }
-    .try-toggle {
-      display: flex; align-items: center; gap: 8px;
-      padding: 11px 16px; font-size: 13px; font-weight: 600;
-      color: var(--accent); cursor: pointer; user-select: none;
-      list-style: none;
-    }
-    .try-toggle::-webkit-details-marker { display: none; }
-    .try-toggle svg { transition: transform 0.2s; }
-    details.try-console[open] .try-toggle svg { transform: rotate(90deg); }
-    .try-body { padding: 0 16px 16px; }
-    .try-fields {
-      display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-      gap: 10px; margin-bottom: 12px;
-    }
-    .try-field { display: flex; flex-direction: column; gap: 4px; }
-    .try-label {
+    .step:last-child { border-bottom: none; }
+    .step-num {
+      width: 22px; height: 22px; border-radius: 50%;
+      border: 1.5px solid var(--border-med);
+      display: flex; align-items: center; justify-content: center;
       font-size: 11.5px; font-weight: 700; color: var(--muted);
-      display: flex; align-items: center; gap: 4px;
+      flex-shrink: 0; margin-top: 1px;
     }
-    .try-label .req { color: #ef4444; }
-    .try-input {
-      height: 36px; padding: 0 11px;
-      border: 1px solid var(--border); border-radius: 7px;
-      background: var(--panel); color: var(--text);
-      font: 13px 'Geist Mono', monospace; outline: none;
-      transition: border-color 0.15s;
-    }
-    .try-input:focus { border-color: var(--accent); }
-    .try-actions { display: flex; align-items: center; gap: 10px; }
-    .try-send-btn {
-      height: 36px; padding: 0 16px; border-radius: 7px; border: none;
-      background: var(--accent); color: #fff;
-      font: 700 13px 'Geist', sans-serif;
-      cursor: pointer; transition: background 0.15s;
-    }
-    .try-send-btn:hover { background: var(--accent2); }
-    .try-send-btn:disabled { opacity: 0.6; cursor: default; }
-    .try-status { font-size: 13px; font-weight: 700; }
-    .try-result {
-      margin-top: 10px; max-height: 320px; overflow: auto;
-      background: var(--code-bg); color: var(--code-text);
-      border-radius: 8px; padding: 14px 16px;
-      font: 12.5px/1.7 'Geist Mono', monospace;
-      border: 1px solid var(--code-border);
-    }
+    .step h3 { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+    .step p  { font-size: 13.5px; color: var(--muted); line-height: 1.6; }
 
-    /* ── Right TOC ─────────────────────────────────────────────────────── */
-    .toc-panel {
+    /* Error code table */
+    .status-table { width: 100%; margin: 14px 0; }
+    .status-row {
+      display: grid; grid-template-columns: 60px 140px 1fr;
+      gap: 16px; padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13.5px; align-items: baseline;
+    }
+    .status-row:last-child { border-bottom: none; }
+    .status-code {
+      font-family: 'JetBrains Mono', monospace; font-size: 13px;
+      font-weight: 600; color: var(--text);
+    }
+    .status-label { color: var(--text-2); font-weight: 500; }
+    .status-desc  { color: var(--muted); }
+
+    /* Changelog */
+    .cl-entry { margin-bottom: 28px; }
+    .cl-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .cl-version {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px; font-weight: 600; color: var(--text);
+    }
+    .cl-date { font-size: 12.5px; color: var(--faint); }
+    .cl-tag {
+      font-size: 10.5px; font-weight: 600; padding: 1px 7px; border-radius: 3px;
+    }
+    .cl-tag-latest { background: rgba(16,185,129,0.08); color: #059669; border: 1px solid rgba(16,185,129,0.2); }
+    html[data-theme="dark"] .cl-tag-latest { color: #34d399; }
+    .cl-entry ul { padding-left: 16px; }
+    .cl-entry li { font-size: 13.5px; color: var(--muted); margin-bottom: 4px; line-height: 1.6; }
+    .cl-entry li strong { color: var(--text-2); }
+
+    /* TOC */
+    .toc {
       position: sticky; top: var(--header-h);
       height: calc(100vh - var(--header-h));
-      overflow-y: auto; padding: 28px 16px 40px;
+      overflow-y: auto; padding: 24px 16px 40px;
       border-left: 1px solid var(--border);
     }
     .toc-title {
-      font-size: 10.5px; font-weight: 700; letter-spacing: 0.07em;
+      font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
       text-transform: uppercase; color: var(--faint);
-      margin-bottom: 10px; padding: 0 6px;
+      margin-bottom: 8px;
     }
     .toc-link {
-      display: flex; align-items: center; gap: 6px;
-      padding: 5px 8px; border-radius: 6px;
-      font-size: 12.5px; color: var(--muted);
-      transition: all 0.12s;
+      display: block; padding: 4px 8px; border-radius: 5px;
+      font-size: 12.5px; color: var(--faint); transition: all 0.12s;
     }
-    .toc-link:hover { color: var(--text); background: var(--bg2); }
-    .toc-link.active { color: var(--accent); font-weight: 600; }
+    .toc-link:hover { color: var(--text); background: var(--bg-hover); }
+    .toc-link.active { color: var(--text); }
 
-    /* ── Prev / Next Navigation ────────────────────────────────────────── */
+    /* Prev/Next */
     .page-nav {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
-      margin-top: 48px; padding-top: 28px; border-top: 1px solid var(--border);
+      display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+      margin-top: 40px; padding-top: 24px;
+      border-top: 1px solid var(--border);
     }
-    .page-nav-card {
-      display: flex; flex-direction: column; gap: 3px;
-      padding: 16px; border-radius: 10px;
-      border: 1px solid var(--border); background: var(--panel);
-      transition: all 0.15s; box-shadow: var(--shadow-sm);
+    .pn-card {
+      padding: 14px 16px; border-radius: 8px;
+      border: 1px solid var(--border-med); background: var(--panel);
+      transition: border-color 0.12s;
     }
-    .page-nav-card:hover { border-color: var(--accent); transform: translateY(-1px); box-shadow: var(--shadow-md); }
-    .page-nav-dir { font-size: 12px; color: var(--faint); font-weight: 500; }
-    .page-nav-title { font-size: 14.5px; font-weight: 700; color: var(--text); }
-    .page-nav-card.next { align-items: flex-end; text-align: right; }
+    .pn-card:hover { border-color: var(--faint); }
+    .pn-dir { font-size: 11.5px; color: var(--faint); margin-bottom: 3px; }
+    .pn-title { font-size: 14px; font-weight: 500; color: var(--text); }
+    .pn-card.next { text-align: right; }
 
-    /* ── Search Modal ──────────────────────────────────────────────────── */
-    .search-backdrop {
-      position: fixed; inset: 0; background: rgba(0,0,0,0.4);
-      backdrop-filter: blur(4px); z-index: 200;
+    /* Search modal */
+    .search-wrap {
+      position: fixed; inset: 0; z-index: 200;
+      background: rgba(0,0,0,0.3);
       display: none; align-items: flex-start; justify-content: center;
       padding-top: 80px;
     }
-    .search-backdrop.open { display: flex; }
-    .search-modal {
-      width: min(560px, calc(100vw - 32px));
-      max-height: calc(100vh - 160px);
-      background: var(--panel); border-radius: 14px;
-      border: 1px solid var(--border);
-      box-shadow: var(--shadow-lg);
-      overflow: hidden; display: flex; flex-direction: column;
+    .search-wrap.open { display: flex; }
+    .search-box {
+      width: min(520px, calc(100vw - 32px));
+      background: var(--panel); border-radius: 12px;
+      border: 1px solid var(--border-med);
+      box-shadow: 0 8px 30px rgba(0,0,0,0.15); overflow: hidden;
     }
-    .search-input-wrap {
+    .search-bar {
       display: flex; align-items: center; gap: 10px;
-      padding: 14px 16px; border-bottom: 1px solid var(--border);
+      padding: 12px 16px; border-bottom: 1px solid var(--border);
     }
-    .search-input-wrap svg { color: var(--faint); flex-shrink: 0; }
-    .search-input {
-      flex: 1; border: none; background: transparent;
-      font: 15px 'Geist', sans-serif; color: var(--text); outline: none;
+    .search-bar svg { color: var(--faint); flex-shrink: 0; }
+    .search-inp {
+      flex: 1; border: none; background: transparent; outline: none;
+      font: 14.5px 'Inter', sans-serif; color: var(--text);
     }
-    .search-input::placeholder { color: var(--faint); }
-    .search-results { overflow-y: auto; max-height: 400px; padding: 8px; }
-    .search-result-item {
+    .search-inp::placeholder { color: var(--faint); }
+    .search-list { max-height: 380px; overflow-y: auto; padding: 6px; }
+    .search-item {
       display: flex; align-items: center; gap: 12px;
-      padding: 10px 12px; border-radius: 8px; cursor: pointer;
-      transition: background 0.12s;
+      padding: 9px 12px; border-radius: 7px; transition: background 0.1s;
     }
-    .search-result-item:hover { background: var(--bg2); }
-    .search-result-icon {
-      width: 32px; height: 32px; border-radius: 8px;
-      background: var(--accent-soft); color: var(--accent);
+    .search-item:hover { background: var(--bg-hover); }
+    .search-item-icon {
+      width: 28px; height: 28px; border-radius: 6px;
+      background: var(--bg); border: 1px solid var(--border-med);
       display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
+      flex-shrink: 0; color: var(--faint);
     }
-    .search-result-text strong { display: block; font-size: 14px; color: var(--text); }
-    .search-result-text span  { display: block; font-size: 12.5px; color: var(--muted); margin-top: 2px; }
-    .search-empty { padding: 24px; text-align: center; color: var(--faint); font-size: 14px; }
+    .search-item strong { display: block; font-size: 13.5px; color: var(--text); font-weight: 500; }
+    .search-item span   { display: block; font-size: 12px; color: var(--faint); margin-top: 1px; }
+    .search-empty { padding: 20px; text-align: center; font-size: 13.5px; color: var(--faint); }
 
-    /* ── Getting Started Quickstart ────────────────────────────────────── */
-    .quickstart-steps {
-      display: flex; flex-direction: column; gap: 0;
-      margin: 20px 0;
+    /* Code tabs */
+    .code-tabs { margin: 14px 0; border-radius: 10px; overflow: hidden; background: var(--code-bg); border: 1px solid rgba(255,255,255,0.06); }
+    .ctabs-bar { display: flex; align-items: center; padding: 6px 10px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+    .ctabs-langs { display: flex; gap: 0; flex: 1; }
+    .ctab {
+      font: 500 12px 'Inter', sans-serif; color: rgba(255,255,255,0.35);
+      background: transparent; border: none;
+      padding: 6px 12px 7px; border-bottom: 2px solid transparent;
+      margin-bottom: -1px; transition: all 0.1s; cursor: pointer;
     }
-    .qs-step {
-      display: flex; gap: 16px; align-items: flex-start;
-      padding: 18px 0; border-bottom: 1px solid var(--border);
+    .ctab:hover { color: rgba(255,255,255,0.6); }
+    .ctab.active { color: rgba(255,255,255,0.85); border-bottom-color: rgba(255,255,255,0.4); }
+    .ctab-copy {
+      font: 500 11.5px 'Inter', sans-serif;
+      background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.35);
+      border: 1px solid rgba(255,255,255,0.1); border-radius: 5px;
+      padding: 3px 9px; margin: 4px 0;
+      transition: all 0.12s;
     }
-    .qs-step:last-child { border-bottom: none; }
-    .qs-num {
-      width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
-      background: var(--accent); color: #fff;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 13px; font-weight: 800; margin-top: 1px;
-    }
-    .qs-text h3 { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
-    .qs-text p  { font-size: 13.5px; color: var(--muted); line-height: 1.65; }
+    .ctab-copy:hover { color: rgba(255,255,255,0.6); }
+    .ctab-copy.ok { color: #34d399; border-color: rgba(52,211,153,0.3); }
+    .code-pane { display: none; }
+    .code-pane.active { display: block; }
+    .code-pane pre { margin: 0; padding: 16px; font: 13px/1.7 'JetBrains Mono', monospace; color: var(--code-text); overflow-x: auto; white-space: pre; }
 
-    /* Architecture diagram */
-    .arch-flow {
-      display: flex; align-items: center; gap: 0;
-      margin: 20px 0; overflow-x: auto; padding: 4px 0;
+    /* Try It */
+    .try-it {
+      margin-top: 16px; border-radius: 8px;
+      border: 1px solid var(--border-med); overflow: hidden;
     }
-    .arch-node {
-      display: flex; flex-direction: column; align-items: center; gap: 6px;
-      padding: 14px 18px; border-radius: 10px; border: 1px solid var(--border);
-      background: var(--panel); min-width: 110px; text-align: center;
-      font-size: 12.5px; font-weight: 600; color: var(--text2);
-      box-shadow: var(--shadow-sm);
+    .try-summary {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 14px; font-size: 13px; font-weight: 500;
+      color: var(--muted); cursor: pointer; user-select: none; list-style: none;
     }
-    .arch-node-icon { font-size: 20px; }
-    .arch-arrow {
-      color: var(--faint); font-size: 18px; padding: 0 8px; flex-shrink: 0;
+    .try-summary::-webkit-details-marker { display: none; }
+    details.try-it[open] .try-summary { border-bottom: 1px solid var(--border); }
+    .try-summary svg { transition: transform 0.15s; }
+    details.try-it[open] .try-summary svg { transform: rotate(90deg); }
+    .try-body { padding: 14px; }
+    .try-fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin-bottom: 12px; }
+    .try-field { display: flex; flex-direction: column; gap: 4px; }
+    .try-lbl { font-size: 11.5px; font-weight: 600; color: var(--muted); }
+    .try-inp {
+      height: 34px; padding: 0 10px;
+      border: 1px solid var(--border-med); border-radius: 6px;
+      background: var(--panel); color: var(--text);
+      font: 12.5px 'JetBrains Mono', monospace; outline: none;
+      transition: border-color 0.12s;
     }
-
-    /* Changelog entries */
-    .changelog-entry {
-      border: 1px solid var(--border); border-radius: 10px;
-      background: var(--panel); margin-bottom: 16px;
-      overflow: hidden; box-shadow: var(--shadow-sm);
+    .try-inp:focus { border-color: var(--faint); }
+    .try-actions { display: flex; align-items: center; gap: 10px; }
+    .try-send {
+      height: 32px; padding: 0 14px; border: none; border-radius: 6px;
+      background: var(--accent); color: var(--white);
+      font: 600 12.5px 'Inter', sans-serif; transition: opacity 0.12s;
     }
-    .changelog-header {
-      display: flex; align-items: center; gap: 12px;
-      padding: 14px 18px; border-bottom: 1px solid var(--border);
-      background: var(--panel2);
+    html[data-theme="dark"] .try-send { color: var(--bg); }
+    .try-send:hover { opacity: 0.85; }
+    .try-send:disabled { opacity: 0.4; }
+    .try-status { font-size: 12.5px; font-weight: 600; }
+    .try-result {
+      margin-top: 10px; max-height: 280px; overflow: auto;
+      background: var(--code-bg); color: var(--code-text);
+      border-radius: 7px; padding: 12px;
+      font: 12px/1.65 'JetBrains Mono', monospace;
     }
-    .changelog-version {
-      font-family: 'Geist Mono', monospace;
-      font-size: 14px; font-weight: 700; color: var(--text);
-    }
-    .changelog-date { font-size: 12.5px; color: var(--faint); margin-left: auto; }
-    .changelog-tag {
-      font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 99px;
-      text-transform: uppercase; letter-spacing: 0.05em;
-    }
-    .changelog-tag.stable { background: rgba(34,197,94,.1); color: #15803d; }
-    .changelog-tag.latest { background: var(--accent-soft); color: var(--accent); }
-    html[data-theme="dark"] .changelog-tag.stable { background:rgba(34,197,94,.12); color:#4ade80; }
-    .changelog-body { padding: 16px 18px; }
-    .changelog-body ul { padding-left: 18px; }
-    .changelog-body li { font-size: 13.5px; color: var(--muted); margin-bottom: 5px; line-height: 1.6; }
-
-    /* Error codes grid */
-    .error-grid {
-      display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-      gap: 10px; margin: 16px 0;
-    }
-    .error-card {
-      padding: 14px 16px; border-radius: 9px; border: 1px solid;
-      text-align: center;
-    }
-    .error-card .code { font-family: 'Geist Mono', monospace; font-size: 22px; font-weight: 800; }
-    .error-card .label { font-size: 12px; font-weight: 600; margin-top: 4px; }
-    .ec-401 { border-color: #fde68a; background: #fffbeb; color: #b45309; }
-    .ec-403 { border-color: #fecaca; background: #fef2f2; color: #b91c1c; }
-    .ec-404 { border-color: #dbeafe; background: #eff6ff; color: #1d4ed8; }
-    .ec-422 { border-color: #e9d5ff; background: #faf5ff; color: #7c3aed; }
-    .ec-429 { border-color: #fde68a; background: #fffbeb; color: #b45309; }
-    .ec-5xx { border-color: #e5e7eb; background: #f9fafb; color: #374151; }
-    html[data-theme="dark"] .ec-401 { border-color: #78350f; background: #451a03; color: #fbbf24; }
-    html[data-theme="dark"] .ec-403 { border-color: #7f1d1d; background: #450a0a; color: #fca5a5; }
-    html[data-theme="dark"] .ec-404 { border-color: #1e3a5f; background: #0f2040; color: #93c5fd; }
-    html[data-theme="dark"] .ec-422 { border-color: #4c1d95; background: #2e1065; color: #c4b5fd; }
-    html[data-theme="dark"] .ec-429 { border-color: #78350f; background: #451a03; color: #fbbf24; }
-    html[data-theme="dark"] .ec-5xx { border-color: var(--border); background: var(--panel2); color: var(--muted); }
-
-    /* Checklist */
-    .checklist { list-style: none; padding: 0; margin: 14px 0; }
-    .checklist li {
-      display: flex; align-items: flex-start; gap: 10px;
-      padding: 9px 0; border-bottom: 1px solid var(--border2);
-      font-size: 13.5px; color: var(--muted); line-height: 1.5;
-    }
-    .checklist li:last-child { border-bottom: none; }
-    .cl-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
 
     /* Responsive */
-    @media (max-width: 1180px) {
-      .page-layout { grid-template-columns: var(--sidebar-w) 1fr; }
-      .toc-panel { display: none; }
+    @media (max-width: 1100px) {
+      .layout { grid-template-columns: var(--sidebar-w) 1fr; }
+      .toc { display: none; }
     }
-    @media (max-width: 860px) {
-      :root { --sidebar-w: 0px; }
-      .header-brand { width: auto; }
+    @media (max-width: 820px) {
+      .layout { display: block; }
       .sidebar { display: none; }
-      .page-layout { display: block; }
-      .main-content { padding: 24px 20px 60px; }
-      .page-title { font-size: 26px; }
+      .main { padding: 24px 20px 60px; }
+      .page-h1 { font-size: 22px; }
       .page-nav { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
 
-  {{-- ── Header ──────────────────────────────────────────────────────────── --}}
-  <header class="site-header">
-    <a class="header-brand" href="{{ route('developers.api-docs') }}" aria-label="Kitobchi Developer API">
-      <img class="logo-light" src="{{ asset('images/logo/logo_blue.png') }}" alt="Kitobchi">
-      <img class="logo-dark" src="{{ asset('images/logo/logo_white.png') }}" alt="Kitobchi">
-      <span class="api-badge">API</span>
+{{-- Header --}}
+<header class="hd">
+  <div class="hd-brand">
+    <a href="{{ route('developers.api-docs') }}" style="display:flex;align-items:center;gap:9px;">
+      <img src="{{ asset('apple-touch-icon.png') }}" alt="Kitobchi" width="26" height="26">
     </a>
-
-    <div class="header-center">
-      <button class="search-trigger" id="searchTrigger" type="button">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <span>Hujjatlardan qidirish...</span>
-        <span class="search-hint"><kbd>⌘</kbd><kbd>K</kbd></span>
-      </button>
-    </div>
-
-    <div class="header-actions">
-      <a class="hbtn" href="{{ $openapiUrl }}" target="_blank" rel="noopener" title="OpenAPI 3.0 spec">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-        OpenAPI
-      </a>
-      <a class="hbtn" href="{{ $postmanUrl }}" target="_blank" rel="noopener" title="Postman Collection">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Postman
-      </a>
-      <button class="hbtn hbtn-icon" id="themeToggle" type="button" title="Mavzuni almashtirish">
-        <svg class="theme-icon-light" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-        <svg class="theme-icon-dark" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-      </button>
-    </div>
-  </header>
-
-  {{-- ── Search Modal ───────────────────────────────────────────────────── --}}
-  <div class="search-backdrop" id="searchBackdrop">
-    <div class="search-modal" role="dialog" aria-label="Hujjatlardan qidirish">
-      <div class="search-input-wrap">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input class="search-input" id="searchInput" type="search" placeholder="Mavzu, endpoint yoki sahifa izlang..." autocomplete="off">
-      </div>
-      <div class="search-results" id="searchResults"></div>
-    </div>
+    <span class="hd-ver">API v1</span>
   </div>
+  <div class="hd-center">
+    <button class="hd-search" id="searchBtn" type="button">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <span>Qidirish...</span>
+      <span class="kbds"><kbd>⌘</kbd><kbd>K</kbd></span>
+    </button>
+  </div>
+  <div class="hd-right">
+    <a class="hd-btn" href="{{ $openapiUrl }}" target="_blank" rel="noopener">OpenAPI</a>
+    <a class="hd-btn" href="{{ $postmanUrl }}" target="_blank" rel="noopener">Postman</a>
+    <button class="hd-btn hd-btn-icon" id="themeBtn" type="button" aria-label="Mavzu">
+      <svg class="ico-sun" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+      <svg class="ico-moon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    </button>
+    <a class="hd-btn hd-btn-primary" href="{{ url('/') }}">Kitobchi.com</a>
+  </div>
+</header>
 
-  {{-- ── Page Layout ────────────────────────────────────────────────────── --}}
-  <div class="page-layout">
+{{-- Search modal --}}
+<div class="search-wrap" id="searchWrap">
+  <div class="search-box">
+    <div class="search-bar">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input class="search-inp" id="searchInp" type="search" placeholder="Sahifa, mavzu yoki endpoint..." autocomplete="off">
+    </div>
+    <div class="search-list" id="searchList"></div>
+  </div>
+</div>
 
-    {{-- Left Sidebar --}}
-    <aside class="sidebar">
-      <nav aria-label="API navigatsiyasi">
-        @foreach($groups as $group => $slugs)
-          <div class="nav-section">
-            <span class="nav-group-label">{{ $group }}</span>
-            @foreach($slugs as $slug)
-              @php $p = $pages[$slug]; @endphp
-              <a href="{{ $routeFor($slug) }}" class="nav-link {{ $currentSlug === $slug ? 'active' : '' }}">
-                @if(!empty($p['icon']) && isset($iconSvgs[$p['icon']]))
-                  <span class="nav-link-icon">{!! $iconSvgs[$p['icon']] !!}</span>
-                @endif
-                <span>{{ $p['title'] }}</span>
-                @if(!empty($p['badge']))
-                  <span class="nav-link-badge {{ str_contains($p['badge'], 'kunda') ? 'soon' : '' }}">{{ $p['badge'] }}</span>
-                @endif
-              </a>
-            @endforeach
+{{-- Main layout --}}
+<div class="layout">
+
+  {{-- Sidebar --}}
+  <aside class="sidebar">
+    <nav aria-label="API navigatsiyasi">
+      @foreach($groups as $group => $slugs)
+        <div class="nav-group">
+          <span class="nav-group-title">{{ $group }}</span>
+          @foreach($slugs as $slug)
+            @php $p = $pages[$slug]; @endphp
+            <a href="{{ $routeFor($slug) }}"
+               class="nav-item {{ $currentSlug === $slug ? 'active' : '' }}">
+              <span>{{ $p['title'] }}</span>
+              @if(!empty($p['badge']))
+                <span class="nav-badge {{ str_contains($p['badge'], 'kunda') ? 'nav-badge-soon' : 'nav-badge-write' }}">
+                  {{ $p['badge'] }}
+                </span>
+              @endif
+            </a>
+          @endforeach
+        </div>
+      @endforeach
+    </nav>
+  </aside>
+
+  {{-- Content --}}
+  <main class="main">
+    <div class="breadcrumb">
+      <a href="{{ route('developers.api-docs') }}">Kitobchi API</a>
+      <span class="breadcrumb-sep">/</span>
+      <span>{{ $currentPage['group'] }}</span>
+      <span class="breadcrumb-sep">/</span>
+      <span>{{ $currentPage['title'] }}</span>
+    </div>
+
+    <h1 class="page-h1">{{ $currentPage['title'] }}</h1>
+    <p class="page-lead">{{ $currentPage['description'] }}</p>
+
+    @switch($currentSlug)
+
+      {{-- GETTING STARTED --}}
+      @case('getting-started')
+        <h2 class="doc-h2" id="overview">Nima bu?</h2>
+        <p class="doc-p">Kitobchi Client API — do'konlar, katalog platformalari va uchinchi tomon servislar uchun mo'ljallangan REST API. API orqali siz Kitobchi'ning kitob va kanselyariya katalogiga, qidiruv tizimiga va seller ma'lumotlariga ulana olasiz.</p>
+        <p class="doc-p">Barcha so'rovlar <strong>HTTPS</strong> orqali, quyidagi base URL ga yuboriladi:</p>
+        <div class="codeblock">
+          <div class="codeblock-header">
+            <span class="codeblock-title">Base URL</span>
           </div>
-        @endforeach
-      </nav>
-    </aside>
+          <pre>{{ $baseUrl }}</pre>
+        </div>
 
-    {{-- Main Content --}}
-    <main class="main-content">
-      <div class="breadcrumb">
-        <a href="{{ route('developers.api-docs') }}">Kitobchi API</a>
-        <span class="breadcrumb-sep">/</span>
-        <span>{{ $currentPage['group'] ?? 'Hujjatlar' }}</span>
-        <span class="breadcrumb-sep">/</span>
-        <span>{{ $currentPage['title'] }}</span>
-      </div>
-
-      <h1 class="page-title">{{ $currentPage['title'] }}</h1>
-      <p class="page-lead">{{ $currentPage['description'] }}</p>
-
-      @switch($currentSlug)
-
-        {{-- ── GETTING STARTED ──────────────────────────────────────── --}}
-        @case('getting-started')
-          <div class="doc-section" id="overview">
-            <h2 class="doc-h2">Nima bu API?</h2>
-            <p class="doc-p">Kitobchi Client API — bu do'konlar, marketpleys platformalari va uchinchi tomon servislar uchun mo'ljallangan ochiq REST API. API yordamida siz:</p>
-            <ul class="doc-ul">
-              <li>Kitobchi katalogidan kitoblar va kanselyariyalar ro'yxatini olishingiz</li>
-              <li>Qidiruv, autocomplete va kategoriya endpointlarini integratsiya qilishingiz</li>
-              <li>Seller (do'kon) sifatida zaxirangizni <span class="ic">ISBN</span> yoki shtrix-kod bo'yicha real vaqtda yangilashingiz</li>
-              <li>Deep link'lar orqali foydalanuvchilarni bevosita ilovaga yo'naltirishingiz</li>
-            </ul>
-            <div class="callout callout-info">
-              <span class="callout-icon">ℹ️</span>
-              <div>
-                <strong>Base URL:</strong> <span class="ic">{{ $baseUrl }}</span><br>
-                Barcha so'rovlar HTTPS orqali yuborilishi shart. HTTP so'rovlar rad etiladi.
-              </div>
+        <hr class="divider">
+        <h2 class="doc-h2" id="quickstart">Boshlash</h2>
+        <div class="steps">
+          <div class="step">
+            <div class="step-num">1</div>
+            <div>
+              <h3>API kalitini oling</h3>
+              <p>Kitobchi jamoasiga murojaat qiling — sizga <span class="ic">X-App-ID</span> va <span class="ic">X-App-Secret</span> juftligi beriladi. Kalit siz boshqaradigan do'kon hisobiga bog'langan.</p>
             </div>
           </div>
-
-          <div class="doc-section" id="architecture">
-            <h2 class="doc-h2">Arxitektura va oqim</h2>
-            <p class="doc-p">Har bir so'rov quyidagi zanjirdan o'tadi:</p>
-            <div class="arch-flow">
-              <div class="arch-node"><span class="arch-node-icon">🖥️</span>Sizning server</div>
-              <span class="arch-arrow">→</span>
-              <div class="arch-node"><span class="arch-node-icon">🔑</span>X-App-ID<br>X-App-Secret</div>
-              <span class="arch-arrow">→</span>
-              <div class="arch-node"><span class="arch-node-icon">🛡️</span>Middleware<br>tekshiruv</div>
-              <span class="arch-arrow">→</span>
-              <div class="arch-node"><span class="arch-node-icon">⚡</span>Cache<br>Layer</div>
-              <span class="arch-arrow">→</span>
-              <div class="arch-node"><span class="arch-node-icon">📦</span>JSON<br>javob</div>
-            </div>
-            <div class="callout callout-warn">
-              <span class="callout-icon">⚠️</span>
-              <div>API kalitini <strong>hech qachon frontend JavaScript</strong> kodi ichida saqlamang. Barcha so'rovlar sizning server tomonidan yuborilishi lozim.</div>
+          <div class="step">
+            <div class="step-num">2</div>
+            <div>
+              <h3>Birinchi so'rovni yuboring</h3>
+              <p>Quyidagi cURL misolini ishga tushirib natijani ko'ring. Barcha so'rovlarda ikkala header ham bo'lishi shart.</p>
             </div>
           </div>
+          <div class="step">
+            <div class="step-num">3</div>
+            <div>
+              <h3>Integratsiyani quring</h3>
+              <p>Catalog, search va seller endpoint'larini o'z tizimingizga ulang. So'rovlarni faqat serveringiz tomonidan yuboring — API kalitini hech qachon frontend kodiga kiritmang.</p>
+            </div>
+          </div>
+        </div>
 
-          <div class="doc-section" id="first-request">
-            <h2 class="doc-h2">Birinchi so'rovni yuborish</h2>
-            <p class="doc-p">Kalit oldingiz va hamma narsa sozlandi. Endi birinchi so'rovni yuboring:</p>
-            <div class="code-block">
-              <div class="code-block-head">
-                <span class="code-block-lang">bash</span>
-                <button class="code-copy-btn" type="button">Nusxalash</button>
-              </div>
-              <pre>curl --request GET \
+        <hr class="divider">
+        <h2 class="doc-h2" id="first-request">Birinchi so'rov</h2>
+        <div class="codeblock">
+          <div class="codeblock-header">
+            <span class="codeblock-title">bash</span>
+            <button class="copy-btn" type="button">Ko'chirish</button>
+          </div>
+          <pre>curl --request GET \
   --url '{{ $baseUrl }}/products/books?page=1' \
   --header 'Accept: application/json' \
   --header 'X-App-ID: app_xxxxxxxxxxxx' \
   --header 'X-App-Secret: your-secret-here'</pre>
-            </div>
-          </div>
+        </div>
 
-          <div class="doc-section" id="response-format">
-            <h2 class="doc-h2">Javob formati</h2>
-            <p class="doc-p">Barcha javoblar standart JSON formatida qaytariladi:</p>
-            <div class="code-block">
-              <div class="code-block-head">
-                <span class="code-block-lang">json — Muvaffaqiyatli javob</span>
-                <button class="code-copy-btn" type="button">Nusxalash</button>
-              </div>
-              <pre>{
+        <hr class="divider">
+        <h2 class="doc-h2" id="response-format">Javob formati</h2>
+        <p class="doc-p">Barcha javoblar JSON formatida qaytariladi. Muvaffaqiyatli javob:</p>
+        <div class="codeblock">
+          <div class="codeblock-header">
+            <span class="codeblock-title">JSON — 200 OK</span>
+          </div>
+          <pre>{
   "status": "success",
   "data": [ ... ],
   "meta": {
@@ -908,224 +713,184 @@
     "last_page": 18
   }
 }</pre>
-            </div>
-            <div class="code-block">
-              <div class="code-block-head">
-                <span class="code-block-lang">json — Xato javob</span>
-                <button class="code-copy-btn" type="button">Nusxalash</button>
-              </div>
-              <pre>{
+        </div>
+        <p class="doc-p">Xato bo'lganda:</p>
+        <div class="codeblock">
+          <div class="codeblock-header">
+            <span class="codeblock-title">JSON — Xato javob</span>
+          </div>
+          <pre>{
   "status": "error",
   "message": "Invalid or inactive API credentials"
 }</pre>
-            </div>
-          </div>
+        </div>
 
-          <div class="doc-section" id="best-practices">
-            <h2 class="doc-h2">Eng yaxshi amaliyotlar</h2>
-            <ul class="checklist">
-              <li><span class="cl-icon">🔒</span><div><strong>Secret serverda:</strong> App Secret'ni faqat server muhitidagi o'zgaruvchilarda saqlang (masalan, <span class="ic">KITOBCHI_APP_SECRET</span>).</div></li>
-              <li><span class="cl-icon">🔁</span><div><strong>POST'larda Idempotency-Key:</strong> Zaxira yangilash so'rovlarida <span class="ic">Idempotency-Key</span> headerini yuboring — takroriy so'rovlar bir marta bajariladi.</div></li>
-              <li><span class="cl-icon">⚡</span><div><strong>ETag'ni saqlang:</strong> GET javobidagi <span class="ic">ETag</span> headerini keyingi so'rovda <span class="ic">If-None-Match</span> sifatida yuboring — 304 javob orqali bandwidth tejang.</div></li>
-              <li><span class="cl-icon">📈</span><div><strong>Limit kuzatuvi:</strong> <span class="ic">X-RateLimit-Remaining-Minute</span> headerini monitoring qiling, chegara yaqinlashganda so'rovlarni kamaytiring.</div></li>
-              <li><span class="cl-icon">🛡️</span><div><strong>IP whitelist:</strong> Boshqaruv panelida kalitingizga server IP manzilini qo'shing — qo'shimcha xavfsizlik qatlami.</div></li>
-            </ul>
-          </div>
-          @break
+        <hr class="divider">
+        <h2 class="doc-h2" id="best-practices">Muhim qoidalar</h2>
+        <ul class="checklist">
+          <li>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+            <div><strong>Secret serverda bo'lsin</strong> — <span class="ic">X-App-Secret</span> ni faqat server muhitiy o'zgaruvchilarida saqlang. Frontend yoki mobil ilovaga bermang.</div>
+          </li>
+          <li>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+            <div><strong>POST'larda Idempotency-Key</strong> — zaxira yangilash so'rovlarida <span class="ic">Idempotency-Key</span> headerini yuboring, internet uzilsa ham ikki marta bajarilmaydi.</div>
+          </li>
+          <li>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+            <div><strong>Rate limit kuzatuvi</strong> — <span class="ic">X-RateLimit-Remaining-Minute</span> headerini kuzating; limit yaqinlashganda so'rovlar orasidagi intervalini oshiring.</div>
+          </li>
+          <li>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+            <div><strong>ETag bilan kesh optimallashtirish</strong> — GET javobidagi <span class="ic">ETag</span> ni saqlang, keyingi so'rovda <span class="ic">If-None-Match</span> orqali 304 javob oling.</div>
+          </li>
+        </ul>
+        @break
 
-        {{-- ── AUTHENTICATION ───────────────────────────────────────── --}}
-        @case('authentication')
-          <div class="doc-section" id="headers">
-            <h2 class="doc-h2">Zarur headerlar</h2>
-            <p class="doc-p">Har bir so'rovda quyidagi uchta header bo'lishi shart:</p>
-            <div class="code-block">
-              <div class="code-block-head">
-                <span class="code-block-lang">http</span>
-                <button class="code-copy-btn" type="button">Nusxalash</button>
-              </div>
-              <pre>X-App-ID: app_xxxxxxxxxxxx
+      {{-- AUTHENTICATION --}}
+      @case('authentication')
+        <h2 class="doc-h2" id="headers">Headerlar</h2>
+        <p class="doc-p">Har bir so'rovda quyidagi headerlar bo'lishi shart:</p>
+        <div class="codeblock">
+          <div class="codeblock-header">
+            <span class="codeblock-title">HTTP</span>
+            <button class="copy-btn" type="button">Ko'chirish</button>
+          </div>
+          <pre>X-App-ID: app_xxxxxxxxxxxx
 X-App-Secret: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 Accept: application/json</pre>
-            </div>
-            <table class="doc-table">
-              <thead><tr><th>Header</th><th>Tavsifi</th><th>Majburiy</th></tr></thead>
-              <tbody>
-                <tr><td><span class="ic">X-App-ID</span></td><td>Unikal ilova identifikatori — <code>app_</code> prefiks bilan boshlanadi</td><td><strong>Ha</strong></td></tr>
-                <tr><td><span class="ic">X-App-Secret</span></td><td>Maxfiy kalit — hech qachon frontend'ga uzatilmasin</td><td><strong>Ha</strong></td></tr>
-                <tr><td><span class="ic">Accept</span></td><td>JSON javob kutilishini bildiradi</td><td>Tavsiya</td></tr>
-                <tr><td><span class="ic">Idempotency-Key</span></td><td>POST so'rovlarda takrorlanishning oldini oladi</td><td>POST'da tavsiya</td></tr>
-              </tbody>
-            </table>
-          </div>
+        </div>
+        <table class="doc-table">
+          <thead><tr><th>Header</th><th>Tavsifi</th><th>Talab</th></tr></thead>
+          <tbody>
+            <tr><td><span class="ic">X-App-ID</span></td><td>Unikal ilova identifikatori — <code>app_</code> prefiksi bilan boshlanadi</td><td><span class="chip chip-req">majburiy</span></td></tr>
+            <tr><td><span class="ic">X-App-Secret</span></td><td>Maxfiy kalit — serverda muhit o'zgaruvchisi sifatida saqlang</td><td><span class="chip chip-req">majburiy</span></td></tr>
+            <tr><td><span class="ic">Accept</span></td><td>JSON javob kutilayotganini bildiradi</td><td><span class="chip chip-opt">tavsiya</span></td></tr>
+            <tr><td><span class="ic">Idempotency-Key</span></td><td>POST so'rovlarda takroriy bajarishning oldini oladi (UUID yuboring)</td><td><span class="chip chip-opt">POST'da tavsiya</span></td></tr>
+          </tbody>
+        </table>
 
-          <div class="doc-section" id="credentials">
-            <h2 class="doc-h2">App ID va Secret olish</h2>
-            <p class="doc-p">Kalitlar Kitobchi Boshqaruv panelidan yaratiladi:</p>
-            <div class="quickstart-steps">
-              <div class="qs-step">
-                <div class="qs-num">1</div>
-                <div class="qs-text">
-                  <h3>Boshqaruv panelga kiring</h3>
-                  <p>Admin hisob bilan <span class="ic">kitobchi.com/boshqaruv</span> ga o'ting.</p>
-                </div>
-              </div>
-              <div class="qs-step">
-                <div class="qs-num">2</div>
-                <div class="qs-text">
-                  <h3>API Clients bo'limiga o'ting</h3>
-                  <p>Sozlamalar → API Clients → Yangi kalit yarating.</p>
-                </div>
-              </div>
-              <div class="qs-step">
-                <div class="qs-num">3</div>
-                <div class="qs-text">
-                  <h3>Ability va IP ni belgilang</h3>
-                  <p><span class="ic">read</span> yoki <span class="ic">stock:write</span> ni tanlang. Seller kaliti uchun do'koningizni biriktiring.</p>
-                </div>
-              </div>
-            </div>
-          </div>
+        <hr class="divider">
+        <h2 class="doc-h2" id="credentials">Kalit olish</h2>
+        <p class="doc-p">API kalitlari Kitobchi jamoasi tomonidan beriladi. Kalit to'plami ikkita elementdan iborat:</p>
+        <table class="doc-table">
+          <thead><tr><th>Element</th><th>Ko'rinishi</th><th>Maqsadi</th></tr></thead>
+          <tbody>
+            <tr><td><span class="ic">X-App-ID</span></td><td><code>app_a1b2c3d4e5f6g7h8</code></td><td>Ochiq identifikator — loglar va debuggingda ko'rinadi</td></tr>
+            <tr><td><span class="ic">X-App-Secret</span></td><td><code>sk_prod_xxxxxxxxxxxx...</code></td><td>Maxfiy kalit — faqat serverda saqlang, hech kimga bermang</td></tr>
+          </tbody>
+        </table>
+        <p class="doc-p">Kalit olish yoki yangilash uchun: <strong>developers@kitobchi.com</strong></p>
 
-          <div class="doc-section" id="secrets">
-            <h2 class="doc-h2">Secret xavfsizligi</h2>
-            <div class="callout callout-error">
-              <span class="callout-icon">🚨</span>
-              <div><strong>Secret oshkor bo'lsa:</strong> Boshqaruv paneli orqali darhol o'chiring va yangi kalit yarating. Eski secret avtomatik bekor qilinadi va barcha so'rovlar 403 bilan rad etiladi.</div>
-            </div>
-            <p class="doc-p">Xavfsiz saqlash uchun tavsiyalar:</p>
-            <div class="code-block">
-              <div class="code-block-head">
-                <span class="code-block-lang">bash — .env fayli</span>
-              </div>
-              <pre>KITOBCHI_APP_ID=app_xxxxxxxxxxxx
-KITOBCHI_APP_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx</pre>
-            </div>
+        <hr class="divider">
+        <h2 class="doc-h2" id="secrets">Xavfsizlik</h2>
+        <div class="note">
+          <strong>Secret oshkor bo'lsa:</strong> darhol bizga xabar bering, eski kalit o'chiriladi va yangi juftlik beriladi. Barcha so'rovlar yangi kalit bilan yuborilishi kerak bo'ladi.
+        </div>
+        <div class="codeblock">
+          <div class="codeblock-header">
+            <span class="codeblock-title">.env</span>
           </div>
+          <pre>KITOBCHI_APP_ID=app_xxxxxxxxxxxx
+KITOBCHI_APP_SECRET=sk_prod_xxxxxxxxxxxx</pre>
+        </div>
 
-          <div class="doc-section" id="abilities">
-            <h2 class="doc-h2">Ruxsatlar (Abilities)</h2>
-            <p class="doc-p">Har bir kalit cheklangan ruxsatlar to'plami bilan yaratiladi:</p>
-            <table class="doc-table">
-              <thead><tr><th>Ability</th><th>Qamrovi</th><th>Shart</th></tr></thead>
-              <tbody>
-                <tr>
-                  <td><span class="type-chip">read</span></td>
-                  <td>Katalog, qidiruv va seller ma'lumotlari (o'qish)</td>
-                  <td>Ixtiyoriy kalit</td>
-                </tr>
-                <tr>
-                  <td><span class="type-chip yellow">stock:write</span></td>
-                  <td>Zaxirani ISBN/shtrix-kod bo'yicha yangilash</td>
-                  <td>Seller-scoped kalit majburiy</td>
-                </tr>
-              </tbody>
-            </table>
-            <div class="callout callout-tip">
-              <span class="callout-icon">💡</span>
-              <div><strong>Minimal ruxsatlar:</strong> Har bir integratsiya uchun alohida kalit yarating va faqat kerakli ability'larni bering. Bu xavfsizlikni oshiradi.</div>
-            </div>
+        <hr class="divider">
+        <h2 class="doc-h2" id="abilities">Ruxsatlar (Abilities)</h2>
+        <p class="doc-p">Har bir kalit yaratilayotganda foydalanish doirasi belgilanadi:</p>
+        <table class="doc-table">
+          <thead><tr><th>Ability</th><th>Qamrovi</th></tr></thead>
+          <tbody>
+            <tr><td><span class="ic">read</span></td><td>Katalog, qidiruv, seller ma'lumotlari (faqat o'qish)</td></tr>
+            <tr><td><span class="ic">stock:write</span></td><td>Do'kon zaxirasini ISBN / shtrix-kod bo'yicha yangilash</td></tr>
+          </tbody>
+        </table>
+        @break
+
+      {{-- RATE LIMITS --}}
+      @case('rate-limits')
+        <h2 class="doc-h2" id="limits">Limitlar</h2>
+        <p class="doc-p">Har bir API kalit uchun standart limitlar:</p>
+        <table class="doc-table">
+          <thead><tr><th>Davr</th><th>Limit</th></tr></thead>
+          <tbody>
+            <tr><td>1 soniya</td><td><span class="ic">{{ $defaultLimits['per_second'] }}</span> so'rov</td></tr>
+            <tr><td>1 daqiqa</td><td><span class="ic">{{ $defaultLimits['per_minute'] }}</span> so'rov</td></tr>
+          </tbody>
+        </table>
+        <p class="doc-p">Limit oshib ketsa HTTP <span class="ic">429 Too Many Requests</span> qaytariladi. <span class="ic">Retry-After</span> headeridagi soniya qadar kuting.</p>
+
+        <hr class="divider">
+        <h2 class="doc-h2" id="headers-rl">Rate-limit headerlar</h2>
+        <table class="doc-table">
+          <thead><tr><th>Header</th><th>Ma'nosi</th></tr></thead>
+          <tbody>
+            <tr><td><span class="ic">X-RateLimit-Limit-Second</span></td><td>1 soniyadagi ruxsat etilgan so'rovlar soni</td></tr>
+            <tr><td><span class="ic">X-RateLimit-Limit-Minute</span></td><td>1 daqiqadagi ruxsat etilgan so'rovlar soni</td></tr>
+            <tr><td><span class="ic">X-RateLimit-Remaining-Second</span></td><td>Joriy soniyadagi qolgan kvota</td></tr>
+            <tr><td><span class="ic">X-RateLimit-Remaining-Minute</span></td><td>Joriy daqiqadagi qolgan kvota</td></tr>
+            <tr><td><span class="ic">Retry-After</span></td><td>429 holati — kutish vaqti (soniya)</td></tr>
+          </tbody>
+        </table>
+
+        <hr class="divider">
+        <h2 class="doc-h2" id="cache">Response keshi</h2>
+        <p class="doc-p">GET endpointlar avtomatik ravishda <strong>120 soniya</strong> keshlanadi. Har bir javobda <span class="ic">X-API-Cache</span> headeri bo'ladi:</p>
+        <table class="doc-table">
+          <thead><tr><th>Qiymat</th><th>Ma'nosi</th></tr></thead>
+          <tbody>
+            <tr><td><span class="ic">MISS</span></td><td>Keshda yo'q edi — yangi javob yaratildi va saqlandi</td></tr>
+            <tr><td><span class="ic">HIT</span></td><td>Keshdan qaytarildi</td></tr>
+            <tr><td><span class="ic">BYPASS</span></td><td>Kesh o'tkazib yuborildi (POST yoki <span class="ic">Cache-Control: no-cache</span>)</td></tr>
+          </tbody>
+        </table>
+
+        <hr class="divider">
+        <h2 class="doc-h2" id="etag">ETag va 304</h2>
+        <p class="doc-p">Bandwidth tejash uchun conditional request'lardan foydalaning:</p>
+        <div class="codeblock">
+          <div class="codeblock-header">
+            <span class="codeblock-title">1-so'rov — ETag saqlang</span>
           </div>
-          @break
-
-        {{-- ── RATE LIMITS ──────────────────────────────────────────── --}}
-        @case('rate-limits')
-          <div class="doc-section" id="limits">
-            <h2 class="doc-h2">Limitlar va response headerlar</h2>
-            <p class="doc-p">Har bir API client uchun standart limitlar:</p>
-            <div class="error-grid" style="grid-template-columns: 1fr 1fr; margin: 16px 0;">
-              <div class="error-card ec-404" style="border-color: #dbeafe; background: #eff6ff; color: #1d4ed8;">
-                <div class="code">{{ $defaultLimits['per_second'] }}</div>
-                <div class="label">so'rov / soniya</div>
-              </div>
-              <div class="error-card ec-404" style="border-color: #dbeafe; background: #eff6ff; color: #1d4ed8;">
-                <div class="code">{{ $defaultLimits['per_minute'] }}</div>
-                <div class="label">so'rov / daqiqa</div>
-              </div>
-            </div>
-            <p class="doc-p">Limit oshib ketganda <strong>HTTP 429</strong> qaytariladi:</p>
-            <div class="code-block">
-              <div class="code-block-head"><span class="code-block-lang">json — 429 Too Many Requests</span></div>
-              <pre>{
-  "status": "error",
-  "message": "Rate limit oshib ketdi. Keyinroq urinib ko'ring.",
-  "retry_after": 1
-}</pre>
-            </div>
-            <table class="doc-table">
-              <thead><tr><th>Header</th><th>Ma'nosi</th></tr></thead>
-              <tbody>
-                <tr><td><span class="ic">X-RateLimit-Limit-Second</span></td><td>1 soniyadagi maksimal so'rovlar</td></tr>
-                <tr><td><span class="ic">X-RateLimit-Limit-Minute</span></td><td>1 daqiqadagi maksimal so'rovlar</td></tr>
-                <tr><td><span class="ic">X-RateLimit-Remaining-Second</span></td><td>Joriy soniyadagi qolgan kvota</td></tr>
-                <tr><td><span class="ic">X-RateLimit-Remaining-Minute</span></td><td>Joriy daqiqadagi qolgan kvota</td></tr>
-                <tr><td><span class="ic">Retry-After</span></td><td>Limit oshganda kutish vaqti (soniya)</td></tr>
-              </tbody>
-            </table>
-          </div>
-
-          <div class="doc-section" id="cache">
-            <h2 class="doc-h2">Response keshi</h2>
-            <p class="doc-p">GET endpointlari avtomatik ravishda <strong>120 soniya</strong> keshlanadi. Kesh holati har bir javobdagi <span class="ic">X-API-Cache</span> headerida ko'rsatiladi:</p>
-            <table class="doc-table">
-              <thead><tr><th>Qiymat</th><th>Ma'nosi</th></tr></thead>
-              <tbody>
-                <tr><td><span class="type-chip green">MISS</span></td><td>Keshda yo'q edi, yangi javob yaratildi va saqlandi</td></tr>
-                <tr><td><span class="type-chip yellow">HIT</span></td><td>Keshdan qaytarildi — tezroq va limitni sarflamadi</td></tr>
-                <tr><td><span class="type-chip gray">BYPASS</span></td><td>Kesh o'tkazib yuborildi (POST, no-cache header)</td></tr>
-              </tbody>
-            </table>
-            <div class="callout callout-tip">
-              <span class="callout-icon">💡</span>
-              <div>Keshni bekor qilish uchun so'rovda <span class="ic">Cache-Control: no-cache</span> headerini yuboring.</div>
-            </div>
-          </div>
-
-          <div class="doc-section" id="etag">
-            <h2 class="doc-h2">ETag va 304 Not Modified</h2>
-            <p class="doc-p">Bandwidth tejash uchun ETag mexanizmidan foydalaning:</p>
-            <div class="code-block">
-              <div class="code-block-head"><span class="code-block-lang">http — 1-so'rov: ETag saqlang</span></div>
-              <pre>HTTP/1.1 200 OK
+          <pre>HTTP/1.1 200 OK
 ETag: "a3f5c8e9b1d2..."
-X-API-Cache: MISS</pre>
-            </div>
-            <div class="code-block">
-              <div class="code-block-head"><span class="code-block-lang">http — 2-so'rov: ETag yuboring</span></div>
-              <pre>GET /products/books HTTP/1.1
+Content-Type: application/json</pre>
+        </div>
+        <div class="codeblock">
+          <div class="codeblock-header">
+            <span class="codeblock-title">2-so'rov — If-None-Match yuboring</span>
+          </div>
+          <pre>GET /products/books HTTP/1.1
 If-None-Match: "a3f5c8e9b1d2..."
 
-HTTP/1.1 304 Not Modified  ← Ma'lumot o'zgarmagan, trafik sarf etilmadi</pre>
-            </div>
-          </div>
-          @break
+→ HTTP/1.1 304 Not Modified  (body yo'q, trafik tejaldi)</pre>
+        </div>
+        @break
 
-        {{-- ── PAGINATION ───────────────────────────────────────────── --}}
-        @case('pagination')
-          <div class="doc-section" id="params">
-            <h2 class="doc-h2">Parametrlar</h2>
-            <table class="doc-table">
-              <thead><tr><th>Parametr</th><th>Turi</th><th>Default</th><th>Tavsifi</th></tr></thead>
-              <tbody>
-                <tr><td><span class="ic">page</span></td><td><span class="type-chip">integer</span></td><td>1</td><td>Sahifa raqami (1 dan boshlanadi)</td></tr>
-                <tr><td><span class="ic">per_page</span></td><td><span class="type-chip">integer</span></td><td>20</td><td>Sahifadagi elementlar soni (maks. 100)</td></tr>
-                <tr><td><span class="ic">q</span></td><td><span class="type-chip">string</span></td><td>—</td><td>Nom yoki tavsif bo'yicha matnli qidiruv</td></tr>
-                <tr><td><span class="ic">sort</span></td><td><span class="type-chip">string</span></td><td>popular</td><td><span class="ic">popular</span>, <span class="ic">new</span>, <span class="ic">price_asc</span>, <span class="ic">price_desc</span></td></tr>
-                <tr><td><span class="ic">seller_id</span></td><td><span class="type-chip">integer</span></td><td>—</td><td>Bitta do'kon mahsulotlariga cheklash</td></tr>
-              </tbody>
-            </table>
-          </div>
+      {{-- PAGINATION --}}
+      @case('pagination')
+        <h2 class="doc-h2" id="params">Parametrlar</h2>
+        <table class="doc-table">
+          <thead><tr><th>Parametr</th><th>Turi</th><th>Default</th><th>Tavsifi</th></tr></thead>
+          <tbody>
+            <tr><td><span class="ic">page</span></td><td><span class="chip chip-type">integer</span></td><td>1</td><td>Sahifa raqami (1 dan boshlanadi)</td></tr>
+            <tr><td><span class="ic">per_page</span></td><td><span class="chip chip-type">integer</span></td><td>20</td><td>Sahifadagi elementlar soni (maks. 100)</td></tr>
+            <tr><td><span class="ic">q</span></td><td><span class="chip chip-type">string</span></td><td>—</td><td>Nom yoki tavsif bo'yicha qidiruv</td></tr>
+            <tr><td><span class="ic">sort</span></td><td><span class="chip chip-type">string</span></td><td>popular</td><td><span class="ic">popular</span>, <span class="ic">new</span>, <span class="ic">price_asc</span>, <span class="ic">price_desc</span></td></tr>
+            <tr><td><span class="ic">seller_id</span></td><td><span class="chip chip-type">integer</span></td><td>—</td><td>Faqat shu do'kon mahsulotlarini ko'rsatish</td></tr>
+          </tbody>
+        </table>
 
-          <div class="doc-section" id="meta">
-            <h2 class="doc-h2">Meta bloki</h2>
-            <p class="doc-p">Sahifalangan javoblar <span class="ic">meta</span> blokini o'z ichiga oladi:</p>
-            <div class="code-block">
-              <div class="code-block-head"><span class="code-block-lang">json — Sahifalangan javob tuzilmasi</span></div>
-              <pre>{
+        <hr class="divider">
+        <h2 class="doc-h2" id="meta">Meta bloki</h2>
+        <p class="doc-p">Sahifalangan barcha javoblarda <span class="ic">meta</span> bloki bo'ladi:</p>
+        <div class="codeblock">
+          <div class="codeblock-header">
+            <span class="codeblock-title">JSON</span>
+          </div>
+          <pre>{
   "status": "success",
-  "data": [
-    { "id": 1, "name": "Kitob nomi", "price": 89000 },
-    ...
-  ],
+  "data": [ ... ],
   "meta": {
     "page": 2,
     "per_page": 20,
@@ -1133,511 +898,414 @@ HTTP/1.1 304 Not Modified  ← Ma'lumot o'zgarmagan, trafik sarf etilmadi</pre>
     "last_page": 18
   }
 }</pre>
-            </div>
-            <table class="doc-table">
-              <thead><tr><th>Maydon</th><th>Turi</th><th>Tavsifi</th></tr></thead>
-              <tbody>
-                <tr><td><span class="ic">meta.page</span></td><td><span class="type-chip">integer</span></td><td>Joriy sahifa raqami</td></tr>
-                <tr><td><span class="ic">meta.per_page</span></td><td><span class="type-chip">integer</span></td><td>Sahifadagi elementlar soni</td></tr>
-                <tr><td><span class="ic">meta.total</span></td><td><span class="type-chip">integer</span></td><td>Jami elementlar soni</td></tr>
-                <tr><td><span class="ic">meta.last_page</span></td><td><span class="type-chip">integer</span></td><td>Oxirgi sahifa raqami</td></tr>
-              </tbody>
-            </table>
-          </div>
+        </div>
+        <table class="doc-table">
+          <thead><tr><th>Maydon</th><th>Turi</th><th>Tavsifi</th></tr></thead>
+          <tbody>
+            <tr><td><span class="ic">meta.page</span></td><td><span class="chip chip-type">integer</span></td><td>Joriy sahifa</td></tr>
+            <tr><td><span class="ic">meta.per_page</span></td><td><span class="chip chip-type">integer</span></td><td>Sahifadagi elementlar soni</td></tr>
+            <tr><td><span class="ic">meta.total</span></td><td><span class="chip chip-type">integer</span></td><td>Jami elementlar soni</td></tr>
+            <tr><td><span class="ic">meta.last_page</span></td><td><span class="chip chip-type">integer</span></td><td>Oxirgi sahifa raqami</td></tr>
+          </tbody>
+        </table>
 
-          <div class="doc-section" id="filtering">
-            <h2 class="doc-h2">Filtr va tartiblash</h2>
-            <div class="code-block">
-              <div class="code-block-head"><span class="code-block-lang">bash — Misollar</span></div>
-              <pre># Nom bo'yicha filtr
+        <hr class="divider">
+        <h2 class="doc-h2" id="filtering">Filtr va tartiblash</h2>
+        <div class="codeblock">
+          <div class="codeblock-header">
+            <span class="codeblock-title">bash</span>
+          </div>
+          <pre># Nom bo'yicha qidiruv
 GET /products/books?q=python&page=1
 
-# Narx bo'yicha o'sish tartibida
+# Narx bo'yicha o'sish
 GET /products/books?sort=price_asc&per_page=50
 
-# Bitta do'kon va yangilardan boshlash
+# Bitta do'kon, yangilaridan boshlab
 GET /products/books?seller_id=12&sort=new</pre>
-            </div>
-          </div>
+        </div>
 
-          <div class="doc-section" id="empty-results">
-            <h2 class="doc-h2">Bo'sh natijalar</h2>
-            <p class="doc-p">Hech narsa topilmasa ham xato qaytarilmaydi — bo'sh massiv bilan <strong>200 OK</strong> qaytariladi:</p>
-            <div class="code-block">
-              <div class="code-block-head"><span class="code-block-lang">json — Bo'sh natija</span></div>
-              <pre>{
+        <hr class="divider">
+        <h2 class="doc-h2" id="empty-results">Bo'sh natijalar</h2>
+        <p class="doc-p">Hech narsa topilmasa ham 200 OK qaytariladi — xato emas:</p>
+        <div class="codeblock">
+          <div class="codeblock-header">
+            <span class="codeblock-title">JSON</span>
+          </div>
+          <pre>{
   "status": "success",
   "data": [],
   "meta": { "page": 1, "per_page": 20, "total": 0, "last_page": 1 }
 }</pre>
-            </div>
-          </div>
-          @break
+        </div>
+        @break
 
-        {{-- ── PRODUCTS / SEARCH / SELLER — endpoint sahifalari ─────── --}}
-        @case('products')
-          <div class="doc-section">
-            <h2 class="doc-h2">Mahsulotlar API</h2>
-            <p class="doc-p">Katalogdagi barcha kitoblar, kanselyariyalar, sellerlar va tavsiyalar. Barcha GET endpointlar <span class="ic">read</span> ability bilan, zaxira yangilash esa <span class="ic">stock:write</span> talab qiladi.</p>
-          </div>
-          @foreach($pageEndpoints as $endpoint)
-            <x-api-docs-endpoint :endpoint="$endpoint" />
-          @endforeach
-          @break
+      {{-- ENDPOINT PAGES --}}
+      @case('products')
+        <p class="doc-p" style="margin-bottom:24px;">Katalogdagi kitoblar, kanselyariyalar, seller ma'lumotlari va tavsiyalar. Barcha GET endpointlar <span class="ic">read</span> ability talab qiladi.</p>
+        @foreach($pageEndpoints as $ep)
+          <x-api-docs-endpoint :endpoint="$ep" />
+        @endforeach
+        @break
 
-        @case('search')
-          <div class="doc-section">
-            <h2 class="doc-h2">Qidiruv API</h2>
-            <p class="doc-p">Global qidiruv, avtomatik to'ldirish (autocomplete), trenddagi so'rovlar va kategoriyalar. Autocomplete endpointini UI'da debounce (≥ 300ms) bilan chaqiring.</p>
-          </div>
-          @foreach($pageEndpoints as $endpoint)
-            <x-api-docs-endpoint :endpoint="$endpoint" />
-          @endforeach
-          @break
+      @case('search')
+        <p class="doc-p" style="margin-bottom:24px;">Global qidiruv, autocomplete va kategorial filtr. Autocomplete'ni UI'da debounce (300 ms) bilan chaqiring.</p>
+        @foreach($pageEndpoints as $ep)
+          <x-api-docs-endpoint :endpoint="$ep" />
+        @endforeach
+        @break
 
-        @case('seller')
-          <div class="doc-section">
-            <h2 class="doc-h2">Seller API — Zaxira boshqaruvi</h2>
-            <div class="callout callout-warn">
-              <span class="callout-icon">⚠️</span>
-              <div>
-                Bu endpointlar faqat <span class="ic">stock:write</span> ability va <strong>seller-scoped</strong> kalit bilan ishlaydi. Kalit muayyan do'kongagina bog'langan — boshqa do'konlarga ta'sir qila olmaydi.
-              </div>
-            </div>
-            <p class="doc-p">POST so'rovlarda <span class="ic">Idempotency-Key</span> headerini yuboring — internet uzilsa ham zaxira ikki marta kamaymasligi uchun.</p>
-          </div>
-          @foreach($pageEndpoints as $endpoint)
-            <x-api-docs-endpoint :endpoint="$endpoint" />
-          @endforeach
-          @break
+      @case('seller')
+        <div class="note" style="margin-bottom:20px;">
+          Bu endpointlar faqat <span class="ic">stock:write</span> ability va do'koningizga bog'langan kalit bilan ishlaydi. POST so'rovlarda <span class="ic">Idempotency-Key</span> headerini yuboring.
+        </div>
+        @foreach($pageEndpoints as $ep)
+          <x-api-docs-endpoint :endpoint="$ep" />
+        @endforeach
+        @break
 
-        {{-- ── WEBHOOKS ─────────────────────────────────────────────── --}}
-        @case('webhooks')
-          <div class="doc-section" id="events">
-            <h2 class="doc-h2">Webhook hodisalari</h2>
-            <div class="callout callout-info">
-              <span class="callout-icon">🔔</span>
-              <div><strong>Tez kunda:</strong> Webhook funksionalligi hozirda ishlab chiqilmoqda. Qo'shimcha ma'lumot uchun developers@kitobchi.com ga murojaat qiling.</div>
-            </div>
-            <p class="doc-p">Webhooklar tayyor bo'lgandan keyin quyidagi hodisalarga obuna bo'lish mumkin bo'ladi:</p>
-            <table class="doc-table">
-              <thead><tr><th>Hodisa</th><th>Qachon yuborilar</th></tr></thead>
-              <tbody>
-                <tr><td><span class="ic">product.stock_changed</span></td><td>Mahsulot zaxirasi o'zgarganda</td></tr>
-                <tr><td><span class="ic">product.price_changed</span></td><td>Mahsulot narxi yangilanganda</td></tr>
-                <tr><td><span class="ic">product.status_changed</span></td><td>Mahsulot faollik holati o'zgarganda</td></tr>
-                <tr><td><span class="ic">seller.status_changed</span></td><td>Do'kon holati o'zgarganda</td></tr>
-              </tbody>
-            </table>
-          </div>
+      @case('deeplink')
+        <p class="doc-p" style="margin-bottom:24px;">Mobil ilova URL schemalari, web, Play Market va App Store havolalarini bitta so'rovda oling.</p>
+        @foreach($pageEndpoints as $ep)
+          <x-api-docs-endpoint :endpoint="$ep" />
+        @endforeach
+        @break
 
-          <div class="doc-section" id="signature">
-            <h2 class="doc-h2">HMAC imzo tekshiruvi</h2>
-            <p class="doc-p">Webhook so'rovining haqiqiyligini <span class="ic">X-Kitobchi-Signature</span> headeridagi HMAC-SHA256 imzo orqali tekshiring:</p>
-            <div class="code-block">
-              <div class="code-block-head"><span class="code-block-lang">php</span></div>
-              <pre>$payload   = file_get_contents('php://input');
+      {{-- WEBHOOKS --}}
+      @case('webhooks')
+        <div class="note" style="margin-bottom:20px;">
+          Webhook funksionalligi hozirda ishlab chiqilmoqda. Tayyor bo'lganda bu sahifa yangilanadi. Murojaat: <strong>developers@kitobchi.com</strong>
+        </div>
+
+        <h2 class="doc-h2" id="events">Rejalashtirilgan hodisalar</h2>
+        <table class="doc-table">
+          <thead><tr><th>Hodisa</th><th>Qachon yuborilar</th></tr></thead>
+          <tbody>
+            <tr><td><span class="ic">product.stock_changed</span></td><td>Mahsulot zaxirasi o'zgarganda</td></tr>
+            <tr><td><span class="ic">product.price_changed</span></td><td>Mahsulot narxi yangilanganda</td></tr>
+            <tr><td><span class="ic">product.status_changed</span></td><td>Mahsulot faollik holati o'zgarganda</td></tr>
+            <tr><td><span class="ic">seller.status_changed</span></td><td>Do'kon holati o'zgarganda</td></tr>
+          </tbody>
+        </table>
+
+        <hr class="divider">
+        <h2 class="doc-h2" id="signature">HMAC imzo tekshiruvi</h2>
+        <p class="doc-p">Webhook so'rovining haqiqiyligini <span class="ic">X-Kitobchi-Signature</span> headeridagi HMAC-SHA256 imzo orqali tekshiring:</p>
+        <div class="codeblock">
+          <div class="codeblock-header">
+            <span class="codeblock-title">PHP</span>
+            <button class="copy-btn" type="button">Ko'chirish</button>
+          </div>
+          <pre>$payload   = file_get_contents('php://input');
 $signature = $_SERVER['HTTP_X_KITOBCHI_SIGNATURE'] ?? '';
-$expected  = hash_hmac('sha256', $payload, env('KITOBCHI_WEBHOOK_SECRET'));
+$expected  = hash_hmac('sha256', $payload, getenv('KITOBCHI_WEBHOOK_SECRET'));
 
 if (! hash_equals($expected, $signature)) {
     http_response_code(401);
     exit;
 }</pre>
-            </div>
-          </div>
+        </div>
 
-          <div class="doc-section" id="retries">
-            <h2 class="doc-h2">Qayta yuborish siyosati</h2>
-            <p class="doc-p">Endpoint 200 qaytarmasa, webhook 3 marta qayta yuboriladi: 1 daqiqa, 5 daqiqa va 30 daqiqadan keyin. 3 urinishdan so'ng webhook o'chiriladi.</p>
-          </div>
-          @break
+        <hr class="divider">
+        <h2 class="doc-h2" id="retries">Qayta yuborish</h2>
+        <p class="doc-p">Endpoint 200 qaytarmasa, webhook 3 marta qayta yuboriladi: 1 daqiqa, 5 daqiqa va 30 daqiqadan keyin. Barcha urinish muvaffaqiyatsiz tugasa webhook to'xtatiladi.</p>
+        @break
 
-        {{-- ── DEEPLINK ─────────────────────────────────────────────── --}}
-        @case('deeplink')
-          <div class="doc-section">
-            <h2 class="doc-h2">Deep Link Generator</h2>
-            <p class="doc-p">Mobil ilova URL schemalari, web havolalar, Play Market va App Store linklarini bitta so'rov bilan oling. Marketing kampaniyalari, QR kodlar va push notification uchun mos.</p>
+      {{-- ERRORS --}}
+      @case('errors')
+        <h2 class="doc-h2" id="statuses">HTTP status kodlar</h2>
+        <div class="status-table">
+          <div class="status-row">
+            <span class="status-code">200</span><span class="status-label">OK</span><span class="status-desc">So'rov muvaffaqiyatli bajarildi</span>
           </div>
-          @foreach($pageEndpoints as $endpoint)
-            <x-api-docs-endpoint :endpoint="$endpoint" />
-          @endforeach
-          @break
-
-        {{-- ── ERRORS ───────────────────────────────────────────────── --}}
-        @case('errors')
-          <div class="doc-section" id="statuses">
-            <h2 class="doc-h2">HTTP status kodlar</h2>
-            <div class="error-grid">
-              <div class="error-card ec-401"><div class="code">401</div><div class="label">Unauthorized</div></div>
-              <div class="error-card ec-403"><div class="code">403</div><div class="label">Forbidden</div></div>
-              <div class="error-card ec-404"><div class="code">404</div><div class="label">Not Found</div></div>
-              <div class="error-card ec-422"><div class="code">422</div><div class="label">Validation Error</div></div>
-              <div class="error-card ec-429"><div class="code">429</div><div class="label">Rate Limited</div></div>
-              <div class="error-card ec-5xx"><div class="code">5xx</div><div class="label">Server Error</div></div>
-            </div>
-            <table class="doc-table" style="margin-top: 20px;">
-              <thead><tr><th>Kod</th><th>Sabab</th><th>Hal qilish</th></tr></thead>
-              <tbody>
-                <tr><td><span class="type-chip red">401</span></td><td><span class="ic">X-App-ID</span> yoki <span class="ic">X-App-Secret</span> header yo'q</td><td>Ikkala headerni ham yuboring</td></tr>
-                <tr><td><span class="type-chip red">403</span></td><td>Noto'g'ri Secret, nofaol kalit yoki IP allowlistdan tashqari</td><td>Kalitni tekshiring, IP ni qo'shing</td></tr>
-                <tr><td><span class="type-chip">404</span></td><td>Endpoint yo'q yoki ma'lumot topilmadi</td><td>URL va ID ni tekshiring</td></tr>
-                <tr><td><span class="type-chip yellow">422</span></td><td>Majburiy parametr yo'q yoki noto'g'ri qiymat</td><td><span class="ic">message</span> maydonini o'qing</td></tr>
-                <tr><td><span class="type-chip yellow">429</span></td><td>Rate limit oshib ketdi</td><td><span class="ic">Retry-After</span> soniya kutib yuboring</td></tr>
-                <tr><td><span class="type-chip gray">5xx</span></td><td>Server ichki xatosi</td><td>Exponential backoff bilan qayta urinib ko'ring</td></tr>
-              </tbody>
-            </table>
+          <div class="status-row">
+            <span class="status-code">304</span><span class="status-label">Not Modified</span><span class="status-desc">Ma'lumot o'zgarmagan (ETag + <span class="ic">If-None-Match</span>)</span>
           </div>
+          <div class="status-row">
+            <span class="status-code">401</span><span class="status-label">Unauthorized</span><span class="status-desc">Credential headerlar yo'q yoki noto'g'ri</span>
+          </div>
+          <div class="status-row">
+            <span class="status-code">403</span><span class="status-label">Forbidden</span><span class="status-desc">Kalit nofaol, ability yetarli emas, yoki IP ruxsatsiz</span>
+          </div>
+          <div class="status-row">
+            <span class="status-code">404</span><span class="status-label">Not Found</span><span class="status-desc">Endpoint yo'q yoki ma'lumot topilmadi</span>
+          </div>
+          <div class="status-row">
+            <span class="status-code">422</span><span class="status-label">Unprocessable</span><span class="status-desc">Majburiy parametr yo'q yoki noto'g'ri qiymat</span>
+          </div>
+          <div class="status-row">
+            <span class="status-code">429</span><span class="status-label">Too Many Requests</span><span class="status-desc">Rate limit oshdi — <span class="ic">Retry-After</span> soniya kuting</span>
+          </div>
+          <div class="status-row">
+            <span class="status-code">5xx</span><span class="status-label">Server Error</span><span class="status-desc">Server ichki xatosi — exponential backoff bilan qayta urinib ko'ring</span>
+          </div>
+        </div>
 
-          <div class="doc-section" id="format">
-            <h2 class="doc-h2">Xato JSON formati</h2>
-            <p class="doc-p">Barcha xatolar standart formatda qaytariladi:</p>
-            <div class="code-block">
-              <div class="code-block-head"><span class="code-block-lang">json</span></div>
-              <pre>{
+        <hr class="divider">
+        <h2 class="doc-h2" id="format">Xato formati</h2>
+        <div class="codeblock">
+          <div class="codeblock-header">
+            <span class="codeblock-title">JSON</span>
+          </div>
+          <pre>{
   "status": "error",
   "message": "Invalid or inactive API credentials"
 }</pre>
-            </div>
-            <p class="doc-p">Validation xatolarida qo'shimcha <span class="ic">errors</span> maydoni bo'lishi mumkin:</p>
-            <div class="code-block">
-              <div class="code-block-head"><span class="code-block-lang">json — 422 Validation Error</span></div>
-              <pre>{
-  "status": "error",
-  "message": "Provide \"stock\" or \"delta\"."
-}</pre>
-            </div>
+        </div>
+
+        <hr class="divider">
+        <h2 class="doc-h2" id="common-errors">Tez-tez uchraydigan xatolar</h2>
+        <table class="doc-table">
+          <thead><tr><th>Xato xabari</th><th>Sabab va yechim</th></tr></thead>
+          <tbody>
+            <tr><td><span class="ic">API credentials missing</span></td><td>Headerlar umuman yuborilmagan — ikkala headerni ham qo'shing</td></tr>
+            <tr><td><span class="ic">Invalid or inactive API credentials</span></td><td>Secret noto'g'ri yoki kalit o'chirilgan — bizga murojaat qiling</td></tr>
+            <tr><td><span class="ic">IP address not allowed for this API key</span></td><td>Server IP allowlistda yo'q — kerakli IP ni bildiring</td></tr>
+            <tr><td><span class="ic">Missing ability: stock:write</span></td><td>Kalit faqat <span class="ic">read</span> — <span class="ic">stock:write</span> kalit so'rang</td></tr>
+            <tr><td><span class="ic">This API key is not scoped to a seller</span></td><td>Seller API uchun do'koningizga bog'langan alohida kalit kerak</td></tr>
+            <tr><td><span class="ic">ISBN not found in your store</span></td><td>Bu ISBN siz boshqaradigan do'konda ro'yxatdan o'tmagan</td></tr>
+          </tbody>
+        </table>
+
+        <hr class="divider">
+        <h2 class="doc-h2" id="checklist">Integratsiya checklisti</h2>
+        <ul class="checklist">
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg><div>App ID va Secret faqat server muhit o'zgaruvchilarida saqlangan</div></li>
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg><div>Barcha API so'rovlar server tomonidan yuborilmoqda (frontend'dan emas)</div></li>
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg><div>POST so'rovlarda <span class="ic">Idempotency-Key</span> header yuborilmoqda</div></li>
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg><div>429 holati uchun <span class="ic">Retry-After</span> headeriga asoslangan kutish mexanizmi bor</div></li>
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg><div>ETag saqlash va <span class="ic">If-None-Match</span> bilan 304 optimizatsiya qilingan</div></li>
+        </ul>
+        @break
+
+      {{-- CHANGELOG --}}
+      @case('changelog')
+        <h2 class="doc-h2" id="versioning">Versiyalash siyosati</h2>
+        <p class="doc-p">API versiyasi URL'da ko'rsatiladi: <span class="ic">/api/v1/client/</span>. Breaking change bo'lganda yangi versiya e'lon qilinadi va eski versiya kamida 6 oy parallel ishlashda qoladi. Non-breaking yangiliklar (yangi endpointlar, yangi response maydonlar) joriy versiyaga qo'shiladi.</p>
+
+        <hr class="divider">
+        <h2 class="doc-h2" id="v1-2">v1.2 — Sentyabr 2026</h2>
+        <div class="cl-entry">
+          <div class="cl-header">
+            <span class="cl-version">v1.2.0</span>
+            <span class="cl-tag cl-tag-latest">Latest</span>
+            <span class="cl-date">19 Sentyabr 2026</span>
           </div>
+          <ul>
+            <li><strong>GET /products/mine</strong> — seller o'z do'konining mahsulotlari va zaxirasini ko'rishi uchun yangi endpoint</li>
+            <li><strong>GET /deeplink</strong> — mobil va web uchun smart URL generator</li>
+            <li>ETag + 304 kesh mexanizmi barcha GET endpointlarga qo'shildi</li>
+            <li><span class="ic">Idempotency-Key</span> header POST so'rovlarda 24 soat keshlanadi</li>
+            <li><span class="ic">by-publisher</span> endpointidagi pagination muammosi tuzatildi</li>
+          </ul>
+        </div>
 
-          <div class="doc-section" id="common-errors">
-            <h2 class="doc-h2">Tez-tez uchraydigan xatolar</h2>
-            <table class="doc-table">
-              <thead><tr><th>Xato xabari</th><th>Sabab</th></tr></thead>
-              <tbody>
-                <tr><td><span class="ic">API credentials missing</span></td><td>Header'lar umuman yuborilmagan</td></tr>
-                <tr><td><span class="ic">Invalid or inactive API credentials</span></td><td>Secret noto'g'ri yoki kalit o'chirilgan</td></tr>
-                <tr><td><span class="ic">IP address not allowed for this API key</span></td><td>Server IP allowlistda yo'q</td></tr>
-                <tr><td><span class="ic">Missing ability: stock:write</span></td><td>Kalit <span class="ic">read</span> only, yozish ruxsati yo'q</td></tr>
-                <tr><td><span class="ic">This API key is not scoped to a seller</span></td><td>Seller API uchun seller-scoped kalit kerak</td></tr>
-                <tr><td><span class="ic">ISBN not found in your store</span></td><td>ISBN shu do'konda ro'yxatdan o'tmagan</td></tr>
-              </tbody>
-            </table>
+        <h2 class="doc-h2" id="v1-1">v1.1 — Iyun 2026</h2>
+        <div class="cl-entry">
+          <div class="cl-header">
+            <span class="cl-version">v1.1.0</span>
+            <span class="cl-date">14 Iyun 2026</span>
           </div>
+          <ul>
+            <li><strong>POST /products/stock/by-code</strong> — ISBN va shtrix-kod bo'yicha zaxira yangilash (<span class="ic">stock:write</span>)</li>
+            <li>IP allowlist — kalitlarga server IP biriktirish imkoniyati</li>
+            <li><span class="ic">X-API-Cache</span> header: MISS / HIT / BYPASS holatlari</li>
+            <li>Rate limit headerlar yangilandi</li>
+            <li><span class="ic">seller_id</span> filter parametridagi xato tuzatildi</li>
+          </ul>
+        </div>
 
-          <div class="doc-section" id="checklist">
-            <h2 class="doc-h2">Integratsiya checklisti</h2>
-            <ul class="checklist">
-              <li><span class="cl-icon">✅</span>App ID va Secret environment variable'larida saqlangan (git'da yo'q)</li>
-              <li><span class="cl-icon">✅</span>Barcha API so'rovlar serverdan yuborilmoqda (frontend'dan emas)</li>
-              <li><span class="cl-icon">✅</span>POST so'rovlarda <span class="ic">Idempotency-Key</span> header yuborilmoqda</li>
-              <li><span class="cl-icon">✅</span>429 xatosida <span class="ic">Retry-After</span> ni kuzatib kutilmoqda</li>
-              <li><span class="cl-icon">✅</span>ETag saqlash va <span class="ic">If-None-Match</span> orqali 304 optimizatsiya qilingan</li>
-              <li><span class="cl-icon">✅</span>IP allowlist Boshqaruv panelida sozlangan</li>
-              <li><span class="cl-icon">✅</span>Seller API uchun seller-scoped kalit ishlatilmoqda</li>
-            </ul>
+        <h2 class="doc-h2" id="v1-0">v1.0 — Yanvar 2026</h2>
+        <div class="cl-entry">
+          <div class="cl-header">
+            <span class="cl-version">v1.0.0</span>
+            <span class="cl-date">5 Yanvar 2026</span>
           </div>
-          @break
+          <ul>
+            <li>Birinchi rasmiy reliz</li>
+            <li>Products endpointlari: books, stationery, recommendations, authors, publishers, sellers</li>
+            <li>Search: global, suggestions, trending, categories</li>
+            <li><span class="ic">X-App-ID</span> + <span class="ic">X-App-Secret</span> autentifikatsiya tizimi</li>
+            <li>OpenAPI 3.0 va Postman Collection eksport</li>
+          </ul>
+        </div>
+        @break
 
-        {{-- ── CHANGELOG ────────────────────────────────────────────── --}}
-        @case('changelog')
-          <div class="doc-section" id="versioning">
-            <h2 class="doc-h2">Versiyalash siyosati</h2>
-            <p class="doc-p">API URL-da versiya ko'rsatiladi: <span class="ic">/api/v1/client/</span>. Breaking change bo'lganda yangi versiya (<span class="ic">/api/v2/client/</span>) e'lon qilinadi va eski versiya kamida <strong>6 oy</strong> parallel ishlaydi. Non-breaking yangiliklar (yangi endpointlar, yangi response maydonlar) joriy versiyaga qo'shiladi va hujjatlashtiriladi.</p>
-          </div>
+      {{-- DEFAULT --}}
+      @default
+        <p class="doc-p">Base URL: <span class="ic">{{ $baseUrl }}</span></p>
+    @endswitch
 
-          <div class="doc-section" id="v1-2">
-            <h2 class="doc-h2">Joriy versiya</h2>
-            <div class="changelog-entry">
-              <div class="changelog-header">
-                <span class="changelog-version">v1.2.0</span>
-                <span class="changelog-tag latest">Latest</span>
-                <span class="changelog-date">Sentyabr 2026</span>
-              </div>
-              <div class="changelog-body">
-                <ul>
-                  <li>🆕 <strong>GET /products/mine</strong> — Seller o'z mahsulotlari va zaxirasini ko'rishi uchun yangi endpoint</li>
-                  <li>🆕 <strong>GET /deeplink</strong> — Mobil va web uchun deep link generator endpoint</li>
-                  <li>🆕 <strong>Branch stock tracking</strong> — Zaxira filial darajasida kuzatilmoqda</li>
-                  <li>⚡ ETag + 304 kesh mexanizmi barcha GET endpointlarga qo'shildi</li>
-                  <li>⚡ <span class="ic">Idempotency-Key</span> header POST so'rovlarda 24 soat keshlanmoqda</li>
-                  <li>🐛 <span class="ic">by-publisher</span> endpointidagi pagination muammosi tuzatildi</li>
-                </ul>
-              </div>
-            </div>
-
-            <div class="changelog-entry">
-              <div class="changelog-header">
-                <span class="changelog-version">v1.1.0</span>
-                <span class="changelog-tag stable">Stable</span>
-                <span class="changelog-date">Iyun 2026</span>
-              </div>
-              <div class="changelog-body">
-                <ul>
-                  <li>🆕 <strong>POST /products/stock/by-code</strong> — ISBN va shtrix-kod bo'yicha zaxira yangilash (stock:write)</li>
-                  <li>🆕 IP allowlist — kalitga server IP manzillarini biriktirish imkoniyati</li>
-                  <li>🆕 <span class="ic">X-API-Cache</span> header — MISS / HIT / BYPASS holatlarini ko'rsatish</li>
-                  <li>⚡ Rate limit headerlar yangilandi: <span class="ic">X-RateLimit-Remaining-Second/Minute</span></li>
-                  <li>🐛 <span class="ic">seller_id</span> filter parametri products/books da ishlamayotgan muammo tuzatildi</li>
-                </ul>
-              </div>
-            </div>
-
-            <div class="changelog-entry">
-              <div class="changelog-header">
-                <span class="changelog-version">v1.0.0</span>
-                <span class="changelog-tag stable">Stable</span>
-                <span class="changelog-date">Yanvar 2026</span>
-              </div>
-              <div class="changelog-body">
-                <ul>
-                  <li>🚀 <strong>Birinchi rasmiy reliz</strong></li>
-                  <li>🆕 Products endpointlari: books, stationery, recommendations, authors, publishers</li>
-                  <li>🆕 Search: global, suggestions, trending, categories</li>
-                  <li>🆕 Sellers: list, by-qr, profile, by-isbn</li>
-                  <li>🆕 <span class="ic">X-App-ID</span> + <span class="ic">X-App-Secret</span> autentifikatsiya tizimi</li>
-                  <li>🆕 OpenAPI 3.0 va Postman Collection eksport</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-
-          <div class="doc-section" id="future">
-            <h2 class="doc-h2">Kelajakdagi rejalar</h2>
-            <p class="doc-p">Keyingi versiyalarda rejalashtirilgan:</p>
-            <ul class="doc-ul">
-              <li>Webhook hodisalari (product.stock_changed, product.price_changed)</li>
-              <li>Batch endpoint — bir so'rovda ko'p ISBN yangilash</li>
-              <li>Orders API — buyurtma holati va tracking</li>
-              <li>OAuth 2.0 autentifikatsiya varianti</li>
-            </ul>
-            <div class="callout callout-info">
-              <span class="callout-icon">📬</span>
-              <div>Yangiliklar va breaking changlardan avval xabardor bo'lish uchun: <strong>developers@kitobchi.com</strong></div>
-            </div>
-          </div>
-          @break
-
-        {{-- ── DEFAULT: GETTING STARTED (fallback) ─────────────────── --}}
-        @default
-          <div class="doc-section" id="overview">
-            <h2 class="doc-h2">Umumiy tushuncha</h2>
-            <p class="doc-p">Kitobchi Client API — hamkor va do'kon integratsiyalari uchun zamonaviy REST API.</p>
-            <div class="callout callout-info">
-              <span class="callout-icon">🔗</span>
-              <div>Base URL: <span class="ic">{{ $baseUrl }}</span></div>
-            </div>
-          </div>
-      @endswitch
-
-      {{-- Prev / Next Navigation --}}
-      @php
-        $orderedSlugs = array_keys($pages);
-        $index = array_search($currentSlug, $orderedSlugs, true);
-        $prev  = $index > 0 ? $orderedSlugs[$index - 1] : null;
-        $next  = $index !== false && $index < count($orderedSlugs) - 1 ? $orderedSlugs[$index + 1] : null;
-      @endphp
-      <nav class="page-nav" aria-label="Sahifalar navigatsiyasi">
-        @if($prev)
-          <a class="page-nav-card" href="{{ $routeFor($prev) }}">
-            <span class="page-nav-dir">← Oldingi</span>
-            <span class="page-nav-title">{{ $pages[$prev]['title'] }}</span>
-          </a>
-        @else
-          <div></div>
-        @endif
-        @if($next)
-          <a class="page-nav-card next" href="{{ $routeFor($next) }}">
-            <span class="page-nav-dir">Keyingi →</span>
-            <span class="page-nav-title">{{ $pages[$next]['title'] }}</span>
-          </a>
-        @endif
-      </nav>
-    </main>
-
-    {{-- Right TOC --}}
-    <aside class="toc-panel">
-      <div class="toc-title">Shu sahifada</div>
-      @foreach($toc as $item)
-        <a href="#{{ $item['id'] }}" class="toc-link">{{ $item['label'] }}</a>
-      @endforeach
-    </aside>
-  </div>
-
-  <script>
-    window.__docsPages = @json($allPages);
-    window.__docsBase  = @json(route('developers.api-docs'));
-
-    // ── Theme ───────────────────────────────────────────────────────────
-    const html = document.documentElement;
-    const saved = localStorage.getItem('kb_docs_theme');
-    if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-      html.dataset.theme = 'dark';
-    }
-    function applyThemeIcons() {
-      const dark = html.dataset.theme === 'dark';
-      document.querySelectorAll('.theme-icon-light').forEach(el => el.style.display = dark ? 'none' : '');
-      document.querySelectorAll('.theme-icon-dark').forEach(el  => el.style.display = dark ? '' : 'none');
-    }
-    applyThemeIcons();
-    document.getElementById('themeToggle')?.addEventListener('click', () => {
-      html.dataset.theme = html.dataset.theme === 'dark' ? 'light' : 'dark';
-      localStorage.setItem('kb_docs_theme', html.dataset.theme);
-      applyThemeIcons();
-    });
-
-    // ── Search ──────────────────────────────────────────────────────────
-    const backdrop  = document.getElementById('searchBackdrop');
-    const trigger   = document.getElementById('searchTrigger');
-    const input     = document.getElementById('searchInput');
-    const results   = document.getElementById('searchResults');
-    const pages     = window.__docsPages || [];
-    const baseRoute = window.__docsBase  || '/developers/api';
-
-    function pageUrl(slug) {
-      return slug === 'getting-started' ? baseRoute : `${baseRoute}/${slug}`;
-    }
-
-    const iconMap = {
-      rocket:'🚀', key:'🔑', gauge:'⚡', layers:'📄', book:'📚',
-      search:'🔍', store:'🏪', zap:'⚡', alert:'⚠️', history:'📋'
-    };
-
-    function renderSearch(q = '') {
-      const query = q.trim().toLowerCase();
-      const matches = pages.filter(p =>
-        !query || `${p.title} ${p.description} ${p.group}`.toLowerCase().includes(query)
-      );
-      if (!matches.length) {
-        results.innerHTML = '<div class="search-empty">Hech narsa topilmadi.</div>';
-        return;
-      }
-      results.innerHTML = matches.map(p => `
-        <a class="search-result-item" href="${pageUrl(p.slug)}">
-          <div class="search-result-icon">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          </div>
-          <div class="search-result-text">
-            <strong>${p.title}</strong>
-            <span>${p.description}</span>
-          </div>
+    {{-- Prev / Next --}}
+    @php
+      $slugs = array_keys($pages);
+      $idx   = array_search($currentSlug, $slugs, true);
+      $prev  = $idx > 0 ? $slugs[$idx - 1] : null;
+      $next  = $idx !== false && $idx < count($slugs) - 1 ? $slugs[$idx + 1] : null;
+    @endphp
+    <nav class="page-nav" aria-label="Sahifalar navigatsiyasi">
+      @if($prev)
+        <a class="pn-card" href="{{ $routeFor($prev) }}">
+          <div class="pn-dir">← Oldingi</div>
+          <div class="pn-title">{{ $pages[$prev]['title'] }}</div>
         </a>
-      `).join('');
-    }
+      @else<div></div>@endif
+      @if($next)
+        <a class="pn-card next" href="{{ $routeFor($next) }}">
+          <div class="pn-dir">Keyingi →</div>
+          <div class="pn-title">{{ $pages[$next]['title'] }}</div>
+        </a>
+      @endif
+    </nav>
+  </main>
 
-    function openSearch() {
-      renderSearch('');
-      backdrop.classList.add('open');
-      setTimeout(() => input?.focus(), 30);
-    }
-    function closeSearch() { backdrop.classList.remove('open'); }
+  {{-- TOC --}}
+  <aside class="toc">
+    <div class="toc-title">Shu sahifada</div>
+    @foreach($toc as $item)
+      <a href="#{{ $item['id'] }}" class="toc-link">{{ $item['label'] }}</a>
+    @endforeach
+  </aside>
 
-    trigger?.addEventListener('click', openSearch);
-    input?.addEventListener('input', () => renderSearch(input.value));
-    backdrop?.addEventListener('click', e => { if (e.target === backdrop) closeSearch(); });
-    document.addEventListener('keydown', e => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); openSearch(); }
-      if (e.key === 'Escape') closeSearch();
-    });
+</div>
 
-    // ── TOC active highlight (Intersection Observer) ─────────────────────
-    const tocLinks = document.querySelectorAll('.toc-link');
-    if (tocLinks.length && 'IntersectionObserver' in window) {
-      const obs = new IntersectionObserver(entries => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            tocLinks.forEach(l => l.classList.toggle('active', l.getAttribute('href') === '#' + entry.target.id));
-          }
-        });
-      }, { rootMargin: '-60px 0px -70% 0px', threshold: 0 });
-      document.querySelectorAll('[id]').forEach(el => {
-        if ([...tocLinks].some(l => l.getAttribute('href') === '#' + el.id)) obs.observe(el);
+<script>
+  // ── Theme ─────────────────────────────────────────────────────────
+  const root = document.documentElement;
+  const saved = localStorage.getItem('kb_theme');
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  if (saved === 'dark' || (!saved && prefersDark)) root.dataset.theme = 'dark';
+
+  function syncThemeIcons() {
+    const dark = root.dataset.theme === 'dark';
+    document.querySelector('.ico-sun').style.display  = dark ? 'none' : '';
+    document.querySelector('.ico-moon').style.display = dark ? '' : 'none';
+  }
+  syncThemeIcons();
+
+  document.getElementById('themeBtn')?.addEventListener('click', () => {
+    root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
+    localStorage.setItem('kb_theme', root.dataset.theme);
+    syncThemeIcons();
+  });
+
+  // ── Search ────────────────────────────────────────────────────────
+  const pages    = @json($allPages);
+  const baseRoute = @json(route('developers.api-docs'));
+  const wrap     = document.getElementById('searchWrap');
+  const btn      = document.getElementById('searchBtn');
+  const inp      = document.getElementById('searchInp');
+  const list     = document.getElementById('searchList');
+
+  function pageUrl(slug) {
+    return slug === 'getting-started' ? baseRoute : `${baseRoute}/${slug}`;
+  }
+
+  const searchIcon = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`;
+
+  function renderSearch(q = '') {
+    const lq = q.trim().toLowerCase();
+    const hits = pages.filter(p => !lq || `${p.title} ${p.description} ${p.group}`.toLowerCase().includes(lq));
+    list.innerHTML = hits.length
+      ? hits.map(p => `<a class="search-item" href="${pageUrl(p.slug)}"><div class="search-item-icon">${searchIcon}</div><div><strong>${p.title}</strong><span>${p.description}</span></div></a>`).join('')
+      : '<div class="search-empty">Hech narsa topilmadi.</div>';
+  }
+
+  function openSearch() { renderSearch(''); wrap.classList.add('open'); setTimeout(() => inp?.focus(), 20); }
+  function closeSearch() { wrap.classList.remove('open'); }
+
+  btn?.addEventListener('click', openSearch);
+  inp?.addEventListener('input', () => renderSearch(inp.value));
+  wrap?.addEventListener('click', e => { if (e.target === wrap) closeSearch(); });
+  document.addEventListener('keydown', e => {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); openSearch(); }
+    if (e.key === 'Escape') closeSearch();
+  });
+
+  // ── TOC Intersection Observer ──────────────────────────────────────
+  const tocLinks = document.querySelectorAll('.toc-link');
+  if (tocLinks.length && 'IntersectionObserver' in window) {
+    const obs = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting)
+          tocLinks.forEach(l => l.classList.toggle('active', l.getAttribute('href') === '#' + e.target.id));
       });
+    }, { rootMargin: '-56px 0px -70% 0px' });
+    tocLinks.forEach(l => {
+      const el = document.querySelector(l.getAttribute('href'));
+      if (el) obs.observe(el);
+    });
+  }
+
+  // ── Code Tabs ──────────────────────────────────────────────────────
+  document.addEventListener('click', e => {
+    const tab = e.target.closest('.ctab');
+    if (!tab) return;
+    const wrap = tab.closest('.code-tabs');
+    const key  = tab.dataset.tab;
+    wrap.querySelectorAll('.ctab').forEach(t => t.classList.toggle('active', t === tab));
+    wrap.querySelectorAll('.code-pane').forEach(p => p.classList.toggle('active', p.dataset.pane === key));
+  });
+
+  // ── Copy ──────────────────────────────────────────────────────────
+  async function doCopy(text, btn) {
+    try {
+      await navigator.clipboard.writeText(text);
+      const orig = btn.textContent;
+      btn.classList.add('ok'); btn.textContent = 'Nusxalandi';
+      setTimeout(() => { btn.classList.remove('ok'); btn.textContent = orig; }, 1500);
+    } catch (_) {}
+  }
+
+  document.addEventListener('click', async e => {
+    const b = e.target.closest('.copy-btn, .ctab-copy');
+    if (!b) return;
+    const tabs  = b.closest('.code-tabs');
+    const block = b.closest('.codeblock');
+    if (tabs) {
+      const pane = tabs.querySelector('.code-pane.active') || tabs.querySelector('.code-pane');
+      await doCopy(pane?.innerText || '', b);
+    } else if (block) {
+      await doCopy(block.querySelector('pre')?.innerText || '', b);
     }
+  });
 
-    // ── Code Tabs ──────────────────────────────────────────────────────
-    document.addEventListener('click', e => {
-      const tab = e.target.closest('.ctab');
-      if (!tab) return;
-      const wrap   = tab.closest('.code-tabs');
-      const target = tab.dataset.tab;
-      wrap.querySelectorAll('.ctab').forEach(t   => t.classList.toggle('active', t === tab));
-      wrap.querySelectorAll('.code-pane').forEach(p => p.classList.toggle('active', p.dataset.pane === target));
-    });
+  // Standalone response copy
+  document.addEventListener('click', async e => {
+    const b = e.target.closest('[data-resp-copy]');
+    if (!b) return;
+    const block = b.closest('.ep-resp-head')?.nextElementSibling;
+    await doCopy(block?.querySelector('code')?.innerText || '', b);
+  });
 
-    // ── Copy Buttons ───────────────────────────────────────────────────
-    async function copyText(text, btn) {
-      try {
-        await navigator.clipboard.writeText(text);
-        const orig = btn.textContent;
-        btn.classList.add('copied'); btn.textContent = '✓ Nusxalandi';
-        setTimeout(() => { btn.classList.remove('copied'); btn.textContent = orig; }, 1400);
-      } catch (_) {}
-    }
-
-    document.addEventListener('click', async e => {
-      const btn = e.target.closest('.ctab-copy, .code-copy-btn');
-      if (!btn) return;
-      let text = '';
-      const tabs = btn.closest('.code-tabs');
-      const block = btn.closest('.code-block');
-      const ep = btn.closest('.ep-response, .ep-body');
-      if (tabs) {
-        const pane = tabs.querySelector('.code-pane.active') || tabs.querySelector('.code-pane');
-        text = pane?.innerText || '';
-      } else if (block) {
-        text = block.querySelector('pre')?.innerText || '';
-      } else if (ep) {
-        text = ep.querySelector('code')?.innerText || '';
-      }
-      await copyText(text, btn);
-    });
-
-    // ── Try It Out ─────────────────────────────────────────────────────
-    document.addEventListener('click', async e => {
-      const btn = e.target.closest('[data-try-send]');
-      if (!btn) return;
-      const root   = btn.closest('[data-tryit]');
-      const appid  = root.querySelector('[data-try="appid"]')?.value?.trim() || '';
-      const secret = root.querySelector('[data-try="secret"]')?.value?.trim() || '';
-      let url      = root.dataset.urlTemplate || '';
-
-      root.querySelectorAll('[data-try-path]').forEach(inp =>
-        url = url.replace('{' + inp.dataset.tryPath + '}', encodeURIComponent(inp.value.trim()))
-      );
-      const qs = [];
-      root.querySelectorAll('[data-try-query]').forEach(inp => {
-        const v = inp.value.trim();
-        if (v) qs.push(encodeURIComponent(inp.dataset.tryQuery) + '=' + encodeURIComponent(v));
-      });
-      if (qs.length) url += (url.includes('?') ? '&' : '?') + qs.join('&');
-
-      const statusEl = root.querySelector('[data-try-status]');
-      const resultEl = root.querySelector('[data-try-result]');
-
-      statusEl.textContent = 'Yuborilmoqda…';
-      statusEl.style.color = 'var(--muted)';
-      btn.disabled = true;
-      const t0 = performance.now();
-      try {
-        const res = await fetch(url, {
-          headers: { Accept: 'application/json', 'X-App-ID': appid, 'X-App-Secret': secret }
-        });
-        const ms  = Math.round(performance.now() - t0);
-        const txt = await res.text();
-        let body  = txt;
-        try { body = JSON.stringify(JSON.parse(txt), null, 2); } catch (_) {}
-        statusEl.textContent = `${res.status} ${res.statusText} · ${ms}ms`;
-        statusEl.style.color = res.ok ? '#22c55e' : '#ef4444';
-        resultEl.textContent = body;
-        resultEl.hidden = false;
-      } catch (err) {
-        statusEl.textContent = 'Xato: ' + err.message;
-        statusEl.style.color = '#ef4444';
-        resultEl.hidden = true;
-      } finally {
-        btn.disabled = false;
-      }
-    });
-  </script>
+  // ── Try It ────────────────────────────────────────────────────────
+  document.addEventListener('click', async e => {
+    const b = e.target.closest('[data-try-send]');
+    if (!b) return;
+    const root   = b.closest('[data-tryit]');
+    const appid  = root.querySelector('[data-try="appid"]')?.value?.trim() || '';
+    const secret = root.querySelector('[data-try="secret"]')?.value?.trim() || '';
+    let url = root.dataset.urlTemplate || '';
+    root.querySelectorAll('[data-try-path]').forEach(i => url = url.replace('{' + i.dataset.tryPath + '}', encodeURIComponent(i.value.trim())));
+    const qs = [];
+    root.querySelectorAll('[data-try-query]').forEach(i => { const v = i.value.trim(); if (v) qs.push(encodeURIComponent(i.dataset.tryQuery) + '=' + encodeURIComponent(v)); });
+    if (qs.length) url += (url.includes('?') ? '&' : '?') + qs.join('&');
+    const st  = root.querySelector('[data-try-status]');
+    const res = root.querySelector('[data-try-result]');
+    st.textContent = 'Yuborilmoqda…'; st.style.color = 'var(--muted)'; b.disabled = true;
+    const t0 = performance.now();
+    try {
+      const r   = await fetch(url, { headers: { Accept: 'application/json', 'X-App-ID': appid, 'X-App-Secret': secret } });
+      const ms  = Math.round(performance.now() - t0);
+      const txt = await r.text();
+      let body  = txt; try { body = JSON.stringify(JSON.parse(txt), null, 2); } catch (_) {}
+      st.textContent  = `${r.status} ${r.statusText} · ${ms}ms`;
+      st.style.color  = r.ok ? '#10b981' : '#ef4444';
+      res.textContent = body; res.hidden = false;
+    } catch (err) {
+      st.textContent = 'Xato: ' + err.message; st.style.color = '#ef4444'; res.hidden = true;
+    } finally { b.disabled = false; }
+  });
+</script>
 </body>
 </html>
