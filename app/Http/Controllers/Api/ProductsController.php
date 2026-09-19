@@ -1806,7 +1806,6 @@ class ProductsController extends Controller
         $path = match ($type) {
             'stationery' => "stationery/{$id}",
             'seller'     => "seller/{$id}",
-            'category'   => "category/{$id}",
             default      => "book/{$id}",
         };
 

@@ -656,7 +656,7 @@ class ApiDocsController extends Controller
                     'cache' => true,
                     'path_params' => [],
                     'query_params' => [
-                        ['name' => 'type', 'type' => 'string', 'required' => false, 'desc' => 'Turi: book, stationery, seller, category.', 'example' => 'book'],
+                        ['name' => 'type', 'type' => 'string', 'required' => false, 'desc' => 'Turi: book, stationery, seller.', 'example' => 'book'],
                         ['name' => 'id', 'type' => 'integer', 'required' => true, 'desc' => 'Mahsulot yoki do‘kon ID raqami.', 'example' => 128],
                     ],
                     'response' => [
