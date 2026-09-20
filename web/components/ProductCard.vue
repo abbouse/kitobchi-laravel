@@ -1,9 +1,7 @@
 <template>
-  <div class="product-card group relative flex flex-col rounded-2xl bg-white overflow-hidden">
-    <!-- Image — piyola'dagi kabi bir nechta rasmni gorizontal swipe/snap
-         orqali ko'rsatadigan mini-karusel (Nuxt UI mavjud bo'lmagani
-         uchun toza CSS scroll-snap bilan qo'lda qurilgan). -->
-    <div class="relative w-full rounded-xl bg-white" style="aspect-ratio: 3 / 4;">
+  <div class="product-card group relative flex flex-col rounded-2xl bg-white overflow-hidden transition-all duration-200">
+    <!-- Image Slider -->
+    <div class="relative w-full rounded-xl bg-neutral-50 overflow-hidden" style="aspect-ratio: 3 / 4;">
       <div
         ref="trackEl"
         class="flex w-full h-full overflow-x-auto no-scrollbar snap-x snap-mandatory rounded-xl"
@@ -15,20 +13,11 @@
           :to="productUrl"
           class="block w-full h-full shrink-0 snap-center"
         >
-          <div class="w-full h-full rounded-xl overflow-hidden bg-gray-50 flex items-center justify-center">
-            <!-- TUZATILDI: bu yerda `idx === 0 ? 'lazy' : 'lazy'` deb
-                 yozilgan edi — ikkala shart ham AYNAN bir xil natija
-                 ('lazy') berardi, ya'ni ekranning yuqori qismida (birinchi
-                 qatorda) chiqadigan kartochkalarning ham rasmi "lazy"
-                 yuklanardi. Bu Google'ning Core Web Vitals (LCP — Largest
-                 Contentful Paint) ko'rsatkichiga salbiy ta'sir qiladi va bu
-                 ham reyting omili hisoblanadi. Endi `eager` prop orqali
-                 (sahifadan — ekranning yuqori qismidagi birinchi 2-4 ta
-                 kartochka uchun `true` beriladi) haqiqiy ustuvorlik beriladi. -->
+          <div class="w-full h-full rounded-xl overflow-hidden bg-neutral-50 flex items-center justify-center">
             <img
               :src="img"
               :alt="product.name"
-              class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+              class="w-full h-full object-cover"
               :loading="eager && idx === 0 ? 'eager' : 'lazy'"
               :fetchpriority="eager && idx === 0 ? 'high' : 'auto'"
             />
@@ -36,7 +25,7 @@
         </NuxtLink>
       </div>
 
-      <!-- Slide dots (faqat 1 tadan ortiq rasm bo'lsa) -->
+      <!-- Slide dots -->
       <div
         v-if="images.length > 1"
         class="absolute bottom-1.5 inset-x-0 z-20 flex items-center justify-center gap-1 pointer-events-none"
@@ -47,60 +36,56 @@
           :key="idx"
           type="button"
           :aria-label="`${idx + 1}-rasm`"
-          class="pointer-events-auto rounded-full transition-all duration-300 border-none cursor-pointer p-0"
-          :class="idx === activeIndex ? 'w-3 h-1.5 bg-white' : 'w-1.5 h-1.5 bg-white/70'"
-          style="box-shadow: 0 0 2px rgba(0,0,0,.35);"
+          class="pointer-events-auto rounded-full transition-all duration-200 border-none cursor-pointer p-0"
+          :class="idx === activeIndex ? 'w-2.5 h-1 bg-white' : 'w-1 h-1 bg-white/60'"
           @click.prevent="goToSlide(idx)"
         ></button>
       </div>
 
       <!-- Discount Pill -->
       <div v-if="discountPercent > 0" class="absolute bottom-1.5 left-1.5 md:bottom-2 md:left-2 z-20 inline-flex items-start flex-col gap-1 pointer-events-none">
-        <span class="font-medium inline-flex items-center text-xs gap-1 rounded-md px-1 py-0.5 bg-[#ED3131] text-white">
+        <span class="font-semibold inline-flex items-center text-[11px] rounded-md px-1.5 py-0.5 bg-[#ED3131] text-white">
           -{{ discountPercent }}%
         </span>
       </div>
 
-      <!-- Glass Favorite Heart Button -->
+      <!-- Clean Favorite Heart Button -->
       <div class="absolute top-1.5 right-1.5 md:top-2 md:right-2 z-20">
-        <div class="relative overflow-hidden transition-shadow duration-300 rounded-2xl p-0 hover:shadow-sm hover:shadow-black/10 backdrop-blur-sm glass-card-bg">
-          <div class="absolute inset-0 pointer-events-none glass-border rounded-2xl"></div>
-          <button
-            type="button"
-            aria-label="Sevimlilar"
-            @click.prevent="favStore.toggleFavorite(product, type)"
-            class="relative w-8 h-8 flex items-center justify-center rounded-full transition-all duration-300 hover:scale-110 active:scale-95 text-gray-500 hover:text-neutral-600 border-none bg-transparent cursor-pointer"
+        <button
+          type="button"
+          aria-label="Sevimlilar"
+          @click.prevent="favStore.toggleFavorite(product, type)"
+          class="w-8 h-8 rounded-full bg-white/90 backdrop-blur-xs flex items-center justify-center text-neutral-400 hover:text-neutral-700 transition-colors border border-black/5 shadow-xs cursor-pointer"
+        >
+          <svg
+            class="w-4 h-4 transition-colors"
+            viewBox="0 0 24 24"
+            :fill="isFav ? '#ef4444' : 'none'"
+            :stroke="isFav ? '#ef4444' : 'currentColor'"
+            stroke-width="1.8"
           >
-            <svg
-              class="w-5 h-5 relative z-10 transition-colors"
-              viewBox="0 0 24 24"
-              :fill="isFav ? '#ef4444' : 'none'"
-              :stroke="isFav ? '#ef4444' : 'currentColor'"
-              stroke-width="1.6"
-            >
-              <path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"/>
-            </svg>
-          </button>
-        </div>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"/>
+          </svg>
+        </button>
       </div>
     </div>
 
     <!-- Product Info -->
-    <div class="product-card__info flex flex-col h-full grow">
-      <NuxtLink :to="productUrl" class="group grow">
-        <div class="text-sm leading-snug line-clamp-2 transition-colors duration-300 group-hover:text-primary-600 text-neutral-900">
+    <div class="product-card__info flex flex-col h-full grow pt-2 pb-1">
+      <NuxtLink :to="productUrl" class="group grow no-underline">
+        <div class="text-sm leading-snug line-clamp-2 text-neutral-800 hover:text-neutral-950 font-normal transition-colors">
           {{ product.name }}
         </div>
       </NuxtLink>
 
-      <div class="flex items-start justify-between gap-2 mt-2">
-        <p class="text-sm md:text-base text-gray-600 font-semibold leading-tight m-0">
+      <div class="flex items-start justify-between gap-2 mt-1.5">
+        <p class="text-sm md:text-base text-neutral-900 font-bold leading-tight m-0">
           {{ formatPrice(currentPrice) }} so‘m
         </p>
       </div>
 
-      <div class="mt-auto">
-        <span class="inline-block px-2 py-0.5 text-xs md:text-sm font-medium bg-primary-100 text-primary rounded-full my-1">
+      <div class="mt-1.5">
+        <span class="inline-block px-2 py-0.5 text-[11px] font-medium bg-neutral-100 text-neutral-600 rounded-md">
           {{ formatPrice(monthlyPrice) }} so‘m/oyiga
         </span>
       </div>

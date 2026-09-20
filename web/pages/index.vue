@@ -31,10 +31,10 @@
       </section>
     </div>
 
-    <!-- ====== CATEGORIES CIRCLE CAROUSEL (Piyola 1:1) ====== -->
+    <!-- ====== CATEGORIES CIRCLE CAROUSEL ====== -->
     <section v-if="categories.length > 0" class="py-6 md:py-8">
       <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
-        <h2 class="font-bold text-[22px] md:text-3xl text-primary leading-[100%] capitalize mb-4">
+        <h2 class="font-bold text-xl md:text-2xl text-neutral-900 tracking-tight mb-4">
           Kataloglar
         </h2>
         <div class="flex items-start flex-row -ms-4 gap-4 md:gap-6 overflow-x-auto no-scrollbar pb-2 px-4">
@@ -45,24 +45,24 @@
           >
             <NuxtLink
               :to="`/category/book-${cat.id}`"
-              class="group/item flex flex-col items-center gap-2"
+              class="group flex flex-col items-center gap-2 no-underline"
             >
-              <div class="w-20 h-20 md:w-30 md:h-30 rounded-full overflow-hidden border-2 border-transparent group-hover/item:border-primary-500 transition-all duration-300 bg-secondary-100 flex items-center justify-center shadow-xs">
+              <div class="w-18 h-18 md:w-24 md:h-24 rounded-full overflow-hidden border border-neutral-200/70 hover:border-neutral-400 transition-colors bg-neutral-50 flex items-center justify-center">
                 <div class="relative w-full h-full flex items-center justify-center p-3">
                   <img
                     v-if="cat.image"
                     :src="cat.image"
                     :alt="cat.name"
-                    class="w-full h-full object-contain transform transition-transform duration-500 group-hover/item:scale-110"
+                    class="w-full h-full object-contain"
                     loading="lazy"
                   />
                   <span
                     v-else
-                    class="font-bold text-primary-500 text-xl md:text-3xl leading-none select-none transition-transform duration-500 group-hover/item:scale-110"
+                    class="font-bold text-neutral-700 text-xl md:text-2xl leading-none select-none"
                   >{{ cat.letter }}</span>
                 </div>
               </div>
-              <span class="font-medium md:font-semibold group-hover/item:font-bold group-hover/item:underline text-xs md:text-sm leading-tight text-center text-neutral-900 group-hover/item:text-primary-500 transition-all duration-300 truncate max-w-full">
+              <span class="font-medium text-xs md:text-sm leading-tight text-center text-neutral-700 group-hover:text-neutral-950 transition-colors truncate max-w-full">
                 {{ cat.name }}
               </span>
             </NuxtLink>
@@ -72,24 +72,24 @@
     </section>
 
     <!-- ====== SECTION 1: YANGI KELGAN KITOBLAR (Faqat Desktopda) ====== -->
-    <section v-if="newBooks.length > 0" class="py-4 md:py-6 lg:py-10 max-md:hidden">
+    <section v-if="newBooks.length > 0" class="py-4 md:py-6 lg:py-8 max-md:hidden">
       <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
-        <div class="w-full px-1 max-md:mt-4 mb-3 md:mb-5 lg:mb-8 flex items-center justify-between gap-3">
-          <h2 class="font-bold text-xl md:text-3xl leading-[100%] text-primary m-0 capitalize">
+        <div class="w-full px-1 mb-3 md:mb-5 flex items-center justify-between gap-3">
+          <h2 class="font-bold text-xl md:text-2xl tracking-tight text-neutral-900 m-0">
             Yangi kelgan kitoblar
           </h2>
           <NuxtLink
             to="/catalog?sort=new"
-            class="section-see-all inline-flex items-center gap-1 shrink-0"
+            class="text-xs md:text-sm font-medium text-neutral-500 hover:text-neutral-900 inline-flex items-center gap-1 transition-colors no-underline"
           >
             <span>Barchasini ko‘rish</span>
-            <svg class="section-see-all__icon w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
             </svg>
           </NuxtLink>
         </div>
 
-        <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5 md:gap-4 lg:gap-5 mb-5">
+        <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4 lg:gap-5 mb-5">
           <ProductCard
             v-for="(book, idx) in newBooks.slice(0, 5)"
             :key="'new-' + book.id"
@@ -98,29 +98,28 @@
             :eager="idx < 5"
           />
         </div>
-
       </div>
     </section>
 
     <!-- ====== SECTION 2: TAVSIYA ETAMIZ (Faqat Desktopda) ====== -->
-    <section v-if="recommendedBooks.length > 0" class="py-4 md:py-6 lg:py-10 bg-secondary-50 max-md:hidden">
+    <section v-if="recommendedBooks.length > 0" class="py-4 md:py-6 lg:py-8 max-md:hidden">
       <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
-        <div class="w-full px-1 max-md:mt-4 mb-3 md:mb-5 lg:mb-8 flex items-center justify-between gap-3">
-          <h2 class="font-bold text-xl md:text-3xl leading-[100%] text-primary m-0 capitalize">
+        <div class="w-full px-1 mb-3 md:mb-5 flex items-center justify-between gap-3">
+          <h2 class="font-bold text-xl md:text-2xl tracking-tight text-neutral-900 m-0">
             Tavsiya etamiz
           </h2>
           <NuxtLink
             to="/catalog?sort=popular"
-            class="section-see-all inline-flex items-center gap-1 shrink-0"
+            class="text-xs md:text-sm font-medium text-neutral-500 hover:text-neutral-900 inline-flex items-center gap-1 transition-colors no-underline"
           >
             <span>Barchasini ko‘rish</span>
-            <svg class="section-see-all__icon w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
             </svg>
           </NuxtLink>
         </div>
 
-        <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5 md:gap-4 lg:gap-5 mb-5">
+        <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4 lg:gap-5 mb-5">
           <ProductCard
             v-for="book in recommendedBooks.slice(0, 5)"
             :key="'rec-' + book.id"
@@ -128,7 +127,6 @@
             type="book"
           />
         </div>
-
       </div>
     </section>
 
@@ -136,25 +134,25 @@
     <section
       v-for="cat in categoryRows"
       :key="cat.category_id"
-      class="py-4 md:py-6 lg:py-10 max-md:hidden"
+      class="py-4 md:py-6 lg:py-8 max-md:hidden"
     >
       <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
-        <div class="w-full px-1 mb-3 md:mb-5 lg:mb-8 flex items-center justify-between gap-3">
-          <h2 class="font-bold text-xl md:text-3xl lg:text-4xl leading-[100%] capitalize text-primary m-0">
+        <div class="w-full px-1 mb-3 md:mb-5 flex items-center justify-between gap-3">
+          <h2 class="font-bold text-xl md:text-2xl tracking-tight text-neutral-900 m-0">
             {{ cat.name_uz }}
           </h2>
           <NuxtLink
             :to="`/category/book-${cat.category_id}`"
-            class="section-see-all inline-flex items-center gap-1 shrink-0"
+            class="text-xs md:text-sm font-medium text-neutral-500 hover:text-neutral-900 inline-flex items-center gap-1 transition-colors no-underline"
           >
             <span>Barchasini ko‘rish</span>
-            <svg class="section-see-all__icon w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
             </svg>
           </NuxtLink>
         </div>
 
-        <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5 md:gap-4 lg:gap-5 mb-5">
+        <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4 lg:gap-5 mb-5">
           <ProductCard
             v-for="book in cat.books.slice(0, 5)"
             :key="'cat-' + cat.category_id + '-' + book.id"
@@ -162,20 +160,13 @@
             type="book"
           />
         </div>
-
       </div>
     </section>
 
-    <!-- ====== BARCHA MAHSULOTLAR — FAQAT MOBILDA (Piyola 1:1). Jonli
-         piyolamarket.uz mobil DOM'idan tasdiqlangan: "Kataloglar"
-         doiralaridan keyin to'g'ridan-to'g'ri kategoriyalarga bo'linmagan,
-         bitta uzluksiz cheksiz-scroll grid boshlanadi ("Barcha
-         Mahsulotlar"), yuqoridagi kabi alohida kategoriya sarlavhalari
-         YO'Q. Desktopda bu bo'lim ko'rinmaydi (`md:hidden`) — o'rniga
-         yuqoridagi kategoriya qatorlari ko'rsatiladi. -->
+    <!-- ====== BARCHA MAHSULOTLAR — FAQAT MOBILDA ====== -->
     <section v-if="mobileFeed.length > 0" class="py-4 md:hidden">
       <div class="px-4 w-full mx-auto">
-        <h2 class="font-bold text-xl leading-[100%] text-primary m-0 capitalize mb-3">
+        <h2 class="font-bold text-lg text-neutral-900 tracking-tight m-0 mb-3">
           Barcha mahsulotlar
         </h2>
 
@@ -202,7 +193,7 @@
           <button
             type="button"
             @click="loadMoreMobile"
-            class="px-6 py-3 rounded-2xl bg-secondary-200 text-primary font-semibold text-sm border-none cursor-pointer"
+            class="px-6 py-2.5 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-800 font-semibold text-sm border-none cursor-pointer transition-colors"
           >
             Yana ko‘rsatish
           </button>
