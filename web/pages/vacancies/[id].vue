@@ -9,7 +9,7 @@
     </div>
 
     <div v-else class="m-0">
-      <!-- HERO HEADER (piyola 1:1 — vacancies-hero* qoidalari qayta ishlatildi) -->
+      <!-- HERO HEADER -->
       <header class="relative overflow-hidden vacancies-hero">
         <div class="vacancies-hero__grid"></div>
         <div class="vacancies-hero__orb vacancies-hero__orb--1"></div>

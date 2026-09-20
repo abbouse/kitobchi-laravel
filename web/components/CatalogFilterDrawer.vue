@@ -1,27 +1,15 @@
 <template>
-  <div>
+  <Teleport to="body">
     <!-- Backdrop -->
     <div
       v-if="isOpen"
-      class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs transition-opacity duration-300"
+      class="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xs transition-opacity duration-300"
       @click="$emit('close')"
     ></div>
 
-    <!-- Panel — MOBILE'da piyoladagi HAQIQIY "Narx" filtri jonli tekshirilib
-         tasdiqlangan: pastdan chiquvchi, yuqori burchaklari yumaloqlangan
-         "bottom sheet" (tortish tutqichi bilan, X tugmasisiz — orqa fon
-         bosilganda yopiladi). DESKTOP'da (md:) esa piyolaning haqiqiy "Filtr"
-         paneli — bu bottom sheet EMAS, balki O'NGDAN chiquvchi to'liq
-         balandlikdagi panel, sarlavha qatorida X yopish tugmasi bilan (jonli
-         desktop DOM'dan tasdiqlangan). Ilgari bu komponent barcha
-         o'lchamlarda (shu jumladan desktopda ham) faqat bottom sheet
-         ko'rinishida edi — bu piyolada yo'q, mobil andozani desktopga
-         noto'g'ri qo'llash edi.
-         Tailwind JIT faol emasligi sababli translate-y/translate-x kabi
-         klasslar ishlamaydi — shuning uchun transform yo'nalishi JS orqali
-         (isDesktop) hisoblanib, inline style bilan qo'llaniladi. -->
+    <!-- Panel -->
     <div
-      class="catalog-filter-panel max-h-85vh fixed z-50 bg-white shadow-2xl transition-transform duration-300 overflow-y-auto bottom-0 left-0 right-0 rounded-t-3xl"
+      class="catalog-filter-panel max-h-[85vh] fixed z-[100] bg-white shadow-2xl transition-transform duration-300 overflow-y-auto bottom-0 left-0 right-0 rounded-t-3xl"
       :style="panelStyle"
     >
       <!-- Tortish tutqichi — faqat mobileda (piyoladagi kabi) -->
@@ -219,7 +207,7 @@
         </button>
       </div>
     </div>
-  </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
@@ -307,13 +295,23 @@ onBeforeUnmount(() => {
 })
 
 const panelStyle = computed(() => {
+  const pointerEvents = props.isOpen ? 'auto' : 'none'
   if (isDesktop.value) {
-    return { transform: props.isOpen ? 'translateX(0)' : 'translateX(100%)' }
+    return {
+      transform: props.isOpen ? 'translateX(0)' : 'translateX(100%)',
+      pointerEvents
+    }
   }
-  return { transform: props.isOpen ? 'translateY(0)' : 'translateY(100%)' }
+  return {
+    transform: props.isOpen ? 'translateY(0)' : 'translateY(100%)',
+    pointerEvents
+  }
 })
 
 watch(() => props.isOpen, (open) => {
+  if (typeof document !== 'undefined') {
+    document.body.style.overflow = open ? 'hidden' : ''
+  }
   if (open) {
     localMin.value = props.minPrice != null ? String(props.minPrice) : ''
     localMax.value = props.maxPrice != null ? String(props.maxPrice) : ''

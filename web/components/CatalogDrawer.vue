@@ -1,20 +1,16 @@
 <template>
-  <div>
+  <Teleport to="body">
     <!-- Backdrop -->
     <div
       v-if="isOpen"
-      class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs transition-opacity duration-300"
+      class="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xs transition-opacity duration-300"
       @click="$emit('close')"
     ></div>
 
-    <!-- Drawer Panel (PiyolaMarket 1:1) -->
-    <!-- MUHIM: translate-x-0 / -translate-x-full klasslari piyola.css'da
-         mavjud emas edi (Tailwind JIT bu loyihada faol emas) — shuning
-         uchun drawer hech qachon yashirinmasdi. Shu sabab inline style
-         orqali transform qo'lda boshqariladi. -->
+    <!-- Drawer Panel -->
     <div
-      class="fixed top-0 left-0 bottom-0 z-50 w-full max-w-md bg-white shadow-2xl transition-transform duration-300 flex flex-col"
-      :style="{ transform: isOpen ? 'translateX(0)' : 'translateX(-100%)' }"
+      class="fixed top-0 left-0 bottom-0 z-[100] w-full max-w-md bg-white shadow-2xl transition-transform duration-300 flex flex-col"
+      :style="{ transform: isOpen ? 'translateX(0)' : 'translateX(-100%)', pointerEvents: isOpen ? 'auto' : 'none' }"
     >
       <div class="p-4 border-b border-gray-100 flex items-center justify-between">
         <h2 class="text-lg font-bold text-primary m-0 flex items-center gap-2">
@@ -74,15 +70,13 @@
         </NuxtLink>
       </div>
     </div>
-  </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
 const props = defineProps<{
   isOpen: boolean
 }>()
-
-defineEmits(['close'])
 
 const activeType = ref<'book' | 'stationery'>('book')
 const config = useRuntimeConfig()
@@ -95,5 +89,37 @@ const { data: categoriesData } = await useFetch<any>(`${config.public.apiBase}/v
 // API javobi turkum bo'yicha kalitlangan: { data: { book: [...], stationery: [...] } }
 const filteredCategories = computed(() => {
   return categoriesData.value?.data?.[activeType.value] || []
+})
+
+const emit = defineEmits(['close'])
+
+watch(
+  () => props.isOpen,
+  (open) => {
+    if (typeof document !== 'undefined') {
+      document.body.style.overflow = open ? 'hidden' : ''
+    }
+  }
+)
+
+function onKeyDown(e: KeyboardEvent) {
+  if (e.key === 'Escape' && props.isOpen) {
+    emit('close')
+  }
+}
+
+onMounted(() => {
+  if (typeof window !== 'undefined') {
+    window.addEventListener('keydown', onKeyDown)
+  }
+})
+
+onUnmounted(() => {
+  if (typeof document !== 'undefined') {
+    document.body.style.overflow = ''
+  }
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('keydown', onKeyDown)
+  }
 })
 </script>

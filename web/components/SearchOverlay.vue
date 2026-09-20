@@ -1,8 +1,9 @@
 <template>
-  <div
-    v-if="searchStore.isOpen"
-    class="fixed inset-0 z-60 bg-white flex flex-col"
-  >
+  <Teleport to="body">
+    <div
+      v-if="searchStore.isOpen"
+      class="fixed inset-0 z-[100] bg-white flex flex-col"
+    >
     <!-- Top bar: input + Bekor qilish (piyola 1:1) -->
     <div class="shrink-0 border-b border-gray-100 py-4">
       <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto flex items-center gap-3">
@@ -105,7 +106,8 @@
         </template>
       </div>
     </div>
-  </div>
+    </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
@@ -190,4 +192,34 @@ function goToFullResults() {
 function close() {
   searchStore.close()
 }
+
+watch(
+  () => searchStore.isOpen,
+  (open) => {
+    if (typeof document !== 'undefined') {
+      document.body.style.overflow = open ? 'hidden' : ''
+    }
+  }
+)
+
+function onKeyDown(e: KeyboardEvent) {
+  if (e.key === 'Escape' && searchStore.isOpen) {
+    close()
+  }
+}
+
+onMounted(() => {
+  if (typeof window !== 'undefined') {
+    window.addEventListener('keydown', onKeyDown)
+  }
+})
+
+onUnmounted(() => {
+  if (typeof document !== 'undefined') {
+    document.body.style.overflow = ''
+  }
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('keydown', onKeyDown)
+  }
+})
 </script>

@@ -307,92 +307,94 @@
          naqsh (fixed inset-0 backdrop + markazlashtirilgan oq kartochka) —
          foydalanuvchining saqlangan manzillari mavjud bo'lganda, gorizontal
          scroll ro'yxatidagi "Manzil qo'shish" kartasi bosilganda ochiladi. -->
-    <div
-      v-if="isAddAddressModalOpen"
-      class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
-      @click.self="isAddAddressModalOpen = false"
-    >
-      <div class="modal-sm-600 relative bg-white rounded-3xl overflow-hidden p-6 sm:p-8 w-full overflow-y-auto">
-        <button @click="isAddAddressModalOpen = false" type="button" class="absolute top-4 right-4 sm:top-6 sm:right-6 w-10 h-10 rounded-full bg-[#F6F6F9] hover:bg-neutral-200 transition-colors flex items-center justify-center border-none cursor-pointer">
-          <svg class="w-5 h-5 text-neutral-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-        </button>
-        <h3 class="text-2xl font-bold text-center m-0 mb-8 text-neutral-900">Manzil qo'shish</h3>
-        <form @submit.prevent="handleSaveAddressModal" class="space-y-4">
-
-          <div v-if="modalAddressError" class="p-3 bg-red-50 text-red-600 rounded-xl text-sm font-medium text-center">
-            {{ modalAddressError }}
-          </div>
-
-          <UzAddressPicker ref="modalAddressPickerRef" @update="onModalAddrUpdate" />
-
-          <div v-if="modalAddressSummary.fullAddress" class="p-3 rounded-xl bg-[#F6F6F9] text-sm text-neutral-600">
-            {{ modalAddressSummary.fullAddress }}
-          </div>
-
-          <button type="submit" :disabled="!modalAddressSummary.isValid || savingModalAddress" class="w-full font-bold items-center transition-colors gap-1.5 text-white bg-primary hover:bg-primary/90 h-12 md:h-14 flex justify-center rounded-2xl text-base px-6 mt-6 border-none cursor-pointer disabled:opacity-75 shadow-sm">
-            {{ savingModalAddress ? "Qo'shilmoqda..." : "Qo'shish" }}
+    <Teleport to="body">
+      <div
+        v-if="isAddAddressModalOpen"
+        class="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
+        @click.self="isAddAddressModalOpen = false"
+      >
+        <div class="modal-sm-600 relative bg-white rounded-3xl overflow-hidden p-6 sm:p-8 w-full overflow-y-auto">
+          <button @click="isAddAddressModalOpen = false" type="button" class="absolute top-4 right-4 sm:top-6 sm:right-6 w-10 h-10 rounded-full bg-[#F6F6F9] hover:bg-neutral-200 transition-colors flex items-center justify-center border-none cursor-pointer">
+            <svg class="w-5 h-5 text-neutral-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
-        </form>
-      </div>
-    </div>
+          <h3 class="text-2xl font-bold text-center m-0 mb-8 text-neutral-900">Manzil qo'shish</h3>
+          <form @submit.prevent="handleSaveAddressModal" class="space-y-4">
 
-    <!-- Karta Qo'shish Modali -->
-    <!-- MUHIM: Kitobchi ilovamizdagi bilan bir xil oqim — 1) karta raqami +
-         muddati kiritiladi, 2) shu MODALNING O'ZIDA (yangi modal ochilmaydi)
-         "kod yuborildi" xabari va SMS kod maydoniga o'tadi, 3) tasdiqlangach
-         karta ro'yxatga avtomatik qo'shilib, selected bo'ladi. Backend:
-         POST /cards (raqam+muddat) → POST /cards/verify (SMS kod). -->
-    <div
-      v-if="isCardModalOpen"
-      class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
-      @click.self="closeCardModal"
-    >
-      <div class="relative bg-white rounded-3xl overflow-hidden p-6 sm:p-8 w-full max-w-md">
-        <button @click="closeCardModal" type="button" class="absolute top-4 right-4 sm:top-6 sm:right-6 w-10 h-10 rounded-full bg-[#F6F6F9] hover:bg-neutral-200 transition-colors flex items-center justify-center border-none cursor-pointer">
-          <svg class="w-5 h-5 text-neutral-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-        </button>
-        <h3 class="text-xl font-bold text-center m-0 mb-6 text-neutral-900">
-          {{ cardStep === 'form' ? "Karta qo'shish" : 'SMS kodni kiriting' }}
-        </h3>
+            <div v-if="modalAddressError" class="p-3 bg-red-50 text-red-600 rounded-xl text-sm font-medium text-center">
+              {{ modalAddressError }}
+            </div>
 
-        <div v-if="cardError" class="mb-4 p-3 bg-red-50 text-red-600 rounded-xl text-sm font-medium text-center">
-          {{ cardError }}
+            <UzAddressPicker ref="modalAddressPickerRef" @update="onModalAddrUpdate" />
+
+            <div v-if="modalAddressSummary.fullAddress" class="p-3 rounded-xl bg-[#F6F6F9] text-sm text-neutral-600">
+              {{ modalAddressSummary.fullAddress }}
+            </div>
+
+            <button type="submit" :disabled="!modalAddressSummary.isValid || savingModalAddress" class="w-full font-bold items-center transition-colors gap-1.5 text-white bg-primary hover:bg-primary/90 h-12 md:h-14 flex justify-center rounded-2xl text-base px-6 mt-6 border-none cursor-pointer disabled:opacity-75 shadow-sm">
+              {{ savingModalAddress ? "Qo'shilmoqda..." : "Qo'shish" }}
+            </button>
+          </form>
         </div>
-
-        <form v-if="cardStep === 'form'" @submit.prevent="submitCardForm" class="space-y-4">
-          <div>
-            <label class="block font-medium text-neutral-800 text-sm mb-1">Karta raqami</label>
-            <input v-model="cardForm.number" type="text" inputmode="numeric" autocomplete="cc-number" maxlength="19" placeholder="0000 0000 0000 0000" class="w-full appearance-none placeholder:text-neutral-400 text-neutral-900 focus:outline-none text-base rounded-2xl h-12 p-3 bg-[#F6F6F9] border border-transparent focus:border-primary/20 transition-all">
-          </div>
-          <div class="flex gap-3">
-            <div class="flex-1">
-              <label class="block font-medium text-neutral-800 text-sm mb-1">Oy (MM)</label>
-              <input v-model="cardForm.expireMonth" type="text" inputmode="numeric" autocomplete="cc-exp-month" maxlength="2" placeholder="MM" class="w-full appearance-none placeholder:text-neutral-400 text-neutral-900 focus:outline-none text-base rounded-2xl h-12 p-3 bg-[#F6F6F9] border border-transparent focus:border-primary/20 transition-all">
-            </div>
-            <div class="flex-1">
-              <label class="block font-medium text-neutral-800 text-sm mb-1">Yil (YY)</label>
-              <input v-model="cardForm.expireYear" type="text" inputmode="numeric" autocomplete="cc-exp-year" maxlength="2" placeholder="YY" class="w-full appearance-none placeholder:text-neutral-400 text-neutral-900 focus:outline-none text-base rounded-2xl h-12 p-3 bg-[#F6F6F9] border border-transparent focus:border-primary/20 transition-all">
-            </div>
-          </div>
-          <button type="submit" :disabled="cardSaving" class="w-full font-bold items-center transition-colors gap-1.5 text-white bg-primary hover:bg-primary/90 h-12 flex justify-center rounded-2xl text-base px-6 mt-2 border-none cursor-pointer disabled:opacity-75 shadow-sm">
-            {{ cardSaving ? "Yuborilmoqda..." : "Davom etish" }}
-          </button>
-        </form>
-
-        <form v-else @submit.prevent="submitCardOtp" class="space-y-4">
-          <p class="text-sm text-neutral-500 text-center m-0">
-            {{ pendingCard?.otpPhone ? `${pendingCard.otpPhone} raqamiga kod yuborildi` : "Telefon raqamingizga kod yuborildi" }}
-          </p>
-          <div>
-            <label class="block font-medium text-neutral-800 text-sm mb-1">SMS kod</label>
-            <input v-model="cardOtpCode" type="text" inputmode="numeric" maxlength="6" placeholder="000000" class="w-full appearance-none placeholder:text-neutral-400 text-neutral-900 focus:outline-none text-center tracking-[0.5em] text-lg rounded-2xl h-12 p-3 bg-[#F6F6F9] border border-transparent focus:border-primary/20 transition-all">
-          </div>
-          <button type="submit" :disabled="cardSaving" class="w-full font-bold items-center transition-colors gap-1.5 text-white bg-primary hover:bg-primary/90 h-12 flex justify-center rounded-2xl text-base px-6 mt-2 border-none cursor-pointer disabled:opacity-75 shadow-sm">
-            {{ cardSaving ? "Tekshirilmoqda..." : "Tasdiqlash" }}
-          </button>
-        </form>
       </div>
-    </div>
+
+      <!-- Karta Qo'shish Modali -->
+      <!-- MUHIM: Kitobchi ilovamizdagi bilan bir xil oqim — 1) karta raqami +
+           muddati kiritiladi, 2) shu MODALNING O'ZIDA (yangi modal ochilmaydi)
+           "kod yuborildi" xabari va SMS kod maydoniga o'tadi, 3) tasdiqlangach
+           karta ro'yxatga avtomatik qo'shilib, selected bo'ladi. Backend:
+           POST /cards (raqam+muddat) → POST /cards/verify (SMS kod). -->
+      <div
+        v-if="isCardModalOpen"
+        class="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
+        @click.self="closeCardModal"
+      >
+        <div class="relative bg-white rounded-3xl overflow-hidden p-6 sm:p-8 w-full max-w-md">
+          <button @click="closeCardModal" type="button" class="absolute top-4 right-4 sm:top-6 sm:right-6 w-10 h-10 rounded-full bg-[#F6F6F9] hover:bg-neutral-200 transition-colors flex items-center justify-center border-none cursor-pointer">
+            <svg class="w-5 h-5 text-neutral-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+          <h3 class="text-xl font-bold text-center m-0 mb-6 text-neutral-900">
+            {{ cardStep === 'form' ? "Karta qo'shish" : 'SMS kodni kiriting' }}
+          </h3>
+
+          <div v-if="cardError" class="mb-4 p-3 bg-red-50 text-red-600 rounded-xl text-sm font-medium text-center">
+            {{ cardError }}
+          </div>
+
+          <form v-if="cardStep === 'form'" @submit.prevent="submitCardForm" class="space-y-4">
+            <div>
+              <label class="block font-medium text-neutral-800 text-sm mb-1">Karta raqami</label>
+              <input v-model="cardForm.number" type="text" inputmode="numeric" autocomplete="cc-number" maxlength="19" placeholder="0000 0000 0000 0000" class="w-full appearance-none placeholder:text-neutral-400 text-neutral-900 focus:outline-none text-base rounded-2xl h-12 p-3 bg-[#F6F6F9] border border-transparent focus:border-primary/20 transition-all">
+            </div>
+            <div class="flex gap-3">
+              <div class="flex-1">
+                <label class="block font-medium text-neutral-800 text-sm mb-1">Oy (MM)</label>
+                <input v-model="cardForm.expireMonth" type="text" inputmode="numeric" autocomplete="cc-exp-month" maxlength="2" placeholder="MM" class="w-full appearance-none placeholder:text-neutral-400 text-neutral-900 focus:outline-none text-base rounded-2xl h-12 p-3 bg-[#F6F6F9] border border-transparent focus:border-primary/20 transition-all">
+              </div>
+              <div class="flex-1">
+                <label class="block font-medium text-neutral-800 text-sm mb-1">Yil (YY)</label>
+                <input v-model="cardForm.expireYear" type="text" inputmode="numeric" autocomplete="cc-exp-year" maxlength="2" placeholder="YY" class="w-full appearance-none placeholder:text-neutral-400 text-neutral-900 focus:outline-none text-base rounded-2xl h-12 p-3 bg-[#F6F6F9] border border-transparent focus:border-primary/20 transition-all">
+              </div>
+            </div>
+            <button type="submit" :disabled="cardSaving" class="w-full font-bold items-center transition-colors gap-1.5 text-white bg-primary hover:bg-primary/90 h-12 flex justify-center rounded-2xl text-base px-6 mt-6 border-none cursor-pointer disabled:opacity-75 shadow-sm">
+              {{ cardSaving ? "Saqlanmoqda..." : "Davom etish" }}
+            </button>
+          </form>
+
+          <form v-else @submit.prevent="submitCardOtp" class="space-y-4">
+            <p class="text-sm text-neutral-500 text-center m-0">
+              {{ pendingCard?.otpPhone ? `${pendingCard.otpPhone} raqamiga kod yuborildi` : "Telefon raqamingizga kod yuborildi" }}
+            </p>
+            <div>
+              <label class="block font-medium text-neutral-800 text-sm mb-1">SMS kod</label>
+              <input v-model="cardOtpCode" type="text" inputmode="numeric" maxlength="6" placeholder="000000" class="w-full appearance-none placeholder:text-neutral-400 text-neutral-900 focus:outline-none text-center tracking-[0.5em] text-lg rounded-2xl h-12 p-3 bg-[#F6F6F9] border border-transparent focus:border-primary/20 transition-all">
+            </div>
+            <button type="submit" :disabled="cardSaving" class="w-full font-bold items-center transition-colors gap-1.5 text-white bg-primary hover:bg-primary/90 h-12 flex justify-center rounded-2xl text-base px-6 mt-2 border-none cursor-pointer disabled:opacity-75 shadow-sm">
+              {{ cardSaving ? "Tekshirilmoqda..." : "Tasdiqlash" }}
+            </button>
+          </form>
+        </div>
+      </div>
+    </Teleport>
   </main>
 </template>
 

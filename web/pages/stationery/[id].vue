@@ -727,13 +727,14 @@
       </div>
     </div>
 
-    <!-- ====== SHARHLAR MODAL / DRAWER (Piyola 1:1) ====== -->
-    <div
-      v-if="isReviewsOpen"
-      class="fixed inset-0 z-70 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
-      @click.self="isReviewsOpen = false"
-    >
-      <div class="max-h-85vh bg-white rounded-3xl w-full max-w-lg p-6 shadow-2xl flex flex-col">
+    <!-- ====== SHARHLAR MODAL / DRAWER ====== -->
+    <Teleport to="body">
+      <div
+        v-if="isReviewsOpen"
+        class="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
+        @click.self="isReviewsOpen = false"
+      >
+        <div class="max-h-[85vh] bg-white rounded-3xl w-full max-w-lg p-6 shadow-2xl flex flex-col">
         <div class="flex items-center justify-between pb-4 border-b border-gray-100">
           <div class="flex items-center gap-2">
             <h3 class="text-lg font-bold text-neutral-900 m-0">Mijozlar sharhlari</h3>
@@ -780,7 +781,8 @@
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </Teleport>
   </div>
 
   <!-- ====== FULL SHIMMER SKELETON (While loading) ====== -->
@@ -822,6 +824,12 @@ const cartStore = useCartStore()
 const favStore = useFavoritesStore()
 
 const isReviewsOpen = ref(false)
+
+watch(isReviewsOpen, (open) => {
+  if (typeof document !== 'undefined') {
+    document.body.style.overflow = open ? 'hidden' : ''
+  }
+})
 
 // Extract numeric ID from param like "123-slug-nomi"
 const rawId = computed(() => {

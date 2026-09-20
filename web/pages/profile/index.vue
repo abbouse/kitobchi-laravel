@@ -56,7 +56,7 @@
               <div class="flex items-center justify-between gap-3">
                 <div class="flex items-center gap-3">
                   <div class="text-2xl text-neutral-400 group-hover:text-primary transition-all duration-300 flex justify-center items-center">
-                    <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" class="text-2xl" v-html="PIYOLA_ICONS[item.key] || ICONS[item.icon]"></svg>
+                    <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" class="text-2xl" v-html="PROFILE_ICONS[item.key] || ICONS[item.icon]"></svg>
                   </div>
                   <p class="font-normal text-neutral-800 m-0 text-sm md:text-base">{{ item.label }}</p>
                 </div>
@@ -75,7 +75,7 @@
               <div class="flex items-center justify-between gap-3">
                 <div class="flex items-center gap-3">
                   <div class="text-2xl text-neutral-400 group-hover:text-primary transition-all duration-300 flex justify-center items-center">
-                    <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" class="text-2xl" v-html="PIYOLA_ICONS[item.key] || ICONS[item.icon]"></svg>
+                    <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" class="text-2xl" v-html="PROFILE_ICONS[item.key] || ICONS[item.icon]"></svg>
                   </div>
                   <p class="font-normal text-neutral-800 m-0 text-sm md:text-base">{{ item.label }}</p>
                 </div>
@@ -133,7 +133,7 @@
                 <div class="flex items-center justify-between gap-3">
                   <div class="flex items-center gap-3">
                     <div class="text-2xl text-neutral-400 group-hover:text-primary transition-all duration-300 flex justify-center items-center">
-                      <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" class="text-2xl" v-html="PIYOLA_ICONS[item.key] || ICONS[item.icon]"></svg>
+                      <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" class="text-2xl" v-html="PROFILE_ICONS[item.key] || ICONS[item.icon]"></svg>
                     </div>
                     <p class="font-normal text-neutral-800 m-0 text-sm md:text-base">{{ item.label }}</p>
                   </div>
@@ -152,7 +152,7 @@
                 <div class="flex items-center justify-between gap-3">
                   <div class="flex items-center gap-3">
                     <div class="text-2xl text-neutral-400 group-hover:text-primary transition-all duration-300 flex justify-center items-center">
-                      <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" class="text-2xl" v-html="PIYOLA_ICONS[item.key] || ICONS[item.icon]"></svg>
+                      <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" class="text-2xl" v-html="PROFILE_ICONS[item.key] || ICONS[item.icon]"></svg>
                     </div>
                     <p class="font-normal text-neutral-800 m-0 text-sm md:text-base">{{ item.label }}</p>
                   </div>
@@ -192,8 +192,8 @@ import { useAuthStore } from '~/stores/auth'
 const authStore = useAuthStore()
 const router = useRouter()
 
-// Piyola Market'dagi haqiqiy SVG ikonkalar
-const PIYOLA_ICONS: Record<string, string> = {
+// Profil bo'limi SVG ikonkalar
+const PROFILE_ICONS: Record<string, string> = {
   orders: '<path fill-rule="evenodd" clip-rule="evenodd" d="M7.50027 6V6.75H5.51327C4.55327 6.75 3.74927 7.474 3.64827 8.429L2.38527 20.429C2.3578 20.6903 2.38558 20.9545 2.46679 21.2045C2.548 21.4544 2.68084 21.6844 2.85669 21.8797C3.03254 22.075 3.24748 22.2311 3.48755 22.338C3.72763 22.4448 3.98749 22.5 4.25027 22.5H19.7503C20.0131 22.5 20.2729 22.4448 20.513 22.338C20.7531 22.2311 20.968 22.075 21.1439 21.8797C21.3197 21.6844 21.4525 21.4544 21.5338 21.2045C21.615 20.9545 21.6427 20.6903 21.6153 20.429L20.3523 8.429C20.3038 7.96815 20.0865 7.54155 19.7421 7.23151C19.3977 6.92146 18.9507 6.74993 18.4873 6.75H16.5003V6C16.5003 4.80653 16.0262 3.66193 15.1823 2.81802C14.3383 1.97411 13.1937 1.5 12.0003 1.5C10.8068 1.5 9.66221 1.97411 8.81829 2.81802C7.97438 3.66193 7.50027 4.80653 7.50027 6ZM12.0003 3C11.2046 3 10.4416 3.31607 9.87895 3.87868C9.31634 4.44129 9.00027 5.20435 9.00027 6V6.75H15.0003V6C15.0003 5.20435 14.6842 4.44129 14.1216 3.87868C13.559 3.31607 12.7959 3 12.0003 3ZM9.00027 11.25C9.00027 12.0456 9.31634 12.8087 9.87895 13.3713C10.4416 13.9339 11.2046 14.25 12.0003 14.25C12.7959 14.25 13.559 13.9339 14.1216 13.3713C14.6842 12.8087 15.0003 12.0456 15.0003 11.25V10.5C15.0003 10.3011 15.0793 10.1103 15.2199 9.96967C15.3606 9.82902 15.5514 9.75 15.7503 9.75C15.9492 9.75 16.14 9.82902 16.2806 9.96967C16.4213 10.1103 16.5003 10.3011 16.5003 10.5V11.25C16.5003 12.4435 16.0262 13.5881 15.1823 14.432C14.3383 15.2759 13.1937 15.75 12.0003 15.75C10.8068 15.75 9.66221 15.2759 8.81829 14.432C7.97438 13.5881 7.50027 12.4435 7.50027 11.25V10.5C7.50027 10.3011 7.57929 10.1103 7.71994 9.96967C7.86059 9.82902 8.05136 9.75 8.25027 9.75C8.44918 9.75 8.63995 9.82902 8.7806 9.96967C8.92125 10.1103 9.00027 10.3011 9.00027 10.5V11.25Z" fill="currentColor"></path>',
   comments: '<path d="M4.913 2.658C6.988 2.388 9.103 2.25 11.25 2.25C13.397 2.25 15.512 2.389 17.587 2.658C19.509 2.908 20.878 4.519 20.992 6.385C20.6577 6.27362 20.3112 6.20278 19.96 6.174C17.1582 5.94141 14.3418 5.94141 11.54 6.174C9.182 6.37 7.5 8.364 7.5 10.608V14.894C7.49906 15.7178 7.72577 16.5258 8.15512 17.2288C8.58446 17.9319 9.19973 18.5026 9.933 18.878L7.28 21.53C7.17511 21.6348 7.04153 21.7061 6.89614 21.735C6.75074 21.7638 6.60004 21.749 6.46308 21.6923C6.32611 21.6356 6.20903 21.5395 6.12661 21.4163C6.04419 21.2931 6.00013 21.1482 6 21V16.97C5.6372 16.9314 5.27484 16.8888 4.913 16.842C2.905 16.58 1.5 14.833 1.5 12.862V6.638C1.5 4.668 2.905 2.919 4.913 2.658Z" fill="currentColor"></path><path d="M15.75 7.5C14.374 7.5 13.011 7.557 11.664 7.669C10.124 7.797 9 9.103 9 10.609V14.894C9 16.401 10.128 17.708 11.67 17.834C12.913 17.936 14.17 17.991 15.438 17.999L18.22 20.78C18.3249 20.8848 18.4585 20.9561 18.6039 20.985C18.7493 21.0139 18.9 20.999 19.0369 20.9423C19.1739 20.8856 19.291 20.7896 19.3734 20.6663C19.4558 20.5431 19.4999 20.3982 19.5 20.25V17.86L19.83 17.834C21.372 17.709 22.5 16.401 22.5 14.894V10.608C22.5 9.103 21.375 7.797 19.836 7.668C18.4769 7.55562 17.1137 7.49957 15.75 7.5Z" fill="currentColor"></path>',
   favorites: '<path fill="currentColor" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>',
@@ -206,7 +206,7 @@ const PIYOLA_ICONS: Record<string, string> = {
   contacts: '<path d="M21.89 12V19.5C21.8874 20.4937 21.4914 21.446 20.7887 22.1487C20.086 22.8514 19.1337 23.2473 18.14 23.25H12.75C12.5511 23.25 12.3603 23.171 12.2197 23.0303C12.079 22.8897 12 22.6989 12 22.5C12 22.3011 12.079 22.1103 12.2197 21.9696C12.3603 21.829 12.5511 21.75 12.75 21.75H18.14C18.7359 21.7473 19.3067 21.5095 19.7281 21.0881C20.1495 20.6667 20.3874 20.0959 20.39 19.5V19.369C20.15 19.456 19.896 19.5 19.64 19.5H18.14C17.5433 19.5 16.971 19.2629 16.549 18.841C16.1271 18.419 15.89 17.8467 15.89 17.25V13.5C15.89 12.9032 16.1271 12.3309 16.549 11.909C16.971 11.487 17.5433 11.25 18.14 11.25H20.353C20.165 9.18958 19.2096 7.27504 17.6764 5.88589C16.1431 4.49674 14.1439 3.7344 12.075 3.74998H12.065C9.99503 3.73024 7.99363 4.49118 6.45965 5.88116C4.92567 7.27114 3.97175 9.18809 3.788 11.25H6C6.59593 11.2526 7.1667 11.4905 7.58808 11.9119C8.00947 12.3333 8.24737 12.9041 8.25 13.5V17.25C8.24737 17.8459 8.00947 18.4167 7.58808 18.8381C7.1667 19.2595 6.59593 19.4973 6 19.5H4.5C3.90407 19.4973 3.3333 19.2595 2.91192 18.8381C2.49053 18.4167 2.25263 17.8459 2.25 17.25V12C2.24997 10.714 2.50433 9.44075 2.99844 8.25351C3.49254 7.06626 4.21663 5.98849 5.129 5.08225C6.04138 4.17601 7.12401 3.45921 8.31456 2.97312C9.50512 2.48704 10.7801 2.24127 12.066 2.24998H12.141C14.7259 2.25289 17.204 3.28109 19.0317 5.10896C20.8594 6.93684 21.8874 9.4151 21.89 12Z" fill="currentColor"></path>',
 }
 
-const ICONS: Record<string, string> = PIYOLA_ICONS
+const ICONS: Record<string, string> = PROFILE_ICONS
 
 interface MenuItem {
   key: string

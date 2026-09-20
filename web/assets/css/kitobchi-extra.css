@@ -1,28 +1,12 @@
 /*
- * piyola-extra.css
+ * kitobchi-extra.css
  * ------------------------------------------------------------------
- * piyola.css (Tailwind v4 dan kompilyatsiya qilingan statik fayl)
- * piyolamarket.uz saytining faqat FOYDALANILGAN klasslarini o'z ichiga
- * oladi — ya'ni piyola'ning har bir sahifasi qayta ochilib, faqat o'sha
- * sahifada ishlatilgan klasslar generatsiya qilingan.
- *
- * Ushbu loyihada (kitobchi web/) Tailwind moduli faollashtirilmagan
- * (@nuxtjs/tailwindcss yoqilsa, piyola.css ichidagi native `@layer`
- * qoidalari bilan to'qnashib, build buziladi — sinab ko'rilgan va
- * qasddan o'chirib qo'yilgan). Shuning uchun piyola'da bor-u, lekin
- * piyola.css'da yo'q bo'lgan klasslar (masalan, vakansiya sahifasi
- * kabi kam ishlatiladigan sahifalarga xos klasslar) shu faylga QO'LDA
- * ko'chirib qo'yiladi.
- *
- * Qoida: bu faylga faqat piyola'ning haqiqiy HTML/CSS manbasidan olingan
- * yoki piyola bilan vizual mos custom qoidalar qo'shiladi — hech qanday
- * o'ylab topilgan (fabricated) stil qo'shilmaydi.
+ * Kitobchi dizayn tizimi va qo'shimcha yordamchi CSS klasslari.
+ * kitobchi.css bilan birgalikda to'liq minimalist UI uslubini ta'minlaydi.
  * ------------------------------------------------------------------ */
 
 /* ===================================================================
- * 1) VAKANSIYALAR SAHIFASI — piyolamarket.uz/vacancies.html va
- *    /vacancies/1.html'dan ajratib olingan (inline <style> blok #7).
- *    Vue scoped-style attributelari ([data-v-xxxxx]) olib tashlangan.
+ * 1) VAKANSIYALAR SAHIFASI
  * =================================================================== */
 .vacancies-hero{background:linear-gradient(135deg,#0b0342,#1a0a5e 40%,#0b0342);position:relative;overflow:hidden}
 .vacancies-hero__grid{position:absolute;inset:0;background-image:linear-gradient(#ffffff08 1px,#0000 0),linear-gradient(90deg,#ffffff08 1px,#0000 0);background-size:60px 60px;-webkit-mask-image:radial-gradient(ellipse 80% 70% at 50% 40%,#000 20%,#0000 80%);mask-image:radial-gradient(ellipse 80% 70% at 50% 40%,#000 20%,#0000 80%)}
@@ -87,13 +71,7 @@
 }
 
 /* ===================================================================
- * 2) liquidGlass-* — piyola.css ichida bu klasslar Vue scoped-style
- *    ([data-v-b511cd03]) bilan cheklangan (piyola'ning ichki Button
- *    komponentiga xos). Kitobchi tomonida bu atribut mavjud bo'lmagani
- *    uchun asl qoidalar ishlamaydi — shu sabab pastda [data-v-xxxxx]
- *    olib tashlangan, umumiy (global) versiyasi qo'shildi. Qiymatlar
- *    piyola.css'dagi bilan bir xil, faqat selektor tozalangan.
- *    Ishlatilishi: AppFooter.vue (ijtimoiy tarmoq tugmalari).
+ * 2) liquidGlass-*
  * =================================================================== */
 .liquidGlass-wrapper{position:relative;display:flex;font-weight:600;overflow:hidden;color:#000;cursor:pointer;transition:all .4s cubic-bezier(.175,.885,.32,2.2)}
 .liquidGlass-effect{position:absolute;z-index:0;inset:0;-webkit-backdrop-filter:blur(1px);backdrop-filter:blur(1px);overflow:hidden;isolation:isolate}
@@ -101,29 +79,13 @@
 .liquidGlass-shine{position:absolute;inset:0;z-index:2;overflow:hidden;box-shadow:inset 1px 1px 1px #ffffffe6,inset 2px 1px 0 2px #2e3950,inset 0 0 1px 1px #ffffffe6,inset 0 -2px 2px 4px #2e3950}
 
 /* ===================================================================
- * 3) glass-card-bg / glass-border — MUHIM TOPILMA: bu klasslar
- *    AppHeader.vue'da (desktop capsulalar + mobil qidiruv paneli, 5+
- *    joyda) ALLAQACHON ishlatilgan, lekin piyola.css'da FAQAT
- *    [data-v-e6e68965] bilan scoped holda mavjud edi — ya'ni haqiqiy
- *    saytda bu "oynasimon" (glass) fon effekti umuman ko'rinmayotgan
- *    edi (browser klass nomini topolmagani uchun qoidani qo'llamagan).
- *    Pastdagi global versiya shu bugni tuzatadi.
+ * 3) glass-card-bg / glass-border — Shishasimon (glassmorphism) fon effektlari
  * =================================================================== */
 .glass-card-bg{background:linear-gradient(135deg,#00000014,#0000000d 15%,#00000005 35%,#0000 60%),#ffffff80}
 .glass-border{padding:1px;background:linear-gradient(165deg,#ffffffb3,#ffffff4d 25%,#0000,#ffffffb3 75%,#ffffff4d);-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
 
 /* ===================================================================
- * 4) Yo'qolgan bir nechta oddiy Tailwind utility'lari — piyola.css
- *    faqat piyola sahifalarida ISHLATILGAN klasslarni o'z ichiga
- *    oladi, shu sabab kitobchi kodida bor-u piyola'da yo'q bir nechta
- *    STANDART (arbitrary bo'lmagan) Tailwind qiymatlari mavjud edi.
- *    Standart Tailwind v3 spacing/rang jadvaliga mos qiymatlar bilan
- *    qo'lda qo'shildi (loyihada Tailwind JIT o'chirilgan — sabab:
- *    yuqoridagi izohga qarang).
- *    Topilgan joylar: AppBottomNav.vue badge pozitsiyasi (-right-2 va
- *    -top-1 — ikkalasi ham bir xil badge uchun kerak edi), bir nechta
- *    sahifadagi breadcrumb ajratuvchisi ("/"), profile/comments.vue
- *    segment tugmalari (md:flex-none).
+ * 4) Yordamchi Tailwind utility'lari
  * =================================================================== */
 .-right-2{right:-.5rem}
 .-top-1{top:-.25rem}
@@ -131,14 +93,7 @@
 @media(min-width:768px){.md\:flex-none{flex:none}}
 
 /* ===================================================================
- * 5) Scroll-snap utility'lari — piyola o'zi gorizontal slayderlar
- *    uchun Embla Carousel (JS) ishlatadi, shu sabab piyola.css'da
- *    tayyor snap-* klasslari YO'Q. Kitobchi tomonida esa (Nuxt UI
- *    o'rniga) native CSS scroll-snap yondashuvi tanlangan — bu yengil
- *    va qo'shimcha kutubxonasiz to'g'ri yechim, faqat klasslar hech
- *    qachon generatsiya qilinmagan edi. Standart Tailwind v3 chiqishi
- *    bilan bir xil qiymatlar bilan qo'lda qo'shildi.
- *    Ishlatilishi: index.vue bannerlar, ProductCard.vue rasm karuseli.
+ * 5) Scroll-snap utility'lari
  * =================================================================== */
 .no-scrollbar{scrollbar-width:none;-ms-overflow-style:none}
 .no-scrollbar::-webkit-scrollbar{display:none;width:0;height:0}
@@ -147,15 +102,7 @@
 .snap-center{scroll-snap-align:center}
 
 /* ===================================================================
- * 6) kb-prose — admin (boshqaruv) tomonidan yozilgan HTML kontentni
- *    (Policy.content — Biz haqimizda / Maxfiylik siyosati / Foydalanish
- *    shartlari va h.k.) piyola'ning privacy.html sahifasidagi uslubga
- *    yaqin ko'rinishda chiqarish uchun. piyola.css'da Tailwind Typography
- *    plagini (.prose) klasslari YO'Q (0 marta uchraydi) — shu sabab
- *    qo'lda, piyola'ning haqiqiy h1/h2/p rang-o'lcham qiymatlariga mos
- *    custom klass yozildi (index.vue/privacy.html outline'idan olingan:
- *    h1 text-3xl md:text-4xl font-bold, h2 text-xl font-semibold,
- *    p text-neutral-600 leading-relaxed).
+ * 6) kb-prose — Legal & Ma'lumot sahifalari uchun matn tipografiyasi
  * =================================================================== */
 .kb-prose h1{font-size:1.875rem;line-height:2.25rem;font-weight:700;margin-bottom:1rem;color:#0b0342}
 .kb-prose h2{font-size:1.25rem;line-height:1.75rem;font-weight:600;margin-top:2.5rem;margin-bottom:1rem;color:#0b0342}
@@ -173,54 +120,18 @@
 .kb-prose>*:last-child{margin-bottom:0}
 
 /* ===================================================================
- * 7) product-gallery-frame — mahsulot sahifasi (books/[id].vue,
- *    stationery/[id].vue) asosiy rasm konteyneri. piyola.css'da
- *    `aspect-auto` klassi umuman yo'q (0 marta uchraydi), lekin bizga
- *    ikkita holat kerak: mobil/tablet'da (lg dan past) atrofida grid
- *    ustun bo'lmagani uchun aniq aspect-ratio shart — aks holda
- *    konteyner balandligi 0 bo'lib qoladi; lg dan boshlab esa galereya
- *    ustuni o'ng (info) ustun bilan bir xil balandlikka cho'ziladi
- *    (grid stretch) — shu holatda aspect-ratio o'chirilishi kerak, aks
- *    holda shakl o'sha balandlikdan KENGLIK talab qilib, ustunidan
- *    tashqariga toshib chiqadi (chap tomondagi matnni yashiradigan
- *    bug — screenshot orqali topilgan). Nisbat 1/1 (kvadrat) emas,
- *    3/4 — piyolaning HAQIQIY mahsulot sahifasidagi galereya
- *    ramkasidan (`aspect-[3/4]`) va kitobchining o'zining
- *    ProductCard.vue katalog kartochkasidan (`aspect-ratio:3/4`) olingan
- *    qiymat — ilgari 1/1 ishlatilgani sabab detail sahifadagi rasm
- *    katalogdagi bilan bir xil chiqmasdi (nomuvofiqlik). object-fit
- *    ham shu bilan birga contain'dan cover'ga o'zgartirildi (pastga
- *    qarang), shuning uchun rasm ramkani TO'LIQ to'ldiradi — piyolada
- *    ham bo'shliq/padding yo'q.
+ * 7) product-gallery-frame — Mahsulot galereyasi ramkasi
  * =================================================================== */
 .product-gallery-frame{aspect-ratio:3/4;height:auto}
 @media(min-width:1024px){.product-gallery-frame{aspect-ratio:auto;height:100%}}
 
 /* ===================================================================
- * 8) AuthModal kirish animatsiyasi — piyola.css'da @keyframes fade-in
- *    va @keyframes scale-in ALLAQACHON mavjud (Nuxt UI'ning UModal
- *    komponenti ichida JS orqali data-state atributi bilan avtomatik
- *    ishga tushiriladi), lekin buni qo'lda yoquvchi tailwindcss-animate
- *    utility klasslari (animate-in/fade-in/zoom-in) piyola.css'da yo'q
- *    — chunki sahifa muallifi ularni hech qachon to'g'ridan-to'g'ri
- *    yozmagan. Kitobchi'ning maxsus (Nuxt UI'siz) AuthModal.vue
- *    komponenti uchun piyola'ning haqiqiy @keyframes scale-in
- *    qiymatidan (opacity 0->1 + scale .95->1) foydalanib, alohida
- *    klass qo'shildi.
+ * 8) AuthModal kirish animatsiyasi
  * =================================================================== */
 .auth-modal-pop-in{animation:scale-in .2s ease-out both}
 
 /* ===================================================================
- * 9) CatalogFilterDrawer.vue — piyoladagi HAQIQIY "Filtr"/"Narx" paneli
- *    MOBILE'da pastdan chiquvchi bottom sheet, DESKTOP'da (>=768px) esa
- *    o'ngdan chiquvchi to'liq balandlikdagi panel (jonli piyola desktop
- *    DOM'idan tasdiqlangan: /category/.../ayollar-parfyumi sahifasida
- *    "Filtr" tugmasi bosilganda o'ng tomondan sarlavha+X yopish tugmasi
- *    bilan chiqadi, pastda "Ko'rsatish" + "Filtrni tozalash" ikkita
- *    to'liq kengliкdagi tugma yonma-yon). Tailwind JIT bu loyihada faol
- *    emasligi sababli md: prefiksli klasslar oldindan compile qilinmagan
- *    — shu sabab bu qoidalar qo'lda yozildi (piyola.css'dagi haqiqiy
- *    breakpoint bilan bir xil, 768px).
+ * 9) CatalogFilterDrawer.vue — Filtr paneli uslublari
  * =================================================================== */
 @media(min-width:768px){
   .catalog-filter-panel{top:0;bottom:0;left:auto;right:0;width:100%;max-width:28rem;border-radius:1.5rem 0 0 1.5rem;max-height:100%;display:flex;flex-direction:column}
@@ -236,8 +147,6 @@
 
 /* ===================================================================
  * 10) PREMIUM SHIMMER EFFECT / SKELETON LOADING (Light Wave)
- *     Butun loyiha bo'ylab serverdan yuklanadigan har qanday ma'lumot
- *     uchun o'ta nafis, silliq, qotib qolmaydigan to'lqin effekti.
  * =================================================================== */
 @keyframes kc-shimmer-wave {
   0% {
@@ -279,21 +188,7 @@
 }
 
 /* ===================================================================
- * 11) FAVICON BRAND GRADIENTS & DEEP SATURATED THEME PALETTE
- *     MUHIM: bu — --color-tima-* / --ui-primary uchun YAGONA haqiqiy manba.
- *     piyola.css'da ham xuddi shu nomdagi o'zgaruvchilar bor (eski,
- *     ochroq to'plam) — lekin bu fayl piyola.css'dan KEYIN yuklanadi
- *     (nuxt.config.ts) va :root'ni qayta e'lon qiladi, shu sabab pastdagi
- *     qiymatlar doim g'alaba qiladi. Rang o'zgartirilganda FAQAT shu
- *     yerni tahrirlang (piyola.css'dagi eski to'plamni goedent
- *     muvofiqlik uchun ham yangilash tavsiya etiladi, lekin amaliy
- *     ta'siri yo'q). Favicon.svg'ning haqiqiy gradient nuqtalaridan
- *     Flutter mobil ilovaning haqiqiy `primaryColor = Color(0xFF2980DD)`
- *     qiymatiga ANIQ moslab (2026-08-31, ikkinchi tur) qayta hisoblandi —
- *     #2980DD endi 500-darajada TO'LIQ ANIQ (piksel-birma-bir) saqlanadi,
- *     qolgan barcha darajalar shundan HSL orqali hosil qilingan. Gradient
- *     endi vertikal (yuqoridan pastga): yuqorisi ozgina oqartirilgan,
- *     pastki qismi asosiy (to'qroq) #2980DD rangida.
+ * 11) KITOBCHI BRAND THEME PALETTE
  * =================================================================== */
 :root {
   --color-tima-50: #E7F2FD;
@@ -653,5 +548,10 @@ button.bg-\[\#08cb00\]:active {
 .profile-nav-item:hover .profile-nav-icon {
   color: #525252;
 }
+
+/* Modallar va qatlamlar uchun qo'shimcha z-index yordamchilari */
+.z-60 { z-index: 60; }
+.z-70 { z-index: 70; }
+.z-100 { z-index: 100; }
 
 

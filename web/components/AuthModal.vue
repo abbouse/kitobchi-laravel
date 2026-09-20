@@ -1,9 +1,9 @@
 <template>
-  <div>
+  <Teleport to="body">
     <!-- Backdrop -->
     <div
       v-if="authStore.isAuthModalOpen"
-      class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
+      class="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
       @click.self="closeModal"
     >
       <!-- Modal Card -->
@@ -113,7 +113,7 @@
         </form>
       </div>
     </div>
-  </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
@@ -298,9 +298,32 @@ async function handleVerifyOtp() {
 watch(
   () => authStore.isAuthModalOpen,
   (open) => {
+    if (typeof document !== 'undefined') {
+      document.body.style.overflow = open ? 'hidden' : ''
+    }
     if (open) nextTick(() => phoneInputEl.value?.focus())
   }
 )
 
-onUnmounted(() => clearCooldown())
+function onKeyDown(e: KeyboardEvent) {
+  if (e.key === 'Escape' && authStore.isAuthModalOpen) {
+    closeModal()
+  }
+}
+
+onMounted(() => {
+  if (typeof window !== 'undefined') {
+    window.addEventListener('keydown', onKeyDown)
+  }
+})
+
+onUnmounted(() => {
+  clearCooldown()
+  if (typeof document !== 'undefined') {
+    document.body.style.overflow = ''
+  }
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('keydown', onKeyDown)
+  }
+})
 </script>

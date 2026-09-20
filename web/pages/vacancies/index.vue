@@ -1,7 +1,7 @@
 <template>
   <main class="max-md:pb-[71px]">
     <div class="vacancies-page min-h-screen overflow-hidden">
-      <!-- HERO (piyola 1:1 — vacancies-hero* klasslar piyola-extra.css'da) -->
+      <!-- HERO -->
       <section class="relative vacancies-hero pt-8 pb-14 md:pt-24 md:pb-36">
         <div class="vacancies-hero__grid"></div>
         <div class="vacancies-hero__orb vacancies-hero__orb--1"></div>

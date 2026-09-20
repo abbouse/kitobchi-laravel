@@ -663,7 +663,7 @@
             <div class="step-num">1</div>
             <div>
               <h3>API kalitini oling</h3>
-              <p>Kitobchi jamoasiga murojaat qiling — sizga <span class="ic">X-App-ID</span> va <span class="ic">X-App-Secret</span> juftligi beriladi. Kalit siz boshqaradigan do'kon hisobiga bog'langan.</p>
+              <p>Do'kon va Kitobchi xodimlari o'rtasida ochilgan maxsus Telegram guruhiga murojaat qiling — sizga <span class="ic">X-App-ID</span> va <span class="ic">X-App-Secret</span> juftligi beriladi. Kalit siz boshqaradigan do'kon hisobiga bog'langan.</p>
             </div>
           </div>
           <div class="step">
@@ -780,7 +780,7 @@ Accept: application/json</pre>
             <tr><td><span class="ic">X-App-Secret</span></td><td><code>sk_prod_xxxxxxxxxxxx...</code></td><td>Maxfiy kalit — faqat serverda saqlang, hech kimga bermang</td></tr>
           </tbody>
         </table>
-        <p class="doc-p">Kalit olish yoki yangilash uchun: <strong>developers@kitobchi.com</strong></p>
+        <p class="doc-p">Kalit olish yoki yangilash bo'yicha: <strong>Do'kon va Kitobchi xodimlari o'rtasida ochilgan maxsus Telegram guruhiga murojaat qiling.</strong></p>
 
         <hr class="divider">
         <h2 class="doc-h2" id="secrets">Xavfsizlik</h2>
@@ -974,7 +974,7 @@ GET /products/books?seller_id=12&sort=new</pre>
       {{-- WEBHOOKS --}}
       @case('webhooks')
         <div class="note" style="margin-bottom:20px;">
-          Webhook funksionalligi hozirda ishlab chiqilmoqda. Tayyor bo'lganda bu sahifa yangilanadi. Murojaat: <strong>developers@kitobchi.com</strong>
+          Webhook funksionalligi hozirda ishlab chiqilmoqda. Tayyor bo'lganda bu sahifa yangilanadi. Murojaat: <strong>Maxsus Telegram guruhiga yozing.</strong>
         </div>
 
         <h2 class="doc-h2" id="events">Rejalashtirilgan hodisalar</h2>
@@ -1059,7 +1059,7 @@ if (! hash_equals($expected, $signature)) {
           <thead><tr><th>Xato xabari</th><th>Sabab va yechim</th></tr></thead>
           <tbody>
             <tr><td><span class="ic">API credentials missing</span></td><td>Headerlar umuman yuborilmagan — ikkala headerni ham qo'shing</td></tr>
-            <tr><td><span class="ic">Invalid or inactive API credentials</span></td><td>Secret noto'g'ri yoki kalit o'chirilgan — bizga murojaat qiling</td></tr>
+            <tr><td><span class="ic">Invalid or inactive API credentials</span></td><td>Secret noto'g'ri yoki kalit o'chirilgan — Telegram guruhga murojaat qiling</td></tr>
             <tr><td><span class="ic">IP address not allowed for this API key</span></td><td>Server IP allowlistda yo'q — kerakli IP ni bildiring</td></tr>
             <tr><td><span class="ic">Missing ability: stock:write</span></td><td>Kalit faqat <span class="ic">read</span> — <span class="ic">stock:write</span> kalit so'rang</td></tr>
             <tr><td><span class="ic">This API key is not scoped to a seller</span></td><td>Seller API uchun do'koningizga bog'langan alohida kalit kerak</td></tr>

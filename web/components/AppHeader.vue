@@ -3,16 +3,13 @@
     isHomePage ? '' : 'max-md:hidden!',
     'sticky top-0 z-50 w-full'
   ]">
-    <!-- ====== STICKY HEADER (PiyolaMarket 1:1) ====== -->
+    <!-- ====== STICKY HEADER (Kitobchi) ====== -->
     <header class="layout-sticky-header py-3 md:py-4 bg-white max-md:rounded-b-2xl shadow-xs md:shadow-sm transition-all duration-300 w-full">
       <div class="px-4 sm:px-6 lg:px-8 max-w-(--ui-container) mx-auto relative w-full bg-transparent">
         <!-- Desktop Header -->
         <div class="hidden md:flex items-center justify-between w-full gap-6">
           <!-- Left: Logo + Kataloglar -->
           <div class="flex-y-center gap-6">
-            <!-- TUZATILDI: eski logo_blue.png (raster, kam sifatli) o'rniga
-                 saytning haqiqiy brend belgisi bo'lgan favicon.svg (vektor,
-                 har qanday o'lchamda aniq) + "kitobchi" wordmark birlashtirildi. -->
             <NuxtLink to="/" class="flex items-center shrink-0 router-link-active router-link-exact-active" aria-label="Kitobchi">
               <img alt="Kitobchi" class="h-10 w-10 rounded-[12px] shadow-xs hover:scale-105 transition-transform duration-200" src="/favicon.svg" />
             </NuxtLink>
@@ -34,9 +31,7 @@
             </button>
           </div>
 
-          <!-- Center: Search — bosilganda piyola'dagi kabi to'liq ekranli
-               qidiruv overlay'i ochiladi (SearchOverlay.vue), shu yerda
-               to'g'ridan-to'g'ri yozilmaydi. -->
+          <!-- Center: Search -->
           <button
             type="button"
             @click="searchStore.open()"

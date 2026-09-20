@@ -1,35 +1,14 @@
 /* Tailwind v4 JIT kirish nuqtasi.
    MUHIM: faqat theme + utilities import qilinadi, "preflight" (base reset)
-   ATAYIN qo'shilmaydi — chunki piyola.css (piyolamarket.uz'dan olingan,
-   o'zi ham haqiqiy Tailwind v4 chiqishi) allaqachon o'zining to'liq
+   ATAYIN qo'shilmaydi — chunki kitobchi.css allaqachon o'zining to'liq
    preflight/base qatlamiga ega. Ikkalasini birga yoqsak, reset qoidalari
    ikki marta ishlaydi (zararsiz, lekin keraksiz) — shu sabab rasman
    Tailwind v4'ning "preflightsiz ishlatish" usuli qo'llanildi:
    https://tailwindcss.com/docs/upgrade-guide (theme.css + utilities.css).
 
-   MUHIM #2 (production'da topilgan CATTA bug, 2026-08-31): quyidagi
-   `@layer theme, base, components, utilities;` qatori SHART. Sababi —
-   CSS cascade layers'ning tartibi HAR BIR nom BIRINCHI marta uchragan
-   joyi bo'yicha belgilanadi, BUTUN hujjat bo'ylab (barcha CSS fayllar
-   qo'shilib). Bu fayl (tailwind.css) nuxt.config.ts'da BIRINCHI
-   yuklanadi va oldin FAQAT "theme" va "utilities" nomlarini bilar edi
-   (bu faylda "base"/"components" umuman yo'q). Shuning uchun "utilities"
-   layer'i "theme"dan keyin darhol global tartibga kirib qolar edi.
-   Keyin piyola.css yuklanganda, uning ICHKI "base" layer'i (bunda
-   `h1,h2,...{font-size:inherit;font-weight:inherit}` degan reset bor)
-   BIRINCHI marta shu yerda uchraydi — va global tartibga "utilities"DAN
-   KEYIN qo'shilib ketadi! Natijada yakuniy tartib: theme < utilities <
-   base < components bo'lib qolgan — ya'ni "base"ning h1-h6 reseti
-   "utilities"dagi .font-bold, .text-[22px] kabi klasslardan KUCHLIROQ
-   bo'lib qolgan (CSS layers'da KEYINGI layer G'OLIB chiqadi, specificity
-   layer ichida ahamiyatga ega, layerlar orasida emas). Bu sabab butun
-   saytda ko'plab sarlavhalar (h1-h6) o'zining font-size/font-weight
-   utility-klasslarini yo'qotib qo'ygan edi (masalan "Kataloglar" H2'si
-   16px/400 bo'lib qolgan, aslida 22px/700 bo'lishi kerak edi).
-   Pastdagi qator TO'G'RI global tartibni ATAYIN, oldindan e'lon qiladi
-   (theme < base < components < utilities — piyola.css'ning o'zi
-   mo'ljallagan tartib bilan bir xil), shunda "utilities" doim ENG
-   OXIRGI (eng kuchli) bo'lib qoladi. */
+   MUHIM #2: quyidagi `@layer theme, base, components, utilities;` qatori SHART.
+   CSS cascade layers tartibini to'g'ri belgilash uchun:
+   theme < base < components < utilities tartibida utilities eng ustun bo'ladi. */
 @layer theme, base, components, utilities;
 
 @import "tailwindcss/theme.css" layer(theme);
