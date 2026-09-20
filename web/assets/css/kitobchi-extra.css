@@ -5,6 +5,10 @@
  * kitobchi.css bilan birgalikda to'liq minimalist UI uslubini ta'minlaydi.
  * ------------------------------------------------------------------ */
 
+:root {
+  --ui-container: 80rem; /* 1280px standard container max-width */
+}
+
 /* ===================================================================
  * 1) VAKANSIYALAR SAHIFASI
  * =================================================================== */
@@ -327,29 +331,33 @@
 }
 
 .product-card {
-  border: none !important;
-  box-shadow: 0 1px 3px 0 rgba(15, 39, 69, 0.07), 0 6px 20px -6px rgba(15, 39, 69, 0.14) !important;
-  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
-  will-change: transform, box-shadow;
+  border: 1px solid rgba(0, 0, 0, 0.05) !important;
+  box-shadow: none !important;
+  transition: transform 0.2s ease, border-color 0.2s ease !important;
 }
 
 .product-card:hover {
-  transform: translateY(-4px) !important;
-  box-shadow: 0 2px 6px 0 rgba(15, 39, 69, 0.08), 0 18px 38px -8px rgba(41, 128, 221, 0.28) !important;
+  transform: translateY(-2px) !important;
+  border-color: rgba(0, 0, 0, 0.12) !important;
+  box-shadow: none !important;
 }
 
 .product-card__info {
-  padding: 14px 12px 16px !important;
+  padding: 10px 8px 12px !important;
 }
 
-/* Primary Action Buttons (Soft brand glow instead of harsh drop shadow) */
+/* Action Buttons (Foydalanuvchi talabi: buttonlarga shadow berilmasligi kerak) */
+button,
+.btn,
+.btn-primary,
 button.bg-primary,
 a.bg-primary,
 .bg-primary:is(button, a),
-.btn-primary,
-.catalog-filter-apply-btn {
-  box-shadow: 0 6px 20px -2px rgba(41, 128, 221, 0.40), 0 2px 8px -1px rgba(41, 128, 221, 0.22) !important;
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease !important;
+.catalog-filter-apply-btn,
+.ios-order-btn,
+button.bg-\[\#08cb00\] {
+  box-shadow: none !important;
+  transition: background-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease !important;
 }
 
 button.bg-primary:hover,
@@ -357,8 +365,8 @@ a.bg-primary:hover,
 .bg-primary:is(button, a):hover,
 .btn-primary:hover,
 .catalog-filter-apply-btn:hover {
-  transform: translateY(-2px) !important;
-  box-shadow: 0 12px 28px -4px rgba(41, 128, 221, 0.52), 0 4px 12px -2px rgba(41, 128, 221, 0.30) !important;
+  transform: none !important;
+  box-shadow: none !important;
 }
 
 button.bg-primary:active,
@@ -366,27 +374,29 @@ a.bg-primary:active,
 .bg-primary:is(button, a):active,
 .btn-primary:active,
 .catalog-filter-apply-btn:active {
-  transform: translateY(0) scale(0.98) !important;
-  box-shadow: 0 3px 10px -2px rgba(41, 128, 221, 0.35) !important;
+  transform: scale(0.98) !important;
+  box-shadow: none !important;
 }
 
-/* Green Order Buttons (Mahsulot sotib olish) */
+/* Green Order Buttons (Mahsulot sotib olish — toza, zamonaviy zumrad yashil, shadowsiz) */
 .ios-order-btn,
 button.bg-\[\#08cb00\] {
-  box-shadow: 0 6px 20px -2px rgba(8, 203, 0, 0.40), 0 2px 8px -1px rgba(8, 203, 0, 0.22) !important;
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease !important;
+  background-color: #10B981 !important;
+  color: #FFFFFF !important;
+  box-shadow: none !important;
 }
 
 .ios-order-btn:hover,
 button.bg-\[\#08cb00\]:hover {
-  transform: translateY(-2px) !important;
-  box-shadow: 0 12px 28px -4px rgba(8, 203, 0, 0.52), 0 4px 12px -2px rgba(8, 203, 0, 0.30) !important;
+  background-color: #059669 !important;
+  box-shadow: none !important;
+  transform: none !important;
 }
 
 .ios-order-btn:active,
 button.bg-\[\#08cb00\]:active {
-  transform: translateY(0) scale(0.98) !important;
-  box-shadow: 0 3px 10px -2px rgba(8, 203, 0, 0.30) !important;
+  transform: scale(0.98) !important;
+  box-shadow: none !important;
 }
 
 /* App Icon Badge Glow (AppDownloadBottomSheet.vue) — o'rniga

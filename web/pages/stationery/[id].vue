@@ -49,7 +49,7 @@
 
           <!-- Pastki o'ngdagi Nuqtalar (Dots Pill Indicator) -->
           <div v-if="!selectedVariantImage && galleryImages.length > 1" class="absolute w-full bottom-0 right-0 p-2 z-20 flex justify-between items-end pointer-events-none">
-            <div class="flex items-center gap-1 rounded-full py-1 px-2 bg-white pointer-events-auto shadow-xs">
+            <div class="flex items-center gap-1 rounded-full py-1 px-2 bg-white/90 border border-neutral-200/60 pointer-events-auto shadow-none">
               <button
                 v-for="(img, idx) in galleryImages"
                 :key="'mob-dot-' + idx"
@@ -64,21 +64,21 @@
             </div>
           </div>
 
-          <!-- Yuqori chap: Orqaga qaytish oynasimon tugmasi (Glass Button) -->
+          <!-- Yuqori chap: Orqaga qaytish tugmasi -->
           <button
             type="button"
             @click.stop="$router.back()"
             aria-label="arrow left"
             class="absolute top-4 left-4 z-30 border-none bg-transparent p-0 cursor-pointer"
           >
-            <div class="relative overflow-hidden transition-shadow duration-300 rounded-full hover:shadow-sm hover:shadow-black/10 backdrop-blur-sm flex items-center justify-center bg-white w-10 h-10 shadow-sm text-neutral-900">
+            <div class="rounded-full flex items-center justify-center bg-white/95 border border-neutral-200/60 w-10 h-10 text-neutral-900 shadow-none">
               <svg class="w-5 h-5 text-neutral-900" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/></svg>
             </div>
           </button>
 
-          <!-- Yuqori o'ng: Sevimli va Ulashish oynasimon kapsulasi (Glass Pill) -->
+          <!-- Yuqori o'ng: Sevimli va Ulashish kapsulasi -->
           <div class="absolute top-4 right-4 z-30 flex items-center">
-            <div class="relative overflow-hidden transition-shadow duration-300 rounded-full hover:shadow-sm hover:shadow-black/10 backdrop-blur-sm flex items-center gap-2 bg-white py-1.5 px-2.5 shadow-sm">
+            <div class="rounded-full flex items-center gap-2 bg-white/95 border border-neutral-200/60 py-1.5 px-2.5 shadow-none">
               <button
                 type="button"
                 @click.stop="favStore.toggleFavorite(product, 'stationery')"
@@ -144,15 +144,15 @@
         <!-- 2-Karta: Muddatli to'lov / Naqd to'lov Tablari -->
         <div class="relative z-20">
           <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto bg-white py-4 rounded-2xl">
-            <div role="tablist" class="relative inline-flex bg-secondary-200 rounded-xl p-1 w-full mb-3">
+            <div role="tablist" class="relative inline-flex bg-neutral-100 rounded-xl p-1 w-full mb-3">
               <button
                 type="button"
                 role="tab"
                 :aria-selected="paymentTab === 'installment'"
                 @click="paymentTab = 'installment'"
                 :class="[
-                  'text-sm px-3 py-1.5 flex-1 font-medium rounded-lg transition-all duration-200 border-none cursor-pointer',
-                  paymentTab === 'installment' ? 'bg-white text-gray-900 shadow-xs' : 'bg-transparent text-gray-500'
+                  'text-sm px-3 py-1.5 flex-1 font-semibold rounded-lg transition-all duration-200 border-none cursor-pointer',
+                  paymentTab === 'installment' ? 'bg-white text-neutral-900 shadow-none' : 'bg-transparent text-neutral-500'
                 ]"
               >
                 Muddatli to‘lov
@@ -163,8 +163,8 @@
                 :aria-selected="paymentTab === 'cash'"
                 @click="paymentTab = 'cash'"
                 :class="[
-                  'text-sm px-3 py-1.5 flex-1 font-medium rounded-lg transition-all duration-200 border-none cursor-pointer',
-                  paymentTab === 'cash' ? 'bg-white text-gray-900 shadow-xs' : 'bg-transparent text-gray-500'
+                  'text-sm px-3 py-1.5 flex-1 font-semibold rounded-lg transition-all duration-200 border-none cursor-pointer',
+                  paymentTab === 'cash' ? 'bg-white text-neutral-900 shadow-none' : 'bg-transparent text-neutral-500'
                 ]"
               >
                 Naqd to‘lov
@@ -174,16 +174,16 @@
             <!-- Muddatli to'lov ma'lumoti -->
             <div v-if="paymentTab === 'installment'" class="space-y-3">
               <div>
-                <p class="text-xs text-gray-400 font-normal m-0 mb-1">Muddatli to'lov</p>
-                <div class="inline-flex bg-secondary-200 rounded-xl p-1 gap-1">
+                <p class="text-xs text-neutral-400 font-normal m-0 mb-1">Muddatli to'lov</p>
+                <div class="inline-flex bg-neutral-100 rounded-xl p-1 gap-1">
                   <button
                     v-for="m in installmentMonths"
                     :key="m"
                     type="button"
                     @click="selectedMonths = m"
                     :class="[
-                      'text-xs font-medium rounded-lg px-3 py-1.5 transition-colors border-none cursor-pointer',
-                      selectedMonths === m ? 'bg-white text-gray-900 shadow-xs' : 'bg-transparent text-gray-500'
+                      'text-xs font-semibold rounded-lg px-3 py-1.5 transition-colors border-none cursor-pointer',
+                      selectedMonths === m ? 'bg-white text-neutral-900 shadow-none' : 'bg-transparent text-neutral-500'
                     ]"
                   >
                     {{ m }} oy
@@ -270,19 +270,19 @@
         <div class="h-6"></div>
       </div>
 
-      <!-- Mobil Pastki Suzuvchi Xarid Paneli (Sticky Buy Bar - Piyola 1:1) -->
+      <!-- Mobil Pastki Suzuvchi Xarid Paneli (Sticky Buy Bar) -->
       <div
-        class="w-full bg-white shadow-2xl rounded-t-2xl fixed bottom-0 left-0 z-60"
+        class="w-full bg-white border-t border-neutral-200/80 fixed bottom-0 left-0 z-60"
         style="padding-bottom: max(1.25rem, env(safe-area-inset-bottom, 1.25rem))"
       >
         <div class="px-4 py-3 flex items-center gap-3">
           <button
             type="button"
             @click="handleAddToCart"
-            class="flex-1 h-12 rounded-2xl bg-secondary-200 hover:bg-secondary-300 text-primary font-bold text-sm border-none cursor-pointer flex items-center justify-center gap-2 transition-all active:scale-95"
+            class="flex-1 h-12 rounded-xl bg-neutral-100 hover:bg-neutral-200/80 text-neutral-800 font-semibold text-sm border-none cursor-pointer flex items-center justify-center gap-2 transition-colors active:scale-95 shadow-none"
             aria-label="Savatga qo'shish"
           >
-            <svg v-if="!isAdded" class="w-5 h-5 text-primary shrink-0" viewBox="0 0 20 20" fill="currentColor">
+            <svg v-if="!isAdded" class="w-5 h-5 text-neutral-700 shrink-0" viewBox="0 0 20 20" fill="currentColor">
               <path d="M3 1a1 1 0 0 0 0 2h1.22l.305 1.222l.01.042l1.358 5.43l-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 0 0 0-2H6.414l1-1H14a1 1 0 0 0 .894-.553l3-6A1 1 0 0 0 17 3H6.28l-.31-1.243A1 1 0 0 0 5 1zm13 15.5a1.5 1.5 0 1 1-3 0a1.5 1.5 0 0 1 3 0M6.5 18a1.5 1.5 0 1 0 0-3a1.5 1.5 0 0 0 0 3"/>
             </svg>
             <svg v-else class="w-5 h-5 text-emerald-600 shrink-0" viewBox="0 0 20 20" fill="currentColor">
@@ -293,7 +293,7 @@
           <button
             type="button"
             @click="handleBuyNow"
-            class="ios-order-btn flex-1 h-12 rounded-2xl text-base font-semibold text-white border-none cursor-pointer flex items-center justify-center active:scale-95 transition-transform"
+            class="ios-order-btn flex-1 h-12 rounded-xl text-base font-semibold text-white border-none cursor-pointer flex items-center justify-center active:scale-95 transition-transform shadow-none"
           >
             Sotib olish
           </button>
@@ -409,7 +409,7 @@
                         type="button"
                         @click="prevImage"
                         aria-label="Oldingi rasm"
-                        class="p-2 absolute rounded-full start-4 top-1/2 -translate-y-1/2 bg-white/90 backdrop-blur-md shadow-md hover:bg-white transition-all cursor-pointer border border-neutral-200/60 z-10 flex items-center justify-center text-neutral-800 opacity-0 group-hover:opacity-100"
+                        class="p-2 absolute rounded-full start-4 top-1/2 -translate-y-1/2 bg-white/95 hover:bg-neutral-100 transition-colors cursor-pointer border border-neutral-200/80 z-10 flex items-center justify-center text-neutral-800 opacity-0 group-hover:opacity-100 shadow-none"
                       >
                         <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
                       </button>
@@ -417,20 +417,20 @@
                         type="button"
                         @click="nextImage"
                         aria-label="Keyingi rasm"
-                        class="p-2 absolute rounded-full end-4 top-1/2 -translate-y-1/2 bg-white/90 backdrop-blur-md shadow-md hover:bg-white transition-all cursor-pointer border border-neutral-200/60 z-10 flex items-center justify-center text-neutral-800 opacity-0 group-hover:opacity-100"
+                        class="p-2 absolute rounded-full end-4 top-1/2 -translate-y-1/2 bg-white/95 hover:bg-neutral-100 transition-colors cursor-pointer border border-neutral-200/80 z-10 flex items-center justify-center text-neutral-800 opacity-0 group-hover:opacity-100 shadow-none"
                       >
                         <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
                       </button>
                     </template>
 
-                    <!-- Sevimli oynasimon tugmasi (yuqori o'ng) -->
+                    <!-- Sevimli tugmasi (yuqori o'ng) -->
                     <div class="absolute top-4 right-4 flex gap-2 z-20">
                       <button
                         type="button"
                         @click="favStore.toggleFavorite(product, 'stationery')"
                         name="Favorite button"
                         aria-label="Favorite button"
-                        class="w-9 h-9 flex items-center justify-center rounded-full bg-white/80 backdrop-blur-md shadow-sm transition-all duration-300 hover:scale-110 active:scale-95 border-none cursor-pointer p-0"
+                        class="w-9 h-9 flex items-center justify-center rounded-full bg-white/95 border border-neutral-200/80 transition-transform duration-200 hover:scale-105 active:scale-95 cursor-pointer p-0 shadow-none"
                       >
                         <svg class="w-5 h-5" viewBox="0 0 24 24" :fill="isFav ? '#ef4444' : 'none'" :stroke="isFav ? '#ef4444' : '#1e293b'" stroke-width="2">
                           <path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"/>
@@ -517,17 +517,17 @@
                   </div>
                 </div>
 
-                <!-- To'lov va Xarid Kartasi (Piyola 1:1) -->
-                <div class="p-6 rounded-3xl bg-secondary-100 space-y-5">
-                  <div role="tablist" class="relative inline-flex bg-secondary-300 rounded-xl p-1 w-full flex">
+                <!-- To'lov va Xarid Kartasi -->
+                <div class="p-6 rounded-3xl bg-neutral-50 border border-neutral-150 space-y-5">
+                  <div role="tablist" class="relative inline-flex bg-neutral-200/70 rounded-xl p-1 w-full flex">
                     <button
                       type="button"
                       role="tab"
                       :aria-selected="paymentTab === 'installment'"
                       @click="paymentTab = 'installment'"
                       :class="[
-                        'text-sm px-4 py-2 flex-1 font-semibold rounded-xl transition-all duration-200 border-none cursor-pointer text-center',
-                        paymentTab === 'installment' ? 'bg-white text-gray-900 shadow-sm rounded-lg' : 'bg-transparent text-gray-400'
+                        'text-sm px-4 py-2 flex-1 font-semibold rounded-lg transition-all duration-200 border-none cursor-pointer text-center',
+                        paymentTab === 'installment' ? 'bg-white text-neutral-900 shadow-none' : 'bg-transparent text-neutral-500'
                       ]"
                     >
                       Muddatli to‘lov
@@ -538,8 +538,8 @@
                       :aria-selected="paymentTab === 'cash'"
                       @click="paymentTab = 'cash'"
                       :class="[
-                        'text-sm px-4 py-2 flex-1 font-semibold rounded-xl transition-all duration-200 border-none cursor-pointer text-center',
-                        paymentTab === 'cash' ? 'bg-white text-gray-900 shadow-sm rounded-lg' : 'bg-transparent text-gray-400'
+                        'text-sm px-4 py-2 flex-1 font-semibold rounded-lg transition-all duration-200 border-none cursor-pointer text-center',
+                        paymentTab === 'cash' ? 'bg-white text-neutral-900 shadow-none' : 'bg-transparent text-neutral-500'
                       ]"
                     >
                       Naqd to‘lov
@@ -550,7 +550,7 @@
                   <div v-if="paymentTab === 'installment'" class="flex justify-between items-end gap-4 w-full pt-1">
                     <div>
                       <p class="text-xs text-neutral-400 font-normal m-0 mb-1.5">Muddatli to'lov</p>
-                      <div class="relative inline-flex bg-secondary-300 rounded-xl p-1">
+                      <div class="relative inline-flex bg-neutral-200/70 rounded-xl p-1">
                         <button
                           v-for="m in installmentMonths"
                           :key="m"
@@ -558,7 +558,7 @@
                           @click="selectedMonths = m"
                           :class="[
                             'px-3.5 py-1 text-xs rounded-lg font-semibold transition-all border-none cursor-pointer',
-                            selectedMonths === m ? 'bg-white text-neutral-900 shadow-xs' : 'bg-transparent text-neutral-500'
+                            selectedMonths === m ? 'bg-white text-neutral-900 shadow-none' : 'bg-transparent text-neutral-500'
                           ]"
                         >
                           {{ m }} oy
@@ -586,26 +586,26 @@
                     </div>
                   </div>
 
-                  <!-- Buyurtma berish & Savat tugmalari (Piyola 1:1) -->
+                  <!-- Buyurtma berish & Savat tugmalari -->
                   <div class="flex items-center gap-3 pt-2">
                     <button
                       type="button"
                       @click="handleBuyNow"
-                      class="ios-order-btn flex-1 h-12 rounded-2xl text-base font-bold text-white bg-[#08cb00] hover:bg-[#07b500] border-none cursor-pointer flex items-center justify-center shadow-xs transition-all"
+                      class="ios-order-btn flex-1 h-12 rounded-xl text-base font-semibold text-white bg-emerald-600 hover:bg-emerald-700 border-none cursor-pointer flex items-center justify-center shadow-none transition-colors"
                     >
                       Buyurtma berish
                     </button>
                     <button
                       type="button"
                       @click="handleAddToCart"
-                      class="font-medium inline-flex items-center text-base gap-2 p-2 h-12 px-3 rounded-2xl border-none cursor-pointer transition-all shrink-0"
-                      :class="isAdded ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100' : 'text-primary bg-primary/10 hover:bg-primary/15 active:bg-primary/15'"
+                      class="font-medium inline-flex items-center text-base gap-2 p-2 h-12 px-3.5 rounded-xl border border-neutral-200 cursor-pointer transition-colors shrink-0 shadow-none"
+                      :class="isAdded ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'text-neutral-700 bg-neutral-100 hover:bg-neutral-200/70'"
                       :aria-label="isAdded ? 'Savatda' : 'Savatga qo\'shish'"
                     >
                       <svg v-if="!isAdded" class="w-6 h-6 shrink-0 fill-current" viewBox="0 0 20 20">
                         <path d="M3 1a1 1 0 0 0 0 2h1.22l.305 1.222l.01.042l1.358 5.43l-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 0 0 0-2H6.414l1-1H14a1 1 0 0 0 .894-.553l3-6A1 1 0 0 0 17 3H6.28l-.31-1.243A1 1 0 0 0 5 1zm13 15.5a1.5 1.5 0 1 1-3 0a1.5 1.5 0 0 1 3 0M6.5 18a1.5 1.5 0 1 0 0-3a1.5 1.5 0 0 0 0 3"/>
                       </svg>
-                      <svg v-else class="w-6 h-6 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                      <svg v-else class="w-6 h-6 shrink-0 fill-current text-emerald-600" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd" />
                       </svg>
                     </button>
@@ -690,7 +690,7 @@
                 <button
                   type="button"
                   @click="isDescExpanded = !isDescExpanded"
-                  class="px-6 py-2.5 rounded-full bg-white shadow-sm text-sm font-semibold text-neutral-800 hover:shadow-md transition-shadow border-none cursor-pointer"
+                  class="px-5 py-2 rounded-full bg-neutral-100 hover:bg-neutral-200 text-sm font-medium text-neutral-800 transition-colors border-none cursor-pointer shadow-none"
                 >
                   {{ isDescExpanded ? 'Kamroq ko‘rsatish' : 'Batafsil ko‘rib chiqing' }}
                 </button>

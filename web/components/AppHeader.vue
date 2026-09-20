@@ -19,7 +19,7 @@
               :class="[
                 'h-10 px-4 rounded-full font-medium text-sm flex items-center gap-2 cursor-pointer transition-colors border border-transparent',
                 $route.path.startsWith('/catalog')
-                  ? 'bg-neutral-900 text-white hover:bg-neutral-800'
+                  ? 'bg-neutral-200 text-neutral-900 font-semibold'
                   : 'bg-neutral-100 text-neutral-800 hover:bg-neutral-200/80 hover:border-neutral-200'
               ]"
             >
@@ -48,7 +48,7 @@
               :class="[
                 'h-10 px-3 rounded-full flex items-center gap-2 transition-colors relative text-sm',
                 $route.path === '/cart'
-                  ? 'bg-neutral-900 text-white font-medium'
+                  ? 'bg-neutral-100 text-neutral-900 font-semibold'
                   : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900'
               ]"
             >
@@ -70,7 +70,7 @@
               :class="[
                 'h-10 px-3 rounded-full flex items-center gap-2 transition-colors relative text-sm',
                 $route.path === '/favorites'
-                  ? 'bg-neutral-900 text-white font-medium'
+                  ? 'bg-neutral-100 text-neutral-900 font-semibold'
                   : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900'
               ]"
             >
@@ -121,8 +121,8 @@
               to="/profile"
               :class="[
                 'h-10 px-3.5 rounded-full flex items-center gap-2 transition-colors text-sm font-medium',
-                $route.path === '/profile'
-                  ? 'bg-neutral-900 text-white'
+                $route.path.startsWith('/profile')
+                  ? 'bg-neutral-100 text-neutral-900 font-semibold'
                   : 'bg-neutral-100 text-neutral-800 hover:bg-neutral-200/80'
               ]"
             >
@@ -133,7 +133,7 @@
               v-else
               type="button"
               @click="authStore.openAuthModal()"
-              class="h-10 px-4 rounded-full bg-neutral-900 hover:bg-neutral-800 text-white font-medium text-sm flex items-center gap-2 transition-colors cursor-pointer border-none"
+              class="h-10 px-4 rounded-full bg-neutral-100 hover:bg-neutral-200/80 text-neutral-800 font-medium text-sm flex items-center gap-2 transition-colors cursor-pointer border-none"
             >
               <i class="icon-profile text-base"></i>
               <span class="max-lg:hidden">{{ t('login') }}</span>

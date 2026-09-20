@@ -1,23 +1,23 @@
 <template>
   <div class="product-card group relative flex flex-col rounded-2xl bg-white overflow-hidden transition-all duration-200">
     <!-- Image Slider -->
-    <div class="relative w-full rounded-xl bg-neutral-50 overflow-hidden" style="aspect-ratio: 3 / 4;">
+    <div class="relative w-full rounded-xl bg-neutral-50 overflow-hidden shrink-0" style="aspect-ratio: 3 / 4;">
       <div
         ref="trackEl"
-        class="flex w-full h-full overflow-x-auto no-scrollbar snap-x snap-mandatory rounded-xl"
+        class="flex w-full h-full overflow-x-auto no-scrollbar snap-x snap-mandatory rounded-xl select-none"
         @scroll="onTrackScroll"
       >
         <NuxtLink
           v-for="(img, idx) in images"
           :key="idx"
           :to="productUrl"
-          class="block w-full h-full shrink-0 snap-center"
+          class="block min-w-full w-full h-full shrink-0 snap-center select-none"
         >
           <div class="w-full h-full rounded-xl overflow-hidden bg-neutral-50 flex items-center justify-center">
             <img
               :src="img"
               :alt="product.name"
-              class="w-full h-full object-cover"
+              class="w-full h-full object-cover select-none pointer-events-none"
               :loading="eager && idx === 0 ? 'eager' : 'lazy'"
               :fetchpriority="eager && idx === 0 ? 'high' : 'auto'"
             />
@@ -36,11 +36,33 @@
           :key="idx"
           type="button"
           :aria-label="`${idx + 1}-rasm`"
-          class="pointer-events-auto rounded-full transition-all duration-200 border-none cursor-pointer p-0"
+          class="pointer-events-auto rounded-full transition-all duration-200 border-none cursor-pointer p-0 shadow-none"
           :class="idx === activeIndex ? 'w-2.5 h-1 bg-white' : 'w-1 h-1 bg-white/60'"
-          @click.prevent="goToSlide(idx)"
+          @click.prevent.stop="goToSlide(idx)"
         ></button>
       </div>
+
+      <!-- Multi-image Desktop Prev/Next Hover Arrows -->
+      <template v-if="images.length > 1">
+        <button
+          v-if="activeIndex > 0"
+          type="button"
+          aria-label="Oldingi rasm"
+          @click.prevent.stop="goToSlide(activeIndex - 1)"
+          class="absolute left-1 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white/90 text-neutral-700 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-20 cursor-pointer border border-neutral-200/60 shadow-none text-xs"
+        >
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <button
+          v-if="activeIndex < images.length - 1"
+          type="button"
+          aria-label="Keyingi rasm"
+          @click.prevent.stop="goToSlide(activeIndex + 1)"
+          class="absolute right-1 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white/90 text-neutral-700 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-20 cursor-pointer border border-neutral-200/60 shadow-none text-xs"
+        >
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
+        </button>
+      </template>
 
       <!-- Discount Pill -->
       <div v-if="discountPercent > 0" class="absolute bottom-1.5 left-1.5 md:bottom-2 md:left-2 z-20 inline-flex items-start flex-col gap-1 pointer-events-none">
@@ -49,13 +71,13 @@
         </span>
       </div>
 
-      <!-- Clean Favorite Heart Button -->
+      <!-- Clean Favorite Heart Button (Shadow-none) -->
       <div class="absolute top-1.5 right-1.5 md:top-2 md:right-2 z-20">
         <button
           type="button"
           aria-label="Sevimlilar"
-          @click.prevent="favStore.toggleFavorite(product, type)"
-          class="w-8 h-8 rounded-full bg-white/90 backdrop-blur-xs flex items-center justify-center text-neutral-400 hover:text-neutral-700 transition-colors border border-black/5 shadow-xs cursor-pointer"
+          @click.prevent.stop="favStore.toggleFavorite(product, type)"
+          class="w-8 h-8 rounded-full bg-white/90 flex items-center justify-center text-neutral-400 hover:text-neutral-700 transition-colors border border-black/5 shadow-none cursor-pointer"
         >
           <svg
             class="w-4 h-4 transition-colors"
