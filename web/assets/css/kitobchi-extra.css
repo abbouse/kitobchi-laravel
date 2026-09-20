@@ -9,6 +9,11 @@
   --ui-container: 80rem; /* 1280px standard container max-width */
 }
 
+/* VK uslubi: sahifalar umumiy foni #f0f2f5 — oq emas, kulrang-oq */
+html, body {
+  background-color: #f0f2f5;
+}
+
 /* ===================================================================
  * 1) VAKANSIYALAR SAHIFASI
  * =================================================================== */
@@ -213,7 +218,7 @@
 }
 
 .page-wrapper {
-  background: linear-gradient(180deg, #F0F6FD 0%, #F5F9FF 320px, #EFF5FC 100%);
+  background: #f0f2f5;
   min-height: 100dvh;
 }
 
@@ -267,51 +272,23 @@
  *     kabi ko'p qatlamli, tarqoq, nafis va yumshoq soyalar tizimi.
  * =================================================================== */
 
-/* Universal Soft Shadows (Ambient + Soft Depth) */
-.shadow-xs {
-  box-shadow: 0 1px 3px 0 rgba(20, 60, 130, 0.05), 0 1px 2px 0 rgba(20, 60, 130, 0.03) !important;
-}
-
-.shadow-sm {
-  box-shadow: 0 4px 12px -2px rgba(20, 60, 130, 0.07), 0 2px 6px -1px rgba(20, 60, 130, 0.04) !important;
-}
-
+/* VK-style: no shadows — flat design */
+.shadow-xs,
+.shadow-sm,
 .shadow,
-.shadow-md {
-  box-shadow: 0 10px 25px -5px rgba(20, 60, 130, 0.09), 0 4px 10px -2px rgba(20, 60, 130, 0.04) !important;
-}
-
-.shadow-lg {
-  box-shadow: 0 16px 36px -6px rgba(20, 60, 130, 0.12), 0 6px 16px -3px rgba(20, 60, 130, 0.05) !important;
-}
-
-.shadow-xl {
-  box-shadow: 0 24px 50px -10px rgba(20, 60, 130, 0.15), 0 10px 24px -4px rgba(20, 60, 130, 0.06) !important;
-}
-
+.shadow-md,
+.shadow-lg,
+.shadow-xl,
 .shadow-2xl {
-  box-shadow: 0 32px 72px -12px rgba(20, 60, 130, 0.18), 0 12px 28px -6px rgba(20, 60, 130, 0.08) !important;
+  box-shadow: none !important;
 }
 
-/* Hover Soft Shadows */
-.hover\:shadow-sm:hover {
-  box-shadow: 0 6px 16px -2px rgba(20, 60, 130, 0.09), 0 2px 8px -1px rgba(20, 60, 130, 0.05) !important;
-}
-
-.hover\:shadow-md:hover {
-  box-shadow: 0 16px 36px -6px rgba(20, 60, 130, 0.14), 0 6px 14px -2px rgba(20, 60, 130, 0.06) !important;
-}
-
-.hover\:shadow-lg:hover {
-  box-shadow: 0 22px 48px -8px rgba(20, 60, 130, 0.17), 0 8px 20px -3px rgba(20, 60, 130, 0.08) !important;
-}
-
-.hover\:shadow-xl:hover {
-  box-shadow: 0 28px 60px -10px rgba(20, 60, 130, 0.20), 0 12px 26px -4px rgba(20, 60, 130, 0.09) !important;
-}
-
+.hover\:shadow-sm:hover,
+.hover\:shadow-md:hover,
+.hover\:shadow-lg:hover,
+.hover\:shadow-xl:hover,
 .hover\:shadow-black\/10:hover {
-  box-shadow: 0 8px 24px -4px rgba(20, 60, 130, 0.11), 0 3px 8px -1px rgba(20, 60, 130, 0.05) !important;
+  box-shadow: none !important;
 }
 
 /* Product Cards & Catalog Items — 2026-08-31 TUZATILDI: yuqoridagi
@@ -326,20 +303,23 @@
    bilan ajralib turadi, hoverda esa brend rangida yumshoq nur (glow)
    qo'shiladi. */
 .shimmer-card {
-  box-shadow: 0 4px 16px -2px rgba(20, 60, 130, 0.06), 0 1px 4px 0 rgba(20, 60, 130, 0.03) !important;
-  border: 1px solid rgba(220, 230, 245, 0.8) !important;
+  box-shadow: none !important;
+  border: none !important;
 }
 
+/* VK-style product card: white on gray background, no border, no shadow */
 .product-card {
-  border: 1px solid rgba(0, 0, 0, 0.05) !important;
+  border: none !important;
   box-shadow: none !important;
-  transition: transform 0.2s ease, border-color 0.2s ease !important;
+  border-radius: 12px !important;
+  transition: background-color 0.15s ease !important;
 }
 
 .product-card:hover {
-  transform: translateY(-2px) !important;
-  border-color: rgba(0, 0, 0, 0.12) !important;
+  transform: none !important;
+  border: none !important;
   box-shadow: none !important;
+  background-color: #f8f9fa !important;
 }
 
 .product-card__info {
@@ -404,25 +384,26 @@ button.bg-\[\#08cb00\]:active {
    Tailwind JIT o'chirilgani sabab u hech qachon kompilyatsiya
    qilinmagan (jonli tekshirildi — natijada soya umuman ko'rinmasdi). */
 .icon-badge-glow {
-  box-shadow: 0 12px 28px -6px rgba(41, 128, 221, 0.35), 0 4px 12px -2px rgba(41, 128, 221, 0.2) !important;
+  box-shadow: none !important;
 }
 
 /* Glass Floating Capsules & Bottom Navigation */
 .glass-card-bg {
-  box-shadow: 0 3px 12px -2px rgba(20, 60, 130, 0.06), inset 0 1px 1px 0 rgba(255, 255, 255, 0.7) !important;
+  box-shadow: none !important;
 }
 
-/* Sticky Headers & Mobile Fixed Bars */
+/* Sticky Headers & Mobile Fixed Bars — VK style: thin border bottom only */
 .layout-sticky-header {
-  box-shadow: 0 6px 24px -6px rgba(20, 60, 130, 0.08) !important;
+  box-shadow: none !important;
+  border-bottom: 1px solid #e7e8ec !important;
 }
 
-/* Modals & Popups */
+/* Modals & Popups — VK style: subtle border */
 .auth-modal-pop-in,
 .catalog-filter-panel,
 .catalog-filter-popover {
-  box-shadow: 0 30px 80px -14px rgba(16, 45, 110, 0.20), 0 10px 30px -4px rgba(16, 45, 110, 0.08) !important;
-  border: 1px solid rgba(255, 255, 255, 0.95) !important;
+  box-shadow: 0 4px 32px rgba(0, 0, 0, 0.12) !important;
+  border: 1px solid #e7e8ec !important;
 }
 
 /* ===================================================================

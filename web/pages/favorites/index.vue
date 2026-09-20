@@ -1,5 +1,5 @@
 <template>
-  <div class="py-3 md:py-6 min-h-dvh bg-secondary-300 md:bg-gray-50 grow">
+  <div class="py-3 md:py-6 min-h-dvh bg-[#f0f2f5] grow">
     <!-- ====== MOBILE STICKY TOP BAR (Piyola 1:1) ====== -->
     <div class="md:hidden py-3 rounded-b-2xl mb-4 bg-white sticky top-0 z-40 transition-all duration-300">
       <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">

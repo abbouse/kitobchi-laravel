@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-white">
+  <div class="bg-[#f0f2f5]">
     <h1 class="sr-only">Kitobchi — Online kitoblar va kanselyariya marketpleysi</h1>
 
     <!-- ====== HERO BANNERS CAROUSEL (Piyola 1:1 aspect-520/141) ====== -->

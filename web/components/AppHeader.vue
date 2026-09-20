@@ -4,7 +4,7 @@
     'sticky top-0 z-50 w-full'
   ]">
     <!-- ====== STICKY HEADER (Kitobchi) ====== -->
-    <header class="layout-sticky-header py-2.5 md:py-3 bg-white/95 backdrop-blur-md border-b border-neutral-200/60 transition-all duration-200 w-full">
+    <header class="layout-sticky-header py-2.5 md:py-3 bg-white border-b border-[#e7e8ec] w-full">
       <div class="px-4 sm:px-6 lg:px-8 max-w-(--ui-container) mx-auto relative w-full bg-transparent">
         <!-- Desktop Header -->
         <div class="hidden md:flex items-center justify-between w-full gap-5">

@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-dvh bg-white grow">
+  <div class="min-h-dvh bg-[#f0f2f5] grow">
     <div ref="headerRef" class="md:hidden sticky top-0 z-40 bg-white rounded-b-2xl shadow-sm">
       <div class="px-4 py-3 grid grid-cols-5 items-center gap-2">
         <button

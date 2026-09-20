@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-dvh bg-white grow">
+  <div class="min-h-dvh bg-[#f0f2f5] grow">
     <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto py-4 md:py-8">
       <nav class="flex items-center gap-2 text-sm text-[#8F8FA1] pb-4">
         <NuxtLink to="/" class="hover:text-neutral-600 transition-colors">Asosiy</NuxtLink>

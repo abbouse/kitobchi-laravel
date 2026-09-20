@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-dvh bg-secondary-300 md:bg-gray-50 grow" v-if="product">
+  <div class="min-h-dvh bg-[#f0f2f5] grow" v-if="product">
     <!-- ========================================================================= -->
     <!--  1. MOBIL KO'RINISH (Piyola Market 1:1)                                    -->
     <!-- ========================================================================= -->
@@ -786,7 +786,7 @@
   </div>
 
   <!-- ====== FULL SHIMMER SKELETON (While loading) ====== -->
-  <div v-else class="py-4 md:py-6 min-h-dvh bg-white grow">
+  <div v-else class="py-4 md:py-6 min-h-dvh bg-[#f0f2f5] grow">
     <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
       <!-- Breadcrumb shimmer -->
       <div class="h-8 w-48 rounded-lg shimmer mb-6 max-md:hidden"></div>

@@ -1,5 +1,5 @@
 <template>
-  <div class="py-4 md:py-6 min-h-dvh bg-white grow">
+  <div class="py-4 md:py-6 min-h-dvh bg-[#f0f2f5] grow">
     <!-- ====== MOBILE STICKY TOP BAR (PiyolaMarket 1:1) ====== -->
     <div ref="headerRef" class="md:hidden sticky top-0 z-40 mb-3">
       <div class="py-3 rounded-b-2xl bg-white shadow-sm transition-all duration-300">
@@ -87,7 +87,7 @@
            yerda `justify-between` bo'lib, son sarlavhadan uzoq, o'ng
            chetga surilib ketardi. -->
       <div class="flex items-end flex-wrap gap-3 pt-2 pb-4">
-        <h1 class="text-2xl sm:text-3xl text-primary font-bold m-0 max-md:hidden">
+        <h1 class="text-2xl sm:text-3xl text-neutral-900 font-bold m-0 max-md:hidden">
           {{ pageTitle }}
         </h1>
         <span class="text-sm text-neutral-400 font-medium">
