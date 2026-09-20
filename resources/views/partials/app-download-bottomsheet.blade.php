@@ -285,6 +285,7 @@
         const backdrop = document.getElementById('kcAppDownloadBackdrop');
         const dismissBtn = document.getElementById('kcAppDownloadDismissBtn');
         const storeBtn = document.getElementById('kcStoreBtn');
+        const storeName = document.getElementById('kcStoreName');
         const appleBox = document.getElementById('kcAppleBox');
         const playBox = document.getElementById('kcPlayBox');
 
@@ -292,12 +293,12 @@
 
         if (isApple) {
             storeBtn.href = APP_STORE_URL;
-            storeName.textContent = 'App Store da ochish';
+            if (storeName) storeName.textContent = 'App Store da ochish';
             if (appleBox) appleBox.style.display = 'flex';
             if (playBox) playBox.style.display = 'none';
         } else {
             storeBtn.href = PLAY_STORE_URL;
-            storeName.textContent = 'Google Play da ochish';
+            if (storeName) storeName.textContent = 'Google Play da ochish';
             if (appleBox) appleBox.style.display = 'none';
             if (playBox) playBox.style.display = 'flex';
         }
