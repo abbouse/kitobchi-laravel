@@ -5562,9 +5562,9 @@
     "semantic_hash": ""
   },
   "web/components/AppHeader.vue": {
-    "mtime": 1789927130.5409253,
-    "seen": 1789927361.187314,
-    "ast_hash": "b70a39e12bd9543f6019900369071535",
+    "mtime": 1789929297.2261522,
+    "seen": 1789929417.2589262,
+    "ast_hash": "948718ccffd115783b6f68efc70378a3",
     "semantic_hash": ""
   },
   "web/components/AuthModal.vue": {
@@ -5706,146 +5706,146 @@
     "semantic_hash": ""
   },
   "web/pages/about.vue": {
-    "mtime": 1787512869.8395734,
-    "seen": 1787659299.020612,
+    "mtime": 1789929359.6884973,
+    "seen": 1789929417.258941,
     "ast_hash": "9dbc8afcbc42c8aa949187f93a08d48f",
     "semantic_hash": "9dbc8afcbc42c8aa949187f93a08d48f"
   },
   "web/pages/books/[id].vue": {
-    "mtime": 1789927236.2490048,
-    "seen": 1789927361.187329,
-    "ast_hash": "853844759a5c9398545822f2afaa2f9e",
+    "mtime": 1789929359.4692616,
+    "seen": 1789929417.258942,
+    "ast_hash": "3364e230e9dba1795ccded81e77f5c6a",
     "semantic_hash": ""
   },
   "web/pages/cart/index.vue": {
-    "mtime": 1788195540.8341756,
-    "seen": 1789811502.002136,
+    "mtime": 1789929359.6055663,
+    "seen": 1789929417.258943,
     "ast_hash": "8098de606cd9efaefe6502870dc67691",
     "semantic_hash": ""
   },
   "web/pages/catalog/index.vue": {
-    "mtime": 1787512947.6489525,
-    "seen": 1787659299.020614,
-    "ast_hash": "525fc425746f7c8e55cd1a1df1ef728c",
-    "semantic_hash": "525fc425746f7c8e55cd1a1df1ef728c"
+    "mtime": 1789929359.4662857,
+    "seen": 1789929417.258943,
+    "ast_hash": "b5fb6d8fa576f9c72f02852b8d84b3b9",
+    "semantic_hash": ""
   },
   "web/pages/category/[slug].vue": {
-    "mtime": 1787512948.2036366,
-    "seen": 1787659299.020614,
-    "ast_hash": "f5004a86ebbb69ffbe0bdfa05a337394",
-    "semantic_hash": "f5004a86ebbb69ffbe0bdfa05a337394"
+    "mtime": 1789929359.4491036,
+    "seen": 1789929417.258944,
+    "ast_hash": "8971546068fed7e59d33248cd6a8c669",
+    "semantic_hash": ""
   },
   "web/pages/checkout/index.vue": {
-    "mtime": 1789923562.4667492,
-    "seen": 1789923889.3801332,
+    "mtime": 1789929359.4848416,
+    "seen": 1789929417.258944,
     "ast_hash": "630f67ea62f3585218ec093c6f9b45b2",
     "semantic_hash": ""
   },
   "web/pages/contacts.vue": {
-    "mtime": 1789923795.3845334,
-    "seen": 1789923889.3801332,
+    "mtime": 1789929359.6909616,
+    "seen": 1789929417.258945,
     "ast_hash": "2d9d6180bf405461704367fadabf5764",
     "semantic_hash": ""
   },
   "web/pages/faq.vue": {
-    "mtime": 1789923803.6211367,
-    "seen": 1789923889.3801339,
+    "mtime": 1789929359.6846943,
+    "seen": 1789929417.258946,
     "ast_hash": "331dbf935f5d0706267c2d8ebe3c5a5f",
     "semantic_hash": ""
   },
   "web/pages/favorites/index.vue": {
-    "mtime": 1787229803.6969564,
-    "seen": 1787659299.020616,
-    "ast_hash": "9f1ec0acccc7b48a1534d9f5b71c50c7",
-    "semantic_hash": "9f1ec0acccc7b48a1534d9f5b71c50c7"
+    "mtime": 1789929359.4580848,
+    "seen": 1789929417.258946,
+    "ast_hash": "7429d31728f922ae64ffdf06d517cd74",
+    "semantic_hash": ""
   },
   "web/pages/index.vue": {
-    "mtime": 1789926164.9074214,
-    "seen": 1789926381.224422,
-    "ast_hash": "0a2695a4ff13c623f36fc0acca37c36e",
+    "mtime": 1789929359.445425,
+    "seen": 1789929417.2589471,
+    "ast_hash": "8de3ecd59361d53d5ec1b1a11c194614",
     "semantic_hash": ""
   },
   "web/pages/legal/[slug].vue": {
-    "mtime": 1787512869.843889,
-    "seen": 1787659299.020617,
+    "mtime": 1789929359.6417263,
+    "seen": 1789929417.258948,
     "ast_hash": "e61ab6581a5f8c51919a8b1c2ff0dbaa",
     "semantic_hash": "e61ab6581a5f8c51919a8b1c2ff0dbaa"
   },
   "web/pages/privacy.vue": {
-    "mtime": 1787512869.8431067,
-    "seen": 1787659299.020617,
+    "mtime": 1789929359.6008356,
+    "seen": 1789929417.258949,
     "ast_hash": "5eca8b2cdd7036f9314c04aaf8a81b5a",
     "semantic_hash": "5eca8b2cdd7036f9314c04aaf8a81b5a"
   },
   "web/pages/profile/address/create.vue": {
-    "mtime": 1787374950.2624779,
-    "seen": 1787659299.020618,
-    "ast_hash": "5242a8cb883d3f0f9311c9a84807d62f",
-    "semantic_hash": "5242a8cb883d3f0f9311c9a84807d62f"
+    "mtime": 1789929359.580436,
+    "seen": 1789929417.25895,
+    "ast_hash": "a34a88b5017e13da7ca52267a14d440e",
+    "semantic_hash": ""
   },
   "web/pages/profile/address/index.vue": {
-    "mtime": 1787053248.1295934,
-    "seen": 1787659299.020618,
+    "mtime": 1789929359.5568912,
+    "seen": 1789929417.258951,
     "ast_hash": "8ce359a975059e161a5aa6d8587ffbf3",
     "semantic_hash": "8ce359a975059e161a5aa6d8587ffbf3"
   },
   "web/pages/profile/comments.vue": {
-    "mtime": 1788174057.491091,
-    "seen": 1788185454.512162,
+    "mtime": 1789929359.5364048,
+    "seen": 1789929417.258951,
     "ast_hash": "4550f87968efdfd9a253554b0831e411",
     "semantic_hash": ""
   },
   "web/pages/profile/edit.vue": {
-    "mtime": 1787057127.528123,
-    "seen": 1787659299.020619,
-    "ast_hash": "f252823fefb910722848a30cd94561c1",
-    "semantic_hash": "f252823fefb910722848a30cd94561c1"
+    "mtime": 1789929359.595173,
+    "seen": 1789929417.258952,
+    "ast_hash": "130d8fa6448843200632a80e179368b9",
+    "semantic_hash": ""
   },
   "web/pages/profile/index.vue": {
-    "mtime": 1789923768.2047906,
-    "seen": 1789923889.380142,
+    "mtime": 1789929359.5054855,
+    "seen": 1789929417.258952,
     "ast_hash": "536c3cb345fc5a913fd7737f57b44527",
     "semantic_hash": ""
   },
   "web/pages/profile/info.vue": {
-    "mtime": 1788190516.9388375,
-    "seen": 1789811502.002147,
+    "mtime": 1789929359.5225925,
+    "seen": 1789929417.258952,
     "ast_hash": "d55c9affbe8adc75c1b744aea03d2e6f",
     "semantic_hash": ""
   },
   "web/pages/profile/orders.vue": {
-    "mtime": 1788190511.5082128,
-    "seen": 1789811502.0021482,
+    "mtime": 1789929359.5914032,
+    "seen": 1789929417.2589529,
     "ast_hash": "97c2c4a873801db4411d940bf810b32f",
     "semantic_hash": ""
   },
   "web/pages/share/cart/[slug].vue": {
-    "mtime": 1786974206.993274,
-    "seen": 1787659299.020621,
+    "mtime": 1789929359.7019012,
+    "seen": 1789929417.2589529,
     "ast_hash": "8e26f5f522c4a745aaa9e4ec2e6aed6d",
     "semantic_hash": "8e26f5f522c4a745aaa9e4ec2e6aed6d"
   },
   "web/pages/share/product/[id].vue": {
-    "mtime": 1786977773.0,
-    "seen": 1787659299.020621,
+    "mtime": 1789929359.6992664,
+    "seen": 1789929417.258954,
     "ast_hash": "5d5c5d02e6bcba603be717c959922f6e",
     "semantic_hash": "5d5c5d02e6bcba603be717c959922f6e"
   },
   "web/pages/stationery/[id].vue": {
-    "mtime": 1789927325.6323872,
-    "seen": 1789927361.1873431,
-    "ast_hash": "7e844a14f877f3dd4117c9f3b91ae3ee",
+    "mtime": 1789929359.4553566,
+    "seen": 1789929417.258954,
+    "ast_hash": "1b88818890a614e742311a47242eef74",
     "semantic_hash": ""
   },
   "web/pages/vacancies/[id].vue": {
-    "mtime": 1789923814.0661726,
-    "seen": 1789923889.3801448,
+    "mtime": 1789929359.7094212,
+    "seen": 1789929417.258955,
     "ast_hash": "ec58bd8d7e3409efd69bdd51915bb92d",
     "semantic_hash": ""
   },
   "web/pages/vacancies/index.vue": {
-    "mtime": 1789923807.9418151,
-    "seen": 1789923889.380146,
+    "mtime": 1789929359.7062302,
+    "seen": 1789929417.258955,
     "ast_hash": "829bab918f1ce9fb5c055370cce6d3c7",
     "semantic_hash": ""
   },
@@ -5994,15 +5994,15 @@
     "semantic_hash": ""
   },
   "web/pages/kolleksiya/[slug].vue": {
-    "mtime": 1787775796.0454414,
-    "seen": 1787776850.848684,
-    "ast_hash": "4971b2f137d8f6742dfe802e119cec9f",
+    "mtime": 1789929359.6704593,
+    "seen": 1789929417.2589471,
+    "ast_hash": "cfb8467e5d1ee99623dd1dc36103efb3",
     "semantic_hash": ""
   },
   "web/pages/kolleksiya/index.vue": {
-    "mtime": 1787775809.3192236,
-    "seen": 1787776850.848684,
-    "ast_hash": "fa0de9349aac7eac16953fb6b23d19c4",
+    "mtime": 1789929359.6534781,
+    "seen": 1789929417.258948,
+    "ast_hash": "8421e8858937eedbb09a1668e3da30e0",
     "semantic_hash": ""
   },
   "CLAUDE.md": {
@@ -6702,8 +6702,8 @@
     "semantic_hash": ""
   },
   "web/pages/legal/index.vue": {
-    "mtime": 1789923828.4113686,
-    "seen": 1789923889.380138,
+    "mtime": 1789929359.6240716,
+    "seen": 1789929417.258949,
     "ast_hash": "15ebe352e288e727b9954a5087821ba2",
     "semantic_hash": ""
   }
