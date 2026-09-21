@@ -568,7 +568,7 @@ export default function Siyosatlar() {
                       <div className="f-w-600">Tarjimalar</div>
                       <div className="f-s-13 text-muted">Har bir til uchun sarlavha va matn alohida saqlanadi.</div>
                     </div>
-                    <div className="nav nav-tabs app-tabs-primary flex-wrap">
+                    <div className="nav kc-segment">
                       {locales.map((locale) => (
                         <div key={locale} className="nav-item"><button
                             type="button"

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { PageCrumbs } from '../Layout';
 import { router, usePage } from '@inertiajs/react';
 import PaginationControls from '../components/PaginationControls';
+import { Avatar as PAvatar } from '../components/Profile';
 
 interface SearchItem {
   id: number;
@@ -121,7 +122,7 @@ export default function SearchHistory() {
               </div>
               <div className="d-grid gap-2">
                 {(searchHistoryInsights.missingDemand || []).map((query) => (
-                  <div key={query.text} className="b-1-light b-r-15 p-3 bg-light-subtle">
+                  <div key={query.text} className="b-1-light b-r-15 p-3">
                     <div className="d-flex align-items-start justify-content-between gap-2">
                       <div className="f-w-600">{query.text}</div>
                       <span className="badge text-light-danger">{query.totalSearches} marta</span>
@@ -140,9 +141,9 @@ export default function SearchHistory() {
       <div className="card">
         <div className="card-body">
           <div className="d-flex gap-2 mb-3 flex-wrap">
-            <form className="input-group" style={{ maxWidth: 320 }} onSubmit={(event) => { event.preventDefault(); load(); }}>
-              <span className="input-group-text bg-white"><i className="ti ti-search text-muted"></i></span>
-              <input className="form-control" placeholder="Qidiruv so'zi yoki foydalanuvchi..." value={search} onChange={e => setSearch(e.target.value)} />
+            <form className="app-form app-icon-form position-relative" style={{ width: 'min(320px, 100%)' }} onSubmit={(event) => { event.preventDefault(); load(); }}>
+              <input type="search" className="form-control" placeholder="Qidiruv so'zi yoki foydalanuvchi..." value={search} onChange={e => setSearch(e.target.value)} />
+              <i className="ti ti-search"></i>
             </form>
             <select className="form-select" style={{ width: 'auto' }} value={filter} onChange={e => { setFilter(e.target.value); load(1, e.target.value); }}>
               {types.map((type) => <option key={type} value={type}>{type === 'all' ? 'Barchasi' : type}</option>)}
@@ -156,7 +157,7 @@ export default function SearchHistory() {
                 {searchHistory.map((item) => (
                   <tr key={item.id}>
                     <td className="f-w-600">{item.text || '—'}</td>
-                    <td>{item.user}</td>
+                    <td><div className="d-flex align-items-center gap-2"><PAvatar name={String(item.user || "?")} size="sm" /><span className="text-nowrap">{item.user}</span></div></td>
                     <td>{item.resultName || '—'}</td>
                     <td><span className="badge text-light-secondary">{item.resultType || '—'}</span></td>
                     <td>{item.resultCount}</td>

@@ -4,6 +4,7 @@ import { router, usePage } from '@inertiajs/react';
 import { Button, Form } from 'react-bootstrap';
 import Modal from '../components/AppModal';
 import PaginationControls from '../components/PaginationControls';
+import { Avatar as PAvatar } from '../components/Profile';
 
 // ===== BLOGERLAR =====
 export function Blogerlar() {
@@ -29,7 +30,7 @@ export function Blogerlar() {
             <div className="card">
               <div className="card-body">
                 <div className="d-flex align-items-center gap-2 mb-2">
-                  <div className="d-flex-center b-r-50 bg-light-primary f-w-600 f-s-18 overflow-hidden flex-shrink-0 w-45 h-45">{blogger.name.split(' ').map(part => part[0]).join('').slice(0, 2)}</div>
+                  <PAvatar name={blogger.name} size="lg" />
                   <div className="min-w-0">
                     <div className="f-w-600 text-truncate">{blogger.name}</div>
                     <p className="mb-0 text-secondary">{(blogger.platforms || []).join(', ') || blogger.phone || 'Bloger'} · {blogger.shipments || 0} shipment</p>
@@ -51,10 +52,10 @@ export function Blogerlar() {
         <Modal.Header closeButton><Modal.Title className="f-s-20 f-w-600">{selected?.name}</Modal.Title></Modal.Header>
         <Modal.Body>
           <div className="row g-3">
-            <div className="col-6"><small className="text-muted">Telefon</small><div className="f-w-600">{selected?.phone || '—'}</div></div>
-            <div className="col-6"><small className="text-muted">Status</small><div>{selected?.status || '—'}</div></div>
-            <div className="col-6"><small className="text-muted">Shipment</small><div>{selected?.shipments || 0}</div></div>
-            <div className="col-6"><small className="text-muted">Faol muddat</small><div>{selected?.activeUntil || '—'}</div></div>
+            <div className="col-6"><p className="mb-1 f-s-13 text-secondary">Telefon</p><div className="f-w-600">{selected?.phone || '—'}</div></div>
+            <div className="col-6"><p className="mb-1 f-s-13 text-secondary">Status</p><div>{selected?.status || '—'}</div></div>
+            <div className="col-6"><p className="mb-1 f-s-13 text-secondary">Shipment</p><div>{selected?.shipments || 0}</div></div>
+            <div className="col-6"><p className="mb-1 f-s-13 text-secondary">Faol muddat</p><div>{selected?.activeUntil || '—'}</div></div>
           </div>
         </Modal.Body>
         <Modal.Footer>
@@ -151,7 +152,7 @@ export function Shikoyatlar() {
             <tbody>{complaints.map(complaint => (
               <tr key={complaint.id}>
                 <td className="f-w-600 text-primary">#{complaint.id}</td>
-                <td className="f-w-600">{complaint.user}</td>
+                <td><div className="d-flex align-items-center gap-2"><PAvatar name={String(complaint.user || "?")} size="sm" /><span className="f-w-600 text-nowrap">{complaint.user}</span></div></td>
                 <td>{complaint.reason || complaint.comment || '—'}</td>
                 <td><span className="badge text-light-secondary f-s-9">{complaintTypeLabel(complaint.type)}</span></td>
                 <td className="text-muted">{complaint.date}</td>
@@ -188,21 +189,17 @@ export function Shikoyatlar() {
                   {selected?.content?.kind === 'book_club' ? (
                     <div>
                       <div className="d-flex align-items-center gap-3 mb-3">
-                        {selected.content.avatar ? (
-                          <img className="object-fit-cover b-r-50" src={selected.content.avatar} alt="" style={{ width: 48, height: 48 }} />
-                        ) : (
-                          <div className="d-flex-center b-r-50 bg-light-primary f-w-600 f-s-18 overflow-hidden flex-shrink-0 w-50 h-50">{(selected.content.author || 'B').slice(0, 1)}</div>
-                        )}
+                        <PAvatar src={selected.content.avatar} name={selected.content.author || 'B'} size="lg" />
                         <div>
                           <div className="f-w-600">{selected.content.author || 'Muallif topilmadi'}</div>
                           <div className="text-muted f-s-13">{selected.content.phone || 'Telefon yo‘q'} · {selected.content.date || '—'}</div>
                         </div>
                       </div>
-                      <div className="b-1-light b-r-15 p-3 bg-light-subtle" style={{ whiteSpace: 'pre-line' }}>{selected.content.summary || 'Post matni yo‘q'}</div>
+                      <div className="bg-light-secondary b-r-15 p-3 text-dark" style={{ whiteSpace: 'pre-line' }}>{selected.content.summary || 'Post matni yo‘q'}</div>
                       {selected.content.images?.length ? (
                         <div className="d-flex flex-wrap gap-2 mt-3">
                           {selected.content.images.map((image) => (
-                            <img className="object-fit-cover b-r-15" key={image} src={image} alt="" style={{ width: 92, height: 92, border: '1px solid var(--border_color)' }} />
+                            <a key={image} href={image} target="_blank" rel="noreferrer" className="d-block h-90 w-90 b-r-15 overflow-hidden b-1-light"><img className="w-100 h-100 object-fit-cover" src={image} alt="" /></a>
                           ))}
                         </div>
                       ) : null}
@@ -233,7 +230,7 @@ export function Shikoyatlar() {
                           </div>
                         </div>
                       </div>
-                      <div className="b-1-light b-r-15 p-3 bg-light-subtle">
+                      <div className="b-1-light b-r-15 p-3">
                         <div className="text-muted f-s-13 mb-2">{selected.content.meta?.senderType || 'Yuboruvchi'} · {selected.content.date || '—'}</div>
                         <div style={{ whiteSpace: 'pre-line' }}>{selected.content.summary || 'Xabar matni yo‘q'}</div>
                       </div>
@@ -265,9 +262,9 @@ export function Shikoyatlar() {
             </div>
             <div className="col-12"><div className="card"><div className="card-header"><h5 className="mb-0">Foydalanuvchining boshqa shikoyatlari</h5></div><div className="card-body">{(selected?.otherReports || []).map((report) => <div className="d-flex justify-content-between b-b-1-light py-2" key={report.id}><span>#{report.id} · {report.reason || '—'}</span><span className="text-muted f-s-13">{report.status} · {report.date || '—'}</span></div>)}{(selected?.otherReports || []).length === 0 ? <div className="text-muted">Boshqa shikoyat topilmadi</div> : null}</div></div></div>
           </div>
-          <div className="d-flex gap-2 mt-3">
+          <div className="nav kc-segment mt-3" role="tablist" aria-label="Shikoyat holati">
             {[['pending', 'Qayta ochish'], ['reviewed', "Ko'rildi"], ['dismissed', 'Rad etish']].map(([status, label]) => (
-              <button key={status} className={`btn btn-sm ${selected?.status === status ? 'btn-primary' : 'btn-outline-secondary'}`} onClick={() => updateStatus(status)}>{label}</button>
+              <div className="nav-item" key={status}><button type="button" className={`nav-link ${selected?.status === status ? 'active' : ''}`} onClick={() => updateStatus(status)}>{label}</button></div>
             ))}
           </div>
         </Modal.Body>

@@ -616,11 +616,11 @@ export default function Hubs() {
         <Modal.Header closeButton><Modal.Title className="f-s-20 f-w-600">{selectedHub?.name}</Modal.Title></Modal.Header>
         <Modal.Body>
           <div className="row g-3">
-            <div className="col-md-3"><small className="text-muted">Kod</small><div className="f-w-600">{selectedHub?.code || '—'}</div></div>
-            <div className="col-md-3"><small className="text-muted">Status</small><div><span className={`badge ${selectedHub?.active ? 'text-light-success' : 'text-light-secondary'}`}>{selectedHub?.active ? 'Faol' : 'Faol emas'}</span></div></div>
-            <div className="col-md-3"><small className="text-muted">Priority</small><div className="f-w-600">{selectedHub?.priority ?? '—'}</div></div>
-            <div className="col-md-3"><small className="text-muted">Koordinata</small><div>{[selectedHub?.lat, selectedHub?.lon].filter(Boolean).join(', ') || '—'}</div></div>
-            <div className="col-12"><small className="text-muted">Manzil</small><div>{selectedHub?.address || '—'}</div></div>
+            <div className="col-md-3"><p className="mb-1 f-s-13 text-secondary">Kod</p><div className="f-w-600">{selectedHub?.code || '—'}</div></div>
+            <div className="col-md-3"><p className="mb-1 f-s-13 text-secondary">Status</p><div><span className={`badge ${selectedHub?.active ? 'text-light-success' : 'text-light-secondary'}`}>{selectedHub?.active ? 'Faol' : 'Faol emas'}</span></div></div>
+            <div className="col-md-3"><p className="mb-1 f-s-13 text-secondary">Priority</p><div className="f-w-600">{selectedHub?.priority ?? '—'}</div></div>
+            <div className="col-md-3"><p className="mb-1 f-s-13 text-secondary">Koordinata</p><div>{[selectedHub?.lat, selectedHub?.lon].filter(Boolean).join(', ') || '—'}</div></div>
+            <div className="col-12"><p className="mb-1 f-s-13 text-secondary">Manzil</p><div>{selectedHub?.address || '—'}</div></div>
             {selectedHub?.lat && selectedHub?.lon ? (
               <div className="col-12">
                 <LeafletMapView markers={[{ lat: selectedHub.lat, lon: selectedHub.lon, label: selectedHub.name, color: selectedHub.active ? 'rgba(var(--success), 1)' : 'rgba(var(--secondary), 1)' }]} height={220} />
@@ -632,10 +632,10 @@ export default function Hubs() {
                 <div className="mt-1"><PipelineBar pipeline={selectedHub.pipeline} stages={hubFulfillment.stages ?? []} /></div>
               </div>
             ) : null}
-            <div className="col-md-4"><small className="text-muted">Xodim</small><div className="f-w-600">{selectedHub?.staff || 0}</div></div>
-            <div className="col-md-4"><small className="text-muted">Fulfillment</small><div className="f-w-600">{selectedHub?.fulfillments || 0}</div></div>
-            <div className="col-md-4"><small className="text-muted">Kuryer</small><div className="f-w-600">{selectedHub?.courierTasks || 0}</div></div>
-            <div className="col-12"><small className="text-muted">Izoh</small><div>{selectedHub?.notes || '—'}</div></div>
+            <div className="col-md-4"><p className="mb-1 f-s-13 text-secondary">Xodim</p><div className="f-w-600">{selectedHub?.staff || 0}</div></div>
+            <div className="col-md-4"><p className="mb-1 f-s-13 text-secondary">Fulfillment</p><div className="f-w-600">{selectedHub?.fulfillments || 0}</div></div>
+            <div className="col-md-4"><p className="mb-1 f-s-13 text-secondary">Kuryer</p><div className="f-w-600">{selectedHub?.courierTasks || 0}</div></div>
+            <div className="col-12"><p className="mb-1 f-s-13 text-secondary">Izoh</p><div>{selectedHub?.notes || '—'}</div></div>
           </div>
         </Modal.Body>
         <Modal.Footer>

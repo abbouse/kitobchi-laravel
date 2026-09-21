@@ -39,7 +39,7 @@
 .iconoir-warning-triangle::before{mask-image:url('data:image/svg+xml;charset=utf-8,<svg width="24" height="24" stroke-width="1.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20.0429 21H3.95705C2.41902 21 1.45658 19.3364 2.22324 18.0031L10.2662 4.01533C11.0352 2.67792 12.9648 2.67791 13.7338 4.01532L21.7768 18.0031C22.5434 19.3364 21.581 21 20.0429 21Z" stroke="currentColor" stroke-linecap="round"/><path d="M12 9V13" stroke="currentColor" stroke-linecap="round"/><path d="M12 17.01L12.01 16.9989" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg>');-webkit-mask-image:url('data:image/svg+xml;charset=utf-8,<svg width="24" height="24" stroke-width="1.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20.0429 21H3.95705C2.41902 21 1.45658 19.3364 2.22324 18.0031L10.2662 4.01533C11.0352 2.67792 12.9648 2.67791 13.7338 4.01532L21.7768 18.0031C22.5434 19.3364 21.581 21 20.0429 21Z" stroke="currentColor" stroke-linecap="round"/><path d="M12 9V13" stroke="currentColor" stroke-linecap="round"/><path d="M12 17.01L12.01 16.9989" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg>');}
 .iconoir-xmark::before{mask-image:url('data:image/svg+xml;charset=utf-8,<svg width="24" height="24" stroke-width="1.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6.75827 17.2426L12.0009 12M17.2435 6.75736L12.0009 12M12.0009 12L6.75827 6.75736M12.0009 12L17.2435 17.2426" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg>');-webkit-mask-image:url('data:image/svg+xml;charset=utf-8,<svg width="24" height="24" stroke-width="1.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6.75827 17.2426L12.0009 12M17.2435 6.75736L12.0009 12M12.0009 12L6.75827 6.75736M12.0009 12L17.2435 17.2426" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg>');}
 
-/* tabler-icons 2.4.0 — 177 glif */
+/* tabler-icons 2.4.0 — 186 glif */
 @font-face{font-family:"tabler-icons";font-style:normal;font-weight:400;font-display:block;src:url("./fonts/tabler-icons.woff2") format("woff2")}
 .ti{font-family:"tabler-icons"!important;speak:none;font-style:normal;font-weight:normal;font-variant:normal;text-transform:none;line-height:1;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
 .ti-address-book:before{content:"\f021"}
@@ -65,6 +65,7 @@
 .ti-box:before{content:"\ea45"}
 .ti-brand-android:before{content:"\ec16"}
 .ti-brand-apple:before{content:"\ec17"}
+.ti-brand-instagram:before{content:"\ec20"}
 .ti-brand-telegram:before{content:"\ec26"}
 .ti-broadcast:before{content:"\f1e9"}
 .ti-building:before{content:"\ea4f"}
@@ -93,6 +94,7 @@
 .ti-clipboard:before{content:"\ea6f"}
 .ti-clipboard-check:before{content:"\ea6c"}
 .ti-clipboard-data:before{content:"\f563"}
+.ti-clock:before{content:"\ea70"}
 .ti-cloud-download:before{content:"\ea71"}
 .ti-code:before{content:"\ea77"}
 .ti-coins:before{content:"\f65d"}
@@ -135,9 +137,11 @@
 .ti-hourglass:before{content:"\ef93"}
 .ti-id:before{content:"\eac3"}
 .ti-id-badge:before{content:"\eff7"}
+.ti-inbox:before{content:"\eac4"}
 .ti-infinity:before{content:"\eb69"}
 .ti-info-circle:before{content:"\eac5"}
 .ti-key:before{content:"\eac7"}
+.ti-language:before{content:"\ebbe"}
 .ti-layout-grid:before{content:"\edba"}
 .ti-layout-list:before{content:"\ec14"}
 .ti-link:before{content:"\eade"}
@@ -147,6 +151,7 @@
 .ti-lock-access:before{content:"\eeaa"}
 .ti-lock-open:before{content:"\eae1"}
 .ti-magnet:before{content:"\eae3"}
+.ti-mail:before{content:"\eae5"}
 .ti-mail-off:before{content:"\f15a"}
 .ti-map:before{content:"\eae9"}
 .ti-map-pin:before{content:"\eae8"}
@@ -155,6 +160,7 @@
 .ti-message:before{content:"\eaef"}
 .ti-message-circle-2-filled:before{content:"\f682"}
 .ti-message-dots:before{content:"\eaee"}
+.ti-message-report:before{content:"\ec9b"}
 .ti-minimize:before{content:"\eaf1"}
 .ti-minus:before{content:"\eaf2"}
 .ti-moon:before{content:"\eaf8"}
@@ -163,9 +169,11 @@
 .ti-news:before{content:"\eafd"}
 .ti-octagon-off:before{content:"\eeb8"}
 .ti-package:before{content:"\eaff"}
+.ti-paperclip:before{content:"\eb02"}
 .ti-pencil:before{content:"\eb04"}
 .ti-pentagon:before{content:"\efe3"}
 .ti-percentage:before{content:"\ecf4"}
+.ti-phone:before{content:"\eb09"}
 .ti-phone-off:before{content:"\ecf5"}
 .ti-photo:before{content:"\eb0a"}
 .ti-player-pause:before{content:"\ed45"}
@@ -209,6 +217,7 @@
 .ti-trending-down:before{content:"\eb42"}
 .ti-trending-up:before{content:"\eb43"}
 .ti-truck:before{content:"\ebc4"}
+.ti-truck-delivery:before{content:"\ec4b"}
 .ti-user:before{content:"\eb4d"}
 .ti-user-circle:before{content:"\ef68"}
 .ti-user-minus:before{content:"\eb4a"}

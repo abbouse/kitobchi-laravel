@@ -6,6 +6,7 @@ import { StatWidget, type StatVariant } from '../components/Axelit';
 import { usePalette } from '../utils/palette';
 import { applyTheme } from '../Layout';
 import { tiIcon } from '../utils/icons';
+import { Avatar as PAvatar } from '../components/Profile';
 
 const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(Math.round(n || 0));
 
@@ -262,7 +263,7 @@ export default function LiveDashboard() {
         </div>
 
         <div className="d-flex gap-2 align-items-center flex-wrap">
-          <ul className="nav nav-tabs app-tabs-primary mb-0 pb-0 border-0" role="tablist" aria-label="Yangilanish tezligi">
+          <ul className="nav kc-segment mb-0" role="tablist" aria-label="Yangilanish tezligi">
             {[
               { label: 'x1', ms: 8000 },
               { label: 'x2', ms: 5000 },
@@ -560,9 +561,7 @@ export default function LiveDashboard() {
                   <ul className="customer-list">
                     {snapshot.online_users.length ? snapshot.online_users.map((user, index) => (
                       <li className="customer-list-item gap-2" key={user.id}>
-                        {user.avatar
-                          ? <img className="h-35 w-35 b-r-50 customer-list-avtar object-fit-cover" src={user.avatar} alt={user.name} />
-                          : <span className={`text-light-${toneAt(index)} f-w-600 h-35 w-35 d-flex-center b-r-50 customer-list-avtar`}>{(user.name || '?').slice(0, 1).toUpperCase()}</span>}
+                        <PAvatar src={user.avatar} name={user.name} size="sm" className="customer-list-avtar" />
                         <div className="customer-list-content min-w-0">
                           <h6 className="mb-0 txt-ellipsis-1 f-s-15">{user.name}</h6>
                           <p className="mb-0 f-s-12 text-secondary">{user.last_seen}</p>

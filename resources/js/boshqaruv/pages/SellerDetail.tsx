@@ -10,6 +10,7 @@ import {
 import { tiIcon } from '../utils/icons';
 import { PageCrumbs } from '../Layout';
 import { MiniStat } from '../components/Axelit';
+import { ProfileCard } from '../components/Profile';
 
 type DetailProps = Seller & {
   isStaffView: boolean;
@@ -98,52 +99,45 @@ export default function SellerDetail() {
         </div>
       </div>
 
-      <div className="card">
-        <div className="card-body">
-          <div className="d-flex flex-wrap justify-content-between gap-4">
-            <div className="d-flex gap-3">
-              <div className="h-75 w-75 d-flex-center b-r-15 bg-light-primary f-w-600 f-s-26 overflow-hidden flex-shrink-0">{seller.photo ? <img className="w-100 h-100 object-fit-cover" src={seller.photo} alt="" /> : initialsOf(seller.name)}</div>
-              <div>
-                <div className="d-flex flex-wrap align-items-center gap-2">
-                  <h4 className="main-title mb-0">{seller.name}</h4>
-                  <span className={`badge text-uppercase ${toneBadge(toneOf(sellerChip(seller.status)))}`}>{sellerLabel(seller.status)}</span>
-                  {seller.verified ? <span className="badge text-light-info"><i className="ti ti-discount-check-filled me-1"></i>Tasdiqlangan</span> : null}
-                  {seller.premium ? <span className="badge text-light-primary"><i className="ti ti-diamond me-1"></i>Premium</span> : null}
-                </div>
-                <div className="text-muted mt-1">{seller.ownerName || '—'} · {seller.phone || '—'}</div>
-                <div className="text-muted f-s-13">{[seller.region, seller.district].filter(Boolean).join(', ') || 'Hudud kiritilmagan'} · ID #{seller.id}</div>
-              </div>
-            </div>
-            <div className="d-flex flex-wrap gap-2 align-self-start">
-              <Link href={seller.actions?.editUrl || '#'} className="btn btn-sm btn-primary border-0"><i className="ti ti-edit me-1"></i>Tahrirlash</Link>
+      <div className="row">
+        <div className="col-lg-4 col-xxl-3">
+          <ProfileCard
+            square
+            image={seller.photo || null}
+            icon="ti ti-building-store"
+            name={seller.name}
+            verified={Boolean(seller.verified)}
+            subtitle={<>{seller.ownerName || '—'} · {seller.phone || '—'}<br /><span className="f-s-13">{[seller.region, seller.district].filter(Boolean).join(', ') || 'Hudud kiritilmagan'} · ID #{seller.id}</span></>}
+            badges={<>
+              <span className={`badge text-uppercase ${toneBadge(toneOf(sellerChip(seller.status)))}`}>{sellerLabel(seller.status)}</span>
+              {seller.premium ? <span className="badge text-light-primary"><i className="ti ti-diamond me-1"></i>Premium</span> : null}
+            </>}
+            stats={[{ label: 'Karma', value: `${Math.round(seller.karma || 0)}%` }, { label: 'Mahsulot', value: String(seller.products || 0) }, { label: 'Buyurtma', value: String(seller.orders || 0) }]}
+            actions={<><Link href={seller.actions?.editUrl || '#'} className="btn btn-sm btn-primary"><i className="ti ti-edit me-1"></i>Tahrirlash</Link>
               {seller.status !== 'approved' ? <button type="button" className="btn btn-sm btn-outline-success" onClick={() => runPatch(seller.actions?.approveUrl, 'Seller tasdiqlansinmi?')}><i className="ti ti-circle-check me-1"></i>Tasdiqlash</button> : null}
               {seller.status !== 'rejected' ? <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => runPatch(seller.actions?.rejectUrl, 'Seller bekor qilinsinmi?')}><i className="ti ti-circle-x me-1"></i>Bekor qilish</button> : null}
               {seller.status === 'blocked' ? <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => runPatch(seller.actions?.unblockUrl, 'Seller blokdan chiqarilsinmi?', { message: 'Admin tomonidan blokdan chiqarildi.' })}><i className="ti ti-lock-open me-1"></i>Blokdan chiqarish</button> : null}
               <button type="button" className="btn btn-sm btn-outline-warning" onClick={warnSeller}><i className="ti ti-alert-triangle me-1"></i>Ogohlantirish</button>
-              <button type="button" className="btn btn-sm btn-light-secondary" onClick={resetPassword}><i className="ti ti-key me-1"></i>Parol reset</button>
+              <button type="button" className="btn btn-sm btn-light-secondary" onClick={resetPassword}><i className="ti ti-key me-1"></i>Parol reset</button></>}
+          />
+          <div className="card">
+            <div className="card-body">
+              <ul className="profile-app-tabs mb-0 p-0 list-unstyled">
+                {TABS.map((item) => (
+                  <li key={item.key} role="button" className={`tab-link f-s-15 f-w-600 d-flex align-items-center gap-2 ${tab === item.key ? 'active' : ''}`} onClick={() => changeTab(item.key)}>
+                    <i className={`${tiIcon(item.icon)} f-s-18`}></i>{item.label}
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
-          <div className="row g-3 mt-1">
-            <div className="col-xxl-2 col-lg-4 col-6"><MiniStatCard icon="ti-star-filled" label="Karma" value={`${Math.round(seller.karma || 0)}%`} index={0} /></div>
-            <div className="col-xxl-2 col-lg-4 col-6"><MiniStatCard icon="ti-wallet" label="Balans" value={`${fmt(seller.balance || 0)} so'm`} index={1} /></div>
-            <div className="col-xxl-2 col-lg-4 col-6"><MiniStatCard icon="ti-trending-up" label="Tushum" value={`${fmt(seller.totalRevenue || 0)} so'm`} index={2} /></div>
-            <div className="col-xxl-2 col-lg-4 col-6"><MiniStatCard icon="ti-package" label="Mahsulot" value={String(seller.products || 0)} index={3} /></div>
-            <div className="col-xxl-2 col-lg-4 col-6"><MiniStatCard icon="ti-receipt" label="Buyurtma" value={String(seller.orders || 0)} index={4} /></div>
-            <div className="col-xxl-2 col-lg-4 col-6"><MiniStatCard icon="ti-shield-x" label="Ogohlantirish" value={`${seller.warningCount || 0}/3`} index={5} /></div>
-          </div>
         </div>
-      </div>
-
-      <div className="nav nav-tabs app-tabs-primary mb-4">
-        {TABS.map((item) => (
-          <div key={item.key} className="nav-item"><button
-              type="button"
-              className={`nav-link ${tab === item.key ? 'active' : ''}`}
-              onClick={() => changeTab(item.key)}>
-              <i className={`${tiIcon(item.icon)}`}></i>{item.label}
-            </button></div>
-        ))}
-      </div>
+        <div className="col-lg-8 col-xxl-9">
+          <div className="row g-3 mb-4">
+            <div className="col-xl-4 col-sm-6"><MiniStatCard icon="ti-wallet" label="Balans" value={`${fmt(seller.balance || 0)} so'm`} index={1} /></div>
+            <div className="col-xl-4 col-sm-6"><MiniStatCard icon="ti-trending-up" label="Tushum" value={`${fmt(seller.totalRevenue || 0)} so'm`} index={2} /></div>
+            <div className="col-xl-4 col-sm-6"><MiniStatCard icon="ti-shield-x" label="Ogohlantirish" value={`${seller.warningCount || 0}/3`} index={5} /></div>
+          </div>
 
       {tab === 'overview' ? <OverviewTab seller={seller} onSeeOrders={() => changeTab('orders')} /> : null}
       {tab === 'branches' ? <BranchesTab seller={seller} pagination={seller.locationsPagination} onPage={(p) => paginate('locations_page', p)} onRotateQr={rotateQr} /> : null}
@@ -154,6 +148,8 @@ export default function SellerDetail() {
       {tab === 'orders' ? <OrdersTab orders={seller.sellerOrders || []} pagination={seller.sellerOrdersPagination} statuses={seller.sellerOrderStatuses || {}} onPage={(p) => paginate('orders_page', p)} onPatch={runPatch} /> : null}
       {tab === 'transactions' ? <TransactionsTab transactions={(seller.transactions as Array<Record<string, unknown>>) || []} pagination={seller.transactionsPagination} onPage={(p) => paginate('transactions_page', p)} /> : null}
       {tab === 'activity' ? <BanLogsTab banLogs={(seller.banLogs as Array<Record<string, unknown>>) || []} pagination={seller.banLogsPagination} onPage={(p) => paginate('ban_logs_page', p)} warningCount={seller.warningCount} /> : null}
+        </div>
+      </div>
     </div>
   );
 }

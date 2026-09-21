@@ -19,6 +19,7 @@ import InfoHint from '../components/InfoHint';
 
 import { StatWidget, MiniStat, EmptyState, type Tone } from '../components/Axelit';
 import { tiIcon } from '../utils/icons';
+import { Avatar as PAvatar } from '../components/Profile';
 
 const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(Math.round(n || 0));
 const money = (n: number) => `${fmt(n)} so'm`;
@@ -235,7 +236,7 @@ export default function Dashboard() {
         </div>
         <div className="d-flex gap-2 align-items-center flex-wrap justify-content-end">
           <span className="badge text-light-info"><i className="ti ti-calendar me-1"></i>{dashboard.range.label}</span>
-          <div className="btn-group btn-group-sm" aria-label="Dashboard davri">
+          <div className="nav kc-segment" role="tablist" aria-label="Dashboard davri">
             {([
               ['today', 'Bugun'],
               ['week', 'Hafta'],
@@ -243,13 +244,17 @@ export default function Dashboard() {
               ['year', 'Yil'],
               ['all', 'Barchasi'],
             ] as const).map(([key, label]) => (
-              <button key={key} disabled={isFiltering} className={`btn ${dashboard.range.key === key ? 'btn-primary' : 'btn-outline-secondary'}`} onClick={() => selectPeriod(key)}>
-                {label}
-              </button>
+              <div className="nav-item" key={key}>
+                <button type="button" role="tab" aria-selected={dashboard.range.key === key} disabled={isFiltering} className={`nav-link ${dashboard.range.key === key ? 'active' : ''}`} onClick={() => selectPeriod(key)}>
+                  {label}
+                </button>
+              </div>
             ))}
-            <button disabled={isFiltering} className={`btn ${dashboard.range.key === 'custom' ? 'btn-primary' : 'btn-outline-secondary'}`} onClick={() => setShowCustomRange((value) => !value)}>
-              <i className="ti ti-calendar-stats me-1"></i>Sana
-            </button>
+            <div className="nav-item">
+              <button type="button" role="tab" aria-selected={dashboard.range.key === 'custom'} disabled={isFiltering} className={`nav-link ${dashboard.range.key === 'custom' ? 'active' : ''}`} onClick={() => setShowCustomRange((value) => !value)}>
+                <i className="ti ti-calendar-stats"></i>Sana
+              </button>
+            </div>
           </div>
           {dashboard.exportUrl ? (
             <div className="d-flex align-items-center gap-1">
@@ -350,10 +355,12 @@ export default function Dashboard() {
                 </div>
                 <p className="mb-0 text-secondary">{dashboard.salesTrend.granularity} · yakuniy savdolar va platform signal</p>
               </div>
-              <div className="btn-group btn-group-sm">
-                <button className={`btn ${chartMetric === 'revenue' ? 'btn-primary' : 'btn-outline-secondary'}`} onClick={() => setChartMetric('revenue')}>Daromad</button>
-                <button className={`btn ${chartMetric === 'profit' ? 'btn-success' : 'btn-outline-secondary'}`} onClick={() => setChartMetric('profit')}>Signal</button>
-                <button className={`btn ${chartMetric === 'orders' ? 'btn-warning' : 'btn-outline-secondary'}`} onClick={() => setChartMetric('orders')}>Order</button>
+              <div className="nav kc-segment kc-segment-sm" role="tablist" aria-label="Grafik ko'rsatkichi">
+                {([['revenue', 'Daromad'], ['profit', 'Signal'], ['orders', 'Order']] as const).map(([key, label]) => (
+                  <div className="nav-item" key={key}>
+                    <button type="button" role="tab" aria-selected={chartMetric === key} className={`nav-link ${chartMetric === key ? 'active' : ''}`} onClick={() => setChartMetric(key)}>{label}</button>
+                  </div>
+                ))}
               </div>
             </div>
 <div className="card-body">
@@ -939,9 +946,7 @@ function SellerScorecard({ rows }: { rows: DashboardPayload['sellerScorecard'] }
                     <td>{index + 1}</td>
                     <td>
                       <a href={seller.url || '#'} className="text-decoration-none text-dark d-flex align-items-center gap-2">
-                        <span className={`h-30 w-30 d-flex-center b-r-50 overflow-hidden flex-shrink-0 text-light-${DASH_TONES[index % DASH_TONES.length]}`}>
-                          {seller.avatar ? <img src={seller.avatar} alt="" className="w-100 h-100 object-fit-cover" /> : <i className="ti ti-building-store"></i>}
-                        </span>
+                        <PAvatar src={seller.avatar} name={seller.name} size="sm" />
                         <span className="txt-ellipsis-1 f-w-500 w-200">{seller.name}</span>
                       </a>
                     </td>
@@ -1119,7 +1124,7 @@ function RecentOrders({ rows }: { rows: DashboardPayload['recentOrders'] }) {
           <ul className="customer-list">
             {rows.slice(0, 8).map((row, index) => (
               <li className="customer-list-item gap-2" key={row.id}>
-                <span className={`text-light-${DASH_TONES[index % DASH_TONES.length]} f-w-600 h-35 w-35 d-flex-center b-r-50 customer-list-avtar f-s-12`}>{(row.customer || 'M').trim().slice(0, 1).toUpperCase()}</span>
+                <PAvatar name={row.customer || 'Mijoz'} size="sm" className="customer-list-avtar" />
                 <div className="customer-list-content min-w-0">
                   <h6 className="mb-0 f-s-15 txt-ellipsis-1">{row.customer || 'Mijoz'} <span className="text-secondary f-w-500 f-s-12">#{row.id}</span></h6>
                   <p className="mb-0 f-s-12 text-secondary txt-ellipsis-1">{row.status} · {row.updated_at || ''}</p>

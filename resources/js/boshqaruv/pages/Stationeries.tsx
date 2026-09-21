@@ -7,6 +7,7 @@ import Modal from '../components/AppModal';
 import PaginationControls from '../components/PaginationControls';
 import ImageGalleryEditor from '../components/ImageGalleryEditor';
 import ModerationRejectModal from '../components/ModerationRejectModal';
+import { MediaCard } from '../components/Profile';
 
 const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n || 0);
 
@@ -110,7 +111,7 @@ export default function Stationeries() {
         <div className="card-body">
 
 
-          <div className="nav nav-tabs app-tabs-primary flex-wrap mb-3">
+          <div className="nav kc-segment mb-3">
             {[
               ['pending', 'Moderatsiya'],
               ['active', 'Tasdiqlangan'],
@@ -192,17 +193,24 @@ export default function Stationeries() {
         <Modal.Body>
           {!selected ? null : (
             <div className="row">
-              <div className="col-xl-4">
-                <div className="card h-100"><div className="card-body">
-                    <div className="b-1-light b-r-15 p-2 mb-3">
-                      {selected.icon ? <img src={selected.icon} alt="" style={{ width: '100%', maxHeight: 260, objectFit: 'contain' }} /> : <div className="text-muted text-center py-5">Rasm yo'q</div>}
-                    </div>
-                    <div className="d-flex flex-wrap gap-1">
-                      {selected.images?.slice(1, 5).map((image) => <img key={image} src={image} alt="" className="w-40 h-55 b-r-10 object-fit-cover flex-shrink-0" />)}
+              <div className="col-lg-4 col-xxl-3">
+                <MediaCard
+                  icon="ti ti-pencil"
+                  image={selected.icon || null}
+                  title={selected.name}
+                  subtitle={[selected.category, selected.seller || 'Ichki katalog'].filter(Boolean).join(' · ')}
+                  badges={<><span className={`badge ${selected.active ? 'text-light-success' : 'text-light-secondary'}`}>{selected.active ? 'Faol' : 'Nofaol'}</span><span className={`badge ${selected.hidden ? 'text-light-warning' : 'text-light-info'}`}>{selected.hidden ? 'Yashirin' : 'Ochiq'}</span></>}
+                  stats={[{ label: 'Narx', value: fmt(selected.price) }, { label: 'Ombor', value: selected.stock }, { label: 'Sotilgan', value: selected.sold }]}
+                />
+                {(selected.images || []).length > 1 ? (
+                  <div className="card"><div className="card-header"><h5 className="mb-0">Galereya</h5></div><div className="card-body">
+                    <div className="row g-2">
+                      {(selected.images || []).slice(0, 9).map((image) => <div className="col-4" key={image}><a href={image} target="_blank" rel="noreferrer" className="d-block b-r-10 overflow-hidden h-80"><img src={image} alt="" className="w-100 h-100 object-fit-cover" /></a></div>)}
                     </div>
                   </div></div>
+                ) : null}
               </div>
-
+              <div className="col-lg-8 col-xxl-9"><div className="row">
               <Info title="Asosiy ma'lumotlar" rows={[
                 ['Kategoriya', selected.category],
                 ['Seller', selected.seller || 'Ichki katalog'],
@@ -322,6 +330,7 @@ export default function Stationeries() {
                     </form>
                   </div></div>
               </div>
+              </div></div>
             </div>
           )}
         </Modal.Body>

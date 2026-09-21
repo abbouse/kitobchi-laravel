@@ -10,6 +10,7 @@ import { ReassignSellerModal, ReassignSellerOption } from '../components/SellerC
 
 import { MiniStat, StatWidget } from '../components/Axelit';
 import { tiIcon } from '../utils/icons';
+import { ProfileCard, Avatar as PAvatar } from '../components/Profile';
 
 const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n || 0);
 
@@ -291,8 +292,8 @@ const statusChip = (status: string) => {
 
 const Detail = ({ label, value }: { label: string; value?: ReactNode }) => (
   <div className="col-md-6">
-    <div className="text-muted f-s-13">{label}</div>
-    <div className="f-w-600">{value || '—'}</div>
+    <p className="mb-1 f-s-13 text-secondary">{label}</p>
+    <h6 className="mb-0 f-w-600 f-s-14 text-dark text-break">{value || '—'}</h6>
   </div>
 );
 
@@ -640,7 +641,7 @@ export default function Orders() {
 
       <div className="card">
         <div className="card-body">
-          <div className="nav nav-tabs app-tabs-primary mb-3 flex-wrap align-items-center">
+          <div className="nav kc-segment mb-3">
             {[
               ['all', 'Barchasi'],
               ['pending', 'Kutilmoqda'],
@@ -652,7 +653,7 @@ export default function Orders() {
               <div key={status} className="nav-item"><button
                   className={`nav-link ${activeTab === status ? 'active' : ''}`}
                   onClick={() => { setActiveTab(status); loadOrders(1, status); }}>
-                  {label} <span className="ms-1 opacity-75">{orderCounts[status] || 0}</span>
+                  {label} <span className="badge">{orderCounts[status] || 0}</span>
                 </button></div>
             ))}
           </div>
@@ -707,8 +708,13 @@ export default function Orders() {
                     >
                       <td className="text-nowrap"><span className={`d-inline-block w-5 h-20 b-r-4 me-2 align-middle ${needsAttention ? 'bg-warning' : ''}`}></span><span className="f-w-600">{order.id}</span></td>
                       <td>
-                        <div className="title-text text-nowrap">{order.customer}</div>
-                        {order.user?.phone ? <div className="f-s-13 text-secondary">{order.user.phone}</div> : null}
+                        <div className="d-flex align-items-center gap-2">
+                          <PAvatar name={order.customer} size="md" />
+                          <div className="min-w-0">
+                            <div className="title-text text-nowrap">{order.customer}</div>
+                            {order.user?.phone ? <div className="f-s-13 text-secondary">{order.user.phone}</div> : null}
+                          </div>
+                        </div>
                       </td>
                       <td className="f-s-13 text-secondary">{order.sourceLabel || (order.source === 'web' ? 'Veb-sayt' : 'Ilova')}</td>
                       <td className="text-end f-w-600 text-nowrap">{order.items}</td>
@@ -752,17 +758,19 @@ export default function Orders() {
           {detailLoading ? <div className="py-5 text-center text-muted">Buyurtma tafsilotlari yuklanmoqda...</div> : selectedOrd ? (
             <div className="row">
               <div className="col-lg-4">
-                <div className="card"><div className="card-body">
-                    <div className="d-flex justify-content-between align-items-start mb-3">
-                      <div>
-                        <div className="text-muted f-s-13">Mijoz</div>
-                        <div className="f-w-600 f-s-20">
-                          {selectedOrd.customer}
-                        </div>
-                        <div className="text-muted f-s-13">{selectedOrd.user?.phone || selectedOrd.user?.email || 'Kontakt yoq'}</div>
-                      </div>
-                      <span className={`badge text-uppercase ${toneBadge(toneOf(statusChip(selectedOrd.status)))}`}>{statusLabel(selectedOrd.status)}</span>
-                    </div>
+                <ProfileCard
+                  name={selectedOrd.customer || 'Mijoz'}
+                  subtitle={selectedOrd.user?.phone || selectedOrd.user?.email || "Kontakt yo'q"}
+                  badges={<>
+                    <span className={`badge text-uppercase ${toneBadge(toneOf(statusChip(selectedOrd.status)))}`}>{statusLabel(selectedOrd.status)}</span>
+                    <span className="badge text-light-secondary">{selectedOrd.sourceLabel || (selectedOrd.source === 'web' ? 'Veb-sayt' : 'Ilova')}</span>
+                  </>}
+                  stats={[
+                    { label: 'Summa', value: fmt(selectedOrd.total) },
+                    { label: 'Mahsulot', value: selectedOrd.items },
+                  ]}
+                />
+                <div className="card"><div className="card-header"><h5 className="mb-0">Buyurtma ma'lumotlari</h5></div><div className="card-body">
                     {normalizeStatus(selectedOrd.status) === 'returned' ? (
                       <div className="alert alert-light-warning py-2 f-s-13 mb-3">
                         Bu buyurtma <strong>qaytgan</strong> holatda. {isCashPending(selectedOrd.paymentStatus || selectedOrd.payment)
@@ -771,7 +779,7 @@ export default function Orders() {
                       </div>
                     ) : null}
                     {selectedOrd.canSendUnreachablePush ? (
-                      <div className="alert alert-light-info py-2 px-3 mb-3" style={{ background: 'rgba(var(--info), .3)', border: '1px solid rgba(var(--info), .3)' }}>
+                      <div className="alert alert-light-info py-2 px-3 mb-3">
                         <div className="d-flex justify-content-between align-items-center">
                           <div>
                             <div className="f-w-600 f-s-13 text-primary">
@@ -928,7 +936,7 @@ export default function Orders() {
                     { label: 'Yetkazish', value: `${fmt(selectedOrd.deliveryPrice || 0)} so'm`, icon: 'ti-truck' },
                     { label: 'Chegirma', value: `${fmt(selectedOrd.discountAmount || 0)} so'm`, icon: 'ti-percentage' },
                   ].map((item) => (
-                    <div className="col-md-3 col-6" key={item.label}>
+                    <div className="col-sm-6" key={item.label}>
                       <MiniStat icon={tiIcon(item.icon)} label={item.label} value={item.value} />
                     </div>
                   ))}
@@ -1338,16 +1346,20 @@ export default function Orders() {
                   </div></div>
 
                 <div className="card"><div className="card-header"><h5 className="mb-0">Statusni o'zgartirish</h5></div><div className="card-body">
-                    <div className="d-flex flex-wrap gap-2">
+                    <div className="nav kc-segment" role="tablist" aria-label="Buyurtma statusi">
                       {statusOptions.map((status) => (
-                        <button
-                          key={status.code}
-                          className={`btn btn-sm ${normalizeStatus(selectedOrd.status) === status.code ? 'btn-primary' : 'btn-outline-secondary'}`}
-                          onClick={() => handleUpdateStatus(status.code)}
-                          disabled={!selectedOrd.statusUrl || normalizeStatus(selectedOrd.status) === status.code}
-                        >
-                          {status.label}
-                        </button>
+                        <div className="nav-item" key={status.code}>
+                          <button
+                            type="button"
+                            role="tab"
+                            aria-selected={normalizeStatus(selectedOrd.status) === status.code}
+                            className={`nav-link ${normalizeStatus(selectedOrd.status) === status.code ? 'active' : ''}`}
+                            onClick={() => handleUpdateStatus(status.code)}
+                            disabled={!selectedOrd.statusUrl || normalizeStatus(selectedOrd.status) === status.code}
+                          >
+                            {status.label}
+                          </button>
+                        </div>
                       ))}
                     </div>
                   </div></div>

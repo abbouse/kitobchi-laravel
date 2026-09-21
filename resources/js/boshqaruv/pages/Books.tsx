@@ -9,6 +9,7 @@ import ImageGalleryEditor from '../components/ImageGalleryEditor';
 import ModerationRejectModal from '../components/ModerationRejectModal';
 import { MiniStat, StatWidget } from '../components/Axelit';
 import { tiIcon } from '../utils/icons';
+import { MediaCard, PersonRow } from '../components/Profile';
 
 const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n || 0);
 
@@ -89,8 +90,8 @@ const badge = (ok: boolean | undefined, yes: string, no: string) => (
 
 const Detail = ({ label, value }: { label: string; value?: ReactNode }) => (
   <div className="col-md-6">
-    <div className="text-muted f-s-13">{label}</div>
-    <div className="f-w-600">{value || '—'}</div>
+    <p className="mb-1 f-s-13 text-secondary">{label}</p>
+    <h6 className="mb-0 f-w-600 f-s-14 text-dark text-break">{value || '—'}</h6>
   </div>
 );
 
@@ -183,7 +184,7 @@ export default function Books() {
             <h5 className="f-w-600">Kitoblar</h5>
             <p className="mb-0 text-secondary">{bookPagination.total} ta kitob topildi</p>
           </div>
-          <div className="nav nav-tabs app-tabs-primary flex-wrap">
+          <div className="nav kc-segment">
             {[
               ['pending', 'Moderatsiya'],
               ['active', 'Faol'],
@@ -286,27 +287,25 @@ export default function Books() {
         <Modal.Body>
           {selectedBook ? (
             <div className="row">
-              <div className="col-lg-4">
-                <div className="card"><div className="card-body text-center">
-                    <div className="w-160 h-215 b-r-22 overflow-hidden d-flex-center bg-light-primary flex-shrink-0 mx-auto mb-3">
-                      {selectedBook.cover ? <img className="w-100 h-100 object-fit-cover" src={selectedBook.cover} alt={selectedBook.title} /> : '📕'}
-                    </div>
-                    <h4 className="f-w-600 mb-1">{selectedBook.title}</h4>
-                    <div className="text-muted mb-3">{selectedBook.author}</div>
-                    <div className="d-flex gap-2 justify-content-center flex-wrap">
-                      {badge(Boolean(selectedBook.active), 'Aktiv', 'Nofaol')}
-                      {badge(Boolean(selectedBook.status), 'Tasdiqlangan', 'Moderatsiya')}
-                      {badge(!selectedBook.hidden, "Ko'rinadi", 'Yashirilgan')}
-                      {selectedBook.recommended ? <span className="badge text-light-info">Tavsiya</span> : null}
-                    </div>
-                  </div></div>
+              <div className="col-lg-4 col-xxl-3">
+                <MediaCard
+                  image={selectedBook.cover || null}
+                  title={selectedBook.title}
+                  subtitle={selectedBook.author}
+                  badges={<>
+                    {badge(Boolean(selectedBook.active), 'Aktiv', 'Nofaol')}
+                    {badge(Boolean(selectedBook.status), 'Tasdiqlangan', 'Moderatsiya')}
+                    {badge(!selectedBook.hidden, "Ko'rinadi", 'Yashirilgan')}
+                    {selectedBook.recommended ? <span className="badge text-light-info">Tavsiya</span> : null}
+                  </>}
+                  stats={[{ label: 'Sotilgan', value: fmt(selectedBook.sold) }, { label: 'Ombor', value: fmt(selectedBook.stock) }, { label: "Ko'rish", value: fmt(selectedBook.views || 0) }]}
+                />
 
                 <div className="card"><div className="card-header"><h5 className="mb-0">Sotuvchi</h5></div><div className="card-body">
                     {selectedBook.seller ? (
                       <>
-                        <div className="f-w-600">{selectedBook.seller.name}</div>
-                        <div className="text-muted f-s-13">{selectedBook.seller.phone || 'Telefon yoq'}</div>
-                        <div className="d-flex gap-2 mt-2 flex-wrap">
+                        <PersonRow icon="ti ti-building-store" name={selectedBook.seller.name} meta={selectedBook.seller.phone || "Telefon yo'q"} />
+                        <div className="d-flex gap-2 mt-3 flex-wrap">
                           {badge(selectedBook.seller.verified, 'Verified', 'Tekshirilmagan')}
                           {badge(!selectedBook.seller.hidden, 'Aktiv shop', 'Shop yashirin')}
                         </div>
@@ -317,7 +316,7 @@ export default function Books() {
                   </div></div>
               </div>
 
-              <div className="col-lg-8">
+              <div className="col-lg-8 col-xxl-9">
                 <div className="row g-3 mb-3">
                   {[
                     { label: 'Narx', value: `${fmt(selectedBook.price)} so'm`, icon: 'ti-cash' },
@@ -325,7 +324,7 @@ export default function Books() {
                     { label: 'Sotilgan', value: `${fmt(selectedBook.sold)} marta`, icon: 'ti-shopping-bag' },
                     { label: 'Daromad', value: `${fmt(selectedBook.totalRevenue || 0)} so'm`, icon: 'ti-trending-up' },
                   ].map((item) => (
-                    <div className="col-md-3 col-6" key={item.label}>
+                    <div className="col-sm-6" key={item.label}>
                       <MiniStat icon={tiIcon(item.icon)} label={item.label} value={item.value} />
                     </div>
                   ))}

@@ -284,7 +284,7 @@ function GeocodeSearch({ onPick }: { onPick: (coords: LatLon, label: string) => 
   return (
     <div className="position-relative">
       <div className="input-group input-group-sm">
-        <span className="input-group-text bg-white"><i className="ti ti-search" /></span>
+        <span className="input-group-text"><i className="ti ti-search" /></span>
         <input
           className="form-control"
           placeholder="Manzil qidirish (masalan: Chilonzor, Toshkent)"

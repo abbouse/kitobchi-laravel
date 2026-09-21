@@ -145,7 +145,7 @@ export default function Settings() {
 
       <div className="card">
 <div className="card-body">
-          <div className="nav nav-tabs app-tabs-primary flex-wrap">
+          <div className="nav kc-segment">
             {tabs.map((item) => (
               <div key={item.key} className="nav-item"><button
                   type="button"

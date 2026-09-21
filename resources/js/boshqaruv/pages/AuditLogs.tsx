@@ -97,11 +97,11 @@ export default function AuditLogs() {
         <Modal.Header closeButton><Modal.Title className="f-s-20 f-w-600">Audit #{selected?.id}</Modal.Title></Modal.Header>
         <Modal.Body>
           <div className="row g-3">
-            <div className="col-md-6"><small className="text-muted">Admin</small><div className="f-w-600">{selected?.admin}</div></div>
-            <div className="col-md-6"><small className="text-muted">IP</small><div>{selected?.ip || '—'}</div></div>
-            <div className="col-md-6"><small className="text-muted">Route</small><div>{selected?.route || '—'}</div></div>
-            <div className="col-md-6"><small className="text-muted">Target</small><div>{selected?.targetType || '—'} #{selected?.targetId || '—'}</div></div>
-            <div className="col-12"><small className="text-muted">Path</small><div>{selected?.path}</div></div>
+            <div className="col-md-6"><p className="mb-1 f-s-13 text-secondary">Admin</p><div className="f-w-600">{selected?.admin}</div></div>
+            <div className="col-md-6"><p className="mb-1 f-s-13 text-secondary">IP</p><div>{selected?.ip || '—'}</div></div>
+            <div className="col-md-6"><p className="mb-1 f-s-13 text-secondary">Route</p><div>{selected?.route || '—'}</div></div>
+            <div className="col-md-6"><p className="mb-1 f-s-13 text-secondary">Target</p><div>{selected?.targetType || '—'} #{selected?.targetId || '—'}</div></div>
+            <div className="col-12"><p className="mb-1 f-s-13 text-secondary">Path</p><div>{selected?.path}</div></div>
             <div className="col-12">
               <p className="mb-0 text-secondary">Request data</p>
               <pre className="mt-2 p-3 b-r-8 f-s-12" style={{ background: 'var(--bs-body-bg)', border: '1px solid var(--bs-border-color)', whiteSpace: 'pre-wrap' }}>{JSON.stringify(selected?.requestData || {}, null, 2)}</pre>

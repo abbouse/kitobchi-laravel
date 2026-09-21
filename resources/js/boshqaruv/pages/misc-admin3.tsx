@@ -4,6 +4,7 @@ import { router, usePage } from '@inertiajs/react';
 import { Button, Form } from 'react-bootstrap';
 import Modal from '../components/AppModal';
 import PaginationControls from '../components/PaginationControls';
+import { Avatar as PAvatar } from '../components/Profile';
 
 type TranslateLocale = 'ru' | 'en' | 'ja';
 type PushLocale = 'uz' | TranslateLocale;
@@ -119,9 +120,9 @@ export function Reels() {
         <Modal.Header closeButton><Modal.Title className="f-s-20 f-w-600">{selected?.title}</Modal.Title></Modal.Header>
         <Modal.Body>
           <div className="row g-3">
-            <div className="col-6"><small className="text-muted">Tartib</small><div>{selected?.order || 0}</div></div>
-            <div className="col-6"><small className="text-muted">Elementlar</small><div>{selected?.items || 0}</div></div>
-            <div className="col-12"><small className="text-muted">Izoh</small><div>{selected?.description || '—'}</div></div>
+            <div className="col-6"><p className="mb-1 f-s-13 text-secondary">Tartib</p><div>{selected?.order || 0}</div></div>
+            <div className="col-6"><p className="mb-1 f-s-13 text-secondary">Elementlar</p><div>{selected?.items || 0}</div></div>
+            <div className="col-12"><p className="mb-1 f-s-13 text-secondary">Izoh</p><div>{selected?.description || '—'}</div></div>
           </div>
         </Modal.Body>
         <Modal.Footer>
@@ -533,7 +534,7 @@ export function ChatKuzatuv() {
     <div>
       <div className="d-flex align-items-end justify-content-between flex-wrap gap-3 mx-1 mb-3"><div><h4 className="main-title mb-0">Chat kuzatuv</h4><PageCrumbs /><p className="mb-0 text-secondary">Foydalanuvchi va seller suhbatlarini real vaqt kontekstida tekshirish</p></div></div>
       <div className="card">
-        <div className="card-header d-flex align-items-center justify-content-between gap-2 flex-wrap"><div className="nav nav-tabs app-tabs-primary flex-wrap">{[['all', 'Barchasi'], ['user', 'User chat'], ['seller', 'Seller chat']].map(([key, label]) => <div key={key} className="nav-item"><button
+        <div className="card-header d-flex align-items-center justify-content-between gap-2 flex-wrap"><div className="nav kc-segment">{[['all', 'Barchasi'], ['user', 'User chat'], ['seller', 'Seller chat']].map(([key, label]) => <div key={key} className="nav-item"><button
             className={`nav-link ${tab === key ? 'active' : ''}`}
             onClick={() => { setTab(key); loadConversations(1, key); }}>{label}<span className="badge text-light-secondary ms-2">{conversationCounts[key] || 0}</span></button></div>)}</div><form className="d-flex gap-2" onSubmit={(event) => { event.preventDefault(); loadConversations(); }}><input className="form-control form-control-sm" style={{ maxWidth: 280 }} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="User, telefon yoki seller" /><button className="btn btn-sm btn-outline-secondary"><i className="ti ti-search"></i></button></form></div>
         <div className="card-body">
@@ -592,8 +593,9 @@ export function ChatKuzatuv() {
                   </div><div className="card-body">
                     <div className="d-grid gap-2">
                       {detail.messages.map((message) => (
-                        <div className={`d-flex ${message.senderType === 'user' ? '' : 'justify-content-end'}`} key={String(message.id)}>
-                          <div className={`b-r-15 b-1-light p-3 ${message.senderType === 'user' ? 'bg-white' : 'bg-light-subtle'}`} style={{ maxWidth: '86%' }}>
+                        <div className={`d-flex gap-2 ${message.senderType === 'user' ? '' : 'flex-row-reverse'}`} key={String(message.id)}>
+                          <PAvatar name={String(message.senderLabel || message.senderType || 'X')} size="sm" />
+                          <div className={`b-r-15 px-3 py-2 ${message.senderType === 'user' ? 'bg-light-secondary' : 'bg-light-primary'}`} style={{ maxWidth: '80%' }}>
                             <div className="d-flex flex-wrap align-items-center gap-2 mb-2">
                               <span className="f-w-600">{String(message.senderLabel || message.senderType || 'Xabar')}</span>
                               <span className="text-muted f-s-13">{String(message.date || '—')}</span>
@@ -829,7 +831,7 @@ export function PushNotifications() {
           <Modal.Header closeButton><Modal.Title className="f-s-20 f-w-600">Push bildirishnoma</Modal.Title></Modal.Header>
           <Modal.Body>
             <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-              <div className="nav nav-tabs app-tabs-primary flex-wrap p-1">
+              <div className="nav kc-segment">
                 {pushLocales.map((locale) => (
                   <div key={locale} className="nav-item"><button
                       type="button"

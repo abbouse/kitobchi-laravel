@@ -5,6 +5,7 @@ import { router, usePage } from '@inertiajs/react';
 import { Button } from 'react-bootstrap';
 import Modal from '../components/AppModal';
 import { tiIcon } from '../utils/icons';
+import { Avatar as PAvatar } from '../components/Profile';
 
 interface Post {
   id: number;
@@ -253,7 +254,7 @@ export default function BookClub() {
       <Modal show={!!selectedPost} onHide={() => { setSelectedPost(null); setDetail(null); }} centered size="xl" scrollable>
         <Modal.Header closeButton><Modal.Title className="f-s-20 f-w-600">Post #{selectedPost?.id}</Modal.Title></Modal.Header>
         <Modal.Body>
-          {loading ? <div className="text-center text-muted py-5">Post tafsiloti yuklanmoqda...</div> : !detail ? (
+          {loading ? <div className="text-center py-5"><span className="spinner-border text-primary"></span><p className="text-secondary mt-2 mb-0">Post tafsiloti yuklanmoqda...</p></div> : !detail ? (
             <div className="text-muted">Tafsilot topilmadi.</div>
           ) : (
             <div className="row">
@@ -270,7 +271,7 @@ export default function BookClub() {
                     <div className="text-break" style={{ whiteSpace: 'pre-line' }}>{detail.post.text || 'Matn yo‘q'}</div>
                     {detail.post.images?.length ? (
                       <div className="d-flex flex-wrap gap-2 mt-3">
-                        {detail.post.images.map((image) => <img key={image} className="w-40 h-55 b-r-10 object-fit-cover flex-shrink-0" src={image} alt="" />)}
+                        {detail.post.images.map((image) => <a key={image} href={image} target="_blank" rel="noreferrer" className="d-block h-120 w-120 b-r-15 overflow-hidden flex-shrink-0"><img className="w-100 h-100 object-fit-cover" src={image} alt="" /></a>)}
                       </div>
                     ) : null}
                   </div></div>
@@ -342,12 +343,8 @@ export default function BookClub() {
   );
 }
 
-function Avatar({ name, src, seed = 1 }: { name: string; src?: string | null; seed?: number }) {
-  return (
-    <div className="d-flex-center b-r-50 bg-light-primary f-w-600 overflow-hidden flex-shrink-0 f-s-15 w-45 h-45">
-      {src ? <img className="w-100 h-100 object-fit-cover" src={src} alt="" /> : name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-    </div>
-  );
+function Avatar({ name, src }: { name: string; src?: string | null; seed?: number }) {
+  return <PAvatar src={src} name={name} size="lg" />;
 }
 
 function Stat({ label, value, tone }: { label: string; value: number; tone?: 'warning' }) {
@@ -355,7 +352,7 @@ function Stat({ label, value, tone }: { label: string; value: number; tone?: 'wa
 }
 
 function Info({ label, value }: { label: string; value?: string | number | null }) {
-  return <div className="col-md-6"><small className="text-muted">{label}</small><div className="f-w-600">{value || '—'}</div></div>;
+  return <div className="col-md-6"><p className="mb-1 f-s-13 text-secondary">{label}</p><div className="f-w-600">{value || '—'}</div></div>;
 }
 
 function PeoplePanel({ title, people, icon }: { title: string; people: Person[]; icon: string }) {

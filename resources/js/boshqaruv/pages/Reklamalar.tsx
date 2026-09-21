@@ -112,10 +112,10 @@ export default function Reklamalar() {
         <Modal.Header closeButton><Modal.Title className="f-s-20 f-w-600">{selected?.name}</Modal.Title></Modal.Header>
         <Modal.Body>
           <div className="row g-3">
-            <div className="col-6"><small className="text-muted">Turi</small><div>{selected?.type || '—'}</div></div>
-            <div className="col-6"><small className="text-muted">Budget</small><div className="f-w-600">{fmt(selected?.budget || 0)} so'm</div></div>
-            <div className="col-6"><small className="text-muted">To'lov</small><div>{selected?.paymentStatus || '—'}</div></div>
-            <div className="col-6"><small className="text-muted">Status</small><div><span className={`badge text-uppercase ${toneBadge(toneOf(chip(selected?.status)))}`}>{selected?.status || '—'}</span></div></div>
+            <div className="col-6"><p className="mb-1 f-s-13 text-secondary">Turi</p><div>{selected?.type || '—'}</div></div>
+            <div className="col-6"><p className="mb-1 f-s-13 text-secondary">Budget</p><div className="f-w-600">{fmt(selected?.budget || 0)} so'm</div></div>
+            <div className="col-6"><p className="mb-1 f-s-13 text-secondary">To'lov</p><div>{selected?.paymentStatus || '—'}</div></div>
+            <div className="col-6"><p className="mb-1 f-s-13 text-secondary">Status</p><div><span className={`badge text-uppercase ${toneBadge(toneOf(chip(selected?.status)))}`}>{selected?.status || '—'}</span></div></div>
           </div>
         </Modal.Body>
         <Modal.Footer>

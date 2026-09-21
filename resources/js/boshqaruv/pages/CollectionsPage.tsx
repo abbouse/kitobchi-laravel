@@ -886,7 +886,7 @@ export default function CollectionsPage() {
           <Modal.Title className="f-s-20 f-w-600"><i className="ti ti-sparkles me-2 text-warning"></i>AI to'plam tavsiyasi</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <div className="b-r-15 b-1-light bg-light-subtle p-3 mb-3 f-s-13 text-muted">
+          <div className="b-r-15 b-1-light p-3 mb-3 f-s-13 text-muted">
             AI bizning real talab ma'lumotimiz (sotuv, savat, ko'rish, qidiruv) va bozor bilimi asosida ombordagi kitoblardan mavzuli to'plam hamda marketing narxini (seller komissiyasi + soliq hisobga olingan) tavsiya qiladi.
           </div>
           <div className="row g-2 align-items-end mb-3">
@@ -997,7 +997,7 @@ export default function CollectionsPage() {
               </div>
             </div>
             <div className="col-lg-4">
-              <div className="nav nav-tabs app-tabs-primary flex-wrap" role="group">
+              <div className="nav kc-segment w-100" role="group">
                 {([
                   ['all', 'Barchasi'],
                   ['active', 'Faol'],
@@ -1299,7 +1299,7 @@ export default function CollectionsPage() {
                     </div>
 
                     {/* Kitob / Kanselyariya tab */}
-                    <div className="nav nav-tabs app-tabs-primary flex-wrap mb-2" role="group">
+                    <div className="nav kc-segment mb-2" role="group">
                       <div className="nav-item"><button
                           type="button"
                           className={`nav-link ${searchType === 'book' ? 'active' : ''}`}

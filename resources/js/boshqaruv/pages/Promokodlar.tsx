@@ -113,5 +113,5 @@ function Field({ name, label, type = 'text', defaultValue, required }: { name: s
 }
 
 function Info({ label, value, mono }: { label: string; value?: string | number | null; mono?: boolean }) {
-  return <div className="col-6"><small className="text-muted">{label}</small><div className="f-w-600" style={mono ? { fontFamily: 'monospace' } : undefined}>{value ?? '—'}</div></div>;
+  return <div className="col-6"><p className="mb-1 f-s-13 text-secondary">{label}</p><div className="f-w-600" style={mono ? { fontFamily: 'monospace' } : undefined}>{value ?? '—'}</div></div>;
 }

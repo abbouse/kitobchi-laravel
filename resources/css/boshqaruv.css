@@ -117,3 +117,64 @@ header.header-main .container-fluid .header-right .header-searchbar .search-list
 /* ── Alohida "show sahifa" (components/AppModal): katta oynalar ro'yxat o'rnida ochiladi ── */
 body.kc-show-open .kc-page-body { display: none; }
 #kc-show-root > .kc-show:not(:last-child) { display: none; }
+
+/* ── Axelit profil kartasi (components/Profile): demo rasmlar o'rniga brend ranglari ── */
+.profile-container .image-details .profile-image.kc-profile-cover {
+  height: 130px;
+  background-image: linear-gradient(135deg, rgba(var(--primary), 1) 0%, rgba(var(--primary), .55) 55%, rgba(var(--info), .7) 100%);
+}
+.profile-container .image-details .profile-pic .avatar-upload .avatar-preview > .kc-avatar {
+  display: flex; align-items: center; justify-content: center;
+  border: 4px solid rgba(var(--white), 1);
+  background-color: rgba(var(--white), 1);
+  background-image: none; background-size: cover; background-position: center;
+  font-size: 34px; font-weight: 700;
+}
+.profile-container .image-details .profile-pic .avatar-upload .avatar-preview > .kc-avatar.kc-avatar-square { border-radius: 22px; }
+.profile-container .image-details .profile-pic .avatar-upload .avatar-preview:has(.kc-avatar-square) { border-radius: 22px; }
+.profile-container .person-details .details { margin-top: 18px; gap: 28px; flex-wrap: wrap; }
+@media screen and (max-width: 768px) {
+  .profile-container .image-details { height: auto; }
+  .profile-container .image-details .profile-pic { bottom: -35px; }
+  .profile-container .person-details { margin-top: 40px; }
+}
+
+/* ── Segmentli boshqaruv (iOS / Cupertino "UISegmentedControl") ─────────────
+   Filtr tablari, davr tanlash, tezlik va h.k. — barchasi bitta ko'rinishda. */
+.kc-segment {
+  display: inline-flex; flex-wrap: nowrap; align-items: stretch; gap: 2px;
+  max-width: 100%; padding: 2px; margin: 0; list-style: none;
+  border: 0; border-radius: 10px;
+  background-color: rgba(118, 118, 128, .12);
+  overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+}
+.kc-segment::-webkit-scrollbar { display: none; }
+.kc-segment > .nav-item { flex: 0 0 auto; display: flex; }
+.kc-segment .nav-link {
+  position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  margin: 0; padding: 6px 14px; border: 0 !important; border-radius: 8px !important;
+  background: transparent; color: rgba(var(--dark), .8);
+  font-size: 13px; font-weight: 600; line-height: 1.35; white-space: nowrap;
+  transition: background-color .2s ease, color .2s ease, box-shadow .2s ease;
+}
+.kc-segment .nav-link:hover:not(.active):not(:disabled) { color: rgba(var(--dark), 1); background-color: rgba(118, 118, 128, .10); }
+.kc-segment .nav-link.active {
+  background-color: rgba(var(--white), 1) !important; color: rgba(var(--dark), 1) !important;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, .12), 0 3px 1px rgba(0, 0, 0, .04);
+}
+.kc-segment .nav-link:disabled { opacity: .55; }
+.kc-segment .nav-link i { font-size: 15px; }
+.kc-segment .nav-link .badge {
+  margin: 0 !important; padding: 2px 7px; border-radius: 6px; font-size: 11px; font-weight: 600;
+  background-color: rgba(118, 118, 128, .16) !important; color: rgba(var(--dark), .7) !important;
+}
+.kc-segment .nav-link.active .badge { background-color: rgba(var(--primary), .16) !important; color: rgba(var(--primary-dark), 1) !important; }
+.kc-segment.kc-segment-sm .nav-link { padding: 4px 11px; font-size: 12px; }
+.kc-segment.w-100 { display: flex; }
+.kc-segment.w-100 > .nav-item { flex: 1 1 0; }
+.kc-segment.w-100 .nav-link { width: 100%; }
+body.dark .kc-segment { background-color: rgba(118, 118, 128, .24); }
+body.dark .kc-segment .nav-link { color: rgba(235, 235, 245, .75); }
+body.dark .kc-segment .nav-link.active { background-color: #636366 !important; color: #fff !important; box-shadow: 0 3px 8px rgba(0, 0, 0, .3); }
+body.dark .kc-segment .nav-link .badge { background-color: rgba(0, 0, 0, .25) !important; color: rgba(235, 235, 245, .8) !important; }
+body.dark .kc-segment .nav-link.active .badge { background-color: rgba(255, 255, 255, .18) !important; color: #fff !important; }

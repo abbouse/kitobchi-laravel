@@ -5,6 +5,7 @@ import { router, usePage } from '@inertiajs/react';
 import { Button } from 'react-bootstrap';
 import Modal from '../components/AppModal';
 import PaginationControls, { useClientPagination } from '../components/PaginationControls';
+import { ProfileCard, Avatar as PAvatar } from '../components/Profile';
 
 const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n || 0);
 
@@ -92,9 +93,7 @@ export default function Authors() {
               <div className="card-body d-flex flex-column justify-content-between">
                 <div>
                   <div className="d-flex align-items-center gap-3 mb-3">
-                    <div className="h-55 w-55 d-flex-center b-r-50 bg-light-primary f-w-600 f-s-18 overflow-hidden flex-shrink-0">
-                      {author.image ? <img className="w-100 h-100 object-fit-cover" src={author.image} alt={author.name} /> : initials(author.name)}
-                    </div>
+                    <PAvatar src={author.image} name={author.name} size="xl" />
                     <div className="min-w-0" style={{ flex: 1 }}>
                       <div className="f-w-600 text-truncate">{author.name}</div>
                       <div className="text-muted f-s-13 mt-1 text-truncate">{author.bio || 'Muallif katalogi'}</div>
@@ -160,17 +159,17 @@ function AuthorDetailModal({ author, detail, loading, onHide, onEdit, onDelete, 
     <Modal show={!!author} onHide={onHide} size="xl" centered>
       <Modal.Header closeButton><Modal.Title className="f-s-20 f-w-600">{author?.name}</Modal.Title></Modal.Header>
       <Modal.Body>
-        {loading ? <div className="text-center text-muted py-5">Ma'lumot yuklanmoqda...</div> : !detail ? <div className="text-muted">Muallif tanlanmagan.</div> : <div className="row">
-          <div className="col-lg-4"><div className="card h-100"><div className="card-body text-center">
-              <div className="d-flex-center b-r-50 bg-light-primary f-w-600 overflow-hidden flex-shrink-0 mx-auto mb-3 f-s-32 w-95 h-95">{detail.image ? <img className="w-100 h-100 object-fit-cover" src={detail.image} alt={detail.name} /> : initials(detail.name)}</div>
-              <h4 className="f-w-600">{detail.name}</h4>
-              <div className="text-muted f-s-13 text-break">{detail.sourceUrl || detail.externalId || 'Manba kiritilmagan'}</div>
-              <div className="d-grid gap-2 mt-3">
-                <span className={`badge ${detail.needsAiPortrait ? 'text-light-warning' : 'text-light-success'}`}>{detail.needsAiPortrait ? 'AI portret kerak' : 'Rasm holati yaxshi'}</span>
-                <span className="badge text-light-info">{detail.hasMultipleAuthors ? 'Ko‘p muallifli yozuv' : 'Yakka muallif'}</span>
-              </div>
-            </div></div></div>
-          <div className="col-lg-8"><div className="card h-100"><div className="card-header"><h5 className="mb-0">Ulangan kitoblar ({fmt(detail.booksCount)})</h5></div><div className="card-body">
+        {loading ? <div className="text-center py-5"><span className="spinner-border text-primary"></span><p className="text-secondary mt-2 mb-0">Ma'lumot yuklanmoqda...</p></div> : !detail ? <div className="text-muted">Muallif tanlanmagan.</div> : <div className="row">
+          <div className="col-lg-4 col-xxl-3">
+            <ProfileCard
+              image={detail.image || null}
+              name={detail.name}
+              subtitle={<span className="f-s-13">{detail.sourceUrl || detail.externalId || 'Manba kiritilmagan'}</span>}
+              badges={<><span className={`badge ${detail.needsAiPortrait ? 'text-light-warning' : 'text-light-success'}`}>{detail.needsAiPortrait ? 'AI portret kerak' : 'Rasm holati yaxshi'}</span><span className="badge text-light-info">{detail.hasMultipleAuthors ? 'Ko‘p muallifli yozuv' : 'Yakka muallif'}</span></>}
+              stats={[{ label: 'Kitoblar', value: fmt(detail.booksCount) }]}
+            />
+          </div>
+          <div className="col-lg-8 col-xxl-9"><div className="card"><div className="card-header"><h5 className="mb-0">Ulangan kitoblar ({fmt(detail.booksCount)})</h5></div><div className="card-body">
               <BooksTable rows={detail.books} />
             </div></div></div>
         </div>}

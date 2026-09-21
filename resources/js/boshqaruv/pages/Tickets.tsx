@@ -6,7 +6,8 @@ import { Button, Form } from 'react-bootstrap';
 import Modal from '../components/AppModal';
 import PaginationControls from '../components/PaginationControls';
 
-import { StatWidget } from '../components/Axelit';
+import { StatWidget, EmptyState } from '../components/Axelit';
+import { ProfileCard, AboutList, Avatar as PAvatar } from '../components/Profile';
 
 interface Ticket {
   id: number;
@@ -116,7 +117,7 @@ export default function Tickets() {
 
       <div className="card">
         <div className="card-body">
-          <div className="nav nav-tabs app-tabs-primary mb-3 flex-wrap">
+          <div className="nav kc-segment mb-3">
             {[
               ['all', 'Barcha murojaatlar', ticketCounts.all || 0],
               ['user', 'Mijoz supporti', ticketCounts.user || 0],
@@ -125,19 +126,21 @@ export default function Tickets() {
               <div key={String(source)} className="nav-item"><button
                   className={`nav-link ${activeSource === source ? 'active' : ''}`}
                   onClick={() => { setActiveSource(String(source)); loadTickets(1, activeTab, search, String(source)); }}>
-                  {label} <span className="ms-1 opacity-75">{count}</span>
+                  {label} <span className="badge">{count}</span>
                 </button></div>
             ))}
           </div>
-          <div className="nav nav-tabs app-tabs-primary mb-3 flex-wrap">
+          <div className="d-flex flex-wrap align-items-center gap-2 mb-3">
+            <div className="nav kc-segment">
             {['all', 'open', 'answered', 'waiting', 'queue', 'active', 'closed', 'rated'].map((s) => (
               <div key={s} className="nav-item"><button
                   className={`nav-link ${activeTab === s ? 'active' : ''}`}
-                  onClick={() => { setActiveTab(s); loadTickets(1, s); }}>{statusLabel(s)} <span className="ms-1 opacity-75">{ticketCounts[s] || 0}</span></button></div>
+                  onClick={() => { setActiveTab(s); loadTickets(1, s); }}>{statusLabel(s)} <span className="badge">{ticketCounts[s] || 0}</span></button></div>
             ))}
-            <form className="ms-auto input-group" style={{ maxWidth: 260 }} onSubmit={(event) => { event.preventDefault(); loadTickets(); }}>
-              <span className="input-group-text bg-white"><i className="ti ti-search text-muted"></i></span>
-              <input className="form-control" placeholder="Ticket qidirish..." value={search} onChange={e => setSearch(e.target.value)} />
+          </div>
+            <form className="app-form app-icon-form position-relative ms-auto" style={{ width: 'min(260px, 100%)' }} onSubmit={(event) => { event.preventDefault(); loadTickets(); }}>
+              <input type="search" className="form-control form-control-sm" placeholder="Ticket qidirish..." value={search} onChange={(event) => setSearch(event.target.value)} />
+              <i className="ti ti-search"></i>
             </form>
           </div>
 
@@ -150,7 +153,7 @@ export default function Tickets() {
                     <td className="f-w-600 text-nowrap">#{ticket.id}</td>
                     <td><span className={`badge ${ticket.source === 'seller' ? 'text-light-primary' : 'text-light-info'}`}>{ticket.sourceLabel || 'Support'}</span></td>
                     <td className="f-w-600">{ticket.subject}</td>
-                    <td>{ticket.user}</td>
+                    <td><div className="d-flex align-items-center gap-2"><PAvatar name={String(ticket.user || "?")} size="sm" /><span className="text-nowrap">{ticket.user}</span></div></td>
                     <td>{ticket.operator || '—'}</td>
                     <td>{ticket.messages}</td>
                     <td>{ticket.rating || '—'}</td>
@@ -184,12 +187,52 @@ export default function Tickets() {
       <Modal show={showDetail} onHide={() => setShowDetail(false)} centered size="xl">
         <Modal.Header closeButton><Modal.Title className="f-s-20 f-w-600">Murojaat #{selectedTicket?.id}</Modal.Title></Modal.Header>
         <Modal.Body>
-          {loadingDetail ? <div className="text-muted py-5 text-center">Yuklanmoqda...</div> : !detail ? <div className="text-muted py-5 text-center">Ma'lumot yuklanmadi</div> : (
+          {loadingDetail ? <div className="text-center py-5"><span className="spinner-border text-primary"></span><p className="text-secondary mt-2 mb-0">Yuklanmoqda...</p></div> : !detail ? <div className="text-muted py-5 text-center">Ma'lumot yuklanmadi</div> : (
             <div className="row">
-              <div className="col-xl-4"><div className="card h-100"><div className="card-header"><h5 className="mb-0">Murojaat egasi</h5></div><div className="card-body"><Info label="Ism" value={detail.profile.name} /><Info label="Telegram" value={detail.profile.username} /><Info label="User ID" value={detail.profile.userId} /><Info label="Manba" value={detail.profile.sourceType} /><Info label="Operator" value={detail.profile.operator} /><Info label="Sana" value={detail.profile.createdAt} /></div></div></div>
-              <div className="col-xl-8"><div className="card h-100"><div className="card-header"><h5 className="mb-0">Suhbat tarixi</h5></div><div className="card-body">{detail.messages.map((message) => <div className={`b-1-light b-r-8 p-3 mb-2 ${message.sentBy === 'user' ? 'bg-light-secondary' : ''}`} key={String(message.id)}><div className="d-flex justify-content-between gap-3 mb-1"><strong className="f-s-13">{String(message.actor || message.sentBy || 'Tizim')}</strong><span className="text-muted f-s-13">{String(message.date || '—')}</span></div><div>{String(message.message || '—')}</div><small className="text-muted">{String(message.type || 'text')}{message.error ? ` · ${message.error}` : ''}</small></div>)}{detail.messages.length === 0 ? <div className="text-muted">Xabar tarixi topilmadi</div> : null}</div></div></div>
-              <div className="col-xl-6"><div className="card h-100"><div className="card-header"><h5 className="mb-0">Ilovalar</h5></div><div className="card-body">{detail.attachments.map((file) => <div className="b-b-1-light py-2" key={String(file.id)}><strong>{String(file.name || 'Fayl')}</strong><div className="f-s-13 text-muted">{String(file.type || '—')} · {file.size ? `${file.size} KB` : 'hajm yo‘q'} · {String(file.sentBy || '—')}</div></div>)}{detail.attachments.length === 0 ? <div className="text-muted">Ilova mavjud emas</div> : null}</div></div></div>
-              <div className="col-xl-6"><div className="card h-100"><div className="card-header"><h5 className="mb-0">Holat</h5></div><div className="card-body"><Info label="Status" value={statusLabel(String(detail.profile.status || ''))} /><Info label="Reyting" value={detail.profile.rating} /><Info label="Yopish sababi" value={detail.profile.closeReason} /><Info label="Yopilgan vaqt" value={detail.profile.closedAt} /></div></div></div>
+              <div className="col-lg-4 col-xxl-3">
+                <ProfileCard
+                  name={String(detail.profile.name || 'Foydalanuvchi')}
+                  subtitle={detail.profile.username ? `@${String(detail.profile.username)}` : `User ID: ${String(detail.profile.userId || '—')}`}
+                  badges={<span className="badge text-light-primary">{statusLabel(String(detail.profile.status || ''))}</span>}
+                  stats={[{ label: 'Xabar', value: detail.messages.length }, { label: 'Ilova', value: detail.attachments.length }, { label: 'Reyting', value: detail.profile.rating ? String(detail.profile.rating) : '—' }]}
+                />
+                <AboutList title="Murojaat ma'lumotlari" rows={[
+                  { icon: 'ti-id', label: 'User ID', value: detail.profile.userId ? String(detail.profile.userId) : null },
+                  { icon: 'ti-brand-telegram', label: 'Telegram', value: detail.profile.username ? String(detail.profile.username) : null },
+                  { icon: 'ti-inbox', label: 'Manba', value: detail.profile.sourceType ? String(detail.profile.sourceType) : null },
+                  { icon: 'ti-headset', label: 'Operator', value: detail.profile.operator ? String(detail.profile.operator) : null },
+                  { icon: 'ti-calendar-event', label: 'Yaratilgan', value: detail.profile.createdAt ? String(detail.profile.createdAt) : null },
+                  { icon: 'ti-lock', label: 'Yopilgan', value: detail.profile.closedAt ? String(detail.profile.closedAt) : null },
+                  { icon: 'ti-message-report', label: 'Yopish sababi', value: detail.profile.closeReason ? String(detail.profile.closeReason) : null },
+                ]} />
+              </div>
+              <div className="col-lg-8 col-xxl-9">
+                <div className="card"><div className="card-header d-flex align-items-center justify-content-between"><h5 className="mb-0">Suhbat tarixi</h5><span className="badge text-light-primary">{detail.messages.length} ta</span></div><div className="card-body">
+                  <div className="d-flex flex-column gap-3">
+                    {detail.messages.map((message) => {
+                      const mine = message.sentBy !== 'user';
+                      const who = String(message.actor || message.sentBy || 'Tizim');
+                      return (
+                        <div className={`d-flex gap-2 ${mine ? 'flex-row-reverse' : ''}`} key={String(message.id)}>
+                          <PAvatar name={who} size="sm" icon={mine ? 'ti ti-headset' : undefined} />
+                          <div className={`b-r-15 px-3 py-2 ${mine ? 'bg-light-primary' : 'bg-light-secondary'}`} style={{ maxWidth: '78%' }}>
+                            <div className="d-flex justify-content-between gap-3 mb-1"><span className="f-w-600 f-s-13">{who}</span><span className="f-s-12 opacity-75">{String(message.date || '—')}</span></div>
+                            <div className="text-break" style={{ whiteSpace: 'pre-wrap' }}>{String(message.message || '—')}</div>
+                            {message.type && message.type !== 'text' || message.error ? <div className="f-s-12 opacity-75 mt-1">{String(message.type || 'text')}{message.error ? ` · ${message.error}` : ''}</div> : null}
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {detail.messages.length === 0 ? <EmptyState text="Xabar tarixi topilmadi" /> : null}
+                  </div>
+                </div></div>
+                <div className="card"><div className="card-header"><h5 className="mb-0">Ilovalar</h5></div><div className="card-body">
+                  <ul className="list-group list-group-flush">
+                    {detail.attachments.map((file) => <li className="list-group-item d-flex align-items-center gap-2 px-0" key={String(file.id)}><span className="h-35 w-35 d-flex-center b-r-10 text-light-info flex-shrink-0"><i className="ti ti-paperclip"></i></span><div className="min-w-0"><div className="f-w-600 txt-ellipsis-1">{String(file.name || 'Fayl')}</div><div className="f-s-12 text-muted">{String(file.type || '—')} · {file.size ? `${file.size} KB` : 'hajm yo‘q'} · {String(file.sentBy || '—')}</div></div></li>)}
+                  </ul>
+                  {detail.attachments.length === 0 ? <EmptyState text="Ilova mavjud emas" /> : null}
+                </div></div>
+              </div>
             </div>
           )}
         </Modal.Body>

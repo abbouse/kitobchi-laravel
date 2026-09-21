@@ -5,6 +5,7 @@ import { router, usePage } from '@inertiajs/react';
 import { Button } from 'react-bootstrap';
 import Modal from '../components/AppModal';
 import PaginationControls, { useClientPagination } from '../components/PaginationControls';
+import { ProfileCard, Avatar as PAvatar } from '../components/Profile';
 
 const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n || 0);
 
@@ -80,7 +81,7 @@ export default function Publishers() {
               <tbody>
                 {pagination.paginated.map((publisher, i) => (
                   <tr key={publisher.id}>
-                    <td><div className="d-flex align-items-center gap-2"><div className="h-45 w-45 d-flex-center b-r-10 bg-light-primary f-w-600 f-s-16 overflow-hidden flex-shrink-0">{publisher.image ? <img className="w-100 h-100 object-fit-cover" src={publisher.image} alt={publisher.name} /> : <i className="ti ti-building"></i>}</div><div><div className="f-w-600">{publisher.name}</div><div className="text-muted f-s-13">#{publisher.id}</div></div></div></td>
+                    <td><div className="d-flex align-items-center gap-2"><PAvatar square src={publisher.image} name={publisher.name} icon="ti ti-building" size="lg" /><div><div className="f-w-600">{publisher.name}</div><div className="text-muted f-s-13">#{publisher.id}</div></div></div></td>
                     <td className="f-w-600">{fmt(publisher.books)}</td>
                     <td><span className={`badge ${publisher.image ? 'text-light-success' : 'text-light-secondary'}`}>{publisher.image ? 'Bor' : "Yo'q"}</span></td>
                     <td><div className="d-flex gap-2"><button className="btn btn-light-primary icon-btn w-30 h-30 b-r-22" onClick={() => openDetail(publisher)}><i className="ti ti-eye"></i></button><button className="btn btn-light-success icon-btn w-30 h-30 b-r-22" onClick={() => setEditing(publisher)}><i className="ti ti-pencil"></i></button><button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => destroy(publisher)}><i className="ti ti-trash"></i></button></div></td>
@@ -131,9 +132,9 @@ function PublisherDetailModal({ publisher, detail, loading, onHide, onEdit, onDe
     <Modal show={!!publisher} onHide={onHide} size="xl" centered>
       <Modal.Header closeButton><Modal.Title className="f-s-20 f-w-600">{publisher?.name}</Modal.Title></Modal.Header>
       <Modal.Body>
-        {loading ? <div className="text-center text-muted py-5">Ma'lumot yuklanmoqda...</div> : !detail ? <div className="text-muted">Nashriyot tanlanmagan.</div> : <div className="row">
-          <div className="col-lg-3"><div className="card h-100"><div className="card-body text-center"><div className="d-flex-center b-r-10 bg-light-primary f-w-600 f-s-16 overflow-hidden flex-shrink-0 mx-auto mb-3 w-95 h-95">{detail.image ? <img className="w-100 h-100 object-fit-cover" src={detail.image} alt={detail.name} /> : <i className="ti ti-building"></i>}</div><h4 className="f-w-600">{detail.name}</h4><span className="badge text-light-info">{fmt(detail.booksCount)} ta kitob</span></div></div></div>
-          <div className="col-lg-9"><div className="card h-100"><div className="card-header"><h5 className="mb-0">Ulangan kitoblar</h5></div><div className="card-body"><BooksTable rows={detail.books} /></div></div></div>
+        {loading ? <div className="text-center py-5"><span className="spinner-border text-primary"></span><p className="text-secondary mt-2 mb-0">Ma'lumot yuklanmoqda...</p></div> : !detail ? <div className="text-muted">Nashriyot tanlanmagan.</div> : <div className="row">
+          <div className="col-lg-4 col-xxl-3"><ProfileCard square image={detail.image || null} icon="ti ti-building" name={detail.name} subtitle="Nashriyot" stats={[{ label: 'Kitoblar', value: fmt(detail.booksCount) }]} /></div>
+          <div className="col-lg-8 col-xxl-9"><div className="card"><div className="card-header"><h5 className="mb-0">Ulangan kitoblar</h5></div><div className="card-body"><BooksTable rows={detail.books} /></div></div></div>
         </div>}
       </Modal.Body>
       <Modal.Footer>{detail ? <Button variant="outline-primary" onClick={onEdit}>Tahrirlash</Button> : null}{publisher ? <Button variant="outline-danger" onClick={() => onDelete(publisher)}>O'chirish</Button> : null}<Button variant="light-secondary" onClick={onHide}>Yopish</Button></Modal.Footer>

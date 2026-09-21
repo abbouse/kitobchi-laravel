@@ -70,7 +70,7 @@ export default function CommissionAudit() {
         </div>
       </div>
 
-      <div className="nav nav-tabs app-tabs-primary flex-wrap mb-3">
+      <div className="nav kc-segment mb-3">
         <div className="nav-item"><button className={`nav-link ${owner === 'seller' ? 'active' : ''}`} onClick={() => goOwner('seller')}>Seller audit</button></div>
         <div className="nav-item"><button className={`nav-link ${owner === 'courier' ? 'active' : ''}`} onClick={() => goOwner('courier')}>Kuryer audit</button></div>
       </div>

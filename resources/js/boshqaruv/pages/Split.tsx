@@ -219,7 +219,7 @@ export default function Split() {
         ) : null}
       </div>
 
-      <div className="nav nav-tabs app-tabs-primary flex-wrap mb-3">
+      <div className="nav kc-segment mb-3">
         {tabs.map(([key, label, icon]) => (
           <div key={key} className="nav-item"><button
               className={`nav-link ${tab === key ? 'active' : ''}`}
@@ -760,7 +760,7 @@ function ContractSection({
       </div>
       <div className="card-body">
 
-        <div className="nav nav-tabs app-tabs-primary flex-wrap px-3 pt-2 pb-1">
+        <div className="nav kc-segment mb-3">
           {filterOptions.map(([value, label]) => (
             <div key={value} className="nav-item"><button
                 className={`nav-link ${filter === value ? 'active' : ''}`}

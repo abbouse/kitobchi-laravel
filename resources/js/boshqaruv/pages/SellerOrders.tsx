@@ -13,6 +13,7 @@ import {
 
 import { StatWidget } from '../components/Axelit';
 import { tiIcon } from '../utils/icons';
+import { ProfileCard, AboutList, Avatar as PAvatar } from '../components/Profile';
 
 // admin.isSuperAdmin — HandleInertiaRequests middleware orqali HAR BIR
 // sahifaga uzatiladigan umumiy (shared) prop (Layout.tsx'da ham shu
@@ -129,7 +130,7 @@ export default function SellerOrders() {
         </div>
         <div className="card-body">
 
-          <div className="nav nav-tabs app-tabs-primary flex-wrap mb-3">
+          <div className="nav kc-segment mb-3">
             {sellerTabs.map((item) => (
               <div key={item.key} className="nav-item"><button
                   className={`nav-link ${sellerTab === item.key ? 'active' : ''}`}
@@ -148,7 +149,7 @@ export default function SellerOrders() {
                     <td className="f-w-600 text-nowrap">#{seller.id}</td>
                     <td>
                       <Link href={seller.actions?.detailUrl || '#'} className="d-flex align-items-center gap-2 text-reset text-decoration-none">
-                        <div className="h-55 w-55 d-flex-center b-r-50 bg-light-primary f-w-600 f-s-18 overflow-hidden flex-shrink-0">{seller.photo ? <img className="w-100 h-100 object-fit-cover" src={seller.photo} alt="" /> : seller.name.slice(0, 2).toUpperCase()}</div>
+                        <PAvatar src={seller.photo} name={seller.name} size="lg" />
                         <div className="min-w-0">
                           <div className="f-w-600 text-truncate">{seller.name}</div>
                           <small className="text-muted text-truncate d-block">{seller.ownerName || seller.legalName || '—'}</small>
@@ -217,7 +218,7 @@ export default function SellerOrders() {
         </div>
         <div className="card-body">
 
-          <div className="nav nav-tabs app-tabs-primary flex-wrap mb-3">
+          <div className="nav kc-segment mb-3">
             {orderStatusTabs.map((item) => (
               <div key={item.key} className="nav-item"><button
                   className={`nav-link ${orderTab === item.key ? 'active' : ''}`}
@@ -280,6 +281,21 @@ function OrderModal({ order, statuses, onHide, onPatch }: {
       <Modal.Body>
         {!order ? null : (
           <div className="row">
+<div className="col-lg-4 col-xxl-3"><ProfileCard
+              icon="ti ti-building-store"
+              name={`Seller order #${order.id}`}
+              subtitle={order.seller}
+              badges={<span className="badge text-light-primary">{statuses[order.status]?.label || order.status}</span>}
+              stats={[{ label: 'Summa', value: fmt(order.amount) }, { label: 'Mahsulot', value: order.summary?.itemsCount || 0 }]}
+            />
+            <AboutList title="Ishtirokchilar" rows={[
+              { icon: 'ti-building-store', label: 'Seller', value: order.seller },
+              { icon: 'ti-user', label: 'Mijoz', value: order.customer },
+              { icon: 'ti-phone', label: 'Telefon', value: order.customerPhone },
+              { icon: 'ti-bike', label: 'Kuryer', value: order.courier },
+              { icon: 'ti-calendar', label: 'Sana', value: order.date },
+            ]} /></div>
+<div className="col-lg-8 col-xxl-9"><div className="row">
             <Info title="Buyurtma" rows={[
               ['Asosiy order', `#${order.orderId || '—'}`], ['Seller', order.seller], ['Mijoz', order.customer],
               ['Telefon', order.customerPhone || '—'], ['Kuryer', order.courier || '—'], ['Sana', order.date || '—'],
@@ -305,6 +321,7 @@ function OrderModal({ order, statuses, onHide, onPatch }: {
                   {(order.items || []).length === 0 ? <div className="text-muted">Mahsulotlar topilmadi</div> : null}
                 </div></div>
             </div>
+</div></div>
           </div>
         )}
       </Modal.Body>

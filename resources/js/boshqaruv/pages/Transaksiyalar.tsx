@@ -7,6 +7,7 @@ import Modal from '../components/AppModal';
 import PaginationControls from '../components/PaginationControls';
 
 import { StatWidget } from '../components/Axelit';
+import { ProfileCard } from '../components/Profile';
 
 const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n || 0);
 const reportUrl = (url?: string, lang: 'uz' | 'ru' = 'uz') => {
@@ -127,7 +128,7 @@ export default function Transaksiyalar() {
       </div>
 
       <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-        <div className="nav nav-tabs app-tabs-primary flex-wrap">
+        <div className="nav kc-segment">
           {[
             ['seller', 'Sotuvchilar'],
             ['courier', 'Kuryerlar'],
@@ -197,16 +198,28 @@ export default function Transaksiyalar() {
         <Modal.Header closeButton><Modal.Title className="f-s-20 f-w-600">Tranzaksiya #{selected?.id}</Modal.Title></Modal.Header>
         <Modal.Body>
           <div className="row">
-            <div className="col-6"><small className="text-muted">{selected?.owner === 'courier' ? 'Kuryer' : 'Sotuvchi'}</small><div className="f-w-600">{selected?.user}</div></div>
-            <div className="col-6"><small className="text-muted">Telefon</small><div>{selected?.phone || '—'}</div></div>
-            <div className="col-6"><small className="text-muted">Turi</small><div>{selected?.type} {selected?.category ? `· ${selected.category}` : ''}</div></div>
-            <div className="col-6"><small className="text-muted">Holat</small><div><span className={`badge text-uppercase ${toneBadge(toneOf(statusChip(selected?.status)))}`}>{selected?.status || '—'}</span></div></div>
-            <div className="col-6"><small className="text-muted">Summa</small><div className="f-w-600">{fmt(selected?.amount || 0)} so'm</div></div>
-            <div className="col-6"><small className="text-muted">Yakuniy summa</small><div className="f-w-600 text-success">{fmt(selected?.netAmount ?? selected?.amount ?? 0)} so'm</div></div>
-            <div className="col-6"><small className="text-muted">Karta</small><div>{selected?.method || '—'}</div></div>
-            <div className="col-6"><small className="text-muted">Buyurtma</small><div>{selected?.owner === 'courier' ? `#${selected?.orderId || '—'} · Kuryer #${selected?.courierOrderId || '—'} · Vazifa #${selected?.courierTaskId || '—'}` : `#${selected?.orderId || '—'} · Sotuvchi #${selected?.sellerOrderId || '—'}`}</div></div>
-            <div className="col-6"><small className="text-muted">Yangilangan</small><div>{selected?.updatedAt || '—'}</div></div>
-            <div className="col-12"><small className="text-muted">Izoh</small><div>{selected?.note || '—'}</div></div>
+            <div className="col-lg-4 col-xxl-3">
+              <ProfileCard
+                icon={selected?.owner === 'courier' ? 'ti ti-bike' : 'ti ti-building-store'}
+                name={selected?.user || '—'}
+                subtitle={selected?.phone || (selected?.owner === 'courier' ? 'Kuryer' : 'Sotuvchi')}
+                badges={<span className={`badge text-uppercase ${toneBadge(toneOf(statusChip(selected?.status)))}`}>{selected?.status || '—'}</span>}
+                stats={[{ label: 'Summa', value: fmt(selected?.amount || 0) }, { label: 'Yakuniy', value: fmt(selected?.netAmount ?? selected?.amount ?? 0) }]}
+              />
+            </div>
+            <div className="col-lg-8 col-xxl-9"><div className="row">
+              <div className="col-12"><div className="card"><div className="card-header"><h5 className="mb-0">Tranzaksiya ma'lumotlari</h5></div><div className="card-body"><div className="row g-3">
+            <div className="col-sm-6"><p className="mb-1 f-s-13 text-secondary">{selected?.owner === 'courier' ? 'Kuryer' : 'Sotuvchi'}</p><div className="f-w-600">{selected?.user}</div></div>
+            <div className="col-sm-6"><p className="mb-1 f-s-13 text-secondary">Telefon</p><div>{selected?.phone || '—'}</div></div>
+            <div className="col-sm-6"><p className="mb-1 f-s-13 text-secondary">Turi</p><div>{selected?.type} {selected?.category ? `· ${selected.category}` : ''}</div></div>
+            <div className="col-sm-6"><p className="mb-1 f-s-13 text-secondary">Holat</p><div><span className={`badge text-uppercase ${toneBadge(toneOf(statusChip(selected?.status)))}`}>{selected?.status || '—'}</span></div></div>
+            <div className="col-sm-6"><p className="mb-1 f-s-13 text-secondary">Summa</p><div className="f-w-600">{fmt(selected?.amount || 0)} so'm</div></div>
+            <div className="col-sm-6"><p className="mb-1 f-s-13 text-secondary">Yakuniy summa</p><div className="f-w-600 text-success">{fmt(selected?.netAmount ?? selected?.amount ?? 0)} so'm</div></div>
+            <div className="col-sm-6"><p className="mb-1 f-s-13 text-secondary">Karta</p><div>{selected?.method || '—'}</div></div>
+            <div className="col-sm-6"><p className="mb-1 f-s-13 text-secondary">Buyurtma</p><div>{selected?.owner === 'courier' ? `#${selected?.orderId || '—'} · Kuryer #${selected?.courierOrderId || '—'} · Vazifa #${selected?.courierTaskId || '—'}` : `#${selected?.orderId || '—'} · Sotuvchi #${selected?.sellerOrderId || '—'}`}</div></div>
+            <div className="col-sm-6"><p className="mb-1 f-s-13 text-secondary">Yangilangan</p><div>{selected?.updatedAt || '—'}</div></div>
+            <div className="col-12"><p className="mb-1 f-s-13 text-secondary">Izoh</p><div>{selected?.note || '—'}</div></div>
+              </div></div></div></div>
             {selected?.owner === 'seller' ? (
               <div className="col-12">
                 <div className="card"><div className="card-body">
@@ -218,32 +231,32 @@ export default function Transaksiyalar() {
                       <span className="badge text-light-secondary">{selected?.recipient?.legalTypeLabel || 'Tanlanmagan'}</span>
                     </div>
                     <div className="row g-3">
-                      <div className="col-md-4"><small className="text-muted d-block">Hisob raqam</small><strong className="text-break">{selected?.recipient?.bankAccount || '—'}</strong></div>
-                      <div className="col-md-4"><small className="text-muted d-block">STIR</small><strong>{selected?.recipient?.inn || '—'}</strong></div>
-                      <div className="col-md-4"><small className="text-muted d-block">MFO</small><strong>{selected?.recipient?.bankMfo || '—'}</strong></div>
-                      <div className="col-md-4"><small className="text-muted d-block">Bank</small><strong>{selected?.recipient?.bankName || '—'}</strong></div>
-                      <div className="col-md-4"><small className="text-muted d-block">SWIFT</small><strong>{selected?.recipient?.bankSwift || '—'}</strong></div>
-                      <div className="col-md-4"><small className="text-muted d-block">Karta / karta egasi</small><strong>{[selected?.recipient?.card, selected?.recipient?.cardHolder].filter(Boolean).join(' · ') || '—'}</strong></div>
-                      <div className="col-12"><small className="text-muted d-block">Yuridik manzil</small><strong>{selected?.recipient?.legalAddress || '—'}</strong></div>
-                      <div className="col-md-4"><small className="text-muted d-block">Shartnoma raqami</small><strong>{selected?.contract?.number || '—'}</strong></div>
-                      <div className="col-md-4"><small className="text-muted d-block">Imzolangan sana</small><strong>{selected?.contract?.signedAt || '—'}</strong></div>
-                      <div className="col-md-4"><small className="text-muted d-block">Amal qilish muddati</small><strong>{selected?.contract?.expiresAt || '—'}</strong></div>
-                      <div className="col-md-6"><small className="text-muted d-block">Hisobvaraq-faktura raqami</small><strong>{selected?.contract?.invoiceNumber || '—'}</strong></div>
-                      <div className="col-md-6"><small className="text-muted d-block">Hisobvaraq-faktura sanasi</small><strong>{selected?.contract?.invoiceDate || '—'}</strong></div>
+                      <div className="col-md-4"><p className="mb-1 f-s-13 text-secondary">Hisob raqam</p><strong className="text-break">{selected?.recipient?.bankAccount || '—'}</strong></div>
+                      <div className="col-md-4"><p className="mb-1 f-s-13 text-secondary">STIR</p><strong>{selected?.recipient?.inn || '—'}</strong></div>
+                      <div className="col-md-4"><p className="mb-1 f-s-13 text-secondary">MFO</p><strong>{selected?.recipient?.bankMfo || '—'}</strong></div>
+                      <div className="col-md-4"><p className="mb-1 f-s-13 text-secondary">Bank</p><strong>{selected?.recipient?.bankName || '—'}</strong></div>
+                      <div className="col-md-4"><p className="mb-1 f-s-13 text-secondary">SWIFT</p><strong>{selected?.recipient?.bankSwift || '—'}</strong></div>
+                      <div className="col-md-4"><p className="mb-1 f-s-13 text-secondary">Karta / karta egasi</p><strong>{[selected?.recipient?.card, selected?.recipient?.cardHolder].filter(Boolean).join(' · ') || '—'}</strong></div>
+                      <div className="col-12"><p className="mb-1 f-s-13 text-secondary">Yuridik manzil</p><strong>{selected?.recipient?.legalAddress || '—'}</strong></div>
+                      <div className="col-md-4"><p className="mb-1 f-s-13 text-secondary">Shartnoma raqami</p><strong>{selected?.contract?.number || '—'}</strong></div>
+                      <div className="col-md-4"><p className="mb-1 f-s-13 text-secondary">Imzolangan sana</p><strong>{selected?.contract?.signedAt || '—'}</strong></div>
+                      <div className="col-md-4"><p className="mb-1 f-s-13 text-secondary">Amal qilish muddati</p><strong>{selected?.contract?.expiresAt || '—'}</strong></div>
+                      <div className="col-md-6"><p className="mb-1 f-s-13 text-secondary">Hisobvaraq-faktura raqami</p><strong>{selected?.contract?.invoiceNumber || '—'}</strong></div>
+                      <div className="col-md-6"><p className="mb-1 f-s-13 text-secondary">Hisobvaraq-faktura sanasi</p><strong>{selected?.contract?.invoiceDate || '—'}</strong></div>
                       <div className="col-12">
-                        <div className="p-3 b-r-15 b-1-light bg-light-secondary">
+                        <div className="p-3 b-r-15 bg-light-secondary">
                           <div className="d-flex justify-content-between align-items-start gap-2">
                             <div>
                               <small className="text-muted d-block mb-1">To‘lov izohi</small>
                               <strong>{selected?.contract?.paymentPurpose || selected?.note || 'Shartnoma raqami kiritilmagan'}</strong>
                             </div>
-                            <button type="button" className="btn btn-sm btn-light-secondary border" onClick={() => copy(selected?.contract?.paymentPurpose || selected?.note)}>
+                            <button type="button" className="btn btn-sm btn-light-secondary" onClick={() => copy(selected?.contract?.paymentPurpose || selected?.note)}>
                               <i className="ti ti-copy"></i>
                             </button>
                           </div>
                         </div>
                       </div>
-                      {selected?.contract?.notes ? <div className="col-12"><small className="text-muted d-block">Shartnoma izohi</small><div>{selected.contract.notes}</div></div> : null}
+                      {selected?.contract?.notes ? <div className="col-12"><p className="mb-1 f-s-13 text-secondary">Shartnoma izohi</p><div>{selected.contract.notes}</div></div> : null}
                     </div>
                   </div></div>
               </div>
@@ -264,10 +277,10 @@ export default function Transaksiyalar() {
                     ) : null}
                   </div>
                   <div className="row g-2 mb-3">
-                    <div className="col-md-3 col-6"><small className="text-muted d-block">Buyurtmalar</small><strong>{selected?.breakdown?.orders || 0} ta</strong></div>
-                    <div className="col-md-3 col-6"><small className="text-muted d-block">Mahsulotlar</small><strong>{selected?.breakdown?.products || 0} ta</strong></div>
-                    <div className="col-md-3 col-6"><small className="text-muted d-block">{selected?.owner === 'courier' ? 'Bonus' : 'Komissiya'}</small><strong>{fmt(selected?.owner === 'courier' ? (selected?.breakdown?.bonus || 0) : (selected?.breakdown?.commission || 0))} so'm</strong></div>
-                    <div className="col-md-3 col-6"><small className="text-muted d-block">Yakuniy</small><strong>{fmt(selected?.breakdown?.net || selected?.netAmount || selected?.amount || 0)} so'm</strong></div>
+                    <div className="col-md-3 col-6"><p className="mb-1 f-s-13 text-secondary">Buyurtmalar</p><strong>{selected?.breakdown?.orders || 0} ta</strong></div>
+                    <div className="col-md-3 col-6"><p className="mb-1 f-s-13 text-secondary">Mahsulotlar</p><strong>{selected?.breakdown?.products || 0} ta</strong></div>
+                    <div className="col-md-3 col-6"><p className="mb-1 f-s-13 text-secondary">{selected?.owner === 'courier' ? 'Bonus' : 'Komissiya'}</p><strong>{fmt(selected?.owner === 'courier' ? (selected?.breakdown?.bonus || 0) : (selected?.breakdown?.commission || 0))} so'm</strong></div>
+                    <div className="col-md-3 col-6"><p className="mb-1 f-s-13 text-secondary">Yakuniy</p><strong>{fmt(selected?.breakdown?.net || selected?.netAmount || selected?.amount || 0)} so'm</strong></div>
                   </div>
                   <div className="table-responsive app-scroll">
                     <table className="table table-bottom-border align-middle f-s-13">
@@ -290,8 +303,9 @@ export default function Transaksiyalar() {
                   {(selected?.breakdown?.rows || []).length > 8 ? <small className="text-muted d-block mt-2">PDF hisobotda barcha qatorlar to'liq chiqadi.</small> : null}
                 </div></div>
             </div>
-            <div className="col-12"><div className="card"><div className="card-header"><h5 className="mb-0">{selected?.owner === 'courier' ? 'Kuryer bo‘yicha qisqa ma’lumot' : 'Sotuvchi bo‘yicha qisqa ma’lumot'}</h5></div><div className="card-body"><div className="row g-2"><div className="col-md-4"><small className="text-muted d-block">Tasdiqlangan</small><strong>{selected?.ownerTotals?.approvedCount || selected?.sellerTotals?.approvedCount || 0} ta</strong></div><div className="col-md-4"><small className="text-muted d-block">Tasdiqlangan summa</small><strong>{fmt(selected?.ownerTotals?.approvedSum || selected?.sellerTotals?.approvedSum || 0)} so'm</strong></div><div className="col-md-4"><small className="text-muted d-block">Kutilayotgan summa</small><strong>{fmt(selected?.ownerTotals?.pendingSum || selected?.sellerTotals?.pendingSum || 0)} so'm</strong></div></div></div></div></div>
+            <div className="col-12"><div className="card"><div className="card-header"><h5 className="mb-0">{selected?.owner === 'courier' ? 'Kuryer bo‘yicha qisqa ma’lumot' : 'Sotuvchi bo‘yicha qisqa ma’lumot'}</h5></div><div className="card-body"><div className="row g-2"><div className="col-md-4"><p className="mb-1 f-s-13 text-secondary">Tasdiqlangan</p><strong>{selected?.ownerTotals?.approvedCount || selected?.sellerTotals?.approvedCount || 0} ta</strong></div><div className="col-md-4"><p className="mb-1 f-s-13 text-secondary">Tasdiqlangan summa</p><strong>{fmt(selected?.ownerTotals?.approvedSum || selected?.sellerTotals?.approvedSum || 0)} so'm</strong></div><div className="col-md-4"><p className="mb-1 f-s-13 text-secondary">Kutilayotgan summa</p><strong>{fmt(selected?.ownerTotals?.pendingSum || selected?.sellerTotals?.pendingSum || 0)} so'm</strong></div></div></div></div></div>
             <div className="col-12"><div className="card"><div className="card-header"><h5 className="mb-0">Yaqin tranzaksiyalar</h5></div><div className="card-body">{(selected?.nearby || []).map((row) => <div className="d-flex justify-content-between b-b-1-light py-2" key={row.id}><span>Tranzaksiya #{row.id} · {row.status || '—'}</span><strong>{fmt(row.netAmount || row.amount || 0)} so'm</strong></div>)}{(selected?.nearby || []).length === 0 ? <div className="text-muted">Boshqa tranzaksiya topilmadi</div> : null}</div></div></div>
+            </div></div>
           </div>
         </Modal.Body>
         <Modal.Footer>

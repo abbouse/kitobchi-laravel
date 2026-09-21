@@ -88,10 +88,10 @@ export function MysteryBox() {
         <Modal.Header closeButton><Modal.Title className="f-s-20 f-w-600">{selected?.user}</Modal.Title></Modal.Header>
         <Modal.Body>
           <div className="row g-3">
-            <div className="col-6"><small className="text-muted">Plan</small><div>{selected?.plan}</div></div>
-            <div className="col-6"><small className="text-muted">Status</small><div>{selected?.statusLabel || selected?.status}</div></div>
-            <div className="col-6"><small className="text-muted">Keyingi yetkazish</small><div>{selected?.nextDelivery || '—'}</div></div>
-            <div className="col-6"><small className="text-muted">Progress</small><div>{selected?.progress || 0}%</div></div>
+            <div className="col-6"><p className="mb-1 f-s-13 text-secondary">Plan</p><div>{selected?.plan}</div></div>
+            <div className="col-6"><p className="mb-1 f-s-13 text-secondary">Status</p><div>{selected?.statusLabel || selected?.status}</div></div>
+            <div className="col-6"><p className="mb-1 f-s-13 text-secondary">Keyingi yetkazish</p><div>{selected?.nextDelivery || '—'}</div></div>
+            <div className="col-6"><p className="mb-1 f-s-13 text-secondary">Progress</p><div>{selected?.progress || 0}%</div></div>
           </div>
         </Modal.Body>
         <Modal.Footer>
@@ -426,7 +426,7 @@ function RadiusMapPicker({
   };
 
   return (
-    <div className="b-r-15 b-1-light bg-light-subtle p-3">
+    <div className="b-r-15 b-1-light p-3">
       <div className="d-flex align-items-start justify-content-between gap-3 mb-3">
         <div>
           <div className="f-w-600">Radius xaritasi</div>
@@ -496,7 +496,7 @@ function DeliveryServiceForm({ service, action, onDone }: { service?: DeliverySe
 
   return (
     <form onSubmit={(event) => submitLogistics(event, service ? 'put' : 'post', action, onDone)}>
-      <div className="b-r-15 b-1-light bg-light-subtle p-3 mb-3">
+      <div className="b-r-15 b-1-light p-3 mb-3">
         <div className="f-w-600 mb-1">Xizmat - bu yetkazish kanali</div>
         <div className="f-s-13 text-muted">Masalan: Kitobchi kuryer, UzPost yoki boshqa pochta. Xizmat bir marta ochiladi, keyin unga bir nechta zona qoidasi ulanadi.</div>
       </div>
@@ -539,7 +539,7 @@ function DeliveryRuleForm({ rule, services, action, onDone }: { rule?: DeliveryR
 
   return (
     <form onSubmit={(event) => submitLogistics(event, rule?.updateUrl ? 'put' : 'post', action, onDone)}>
-      <div className="b-r-15 b-1-light bg-light-subtle p-3 mb-3">
+      <div className="b-r-15 b-1-light p-3 mb-3">
         <div className="f-w-600 mb-1">Zona qoidasi — bu xizmat qayerda va qanday narxda ishlashini belgilaydi</div>
         <div className="f-s-13 text-muted">Bitta xizmatga bir nechta zona qo'shish mumkin. Chegarani <b>polygon</b> qilib xaritada chizing (taksi uslubi) yoki oddiy <b>radius</b> bering.</div>
       </div>
@@ -571,7 +571,7 @@ function DeliveryRuleForm({ rule, services, action, onDone }: { rule?: DeliveryR
         {scope === 'polygon' ? (
           <>
             <div className="col-12">
-              <div className="card"><div className="card-body bg-light-subtle">
+              <div className="card"><div className="card-body">
                   <div className="d-flex align-items-start justify-content-between gap-3 mb-2">
                     <div>
                       <div className="f-w-600">Zona chegarasi (polygon)</div>
@@ -599,7 +599,7 @@ function DeliveryRuleForm({ rule, services, action, onDone }: { rule?: DeliveryR
         ) : scope === 'radius' ? (
           <>
             <div className="col-12">
-              <div className="card"><div className="card-body bg-light-subtle">
+              <div className="card"><div className="card-body">
                   <div className="d-flex align-items-start justify-content-between gap-3 mb-2">
                     <div>
                       <div className="f-w-600">Radius xaritasi</div>
@@ -852,7 +852,7 @@ export function Logistika() {
                   <i className="ti ti-search position-absolute text-secondary" style={{ left: 12, top: 9 }}></i>
                   <input className="form-control form-control-sm" style={{ paddingLeft: 32 }} placeholder="Zona, xizmat yoki hudud bo'yicha" value={ruleQuery} onChange={(event) => setRuleQuery(event.target.value)} />
                 </div>
-                <div className="nav nav-tabs app-tabs-primary flex-wrap">
+                <div className="nav kc-segment">
                   {(['all', 'polygon', 'radius', 'country'] as const).map((value) => (
                     <div key={value} className="nav-item"><button
                         type="button"

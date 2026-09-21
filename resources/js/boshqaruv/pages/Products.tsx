@@ -83,9 +83,9 @@ export default function Products() {
       <div className="card">
         <div className="card-body">
           <div className="d-flex flex-wrap gap-2 mb-3">
-            <div className="input-group" style={{ maxWidth: 320 }}>
-              <span className="input-group-text bg-white"><i className="ti ti-search text-muted"></i></span>
-              <input className="form-control" placeholder="Mahsulot, kategoriya, seller..." value={search} onChange={e => setSearch(e.target.value)} />
+            <div className="app-form app-icon-form position-relative" style={{ width: 'min(320px, 100%)' }}>
+              <input type="search" className="form-control" placeholder="Mahsulot, kategoriya, seller..." value={search} onChange={e => setSearch(e.target.value)} />
+              <i className="ti ti-search"></i>
             </div>
             <select className="form-select" style={{ width: 'auto' }} value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
               {types.map((type) => <option key={type} value={type}>{type}</option>)}
@@ -133,12 +133,12 @@ export default function Products() {
         <Modal.Header closeButton><Modal.Title className="f-s-20 f-w-600">{selected?.title}</Modal.Title></Modal.Header>
         <Modal.Body>
           <div className="row g-3">
-            <div className="col-6"><small className="text-muted">Turi</small><div className="f-w-600">{selected?.type}</div></div>
-            <div className="col-6"><small className="text-muted">Kategoriya</small><div>{selected?.category || '—'}</div></div>
-            <div className="col-6"><small className="text-muted">Narx</small><div className="f-w-600 text-primary">{fmt(selected?.price || 0)} so'm</div></div>
-            <div className="col-6"><small className="text-muted">Daromad</small><div>{fmt(selected?.revenue || 0)} so'm</div></div>
-            <div className="col-6"><small className="text-muted">Ombor</small><div>{selected?.stock || 0} dona</div></div>
-            <div className="col-6"><small className="text-muted">Sotilgan</small><div>{selected?.sold || 0} dona</div></div>
+            <div className="col-6"><p className="mb-1 f-s-13 text-secondary">Turi</p><div className="f-w-600">{selected?.type}</div></div>
+            <div className="col-6"><p className="mb-1 f-s-13 text-secondary">Kategoriya</p><div>{selected?.category || '—'}</div></div>
+            <div className="col-6"><p className="mb-1 f-s-13 text-secondary">Narx</p><div className="f-w-600 text-primary">{fmt(selected?.price || 0)} so'm</div></div>
+            <div className="col-6"><p className="mb-1 f-s-13 text-secondary">Daromad</p><div>{fmt(selected?.revenue || 0)} so'm</div></div>
+            <div className="col-6"><p className="mb-1 f-s-13 text-secondary">Ombor</p><div>{selected?.stock || 0} dona</div></div>
+            <div className="col-6"><p className="mb-1 f-s-13 text-secondary">Sotilgan</p><div>{selected?.sold || 0} dona</div></div>
           </div>
         </Modal.Body>
         <Modal.Footer>

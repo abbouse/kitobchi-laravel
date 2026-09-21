@@ -93,17 +93,19 @@ export default function SellerAiActions() {
 
       <div className="card">
         <div className="card-body">
-          <div className="nav nav-tabs app-tabs-primary mb-3 flex-wrap">
+          <div className="d-flex flex-wrap align-items-center gap-2 mb-3">
+            <div className="nav kc-segment">
             {['all', 'preview', 'applied', 'rolled_back', 'failed', 'cancelled'].map((item) => (
               <div key={item} className="nav-item"><button
                   className={`nav-link ${status === item ? 'active' : ''}`}
                   onClick={() => { setStatus(item); load(1, item); }}>
-                  {statusLabel(item)} <span className="ms-1 opacity-75">{sellerAiActionCounts[item] || 0}</span>
+                  {statusLabel(item)} <span className="badge">{sellerAiActionCounts[item] || 0}</span>
                 </button></div>
             ))}
-            <form className="ms-auto input-group" style={{ maxWidth: 300 }} onSubmit={(event) => { event.preventDefault(); load(); }}>
-              <span className="input-group-text bg-white"><i className="ti ti-search text-muted"></i></span>
-              <input className="form-control" placeholder="Seller, fayl yoki token..." value={search} onChange={(event) => setSearch(event.target.value)} />
+          </div>
+            <form className="app-form app-icon-form position-relative ms-auto" style={{ width: 'min(300px, 100%)' }} onSubmit={(event) => { event.preventDefault(); load(); }}>
+              <input type="search" className="form-control form-control-sm" placeholder="Seller, fayl yoki token..." value={search} onChange={(event) => setSearch(event.target.value)} />
+              <i className="ti ti-search"></i>
             </form>
           </div>
 

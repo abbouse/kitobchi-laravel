@@ -67,7 +67,7 @@ export function Vakansiyalar() {
                 ['ja', 'Yaponcha'],
               ].map(([locale, label]) => (
                 <div className="col-12" key={locale}>
-                  <div className="card"><div className="card-body bg-light-subtle">
+                  <div className="card"><div className="card-body">
                       <div className="f-w-600 mb-3">{label} tarjima</div>
                       <div className="row g-3">
                         <div className="col-md-6">
@@ -176,15 +176,15 @@ export function KaryeraArizalari() {
         <Modal.Header closeButton><Modal.Title className="f-s-20 f-w-600">{selected?.name}</Modal.Title></Modal.Header>
         <Modal.Body>
           <div className="row g-2">
-            <div className="col-6"><small className="text-muted">Vakansiya</small><div className="f-w-600">{selected?.vacancy}</div></div>
-            <div className="col-6"><small className="text-muted">Status</small><div><span className={`badge ${selected?.status === 'New' ? 'text-light-info' : selected?.status === 'Reviewed' ? 'text-light-warning' : 'text-light-success'}`}>{selected?.status}</span></div></div>
-            <div className="col-12"><small className="text-muted">Email</small><div>{selected?.email}</div></div>
-            <div className="col-12"><small className="text-muted">Telegram</small><div>{selected?.telegram || '—'}</div></div>
-            <div className="col-12"><small className="text-muted">Xabar</small><div>{selected?.message || '—'}</div></div>
+            <div className="col-6"><p className="mb-1 f-s-13 text-secondary">Vakansiya</p><div className="f-w-600">{selected?.vacancy}</div></div>
+            <div className="col-6"><p className="mb-1 f-s-13 text-secondary">Status</p><div><span className={`badge ${selected?.status === 'New' ? 'text-light-info' : selected?.status === 'Reviewed' ? 'text-light-warning' : 'text-light-success'}`}>{selected?.status}</span></div></div>
+            <div className="col-12"><p className="mb-1 f-s-13 text-secondary">Email</p><div>{selected?.email}</div></div>
+            <div className="col-12"><p className="mb-1 f-s-13 text-secondary">Telegram</p><div>{selected?.telegram || '—'}</div></div>
+            <div className="col-12"><p className="mb-1 f-s-13 text-secondary">Xabar</p><div>{selected?.message || '—'}</div></div>
             <div className="col-12 mt-3">
-              <div className="d-flex gap-2">
-                {['new', 'reviewed', 'replied', 'closed'].map(s => (
-                  <button key={s} className={`btn btn-sm ${selected?.status === s ? 'btn-primary' : 'btn-outline-secondary'}`} onClick={() => updateStatus(s)}>{s}</button>
+              <div className="nav kc-segment" role="tablist" aria-label="Ariza holati">
+                {[['new', 'Yangi'], ['reviewed', "Ko'rildi"], ['replied', 'Javob berildi'], ['closed', 'Yopildi']].map(([s, label]) => (
+                  <div className="nav-item" key={s}><button type="button" className={`nav-link ${selected?.status === s ? 'active' : ''}`} onClick={() => updateStatus(s)}>{label}</button></div>
                 ))}
               </div>
             </div>
