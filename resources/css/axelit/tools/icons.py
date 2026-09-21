@@ -58,6 +58,8 @@ WEIGHTS = [('ph', 'regular', 'Phosphor'), ('ph-bold', 'bold', 'Phosphor-Bold'), 
 ALWAYS_PH = {'bold': {0xe9fe, 0xea00, 0xec86, 0xebf8, 0xea37}}
 ph_names = sorted(c for c in classes if c.startswith('ph-') and c not in ('ph-bold', 'ph-fill', 'ph-duotone', 'ph-light', 'ph-thin'))
 for cls, w, fam in WEIGHTS:
+    if cls not in classes and w != 'bold':
+        continue
     pcss = open(f'{NM}/@phosphor-icons/web/src/{w}/style.css').read()
     cps = set(ALWAYS_PH.get(w, set())); rules = []
     for name in ph_names:
