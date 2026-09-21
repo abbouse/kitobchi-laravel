@@ -1,4 +1,5 @@
 import { ChangeEvent, DragEvent, FormEvent, useEffect, useMemo, useState } from 'react';
+import { PageCrumbs } from '../Layout';
 import { router, usePage } from '@inertiajs/react';
 import { Button, Form, Modal } from 'react-bootstrap';
 
@@ -481,7 +482,7 @@ export default function CollectionsPage() {
           {!isGroup ? (
             <button
               type="button"
-              className={`btn btn-sm py-0 ${activeKey === node.key ? 'btn-primary-gradient' : 'btn-light'}`}
+              className={`btn btn-sm py-0 ${activeKey === node.key ? 'btn-primary' : 'btn-light-secondary'}`}
               onClick={() => setActiveKey(node.key)}
               title="Chapdagi qidiruvdan mahsulot shu bo'limga qo'shiladi"
             >
@@ -492,9 +493,9 @@ export default function CollectionsPage() {
             {isGroup ? `${node.children.length} ichki bo'lim` : `${node.items.length} mahsulot`}
           </span>
           <div className="ms-auto d-flex gap-1">
-            <button type="button" className="btn btn-sm btn-light py-0" title="Yuqoriga" onClick={() => moveNode(node.key, -1)}><i className="bi bi-arrow-up"></i></button>
-            <button type="button" className="btn btn-sm btn-light py-0" title="Pastga" onClick={() => moveNode(node.key, 1)}><i className="bi bi-arrow-down"></i></button>
-            <button type="button" className="btn btn-sm btn-light text-danger py-0" title="O'chirish" onClick={() => removeSection(node.key)}><i className="bi bi-trash"></i></button>
+            <button type="button" className="btn btn-sm btn-light-secondary py-0" title="Yuqoriga" onClick={() => moveNode(node.key, -1)}><i className="bi bi-arrow-up"></i></button>
+            <button type="button" className="btn btn-sm btn-light-secondary py-0" title="Pastga" onClick={() => moveNode(node.key, 1)}><i className="bi bi-arrow-down"></i></button>
+            <button type="button" className="btn btn-sm btn-light-secondary text-danger py-0" title="O'chirish" onClick={() => removeSection(node.key)}><i className="bi bi-trash"></i></button>
           </div>
         </div>
         <div className="row g-1 mb-2">
@@ -518,11 +519,11 @@ export default function CollectionsPage() {
                     {item.image ? <img src={item.image} alt="" width={24} height={24} style={{ borderRadius: 4, objectFit: 'cover' }} /> : null}
                     <span className="text-truncate flex-fill">{item.name}</span>
                     <div className="input-group input-group-sm" style={{ width: 96 }}>
-                      <button type="button" className="btn btn-light" onClick={() => updateSectionItem(node.key, index, { quantity: Math.max(1, item.quantity - 1) })}>−</button>
+                      <button type="button" className="btn btn-light-secondary" onClick={() => updateSectionItem(node.key, index, { quantity: Math.max(1, item.quantity - 1) })}>−</button>
                       <span className="form-control text-center bg-white">{item.quantity}</span>
-                      <button type="button" className="btn btn-light" onClick={() => updateSectionItem(node.key, index, { quantity: item.quantity + 1 })}>+</button>
+                      <button type="button" className="btn btn-light-secondary" onClick={() => updateSectionItem(node.key, index, { quantity: item.quantity + 1 })}>+</button>
                     </div>
-                    <button type="button" className="btn btn-sm btn-light text-danger py-0" onClick={() => removeSectionItem(node.key, index)}><i className="bi bi-x-lg"></i></button>
+                    <button type="button" className="btn btn-sm btn-light-secondary text-danger py-0" onClick={() => removeSectionItem(node.key, index)}><i className="bi bi-x-lg"></i></button>
                   </div>
                 ))}
               </div>
@@ -536,7 +537,7 @@ export default function CollectionsPage() {
         {level === 1 ? (
           <div>
             {node.children.map((child) => renderNode(child, 2))}
-            <button type="button" className="btn btn-sm btn-light" onClick={() => addChildSection(node.key)}><i className="bi bi-plus me-1"></i>Ichki bo'lim</button>
+            <button type="button" className="btn btn-sm btn-light-secondary" onClick={() => addChildSection(node.key)}><i className="bi bi-plus me-1"></i>Ichki bo'lim</button>
           </div>
         ) : null}
       </div>
@@ -858,15 +859,15 @@ export default function CollectionsPage() {
 
       <div className="page-head">
         <div>
-          <h1 className="page-title">To'plamlar</h1>
+          <h1 className="page-title">To'plamlar</h1><PageCrumbs />
           <p className="page-subtitle">Banner orqali ochiladigan tayyor kitob va kanselyariya to'plamlari, ularning sahifa dizayni</p>
         </div>
         <div className="d-flex gap-2">
-          <button className="btn btn-light" onClick={() => { setAiError(null); setAiOpen(true); }}>
+          <button className="btn btn-light-secondary" onClick={() => { setAiError(null); setAiOpen(true); }}>
             <i className="bi bi-stars me-1"></i>AI tavsiya
           </button>
           <button
-            className="btn btn-primary-gradient"
+            className="btn btn-primary"
             onClick={() => {
               hydrateForm(null);
               setShowForm(true);
@@ -895,7 +896,7 @@ export default function CollectionsPage() {
               <input className="form-control" type="number" min={2} max={12} placeholder="auto" value={aiSize} onChange={(e) => setAiSize(e.target.value)} />
             </div>
             <div className="col-md-3">
-              <button className="btn btn-primary-gradient w-100" onClick={runAiRecommend} disabled={aiLoading}>
+              <button className="btn btn-primary w-100" onClick={runAiRecommend} disabled={aiLoading}>
                 {aiLoading ? <span className="spinner-border spinner-border-sm" /> : <><i className="bi bi-magic me-1"></i>Tahlil</>}
               </button>
             </div>
@@ -913,7 +914,7 @@ export default function CollectionsPage() {
               </div>
 
               <div className="table-responsive mb-3">
-                <table className="data-table">
+                <table className="table table-bottom-border align-middle data-table">
                   <thead><tr><th></th><th>Kitob</th><th>Narx</th><th>Talab (sot/savat/ko'r)</th></tr></thead>
                   <tbody>
                     {aiResult.books.map((b) => (
@@ -956,7 +957,7 @@ export default function CollectionsPage() {
           ) : null}
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="light" onClick={() => setAiOpen(false)}>Yopish</Button>
+          <Button variant="light-secondary" onClick={() => setAiOpen(false)}>Yopish</Button>
           <Button variant="success" disabled={!aiResult} onClick={applyAiRecommendation}><i className="bi bi-check2 me-1"></i>Qabul qilish va tahrirlash</Button>
         </Modal.Footer>
       </Modal>
@@ -1008,7 +1009,7 @@ export default function CollectionsPage() {
                 <button
                   key={value}
                   type="button"
-                  className={`btn btn-sm ${statusFilter === value ? 'btn-primary-gradient' : 'btn-light'}`}
+                  className={`kc-tab ${statusFilter === value ? 'active' : ''}`}
                   onClick={() => setStatusFilter(value)}
                 >
                   {label}
@@ -1070,7 +1071,7 @@ export default function CollectionsPage() {
                 ) : null}
 
                 <div className="table-responsive mb-3" style={{ maxHeight: 220, overflowY: 'auto' }}>
-                  <table className="data-table">
+                  <table className="table table-bottom-border align-middle data-table">
                     <thead>
                       <tr>
                         <th>Mahsulot</th>
@@ -1108,16 +1109,16 @@ export default function CollectionsPage() {
                 </div>
 
                 <div className="d-flex gap-2">
-                  <button className="btn btn-sm btn-light flex-fill" onClick={() => { hydrateForm(collection); setShowForm(true); }}>
+                  <button className="btn btn-sm btn-light-secondary flex-fill" onClick={() => { hydrateForm(collection); setShowForm(true); }}>
                     <i className="bi bi-pencil me-1"></i>Tahrirlash
                   </button>
-                  <button className="btn btn-sm btn-light" title="Nusxa olish" onClick={() => duplicate(collection)}>
+                  <button className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22" title="Nusxa olish" onClick={() => duplicate(collection)}>
                     <i className="bi bi-files"></i>
                   </button>
-                  <button className="btn btn-sm btn-light" title={collection.isActive ? 'Yashirish' : 'Faollashtirish'} onClick={() => toggle(collection)}>
+                  <button className="btn btn-sm btn-light-secondary" title={collection.isActive ? 'Yashirish' : 'Faollashtirish'} onClick={() => toggle(collection)}>
                     <i className={`bi ${collection.isActive ? 'bi-eye-slash' : 'bi-eye'}`}></i>
                   </button>
-                  <button className="btn btn-sm btn-light text-danger" title="O'chirish" onClick={() => destroy(collection)}>
+                  <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" title="O'chirish" onClick={() => destroy(collection)}>
                     <i className="bi bi-trash"></i>
                   </button>
                 </div>
@@ -1192,7 +1193,7 @@ export default function CollectionsPage() {
                           <button
                             key={locale}
                             type="button"
-                            className="btn btn-sm btn-light"
+                            className="btn btn-sm btn-light-secondary"
                             disabled={translatingLocales.length > 0}
                             onClick={() => translateFromUz([locale])}
                           >
@@ -1201,7 +1202,7 @@ export default function CollectionsPage() {
                         ))}
                         <button
                           type="button"
-                          className="btn btn-sm btn-primary-gradient"
+                          className="btn btn-sm btn-primary"
                           disabled={translatingLocales.length > 0}
                           onClick={() => translateFromUz(['ru', 'en', 'ja'])}
                         >
@@ -1300,14 +1301,14 @@ export default function CollectionsPage() {
                   <div className="btn-group w-100 mb-2" role="group">
                     <button
                       type="button"
-                      className={`btn btn-sm ${searchType === 'book' ? 'btn-primary-gradient' : 'btn-light'}`}
+                      className={`kc-tab ${searchType === 'book' ? 'active' : ''}`}
                       onClick={() => { setSearchType('book'); setSearchResults([]); }}
                     >
                       <i className="bi bi-book me-1"></i>Kitob
                     </button>
                     <button
                       type="button"
-                      className={`btn btn-sm ${searchType === 'stationery' ? 'btn-primary-gradient' : 'btn-light'}`}
+                      className={`kc-tab ${searchType === 'stationery' ? 'active' : ''}`}
                       onClick={() => { setSearchType('stationery'); setSearchResults([]); }}
                     >
                       <i className="bi bi-pencil me-1"></i>Kanselyariya
@@ -1327,7 +1328,7 @@ export default function CollectionsPage() {
                       {activeKey === 'root' && sections.length > 0 ? "Bo'lim tanlang!" : findNodeName(activeKey)}
                     </span>
                     {activeKey !== 'root' && sections.length === 0 ? (
-                      <button type="button" className="btn btn-sm btn-light py-0" onClick={() => setActiveKey('root')}>To'plamga (umumiy)</button>
+                      <button type="button" className="btn btn-sm btn-light-secondary py-0" onClick={() => setActiveKey('root')}>To'plamga (umumiy)</button>
                     ) : null}
                   </div>
 
@@ -1338,7 +1339,7 @@ export default function CollectionsPage() {
                       <button
                         type="button"
                         key={itemKey(product.productType, product.id)}
-                        className="btn btn-light w-100 text-start mb-2 d-flex align-items-center gap-2"
+                        className="btn btn-light-secondary w-100 text-start mb-2 d-flex align-items-center gap-2"
                         onClick={() => addProduct(product)}
                       >
                         {product.image ? (
@@ -1402,7 +1403,7 @@ export default function CollectionsPage() {
                               </div>
                             </div>
                           </div>
-                          <button type="button" className="btn btn-sm btn-light text-danger" onClick={() => removeItem(index)}>
+                          <button type="button" className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => removeItem(index)}>
                             <i className="bi bi-trash"></i>
                           </button>
                         </div>
@@ -1410,7 +1411,7 @@ export default function CollectionsPage() {
                           <div className="col-6">
                             <Form.Label className="small text-muted mb-1">Soni</Form.Label>
                             <div className="input-group input-group-sm">
-                              <button type="button" className="btn btn-light" onClick={() => updateItem(index, { quantity: Math.max(1, item.quantity - 1) })}>−</button>
+                              <button type="button" className="btn btn-light-secondary" onClick={() => updateItem(index, { quantity: Math.max(1, item.quantity - 1) })}>−</button>
                               <Form.Control
                                 type="number"
                                 min={1}
@@ -1418,7 +1419,7 @@ export default function CollectionsPage() {
                                 value={item.quantity}
                                 onChange={(event) => updateItem(index, { quantity: Math.max(1, Number(event.target.value || 1)) })}
                               />
-                              <button type="button" className="btn btn-light" onClick={() => updateItem(index, { quantity: item.quantity + 1 })}>+</button>
+                              <button type="button" className="btn btn-light-secondary" onClick={() => updateItem(index, { quantity: item.quantity + 1 })}>+</button>
                             </div>
                           </div>
                           <div className="col-6">
@@ -1433,7 +1434,7 @@ export default function CollectionsPage() {
                   <div className="mt-3">
                     <div className="d-flex justify-content-between align-items-center mb-1">
                       <div className="fw-semibold small"><i className="bi bi-diagram-3 me-1"></i>Bo'limlar (ixtiyoriy)</div>
-                      <button type="button" className="btn btn-sm btn-light" onClick={addSection}><i className="bi bi-plus-lg me-1"></i>Bo'lim</button>
+                      <button type="button" className="btn btn-sm btn-light-secondary" onClick={addSection}><i className="bi bi-plus-lg me-1"></i>Bo'lim</button>
                     </div>
                     <div className="small text-muted mb-2">Bo'lim qo'shsangiz to'plam sinf/tur bo'yicha bo'linadi (har biriga 4 tilda nom + alohida narx). Bo'lim ichida ichki bo'lim bo'lsa — u <b>guruh</b>ga aylanadi (mahsulot faqat ichki bo'limlarga). Bo'lim qo'shmasangiz oddiy to'plam bo'lib qoladi.</div>
                     {sections.length > 0 ? (() => {
@@ -1467,8 +1468,8 @@ export default function CollectionsPage() {
             </div>
           </Modal.Body>
           <Modal.Footer>
-            <Button variant="light" onClick={() => { setShowForm(false); resetForm(); }}>Bekor qilish</Button>
-            <Button type="submit" className="btn-primary-gradient border-0" disabled={!hasAnyProduct}>Saqlash</Button>
+            <Button variant="light-secondary" onClick={() => { setShowForm(false); resetForm(); }}>Bekor qilish</Button>
+            <Button type="submit" className="btn-primary border-0" disabled={!hasAnyProduct}>Saqlash</Button>
           </Modal.Footer>
         </Form>
       </Modal>

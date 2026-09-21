@@ -1,96 +1,137 @@
 import { useEffect, useState } from 'react';
 import { router } from '@inertiajs/react';
+import { applyTheme } from '../Layout';
 
+/**
+ * Kirish sahifasi — Axelit "sign_in" sahifasining tuzilmasi:
+ * lavanda fon, markazda oq konteyner; chapda brend bloki, o'ngda shakl.
+ */
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(true);
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof window === 'undefined') return false;
-    return localStorage.getItem('boshqaruv-theme') === 'dark';
+    try { return localStorage.getItem('boshqaruv-theme') === 'dark'; } catch { return false; }
   });
 
-  useEffect(() => {
-    document.body.classList.toggle('boshqaruv-dark', darkMode);
-    document.documentElement.setAttribute('data-bs-theme', darkMode ? 'dark' : 'light');
-    localStorage.setItem('boshqaruv-theme', darkMode ? 'dark' : 'light');
-  }, [darkMode]);
+  useEffect(() => { applyTheme(darkMode); }, [darkMode]);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     router.post('/boshqaruv/login', { email, password, remember });
   };
 
+  const points = [
+    { icon: 'bi-shield-check', tone: 'primary', title: 'Audit', text: 'Har bir kirish qayd etiladi' },
+    { icon: 'bi-person-lock', tone: 'success', title: 'Ruxsat', text: 'Faqat tasdiqlangan adminlar' },
+    { icon: 'bi-clock-history', tone: 'danger', title: 'Sessiya', text: 'Faollik muntazam tekshiriladi' },
+  ];
+
   return (
-    <div className="login-wrap">
-      <div className="login-left">
-        <div className="login-brand-block">
-          <img src="/images/logo/logo_white.png" alt="Kitobchi" className="login-brand-logo" />
-          <span>Ichki boshqaruv muhiti</span>
-          <h1>Ruxsatli xodimlar uchun kirish</h1>
-          <p>
-            Bu sahifa faqat Kitobchi administratsiyasi uchun. Kirishlar nazorat qilinadi va sessiya xavfsizligi tekshiriladi.
-          </p>
-        </div>
-        <div className="login-security-grid">
-          {[
-            { icon: 'bi-shield-check', title: 'Audit', text: 'Har bir kirish qayd etiladi' },
-            { icon: 'bi-person-lock', title: 'Ruxsat', text: 'Faqat tasdiqlangan adminlar' },
-            { icon: 'bi-clock-history', title: 'Sessiya', text: 'Faollik muntazam tekshiriladi' },
-          ].map((s) => (
-            <div className="login-security-card" key={s.title}>
-              <i className={`bi ${s.icon}`}></i>
-              <strong>{s.title}</strong>
-              <span>{s.text}</span>
-            </div>
-          ))}
-        </div>
-      </div>
+    <div className="sign-in-bg">
+      <div className="app-wrapper d-block">
+        <div className="main-container">
+          <div className="container">
+            <div className="row sign-in-content-bg">
+              <div className="col-lg-6 image-contentbox d-none d-lg-block">
+                <div className="form-container">
+                  <div className="signup-content mt-4">
+                    <div className="kc-login-brand">
+                      <img src="/favicon.svg" alt="" width={52} height={52} />
+                      <strong>Kitobchi</strong>
+                    </div>
+                  </div>
+                  <div className="kc-login-points">
+                    {points.map((p) => (
+                      <div className="kc-login-point" key={p.title}>
+                        <span className={`h-45 w-45 d-flex-center b-r-50 text-light-${p.tone} flex-shrink-0 f-s-20`}><i className={`bi ${p.icon}`}></i></span>
+                        <div>
+                          <h6>{p.title}</h6>
+                          <p>{p.text}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-center text-secondary f-s-13 mb-0">© {new Date().getFullYear()} Kitobchi. Ichki foydalanish uchun.</p>
+                </div>
+              </div>
 
-      <div className="login-right">
-        <div className="login-card">
-          <div className="login-card-top">
-            <img src={darkMode ? '/images/logo/logo_white.png' : '/images/logo/logo_blue.png'} alt="Kitobchi" className="login-card-logo" />
-            <button type="button" className="login-theme-btn" onClick={() => setDarkMode((value) => !value)} aria-label={darkMode ? 'Light mode' : 'Dark mode'}>
-              <i className={`bi ${darkMode ? 'bi-sun' : 'bi-moon'}`}></i>
-            </button>
-          </div>
-
-          <h2>Kirish</h2>
-          <p className="login-muted">Hisob ma'lumotlaringizni kiriting.</p>
-
-          <form onSubmit={submit}>
-            <div className="mb-3">
-              <label className="form-label fw-semibold small">Email manzil</label>
-              <div className="input-group">
-                <span className="input-group-text bg-white"><i className="bi bi-envelope text-muted"></i></span>
-                <input type="email" className="form-control" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              <div className="col-lg-6 form-contentbox">
+                <button
+                  type="button"
+                  className="btn btn-light-secondary icon-btn w-35 h-35 b-r-22 kc-login-theme"
+                  onClick={() => setDarkMode((value) => !value)}
+                  aria-label={darkMode ? "Yorug' rejim" : "Qorong'i rejim"}
+                  title={darkMode ? "Yorug' rejim" : "Qorong'i rejim"}
+                >
+                  <i className={`${darkMode ? 'iconoir-sun-light' : 'iconoir-half-moon'} f-s-18`}></i>
+                </button>
+                <div className="form-container">
+                  <form className="app-form" onSubmit={submit}>
+                    <div className="row">
+                      <div className="col-12">
+                        <div className="mb-5 text-center text-lg-start">
+                          <div className="kc-login-brand justify-content-center justify-content-lg-start d-lg-none mb-4">
+                            <img src="/favicon.svg" alt="" width={44} height={44} />
+                            <strong>Kitobchi</strong>
+                          </div>
+                          <h2 className="text-primary f-w-600">Boshqaruvga xush kelibsiz!</h2>
+                          <p>Ruxsatli xodimlar uchun kirish. Hisob ma'lumotlaringizni kiriting.</p>
+                        </div>
+                      </div>
+                      <div className="col-12">
+                        <div className="mb-3">
+                          <label htmlFor="login-email" className="form-label">Email manzil</label>
+                          <input
+                            id="login-email"
+                            type="email"
+                            className="form-control"
+                            placeholder="admin@kitobchi.uz"
+                            autoComplete="username"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
+                          />
+                        </div>
+                      </div>
+                      <div className="col-12">
+                        <div className="mb-3">
+                          <label htmlFor="login-password" className="form-label">Parol</label>
+                          <a href="#" className="link-primary float-end" onClick={(e) => e.preventDefault()}>Parolni unutdingizmi?</a>
+                          <input
+                            id="login-password"
+                            type="password"
+                            className="form-control"
+                            placeholder="Parolingizni kiriting"
+                            autoComplete="current-password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                          />
+                        </div>
+                      </div>
+                      <div className="col-12">
+                        <div className="form-check mb-3">
+                          <input className="form-check-input" type="checkbox" id="remember" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
+                          <label className="form-check-label text-secondary" htmlFor="remember">Eslab qolish</label>
+                        </div>
+                      </div>
+                      <div className="col-12">
+                        <div className="mb-3">
+                          <button type="submit" className="btn btn-primary w-100">Kirish</button>
+                        </div>
+                      </div>
+                      <div className="col-12">
+                        <div className="text-center text-lg-start text-secondary">
+                          Ruxsatsiz kirish taqiqlanadi. Har bir urinish qayd etiladi.
+                        </div>
+                      </div>
+                    </div>
+                  </form>
+                </div>
               </div>
             </div>
-            <div className="mb-3">
-              <label className="form-label fw-semibold small">Parol</label>
-              <div className="input-group">
-                <span className="input-group-text bg-white"><i className="bi bi-lock text-muted"></i></span>
-                <input type="password" className="form-control" value={password} onChange={(e) => setPassword(e.target.value)} required />
-              </div>
-            </div>
-            <div className="d-flex justify-content-between align-items-center mb-4">
-              <div className="form-check">
-                <input type="checkbox" className="form-check-input" id="remember" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
-                <label className="form-check-label small" htmlFor="remember">Eslab qolish</label>
-              </div>
-              <a href="#" className="small text-decoration-none" style={{ color: 'var(--kc-ink)', fontWeight: 600 }}>Parolni unutdingizmi?</a>
-            </div>
-            <button type="submit" className="btn btn-primary-gradient w-100 py-2 mb-3">
-              <i className="bi bi-box-arrow-in-right me-2"></i>Kirish
-            </button>
-            <div className="text-center">
-              <small className="text-muted">Ruxsatsiz kirish taqiqlanadi.</small>
-            </div>
-          </form>
-
-          <div className="mt-4 pt-4 border-top text-center">
-            <small className="text-muted">© 2026 Kitobchi. Ichki foydalanish uchun.</small>
           </div>
         </div>
       </div>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { PageCrumbs } from '../Layout';
 import type { FormEvent, ReactNode } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Modal, Button } from 'react-bootstrap';
@@ -144,7 +145,7 @@ export default function Books() {
     <div>
       <div className="page-head">
         <div>
-          <h1 className="page-title">Kitoblar katalogi</h1>
+          <h1 className="page-title">Kitoblar katalogi</h1><PageCrumbs />
           <p className="page-subtitle">Moderatsiya, faol va rad etilgan kitoblarni boshqarish</p>
         </div>
         <form className="d-flex gap-2" onSubmit={(event) => { event.preventDefault(); loadBooks(1); }}>
@@ -201,7 +202,7 @@ export default function Books() {
         </div>
 
         <div className="table-responsive">
-          <table className="data-table">
+          <table className="table table-bottom-border align-middle data-table">
             <thead>
               <tr>
                 <th></th>
@@ -242,16 +243,16 @@ export default function Books() {
                     <td><span className={`chip ${chip}`}>{label}</span></td>
                     <td>
                       <div className="d-flex gap-1">
-                        <button className="btn btn-sm btn-light" onClick={() => handleOpenView(book)} title="Ko'rish / tahrirlash">
+                        <button className="btn btn-light-primary icon-btn w-30 h-30 b-r-22" onClick={() => handleOpenView(book)} title="Ko'rish / tahrirlash">
                           <i className="bi bi-eye"></i>
                         </button>
                         {book.moderateUrl && book.status !== 1 ? (
-                          <button className="btn btn-sm btn-light text-success" onClick={() => handleModerate(book, 1)} title="Tasdiqlash">
+                          <button className="btn btn-light-success icon-btn w-30 h-30 b-r-22" onClick={() => handleModerate(book, 1)} title="Tasdiqlash">
                             <i className="bi bi-check-lg"></i>
                           </button>
                         ) : null}
                         {book.moderateUrl && book.status !== 2 ? (
-                          <button className="btn btn-sm btn-light text-danger" onClick={() => setRejectTarget(book)} title="Rad etish">
+                          <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => setRejectTarget(book)} title="Rad etish">
                             <i className="bi bi-x-lg"></i>
                           </button>
                         ) : null}
@@ -419,7 +420,7 @@ export default function Books() {
                       <ImageGalleryEditor key={selectedBook.id} images={selectedBook.rawImages || selectedBook.images || []} />
                     </div>
                     <div className="col-12"><label className="form-label small text-muted">Tavsif</label><textarea name="description" className="form-control" rows={4} defaultValue={selectedBook.description || ''} /></div>
-                    <div className="col-12"><button className="btn btn-primary-gradient">Saqlash</button></div>
+                    <div className="col-12"><button className="btn btn-primary">Saqlash</button></div>
                   </form>
                 </div>
               </div>
@@ -431,10 +432,10 @@ export default function Books() {
             <>
               <Button variant="outline-danger" onClick={() => setRejectTarget(selectedBook)}>Rad etish</Button>
               <Button variant="outline-secondary" onClick={() => handleModerate(selectedBook, 0)}>Moderatsiyaga</Button>
-              <Button variant="primary" className="btn-primary-gradient" onClick={() => handleModerate(selectedBook, 1)}>Tasdiqlash</Button>
+              <Button variant="primary" className="btn-primary" onClick={() => handleModerate(selectedBook, 1)}>Tasdiqlash</Button>
             </>
           ) : null}
-          <Button variant="light" onClick={() => setShowView(false)}>Yopish</Button>
+          <Button variant="light-secondary" onClick={() => setShowView(false)}>Yopish</Button>
         </Modal.Footer>
       </Modal>
     </div>
@@ -457,7 +458,7 @@ function MiniOrdersTable({ rows, empty }: { rows: MiniOrder[]; empty: string }) 
 
   return (
     <div className="table-responsive">
-      <table className="data-table compact-table">
+      <table className="table table-bottom-border align-middle data-table compact-table">
         <thead>
           <tr>
             <th>ID</th>
@@ -480,7 +481,7 @@ function MiniOrdersTable({ rows, empty }: { rows: MiniOrder[]; empty: string }) 
               <td><span className="chip chip-gray">{row.status || '—'}</span></td>
               <td className="text-muted">{row.date || '—'}</td>
               <td className="text-end">
-                {row.url ? <a className="btn btn-sm btn-light" href={row.url} title="Buyurtmani ochish"><i className="bi bi-eye"></i></a> : null}
+                {row.url ? <a className="btn btn-light-primary icon-btn w-30 h-30 b-r-22" href={row.url} title="Buyurtmani ochish"><i className="bi bi-eye"></i></a> : null}
               </td>
             </tr>
           ))}

@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useState } from 'react';
+import { PageCrumbs } from '../Layout';
 import { Link, router, usePage } from '@inertiajs/react';
 import {
   Seller, fmt, localDateTimeInput, sellerActivityOptions,
@@ -52,7 +53,7 @@ export default function SellerEdit() {
 
       <div className="page-head">
         <div>
-          <h1 className="page-title">Sellerni tahrirlash</h1>
+          <h1 className="page-title">Sellerni tahrirlash</h1><PageCrumbs />
           <p className="page-subtitle">{seller.name} · ID #{seller.id}</p>
         </div>
       </div>
@@ -282,8 +283,8 @@ export default function SellerEdit() {
       <div className="edit-save-bar">
         <div className="text-muted small d-none d-md-block">{seller.name} ma'lumotlarini tahrirlamoqdasiz</div>
         <div className="d-flex gap-2 ms-auto">
-          <Link href={detailUrl} className="btn btn-light">Bekor qilish</Link>
-          <button type="submit" className="btn btn-primary-gradient border-0" disabled={saving}>
+          <Link href={detailUrl} className="btn btn-light-secondary">Bekor qilish</Link>
+          <button type="submit" className="btn btn-primary border-0" disabled={saving}>
             {saving ? <><span className="spinner-border spinner-border-sm me-2"></span>Saqlanmoqda...</> : <><i className="bi bi-check2-circle me-1"></i>Saqlash</>}
           </button>
         </div>

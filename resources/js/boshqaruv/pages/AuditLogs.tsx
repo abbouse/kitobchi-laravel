@@ -1,4 +1,5 @@
 import { toneOf } from '../utils/tone';
+import { PageCrumbs } from '../Layout';
 import { useState } from 'react';
 import { Modal } from 'react-bootstrap';
 import { router, usePage } from '@inertiajs/react';
@@ -44,7 +45,7 @@ export default function AuditLogs() {
     <div>
       <div className="page-head">
         <div>
-          <h1 className="page-title">Audit log</h1>
+          <h1 className="page-title">Audit log</h1><PageCrumbs />
           <p className="page-subtitle">Adminlar bajargan POST, PUT, PATCH va DELETE amallari.</p>
         </div>
       </div>
@@ -67,7 +68,7 @@ export default function AuditLogs() {
           <span className="chip chip-gray">{auditLogPagination.total} ta</span>
         </div>
         <div className="table-responsive">
-          <table className="data-table">
+          <table className="table table-bottom-border align-middle data-table">
             <thead><tr><th>ID</th><th>Admin</th><th>Method</th><th>Action</th><th>Target</th><th>Path</th><th>Status</th><th>Sana</th><th></th></tr></thead>
             <tbody>
               {auditLogs.map((log) => (
@@ -80,7 +81,7 @@ export default function AuditLogs() {
                   <td className="text-muted small">{log.path}</td>
                   <td><span className={`chip ${(log.statusCode || 0) >= 400 ? 'chip-danger' : 'chip-success'}`}>{log.statusCode || '—'}</span></td>
                   <td className="text-muted small">{log.date || '—'}</td>
-                  <td><button className="btn btn-sm btn-light" onClick={() => setSelected(log)}><i className="bi bi-eye"></i></button></td>
+                  <td><button className="btn btn-light-primary icon-btn w-30 h-30 b-r-22" onClick={() => setSelected(log)}><i className="bi bi-eye"></i></button></td>
                 </tr>
               ))}
             </tbody>

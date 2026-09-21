@@ -1,4 +1,5 @@
 import { router, usePage } from '@inertiajs/react';
+import { PageCrumbs } from '../Layout';
 import PaginationControls from '../components/PaginationControls';
 
 const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(Math.round(n || 0));
@@ -62,14 +63,14 @@ export default function CommissionAudit() {
     <div>
       <div className="page-head">
         <div>
-          <h1 className="page-title">Komissiya audit</h1>
+          <h1 className="page-title">Komissiya audit</h1><PageCrumbs />
           <p className="page-subtitle">{isCourier ? 'Kuryer payout, km formula, bonus va withdrawal komissiyasi real tranzaksiyalar bilan solishtiriladi.' : 'Seller-specific va global komissiya qoidalari real tranzaksiyalar bilan solishtiriladi.'}</p>
         </div>
       </div>
 
       <div className="btn-group mb-3">
-        <button className={`btn btn-sm ${owner === 'seller' ? 'btn-primary-gradient' : 'btn-light'}`} onClick={() => goOwner('seller')}>Seller audit</button>
-        <button className={`btn btn-sm ${owner === 'courier' ? 'btn-primary-gradient' : 'btn-light'}`} onClick={() => goOwner('courier')}>Kuryer audit</button>
+        <button className={`kc-tab ${owner === 'seller' ? 'active' : ''}`} onClick={() => goOwner('seller')}>Seller audit</button>
+        <button className={`kc-tab ${owner === 'courier' ? 'active' : ''}`} onClick={() => goOwner('courier')}>Kuryer audit</button>
       </div>
 
       <div className="kpi-strip row g-3 mb-3">
@@ -104,7 +105,7 @@ export default function CommissionAudit() {
           <span className="chip chip-gray">{commissionAuditPagination.total} ta</span>
         </div>
         <div className="table-responsive">
-          <table className="data-table">
+          <table className="table table-bottom-border align-middle data-table">
             <thead><tr><th>ID</th><th>{isCourier ? 'Kuryer' : 'Seller'}</th><th>Order</th><th>Summa</th><th>Balansga</th><th>Qoida</th><th>Amalda</th><th>Kutilgan</th><th>Farq</th><th>Status</th></tr></thead>
             <tbody>
               {commissionAuditRows.map((row) => (

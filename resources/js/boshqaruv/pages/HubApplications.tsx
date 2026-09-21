@@ -1,4 +1,5 @@
 import { router, usePage } from '@inertiajs/react';
+import { PageCrumbs } from '../Layout';
 
 type HubApplication = {
   id: number;
@@ -57,7 +58,7 @@ export default function HubApplications() {
     <div>
       <div className="page-head">
         <div>
-          <h1 className="page-title">Hub arizalari</h1>
+          <h1 className="page-title">Hub arizalari</h1><PageCrumbs />
           <p className="page-subtitle">
             Jami {hubApplications.length} ta ariza{newCount > 0 ? ` · ${newCount} ta yangi` : ''}
           </p>
@@ -66,7 +67,7 @@ export default function HubApplications() {
 
       <div className="card-panel">
         <div className="table-responsive">
-          <table className="data-table">
+          <table className="table table-bottom-border align-middle data-table">
             <thead>
               <tr>
                 <th>#</th>
@@ -107,7 +108,7 @@ export default function HubApplications() {
                   </td>
                   <td className="text-muted small">{app.date}</td>
                   <td>
-                    <button className="btn btn-sm btn-light text-danger" onClick={() => destroy(app)}>
+                    <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => destroy(app)}>
                       <i className="bi bi-trash"></i>
                     </button>
                   </td>

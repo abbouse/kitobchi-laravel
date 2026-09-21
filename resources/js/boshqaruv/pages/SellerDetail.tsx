@@ -105,12 +105,12 @@ export default function SellerDetail() {
             </div>
           </div>
           <div className="d-flex flex-wrap gap-2 align-self-start">
-            <Link href={seller.actions?.editUrl || '#'} className="btn btn-sm btn-primary-gradient border-0"><i className="bi bi-pencil-square me-1"></i>Tahrirlash</Link>
+            <Link href={seller.actions?.editUrl || '#'} className="btn btn-sm btn-primary border-0"><i className="bi bi-pencil-square me-1"></i>Tahrirlash</Link>
             {seller.status !== 'approved' ? <button type="button" className="btn btn-sm btn-outline-success" onClick={() => runPatch(seller.actions?.approveUrl, 'Seller tasdiqlansinmi?')}><i className="bi bi-check2-circle me-1"></i>Tasdiqlash</button> : null}
             {seller.status !== 'rejected' ? <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => runPatch(seller.actions?.rejectUrl, 'Seller bekor qilinsinmi?')}><i className="bi bi-x-circle me-1"></i>Bekor qilish</button> : null}
             {seller.status === 'blocked' ? <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => runPatch(seller.actions?.unblockUrl, 'Seller blokdan chiqarilsinmi?', { message: 'Admin tomonidan blokdan chiqarildi.' })}><i className="bi bi-unlock me-1"></i>Blokdan chiqarish</button> : null}
             <button type="button" className="btn btn-sm btn-outline-warning" onClick={warnSeller}><i className="bi bi-exclamation-triangle me-1"></i>Ogohlantirish</button>
-            <button type="button" className="btn btn-sm btn-light" onClick={resetPassword}><i className="bi bi-key me-1"></i>Parol reset</button>
+            <button type="button" className="btn btn-sm btn-light-secondary" onClick={resetPassword}><i className="bi bi-key me-1"></i>Parol reset</button>
           </div>
         </div>
         <div className="row g-3 mt-1">
@@ -227,7 +227,7 @@ function OverviewTab({ seller, onSeeOrders }: { seller: DetailProps; onSeeOrders
         empty="Buyurtma yo'q"
         items={(seller.recentOrders || []).slice(0, 6)}
         render={(item) => <><strong>#{item.id} · {fmt(Number(item.amount || 0))} so'm</strong><span>{String(item.customer || 'Mijoz')} · {String(item.date || '—')}</span></>}
-        action={<button type="button" className="btn btn-sm btn-light" onClick={onSeeOrders}>Barchasi</button>}
+        action={<button type="button" className="btn btn-sm btn-light-secondary" onClick={onSeeOrders}>Barchasi</button>}
       />
       <ListBlock
         title={`Ogohlantirishlar (${seller.warningCount || 0}/3)`}
@@ -250,8 +250,8 @@ function BranchesTab({ seller, pagination, onPage, onRotateQr }: { seller: Detai
           <div className="small text-muted text-break mt-1">Token: {String(seller.qr?.token || '—')}</div>
           <div className="small text-muted mt-1">Yangilangan: {String(seller.qr?.rotatedAt || '—')}</div>
           <div className="d-flex gap-2 justify-content-center mt-3 flex-wrap">
-            {seller.qr?.imageUrl ? <a className="btn btn-sm btn-light" href={String(seller.qr.imageUrl)} target="_blank" rel="noreferrer">Ochish</a> : null}
-            {seller.qr?.imageUrl ? <a className="btn btn-sm btn-light" href={String(seller.qr.imageUrl)} download={`kitobchi-seller-${seller.id}-qr.png`}>Yuklab olish</a> : null}
+            {seller.qr?.imageUrl ? <a className="btn btn-sm btn-light-secondary" href={String(seller.qr.imageUrl)} target="_blank" rel="noreferrer">Ochish</a> : null}
+            {seller.qr?.imageUrl ? <a className="btn btn-sm btn-light-secondary" href={String(seller.qr.imageUrl)} download={`kitobchi-seller-${seller.id}-qr.png`}>Yuklab olish</a> : null}
             <button type="button" className="btn btn-sm btn-outline-primary" onClick={onRotateQr}><i className="bi bi-arrow-clockwise me-1"></i>Yangilash</button>
           </div>
         </div>
@@ -273,7 +273,7 @@ function BranchesTab({ seller, pagination, onPage, onRotateQr }: { seller: Detai
                     <div className="small text-muted text-break mt-2">URL: {String(item.qrUrl || '—')}</div>
                     <MapButtons mapLinks={(item.mapLinks || {}) as Record<string, string>} />
                     <div className="d-flex gap-2 flex-wrap mt-2">
-                      {item.qrImageUrl ? <a href={String(item.qrImageUrl)} className="btn btn-sm btn-light" target="_blank" rel="noreferrer">QR ochish</a> : null}
+                      {item.qrImageUrl ? <a href={String(item.qrImageUrl)} className="btn btn-sm btn-light-secondary" target="_blank" rel="noreferrer">QR ochish</a> : null}
                       {item.rotateUrl ? <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => confirm("Eski filial QR ishlamay qoladi. Yangilansinmi?") && router.post(String(item.rotateUrl), {}, { preserveScroll: true })}>QR yangilash</button> : null}
                     </div>
                   </div>
@@ -303,7 +303,7 @@ function ContractTab({ seller, pagination, onPage }: { seller: DetailProps; pagi
           <form onSubmit={(event) => { event.preventDefault(); if (seller.actions?.extendContractUrl) router.patch(seller.actions.extendContractUrl, Object.fromEntries(new FormData(event.currentTarget)) as Record<string, string>, { preserveScroll: true }); }} className="row g-2">
             <div className="col-4"><select name="months" className="form-select form-select-sm" defaultValue="12"><option value="3">3 oy</option><option value="6">6 oy</option><option value="12">12 oy</option><option value="24">24 oy</option></select></div>
             <div className="col-8"><input name="notes" className="form-control form-control-sm" placeholder="Izoh" /></div>
-            <div className="col-12"><button type="submit" className="btn btn-sm btn-primary-gradient border-0">Uzaytirish</button></div>
+            <div className="col-12"><button type="submit" className="btn btn-sm btn-primary border-0">Uzaytirish</button></div>
           </form>
         </div>
       </div>
@@ -311,7 +311,7 @@ function ContractTab({ seller, pagination, onPage }: { seller: DetailProps; pagi
         <div className="detail-panel">
           <h6 className="fw-bold mb-3">Shartnoma tarixi</h6>
           <div className="table-responsive">
-            <table className="data-table">
+            <table className="table table-bottom-border align-middle data-table">
               <thead><tr><th>Amal</th><th>Raqam</th><th>Eski → Yangi</th><th>Kim tomonidan</th><th>Izoh</th><th>Sana</th></tr></thead>
               <tbody>
                 {(seller.contractHistory || []).map((item) => (
@@ -367,7 +367,7 @@ function DocumentsTab({ seller, pagination, onPage, onUpload }: { seller: Detail
         </div>
         <div className="col-md-4"><input type="file" name="file" className="form-control form-control-sm" accept=".pdf,image/*" required /></div>
         <div className="col-md-3"><input name="description" className="form-control form-control-sm" placeholder="Izoh" /></div>
-        <div className="col-md-2"><button type="submit" className="btn btn-sm btn-primary-gradient border-0 w-100">Yuklash</button></div>
+        <div className="col-md-2"><button type="submit" className="btn btn-sm btn-primary border-0 w-100">Yuklash</button></div>
       </form>
       <div className="d-grid gap-2">
         {(seller.documents || []).map((item) => (
@@ -379,8 +379,8 @@ function DocumentsTab({ seller, pagination, onPage, onUpload }: { seller: Detail
               {item.description ? <div className="small text-muted">{String(item.description)}</div> : null}
             </div>
             <div className="d-flex gap-2 flex-shrink-0">
-              {item.url ? <a href={String(item.url)} target="_blank" rel="noreferrer" className="btn btn-sm btn-light">Ko'rish</a> : null}
-              {item.deleteUrl ? <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => confirm("Hujjat o'chirilsinmi?") && router.delete(String(item.deleteUrl), { preserveScroll: true })}><i className="bi bi-trash"></i></button> : null}
+              {item.url ? <a href={String(item.url)} target="_blank" rel="noreferrer" className="btn btn-sm btn-light-secondary">Ko'rish</a> : null}
+              {item.deleteUrl ? <button type="button" className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => confirm("Hujjat o'chirilsinmi?") && router.delete(String(item.deleteUrl), { preserveScroll: true })}><i className="bi bi-trash"></i></button> : null}
             </div>
           </div>
         ))}
@@ -453,7 +453,7 @@ function StaffTab({ seller }: { seller: DetailProps }) {
         <>
           {data.staff.length ? (
             <div className="table-responsive mb-3">
-              <table className="data-table">
+              <table className="table table-bottom-border align-middle data-table">
                 <thead><tr><th>Hodim</th><th>Rol</th><th>Filial</th><th>Holat</th><th>Amallar</th></tr></thead>
                 <tbody>
                   {data.staff.map((member) => {
@@ -471,10 +471,10 @@ function StaffTab({ seller }: { seller: DetailProps }) {
                         <td className="text-muted" style={{ maxWidth: 180 }}>{member.location || '—'}</td>
                         <td><span className={`chip ${active ? 'chip-success' : 'chip-gray'}`}>{active ? 'Faol' : 'Nofaol'}</span></td>
                         <td>
-                          <button className="btn btn-sm btn-light me-1" title="Parolni yangilash (SMS bilan boradi)" onClick={() => resetStaffPassword(member)}>
+                          <button className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22 me-1" title="Parolni yangilash (SMS bilan boradi)" onClick={() => resetStaffPassword(member)}>
                             <i className="bi bi-key"></i>
                           </button>
-                          <button className="btn btn-sm btn-light" title={active ? 'Deaktivatsiya' : 'Faollashtirish'} onClick={() => toggleStaff(member)}>
+                          <button className="btn btn-sm btn-light-secondary" title={active ? 'Deaktivatsiya' : 'Faollashtirish'} onClick={() => toggleStaff(member)}>
                             <i className={`bi ${active ? 'bi-pause-circle text-warning' : 'bi-play-circle text-success'}`}></i>
                           </button>
                         </td>
@@ -514,12 +514,12 @@ function StaffTab({ seller }: { seller: DetailProps }) {
                 ) : null}
               </div>
               <div className="d-flex gap-2 mt-3">
-                <button className="btn btn-sm btn-primary-gradient border-0" type="submit">Qo&apos;shish (parol SMS bilan boradi)</button>
-                <button className="btn btn-sm btn-light" type="button" onClick={() => setShowAdd(false)}>Bekor</button>
+                <button className="btn btn-sm btn-primary border-0" type="submit">Qo&apos;shish (parol SMS bilan boradi)</button>
+                <button className="btn btn-sm btn-light-secondary" type="button" onClick={() => setShowAdd(false)}>Bekor</button>
               </div>
             </form>
           ) : (
-            <button className="btn btn-sm btn-primary-gradient border-0" type="button" onClick={() => setShowAdd(true)} disabled={data.locations.length === 0}>
+            <button className="btn btn-sm btn-primary border-0" type="button" onClick={() => setShowAdd(true)} disabled={data.locations.length === 0}>
               <i className="bi bi-person-plus me-1"></i>Hodim qo&apos;shish
             </button>
           )}
@@ -542,7 +542,7 @@ function OrdersTab({ orders, pagination, statuses, onPage, onPatch }: {
   return (
     <div className="detail-panel">
       <div className="table-responsive">
-        <table className="data-table">
+        <table className="table table-bottom-border align-middle data-table">
           <thead><tr><th></th><th>ID</th><th>Mijoz</th><th>Summa</th><th>Mahsulot</th><th>Holat</th><th>Sana</th></tr></thead>
           <tbody>
             {orders.map((order) => (
@@ -601,7 +601,7 @@ function TransactionsTab({ transactions, pagination, onPage }: { transactions: A
   return (
     <div className="detail-panel">
       <div className="table-responsive">
-        <table className="data-table">
+        <table className="table table-bottom-border align-middle data-table">
           <thead><tr><th>Sana</th><th>Tur</th><th>Summa</th><th>Komissiya</th><th>Net</th><th>Holat</th></tr></thead>
           <tbody>
             {transactions.map((item) => (

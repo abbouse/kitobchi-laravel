@@ -1,4 +1,5 @@
 import { FormEvent, InputHTMLAttributes, useMemo, useState } from 'react';
+import { PageCrumbs } from '../Layout';
 import { router, usePage } from '@inertiajs/react';
 import { Modal, Button } from 'react-bootstrap';
 import { LeafletMapPicker, LeafletMapView } from '../components/LeafletMap';
@@ -255,7 +256,7 @@ function HubForm({ hub, action, onDone }: { hub?: Hub | null; action?: string; o
         </div>
       </div>
       <div className="text-end mt-4">
-        <button className="btn btn-primary-gradient"><i className="bi bi-check2 me-1"></i>{hub ? 'Saqlash' : "Qo'shish"}</button>
+        <button className="btn btn-primary"><i className="bi bi-check2 me-1"></i>{hub ? 'Saqlash' : "Qo'shish"}</button>
       </div>
     </form>
   );
@@ -305,7 +306,7 @@ function StaffForm({ staff, hubs, roles, permissions, action, onDone }: {
         ) : null}
       </div>
       <div className="text-end mt-4">
-        <button className="btn btn-primary-gradient"><i className="bi bi-check2 me-1"></i>{staff ? 'Saqlash' : "Xodim qo'shish"}</button>
+        <button className="btn btn-primary"><i className="bi bi-check2 me-1"></i>{staff ? 'Saqlash' : "Xodim qo'shish"}</button>
       </div>
     </form>
   );
@@ -348,10 +349,10 @@ export default function Hubs() {
     <div>
       <div className="page-head">
         <div>
-          <h1 className="page-title">Hub Fulfillment</h1>
+          <h1 className="page-title">Hub Fulfillment</h1><PageCrumbs />
           <p className="page-subtitle">Fulfillment markazlari, xodimlar, rollar va kuryer vazifalari</p>
         </div>
-        <button className="btn btn-primary-gradient" onClick={() => setEditingHub(null)}><i className="bi bi-plus-circle me-1"></i>Hub qo'shish</button>
+        <button className="btn btn-primary" onClick={() => setEditingHub(null)}><i className="bi bi-plus-circle me-1"></i>Hub qo'shish</button>
       </div>
 
       <div className="kpi-strip row g-3 mb-4">
@@ -488,9 +489,9 @@ export default function Hubs() {
               </div>
 
               <div className="d-flex gap-2 mt-auto">
-                <button className="btn btn-sm btn-light flex-fill" onClick={() => setSelectedHub(hub)}><i className="bi bi-eye"></i> Batafsil</button>
-                <button className="btn btn-sm btn-light" onClick={() => setEditingHub(hub)}><i className="bi bi-pencil"></i></button>
-                <button className="btn btn-sm btn-light text-danger" onClick={() => destroy(hub.destroyUrl, `${hub.name} hub o'chirilsinmi?`)}><i className="bi bi-trash"></i></button>
+                <button className="btn btn-sm btn-light-secondary flex-fill" onClick={() => setSelectedHub(hub)}><i className="bi bi-eye"></i> Batafsil</button>
+                <button className="btn btn-light-success icon-btn w-30 h-30 b-r-22" onClick={() => setEditingHub(hub)}><i className="bi bi-pencil"></i></button>
+                <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => destroy(hub.destroyUrl, `${hub.name} hub o'chirilsinmi?`)}><i className="bi bi-trash"></i></button>
               </div>
             </div>
           </div>
@@ -505,10 +506,10 @@ export default function Hubs() {
                 <div className="panel-title">Hub xodimlari</div>
                 <small className="text-muted">A122 dagi rollar va permission katalogi asosida</small>
               </div>
-              <button className="btn btn-sm btn-primary-gradient" onClick={() => setEditingStaff(null)}><i className="bi bi-person-plus me-1"></i>Xodim</button>
+              <button className="btn btn-sm btn-primary" onClick={() => setEditingStaff(null)}><i className="bi bi-person-plus me-1"></i>Xodim</button>
             </div>
             <div className="table-responsive">
-              <table className="data-table">
+              <table className="table table-bottom-border align-middle data-table">
                 <thead><tr><th>Xodim</th><th>Hub</th><th>Rol</th><th>Ruxsat</th><th>Oxirgi aktivlik</th><th>Holat</th><th></th></tr></thead>
                 <tbody>
                   {hubStaff.map((staff) => (
@@ -520,9 +521,9 @@ export default function Hubs() {
                       <td className="text-muted">{staff.lastSeenAt || '—'}</td>
                       <td><span className={`chip ${staff.active ? 'chip-success' : 'chip-gray'}`}>{staff.active ? 'Faol' : 'Nofaol'}</span></td>
                       <td className="text-end">
-                        <button className="btn btn-sm btn-light me-1" onClick={() => setEditingStaff(staff)}><i className="bi bi-pencil"></i></button>
-                        <button className="btn btn-sm btn-light me-1" onClick={() => toggle(staff.toggleUrl)}><i className="bi bi-power"></i></button>
-                        <button className="btn btn-sm btn-light" onClick={() => resetPassword(staff)}><i className="bi bi-key"></i></button>
+                        <button className="btn btn-light-success icon-btn w-30 h-30 b-r-22 me-1" onClick={() => setEditingStaff(staff)}><i className="bi bi-pencil"></i></button>
+                        <button className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22 me-1" onClick={() => toggle(staff.toggleUrl)}><i className="bi bi-power"></i></button>
+                        <button className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22" onClick={() => resetPassword(staff)}><i className="bi bi-key"></i></button>
                       </td>
                     </tr>
                   ))}
@@ -569,7 +570,7 @@ export default function Hubs() {
           <span className="chip chip-info">{totalCourierTasks} ta kuryer vazifasi</span>
         </div>
         <div className="table-responsive">
-          <table className="data-table">
+          <table className="table table-bottom-border align-middle data-table">
             <thead><tr><th>Hub</th><th>Kod</th><th>Hudud</th><th className="num">Xodim</th><th className="num">Fulfillment</th><th className="num">Kuryer task</th><th>Qo'llab-quvvatlaydi</th><th>Amallar</th></tr></thead>
             <tbody>
               {hubs.map((hub) => (
@@ -586,8 +587,8 @@ export default function Hubs() {
                     </span>
                   </td>
                   <td>
-                    <button className="btn btn-sm btn-light me-1" onClick={() => setSelectedHub(hub)}><i className="bi bi-eye"></i></button>
-                    <button className="btn btn-sm btn-light" onClick={() => setEditingHub(hub)}><i className="bi bi-pencil"></i></button>
+                    <button className="btn btn-light-primary icon-btn w-30 h-30 b-r-22 me-1" onClick={() => setSelectedHub(hub)}><i className="bi bi-eye"></i></button>
+                    <button className="btn btn-light-success icon-btn w-30 h-30 b-r-22" onClick={() => setEditingHub(hub)}><i className="bi bi-pencil"></i></button>
                   </td>
                 </tr>
               ))}
@@ -623,7 +624,7 @@ export default function Hubs() {
           </div>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="light" onClick={() => setSelectedHub(null)}>Yopish</Button>
+          <Button variant="light-secondary" onClick={() => setSelectedHub(null)}>Yopish</Button>
           {selectedHub ? <Button variant="primary" onClick={() => { setEditingHub(selectedHub); setSelectedHub(null); }}>Tahrirlash</Button> : null}
         </Modal.Footer>
       </Modal>

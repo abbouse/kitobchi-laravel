@@ -42,19 +42,20 @@ export type Palette = Record<PaletteKey, string>;
 
 /** SSR va birinchi render uchun zaxira qiymatlar (yorug' mavzu). */
 const FALLBACK: Palette = {
-  ink: '#6A4FE3', text: '#15264B', soft: '#5E5C65', muted: '#6B6A78',
+  ink: '#8C76F0', text: '#15264B', soft: 'rgba(40, 38, 50, .75)', muted: '#646464',
   line: '#E0DFD6', grid: '#E0DFD6', surface: '#FFFFFF', page: '#F6F6F6',
-  ok: '#147834', warn: '#6B6010', danger: '#B8089A', info: '#2E5EE7', neutral: '#5A4C55',
-  indigo: '#8C76F0', violet: '#B3A5F7', dviolet: '#3C2A9E', navy: '#2E5EE7',
-  steel: '#6C8FEF', teal: '#1C8C8C', green: '#1E8A43', dgreen: '#0E5A27',
-  amber: '#CDD13A', orange: '#E39A3B', plum: '#F00AC8', red: '#D91BAE', dred: '#7A1480',
+  ok: '#147834', warn: '#63591D', danger: '#F00AC8', info: '#2E5EE7', neutral: '#646464',
+  indigo: '#8C76F0', violet: 'rgba(140, 118, 240, .45)', dviolet: '#241187', navy: '#2E5EE7',
+  steel: 'rgba(46, 94, 231, .45)', teal: '#083C80', green: '#147834', dgreen: 'rgba(20, 120, 52, .5)',
+  amber: '#D7DC41', orange: '#63591D', plum: '#F00AC8', red: 'rgba(240, 10, 200, .45)', dred: '#660F6A',
 };
 
 export function readPalette(scope?: Element | null): Palette {
   if (typeof window === 'undefined' || typeof getComputedStyle !== 'function') {
     return { ...FALLBACK };
   }
-  const styles = getComputedStyle(scope || document.documentElement);
+  // Tokenlar body'da qayta hisoblanadi (qorong'i rejim body.dark da yoqiladi)
+  const styles = getComputedStyle(scope || document.body || document.documentElement);
   const out = {} as Palette;
   (Object.keys(TOKENS) as PaletteKey[]).forEach((key) => {
     const value = styles.getPropertyValue(TOKENS[key]).trim();

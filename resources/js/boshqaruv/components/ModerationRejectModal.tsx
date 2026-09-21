@@ -50,7 +50,7 @@ export default function ModerationRejectModal({
         <div className="form-text">Bo'sh qoldirilsa, standart sabab ko'rsatiladi.</div>
       </Modal.Body>
       <Modal.Footer>
-        <Button variant="light" onClick={handleHide}>Bekor qilish</Button>
+        <Button variant="light-secondary" onClick={handleHide}>Bekor qilish</Button>
         <Button variant="danger" onClick={handleConfirm}>Rad etish</Button>
       </Modal.Footer>
     </Modal>

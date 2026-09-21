@@ -1,4 +1,5 @@
 import { toneOf } from '../utils/tone';
+import { PageCrumbs } from '../Layout';
 import { useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Modal, Button } from 'react-bootstrap';
@@ -117,7 +118,7 @@ export default function Transaksiyalar() {
     <div>
       <div className="page-head">
         <div>
-          <h1 className="page-title">Tranzaksiyalar</h1>
+          <h1 className="page-title">Tranzaksiyalar</h1><PageCrumbs />
           <p className="page-subtitle">Sotuvchi va kuryer to'lovlari, jarimalar, buyurtma daromadlari va yechib olish so'rovlari</p>
         </div>
       </div>
@@ -127,7 +128,7 @@ export default function Transaksiyalar() {
           {[
             ['seller', 'Sotuvchilar'],
             ['courier', 'Kuryerlar'],
-          ].map(([key, label]) => <button key={key} className={`btn btn-sm ${owner === key ? 'btn-primary-gradient' : 'btn-light'}`} onClick={() => { setOwner(key); router.get('/boshqaruv/transactions', { transaction_owner: key, transactions_page: 1 }, { preserveState: true, preserveScroll: true, replace: true }); }}>{label}</button>)}
+          ].map(([key, label]) => <button key={key} className={`kc-tab ${owner === key ? 'active' : ''}`} onClick={() => { setOwner(key); router.get('/boshqaruv/transactions', { transaction_owner: key, transactions_page: 1 }, { preserveState: true, preserveScroll: true, replace: true }); }}>{label}</button>)}
         </div>
         <input className="form-control form-control-sm" style={{ maxWidth: 360 }} value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && go({ transactions_page: 1 })} placeholder={`${ownerLabel}, telefon, order ID yoki summa`} />
       </div>
@@ -161,7 +162,7 @@ export default function Transaksiyalar() {
           <span className="chip chip-warning">{totals.pending} ta kutilmoqda</span>
         </div>
         <div className="table-responsive">
-          <table className="data-table">
+          <table className="table table-bottom-border align-middle data-table">
             <thead><tr><th>ID</th><th>{ownerLabel}</th><th>Turi</th><th>Summa</th><th>Yakuniy</th><th>Usul</th><th>Buyurtma</th><th>Sana</th><th>Holat</th><th>Amallar</th></tr></thead>
             <tbody>
               {transactions.map((item) => (
@@ -176,7 +177,7 @@ export default function Transaksiyalar() {
                   <td className="text-muted">{item.date || '—'}</td>
                   <td><span className={`st ${toneOf(statusChip(item.status))}`}><i></i>{item.status || '—'}</span></td>
                   <td>
-                    <button className="btn btn-sm btn-light me-1" onClick={() => setSelected(item)}><i className="bi bi-eye"></i></button>
+                    <button className="btn btn-light-primary icon-btn w-30 h-30 b-r-22 me-1" onClick={() => setSelected(item)}><i className="bi bi-eye"></i></button>
                     {statusChip(item.status) === 'chip-warning' && item.approveUrl ? (
                       <button className="btn btn-sm btn-success me-1" onClick={() => patch(item.approveUrl, 'Tranzaksiya tasdiqlansinmi?')}><i className="bi bi-check-lg"></i></button>
                     ) : null}
@@ -237,7 +238,7 @@ export default function Transaksiyalar() {
                             <small className="text-muted d-block mb-1">To‘lov izohi</small>
                             <strong>{selected?.contract?.paymentPurpose || selected?.note || 'Shartnoma raqami kiritilmagan'}</strong>
                           </div>
-                          <button type="button" className="btn btn-sm btn-light border" onClick={() => copy(selected?.contract?.paymentPurpose || selected?.note)}>
+                          <button type="button" className="btn btn-sm btn-light-secondary border" onClick={() => copy(selected?.contract?.paymentPurpose || selected?.note)}>
                             <i className="bi bi-copy"></i>
                           </button>
                         </div>
@@ -270,7 +271,7 @@ export default function Transaksiyalar() {
                   <div className="col-md-3 col-6"><small className="text-muted d-block">Yakuniy</small><strong>{fmt(selected?.breakdown?.net || selected?.netAmount || selected?.amount || 0)} so'm</strong></div>
                 </div>
                 <div className="table-responsive">
-                  <table className="data-table small">
+                  <table className="table table-bottom-border align-middle data-table small">
                     <thead><tr><th>Buyurtma</th><th>Ichki buyurtma</th><th>Mahsulot</th><th>Umumiy/Asosiy</th><th>Komissiya/Bonus</th><th>Yakuniy</th></tr></thead>
                     <tbody>
                       {(selected?.breakdown?.rows || []).slice(0, 8).map((row, index) => (
@@ -304,7 +305,7 @@ export default function Transaksiyalar() {
           ) : null}
           {statusChip(selected?.status) === 'chip-warning' && selected?.approveUrl ? <Button variant="outline-secondary" onClick={() => patch(selected.approveUrl, 'Tranzaksiya tasdiqlansinmi?')}>Tasdiqlash</Button> : null}
           {statusChip(selected?.status) === 'chip-warning' && selected?.rejectUrl ? <Button variant="outline-secondary" onClick={() => patch(selected.rejectUrl, 'Tranzaksiya rad etilsinmi?')}>Rad etish</Button> : null}
-          <Button variant="light" onClick={() => setSelected(null)}>Yopish</Button>
+          <Button variant="light-secondary" onClick={() => setSelected(null)}>Yopish</Button>
         </Modal.Footer>
       </Modal>
     </div>

@@ -1,4 +1,5 @@
 import { toneOf } from '../utils/tone';
+import { PageCrumbs } from '../Layout';
 import { FormEvent, useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import PaginationControls from '../components/PaginationControls';
@@ -99,7 +100,7 @@ export default function Fiscalization() {
       <header className="fiscal-header">
         <div className="fiscal-header__copy">
           <span className="fiscal-eyebrow"><i className="bi bi-shield-check"></i> Paylov OFD nazorati</span>
-          <h1 className="page-title">Fiskalizatsiya</h1>
+          <h1 className="page-title">Fiskalizatsiya</h1><PageCrumbs />
           <p className="page-subtitle">Cheklar, katalog kodlari va integratsiya xatolari yagona nazorat markazida.</p>
         </div>
         <button className="fiscal-retry-btn" disabled={Boolean(busy) || !retryPendingUrl} onClick={() => post(retryPendingUrl, 'batch', { limit: 100 })}>
@@ -201,7 +202,7 @@ export default function Fiscalization() {
         </div>
 
         <div className="fiscal-table-wrap">
-          <table className="data-table fiscal-table">
+          <table className="table table-bottom-border align-middle data-table fiscal-table">
             <thead><tr><th>Order</th><th>Mijoz</th><th>Summa</th><th>Holat</th><th>Urinish</th><th>Paylov / xato</th><th>Sana</th><th>Amallar</th></tr></thead>
             <tbody>
               {fiscalTransactions.map((row) => (

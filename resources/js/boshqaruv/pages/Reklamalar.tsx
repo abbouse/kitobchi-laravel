@@ -1,4 +1,5 @@
 import { toneOf } from '../utils/tone';
+import { PageCrumbs } from '../Layout';
 import { useMemo, useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Modal, Button } from 'react-bootstrap';
@@ -51,7 +52,7 @@ export default function Reklamalar() {
     <div>
       <div className="page-head">
         <div>
-          <h1 className="page-title">Reklamalar</h1>
+          <h1 className="page-title">Reklamalar</h1><PageCrumbs />
           <p className="page-subtitle">Seller reklamalari, moderatsiya va to'lov holati</p>
         </div>
       </div>
@@ -100,8 +101,8 @@ export default function Reklamalar() {
               </div>
 
               <div className="d-flex gap-2 mt-auto">
-                <button className="btn btn-sm btn-light flex-fill" onClick={() => setSelected(ad)}><i className="bi bi-eye"></i></button>
-                <button className="btn btn-sm btn-light text-danger" onClick={() => destroy(ad)}><i className="bi bi-trash"></i></button>
+                <button className="btn btn-sm btn-light-secondary flex-fill" onClick={() => setSelected(ad)}><i className="bi bi-eye"></i></button>
+                <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => destroy(ad)}><i className="bi bi-trash"></i></button>
               </div>
             </div>
           </div>
@@ -121,7 +122,7 @@ export default function Reklamalar() {
         <Modal.Footer>
           {selected?.moderateUrl ? <Button variant="outline-secondary" onClick={() => moderate(selected, 'approved')}>Tasdiqlash</Button> : null}
           {selected?.moderateUrl ? <Button variant="outline-secondary" onClick={() => moderate(selected, 'rejected')}>Rad etish</Button> : null}
-          <Button variant="light" onClick={() => setSelected(null)}>Yopish</Button>
+          <Button variant="light-secondary" onClick={() => setSelected(null)}>Yopish</Button>
         </Modal.Footer>
       </Modal>
     </div>

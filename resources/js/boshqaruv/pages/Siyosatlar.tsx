@@ -1,4 +1,5 @@
 import { router, usePage } from '@inertiajs/react';
+import { PageCrumbs } from '../Layout';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { Button, Form, Modal } from 'react-bootstrap';
 import { splitPolicyPreset } from './policyPresets';
@@ -275,10 +276,10 @@ export default function Siyosatlar() {
     <div>
       <div className="page-head">
         <div>
-          <h1 className="page-title">Siyosatlar va qoidalar</h1>
+          <h1 className="page-title">Siyosatlar va qoidalar</h1><PageCrumbs />
           <p className="page-subtitle">Legal sahifalar va appda ko‘rinadigan siyosatlarni boshqarish</p>
         </div>
-        <button className="btn btn-primary-gradient" onClick={openCreate}>
+        <button className="btn btn-primary" onClick={openCreate}>
           <i className="bi bi-plus-lg me-1"></i>Siyosat qo‘shish
         </button>
       </div>
@@ -331,7 +332,7 @@ export default function Siyosatlar() {
             </Form.Select>
           </div>
           <div className="col-lg-3">
-            <button type="button" className="btn btn-light w-100" onClick={() => { setQuery(''); setStatusFilter('all'); }}>
+            <button type="button" className="btn btn-light-secondary w-100" onClick={() => { setQuery(''); setStatusFilter('all'); }}>
               Filterlarni tozalash
             </button>
           </div>
@@ -340,7 +341,7 @@ export default function Siyosatlar() {
 
       <div className="card-panel">
         <div className="table-responsive">
-          <table className="data-table">
+          <table className="table table-bottom-border align-middle data-table">
             <thead>
               <tr>
                 <th>ID</th>
@@ -404,15 +405,15 @@ export default function Siyosatlar() {
                     </td>
                     <td>
                       <div className="d-flex gap-1">
-                        <button className="btn btn-sm btn-light" onClick={() => openEdit(policy)}>
+                        <button className="btn btn-light-success icon-btn w-30 h-30 b-r-22" onClick={() => openEdit(policy)}>
                           <i className="bi bi-pencil"></i>
                         </button>
                         {policy.publicUrl ? (
-                          <a className="btn btn-sm btn-light" href={policy.publicUrl} target="_blank" rel="noreferrer">
+                          <a className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22" href={policy.publicUrl} target="_blank" rel="noreferrer">
                             <i className="bi bi-box-arrow-up-right"></i>
                           </a>
                         ) : null}
-                        <button className="btn btn-sm btn-light text-danger" onClick={() => destroy(policy)}>
+                        <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => destroy(policy)}>
                           <i className="bi bi-trash"></i>
                         </button>
                       </div>
@@ -462,12 +463,12 @@ export default function Siyosatlar() {
                       </button>
                       <button
                         type="button"
-                        className="btn btn-sm btn-light"
+                        className="btn btn-sm btn-light-secondary"
                         onClick={() => setForm((prev) => ({ ...prev, slug: slugify(prev.slug || prev.title) }))}
                       >
                         Slug yaratish
                       </button>
-                      <button type="button" className="btn btn-sm btn-light" onClick={resetForm}>
+                      <button type="button" className="btn btn-sm btn-light-secondary" onClick={resetForm}>
                         Tozalash
                       </button>
                     </div>
@@ -524,7 +525,7 @@ export default function Siyosatlar() {
                     </div>
                     <div className="col-md-3 d-flex align-items-end">
                       {editing?.publicUrl ? (
-                        <a href={editing.publicUrl} target="_blank" rel="noreferrer" className="btn btn-light w-100">
+                        <a href={editing.publicUrl} target="_blank" rel="noreferrer" className="btn btn-light-secondary w-100">
                           Ochiq sahifa
                         </a>
                       ) : (
@@ -561,7 +562,7 @@ export default function Siyosatlar() {
                         <button
                           key={locale}
                           type="button"
-                          className={`btn ${activeLocale === locale ? 'btn-dark' : 'btn-light'}`}
+                          className={`kc-tab ${activeLocale === locale ? 'active' : ''}`}
                           onClick={() => setActiveLocale(locale)}
                         >
                           {localeLabels[locale]}
@@ -629,10 +630,10 @@ export default function Siyosatlar() {
             </div>
           </Modal.Body>
           <Modal.Footer>
-            <Button variant="light" onClick={closeModal}>
+            <Button variant="light-secondary" onClick={closeModal}>
               Bekor qilish
             </Button>
-            <Button type="submit" className="btn-primary-gradient border-0">
+            <Button type="submit" className="btn-primary border-0">
               Saqlash
             </Button>
           </Modal.Footer>

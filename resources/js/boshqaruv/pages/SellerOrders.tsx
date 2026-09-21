@@ -1,4 +1,5 @@
 import { toneOf } from '../utils/tone';
+import { PageCrumbs } from '../Layout';
 import { useMemo, useState } from 'react';
 import { Link, router, usePage } from '@inertiajs/react';
 import { Modal, Button } from 'react-bootstrap';
@@ -96,7 +97,7 @@ export default function SellerOrders() {
     <div>
       <div className="page-head">
         <div>
-          <h1 className="page-title">Sellerlar</h1>
+          <h1 className="page-title">Sellerlar</h1><PageCrumbs />
           <p className="page-subtitle">Seller moderatsiyasi, shartnoma, ogohlantirishlar va seller buyurtmalari</p>
         </div>
       </div>
@@ -140,7 +141,7 @@ export default function SellerOrders() {
           ))}
         </div>
         <div className="table-responsive">
-          <table className="data-table">
+          <table className="table table-bottom-border align-middle data-table">
             <thead><tr><th>ID</th><th>Do'kon</th><th>Tel</th><th>Viloyat</th><th className="right">Karma</th><th className="right">Mahsulot</th><th className="right">Buyurtma</th><th className="right">Ogohlantirish</th><th>Holat</th><th>Amallar</th></tr></thead>
             <tbody>
               {sellers.map((seller) => (
@@ -167,12 +168,12 @@ export default function SellerOrders() {
                   <td><span className={`st ${toneOf(sellerChip(seller.status))}`}><i></i>{sellerLabel(seller.status)}</span></td>
                   <td>
                     <div className="d-flex align-items-center gap-1">
-                      <Link href={seller.actions?.detailUrl || '#'} className="btn btn-sm btn-light" title="Ko'rish"><i className="bi bi-eye"></i></Link>
-                      <Link href={seller.actions?.editUrl || '#'} className="btn btn-sm btn-light" title="Tahrirlash"><i className="bi bi-pencil-square"></i></Link>
+                      <Link href={seller.actions?.detailUrl || '#'} className="btn btn-light-primary icon-btn w-30 h-30 b-r-22" title="Ko'rish"><i className="bi bi-eye"></i></Link>
+                      <Link href={seller.actions?.editUrl || '#'} className="btn btn-light-success icon-btn w-30 h-30 b-r-22" title="Tahrirlash"><i className="bi bi-pencil-square"></i></Link>
                       <div className="dropdown">
                         <button
                           type="button"
-                          className="btn btn-sm btn-light"
+                          className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22"
                           title="Boshqa amallar"
                           data-bs-toggle="dropdown"
                           aria-expanded="false"
@@ -222,7 +223,7 @@ export default function SellerOrders() {
           ))}
         </div>
         <div className="table-responsive">
-          <table className="data-table">
+          <table className="table table-bottom-border align-middle data-table">
             <thead><tr><th>ID</th><th>Seller</th><th>Mijoz</th><th className="right">Summa</th><th className="right">Mahsulot</th><th>Holat</th><th className="right">Sana</th><th></th></tr></thead>
             <tbody>
               {sellerOrders.map((order) => (
@@ -240,9 +241,9 @@ export default function SellerOrders() {
                   <td className="text-muted">{order.date || order.acceptedAt || '—'}</td>
                   <td>
                     <div className="d-flex align-items-center gap-1">
-                      <button className="btn btn-sm btn-light" onClick={() => setSelectedOrder(order)} title="Ko'rish"><i className="bi bi-eye"></i></button>
+                      <button className="btn btn-light-primary icon-btn w-30 h-30 b-r-22" onClick={() => setSelectedOrder(order)} title="Ko'rish"><i className="bi bi-eye"></i></button>
                       {isSuperAdmin && order.canReassign ? (
-                        <button className="btn btn-sm btn-light" onClick={() => setReassignOrder(order)} title="Do'konni almashtirish"><i className="bi bi-arrow-left-right"></i></button>
+                        <button className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22" onClick={() => setReassignOrder(order)} title="Do'konni almashtirish"><i className="bi bi-arrow-left-right"></i></button>
                       ) : null}
                     </div>
                   </td>
@@ -309,7 +310,7 @@ function OrderModal({ order, statuses, onHide, onPatch }: {
             {Object.entries(statuses).map(([value, meta]) => <option key={value} value={value}>{meta.label}</option>)}
           </select>
         ) : null}
-        <Button variant="light" onClick={onHide}>Yopish</Button>
+        <Button variant="light-secondary" onClick={onHide}>Yopish</Button>
       </Modal.Footer>
     </Modal>
   );

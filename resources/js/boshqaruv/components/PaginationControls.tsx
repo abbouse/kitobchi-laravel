@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 
 export function useClientPagination<T>(items: T[], perPage = 24) {
   const [page, setPage] = useState(1);
@@ -40,29 +40,35 @@ export default function PaginationControls({
 
   return (
     <div className="pagination-bar">
-      <div className="text-muted small">{from}-{to} / {total}</div>
-      <div className="pagination-buttons">
-        <button className="btn btn-sm btn-light" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>
-          <i className="bi bi-chevron-left"></i>
-        </button>
+      <p className="mb-0 f-s-15 f-w-500 txt-ellipsis-1 pagination-info">{from}-{to} / {total}</p>
+      {/* Axelit: "pagination app-pagination" */}
+      <ul className="pagination app-pagination justify-content-end">
+        <li className={`page-item ${page <= 1 ? 'disabled' : ''}`}>
+          <button type="button" className="page-link" disabled={page <= 1} onClick={() => onPageChange(page - 1)} aria-label="Oldingi sahifa">
+            <i className="ti ti-chevron-left"></i>
+          </button>
+        </li>
         {pages.map((item, index) => {
           const prev = pages[index - 1];
           return (
-            <span key={item} className="d-inline-flex align-items-center gap-1">
-              {prev && item - prev > 1 ? <span className="text-muted px-1">...</span> : null}
-              <button
-                className={`btn btn-sm ${item === page ? 'btn-primary-gradient' : 'btn-light'}`}
-                onClick={() => onPageChange(item)}
-              >
-                {item}
-              </button>
-            </span>
+            <Fragment key={item}>
+              {prev && item - prev > 1 ? (
+                <li className="page-item disabled gap"><span className="page-link">…</span></li>
+              ) : null}
+              <li className={`page-item ${item === page ? 'active' : ''}`}>
+                <button type="button" className="page-link" onClick={() => onPageChange(item)} aria-current={item === page ? 'page' : undefined}>
+                  {item}
+                </button>
+              </li>
+            </Fragment>
           );
         })}
-        <button className="btn btn-sm btn-light" disabled={page >= totalPages} onClick={() => onPageChange(page + 1)}>
-          <i className="bi bi-chevron-right"></i>
-        </button>
-      </div>
+        <li className={`page-item ${page >= totalPages ? 'disabled' : ''}`}>
+          <button type="button" className="page-link" disabled={page >= totalPages} onClick={() => onPageChange(page + 1)} aria-label="Keyingi sahifa">
+            <i className="ti ti-chevron-right"></i>
+          </button>
+        </li>
+      </ul>
     </div>
   );
 }

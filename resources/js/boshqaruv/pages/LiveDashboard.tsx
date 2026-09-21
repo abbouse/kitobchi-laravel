@@ -1,8 +1,9 @@
-import { toneOf } from '../utils/tone';
 import { useEffect, useMemo, useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import InfoHint from '../components/InfoHint';
+import { usePalette } from '../utils/palette';
+import { applyTheme } from '../Layout';
 
 const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(Math.round(n || 0));
 
@@ -113,13 +114,18 @@ const emptySnapshot: Snapshot = {
   delivery_split: [],
 };
 
-const statusClass = (status?: string) => {
+// Holat → Axelit rang nomi (badge text-light-*)
+const statusTone = (status?: string) => {
   const value = String(status || '').toLowerCase();
-  if (value.includes('qabul') || value.includes('yetib') || value.includes('delivered') || value === 'customer_received' || value === 'c' || value === 'd') return 'chip-success';
-  if (value.includes("yo'l") || value.includes('delivery') || value === 'b') return 'chip-info';
-  if (value.includes('bekor') || value.includes('qayt') || value.includes('cancel') || value === 'returned' || value === 'f' || value === 'r') return 'chip-danger';
-  return 'chip-warning';
+  if (value.includes('qabul') || value.includes('yetib') || value.includes('delivered') || value === 'customer_received' || value === 'c' || value === 'd') return 'success';
+  if (value.includes("yo'l") || value.includes('delivery') || value === 'b') return 'info';
+  if (value.includes('bekor') || value.includes('qayt') || value.includes('cancel') || value === 'returned' || value === 'f' || value === 'r') return 'danger';
+  return 'warning';
 };
+
+// Axelit ro'yxatlaridagi rang navbati
+const TONES = ['primary', 'success', 'info', 'warning', 'danger', 'secondary'] as const;
+const toneAt = (index: number) => TONES[index % TONES.length];
 
 const liveKpiHelps: Record<string, string> = {
   'Jami daromad': "Mijoz qabul qilgan va to'lovi tasdiqlangan barcha savdolar summasi. Bu yalpi tushum, sof foyda emas.",
@@ -153,6 +159,13 @@ export default function LiveDashboard() {
   const [speed, setSpeed] = useState(5000);
   const [clock, setClock] = useState(new Date());
   const [lastError, setLastError] = useState<string | null>(null);
+  const [darkMode, setDarkMode] = useState(() => {
+    try { return localStorage.getItem('boshqaruv-theme') === 'dark'; } catch { return false; }
+  });
+  const palette = usePalette();
+
+  useEffect(() => { applyTheme(darkMode); }, [darkMode]);
+  useEffect(() => { document.title = 'Live Dashboard — Kitobchi Boshqaruv'; }, []);
 
   const endpoint = liveEndpoint || snapshot.endpoint || '/boshqaruv/live/data';
   const mainActive = (snapshot.main_counts.new || 0) + (snapshot.main_counts.packing || 0) + (snapshot.main_counts.onway || 0);
@@ -205,320 +218,419 @@ export default function LiveDashboard() {
     else document.documentElement.requestFullscreen();
   };
 
+  const k = snapshot.kpis;
+  // Axelit dashboard vidjetlari ritmi: katak-fon / primary-300 / danger-300 / yashil / info-300 / warning-300
+  const kpis = [
+    { l: 'Jami daromad', v: fmt(k.total_revenue), u: "so'm", icon: 'bi-cash-stack', tone: 'grid' },
+    { l: 'Bugungi daromad', v: fmt(k.today_revenue), u: "so'm", icon: 'bi-calendar2-day', tone: 'violet' },
+    { l: 'Oylik daromad', v: fmt(k.month_revenue), u: "so'm", icon: 'bi-calendar3', tone: 'pink' },
+    { l: 'Platform signal', v: fmt(netSignal), u: "so'm", icon: 'bi-graph-up-arrow', tone: 'green' },
+    { l: 'Jami order', v: fmt(k.total_orders), u: 'ta', icon: 'bi-bag-check', tone: 'info' },
+    { l: 'Bugungi order', v: fmt(k.today_orders), u: 'ta', icon: 'bi-lightning-charge', tone: 'warning' },
+    { l: 'Aktiv order', v: fmt(k.active_orders), u: 'ta', icon: 'bi-hourglass-split', tone: 'green' },
+    { l: 'AOV', v: fmt(k.avg_order_value), u: "so'm", icon: 'bi-receipt', tone: 'grid' },
+    { l: 'Seller oqimi', v: fmt(sellerActive), u: 'ta', icon: 'bi-shop-window', tone: 'violet' },
+    { l: 'Kuryer oqimi', v: fmt(courierActive), u: 'ta', icon: 'bi-bicycle', tone: 'pink' },
+    { l: 'Online user', v: fmt(k.online_users), u: 'kishi', icon: 'bi-people', tone: 'warning' },
+    { l: 'Completion', v: k.completion_rate.toFixed(1), u: '%', icon: 'bi-bullseye', tone: 'info' },
+  ];
+  const finance = [
+    { l: 'Yakuniy savdo', v: fmt(k.paid_orders), u: 'ta', s: `${k.paid_rate.toFixed(1)}% ulush`, tone: 'success' },
+    { l: 'Seller komissiya', v: fmt(k.commission), u: "so'm", s: 'Tasdiqlangan tranzaksiya', tone: 'primary' },
+    { l: 'Yetkazish daromadi', v: fmt(k.delivery_income), u: "so'm", s: 'Paid orderlar', tone: 'info' },
+    { l: 'Kuryer payout', v: fmt(k.courier_payout), u: "so'm", s: 'Topshirilgan orderlar', tone: 'warning' },
+    { l: 'Promo + cashback', v: fmt(k.promo_discount + k.cashback), u: "so'm", s: 'Chegirma xarajati', tone: 'danger' },
+    { l: 'Chiqim + provider + soliq', v: fmt(k.manual_expenses + k.provider_fee + k.tax), u: "so'm", s: 'Marketplace xarajatlari', tone: 'secondary' },
+    { l: 'Net marja', v: k.profit_margin.toFixed(1), u: '%', s: `Cancel ${k.cancellation_rate.toFixed(1)}%`, tone: k.profit_margin >= 0 ? 'success' : 'danger' },
+  ];
+
   return (
-    <div className="fs-live p-3 p-xl-4" style={{ minHeight: '100vh' }}>
-      <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2 pb-2 border-bottom" style={{ borderColor: 'var(--kc-border-subtle)' }}>
-        <div className="d-flex align-items-center gap-2">
-          <div className="live-brand-mark"><i className="bi bi-broadcast"></i></div>
-          <div>
-            <div className="d-flex align-items-center gap-2">
-              <h3 style={{ color: 'var(--kc-text)', fontWeight: 600, margin: 0, letterSpacing: '-.02em' }}>Kitobchi Live Command Center</h3>
-              <span className="chip" style={{ background: isPaused ? 'var(--kc-warn-bg)' : 'var(--kc-ok-bg)', color: isPaused ? 'var(--kc-warn)' : 'var(--kc-ok)', border: `1px solid ${isPaused ? 'var(--kc-warn)' : 'var(--kc-ok)'}`, fontSize: 10 }}>
-                {!isPaused && <span className="live-pulse"></span>}
-                {isPaused ? 'PAUSED' : 'LIVE'}
-              </span>
-            </div>
-            <div style={{ color: 'var(--kc-text-muted)', fontSize: 11 }}>Buyurtma, seller, kuryer, to'lov va online mijozlar real monitoringi</div>
-          </div>
-        </div>
-
-        <div className="d-flex gap-1 align-items-center flex-wrap">
-          <div className="btn-group btn-group-sm">
-            <button className={`btn ${speed === 8000 ? 'btn-primary' : 'btn-outline-secondary'}`} onClick={() => setSpeed(8000)}>x1</button>
-            <button className={`btn ${speed === 5000 ? 'btn-primary' : 'btn-outline-secondary'}`} onClick={() => setSpeed(5000)}>x2</button>
-            <button className={`btn ${speed === 2000 ? 'btn-primary' : 'btn-outline-secondary'}`} onClick={() => setSpeed(2000)}>x5</button>
-          </div>
-          <button className={`btn btn-sm ${isPaused ? 'btn-warning' : 'btn-outline-secondary'}`} onClick={() => setIsPaused(!isPaused)}>
-            <i className={`bi ${isPaused ? 'bi-play-fill' : 'bi-pause-fill'}`}></i>
-          </button>
-          <div className="px-2 py-1 rounded" style={{ background: 'var(--kc-bg-subtle)', color: 'var(--kc-text)', fontSize: 12, border: '1px solid var(--kc-border)' }}>
-            <i className="bi bi-clock text-primary me-1"></i>{clock.toLocaleTimeString('uz-UZ')}
-          </div>
-          <button className="btn btn-outline-light btn-sm" onClick={goFull}><i className="bi bi-arrows-fullscreen"></i></button>
-          <button className="btn btn-primary-gradient btn-sm" onClick={() => router.visit('/boshqaruv')}><i className="bi bi-house-door"></i></button>
-        </div>
-      </div>
-
-      <div className="mb-3 p-2 rounded d-flex align-items-center gap-2" style={{ background: 'var(--kc-bg-subtle)', border: '1px solid var(--kc-border-subtle)' }}>
-        <i className={`bi ${lastError ? 'bi-exclamation-triangle' : 'bi-activity'}`} style={{ fontSize: 18, color: lastError ? 'var(--kc-warn)' : 'var(--kc-ok)' }}></i>
-        <span className="fw-bold small" style={{ color: lastError ? 'var(--kc-warn)' : 'var(--kc-ok)' }}>{lastError ? 'Live ogohlantirish:' : 'Snapshot:'}</span>
-        <span style={{ color: 'var(--kc-text)', fontSize: 13 }}>{lastError || `So'nggi yangilanish ${snapshot.generated_at}. Aktiv oqim: ${mainActive + sellerActive + courierActive} ta.`}</span>
-      </div>
-
-      {snapshot.financialRestricted ? (
-        <div className="mb-3 p-2 rounded d-flex align-items-center gap-2" style={{ background: 'var(--kc-neutral-bg)', border: '1px solid var(--kc-border)' }}>
-          <i className="bi bi-lock-fill" style={{ fontSize: 16, color: 'var(--kc-text-soft)' }}></i>
-          <span style={{ color: 'var(--kc-text)', fontSize: 13 }}>Sizning rolingizda moliyaviy ko'rsatkichlar (daromad, tushum, foyda) 0 qilib ko'rsatiladi — faqat operatsion sonlar (order, mijoz, hudud bo'yicha oqim) ochiq. Kerak bo'lsa, "Moliya" ruxsatiga ega admindan so'rang.</span>
-        </div>
-      ) : null}
-
-      <div className="row g-2 mb-3">
-        {[
-          { l: 'Jami daromad', v: fmt(snapshot.kpis.total_revenue) + " so'm", icon: 'bi-cash-stack' },
-          { l: 'Bugungi daromad', v: fmt(snapshot.kpis.today_revenue) + " so'm", icon: 'bi-calendar2-day' },
-          { l: 'Oylik daromad', v: fmt(snapshot.kpis.month_revenue) + " so'm", icon: 'bi-calendar3' },
-          { l: 'Platform signal', v: fmt(netSignal) + " so'm", icon: 'bi-graph-up-arrow' },
-          { l: 'Jami order', v: fmt(snapshot.kpis.total_orders), icon: 'bi-bag-check' },
-          { l: 'Bugungi order', v: fmt(snapshot.kpis.today_orders), icon: 'bi-lightning-charge' },
-          { l: 'Aktiv order', v: fmt(snapshot.kpis.active_orders), icon: 'bi-hourglass-split' },
-          { l: 'AOV', v: fmt(snapshot.kpis.avg_order_value) + " so'm", icon: 'bi-receipt' },
-          { l: 'Seller oqimi', v: fmt(sellerActive), icon: 'bi-shop-window' },
-          { l: 'Kuryer oqimi', v: fmt(courierActive), icon: 'bi-bicycle' },
-          { l: 'Online user', v: fmt(snapshot.kpis.online_users), icon: 'bi-people' },
-          { l: 'Completion', v: snapshot.kpis.completion_rate.toFixed(1) + '%', icon: 'bi-bullseye' },
-        ].map((kpi) => (
-          <div className="col-xl-2 col-lg-3 col-md-4 col-6" key={kpi.l}>
-            <div className="live-kpi">
-              <div className="d-flex justify-content-between align-items-start">
-                <span className="d-inline-flex align-items-center gap-1">{kpi.l}<InfoHint tone="dark" text={liveKpiHelps[kpi.l]} /></span>
-                <i className={`bi ${kpi.icon}`}></i>
+    <div className="kc-live">
+      <div className="container-fluid">
+        {/* ── Sarlavha: Axelit "main-title" + breadcrumb, o'ngda boshqaruv tugmalari ── */}
+        <div className="kc-live-head">
+          <div className="d-flex align-items-center gap-3 min-w-0">
+            <img className="kc-live-logo" src="/favicon.svg" alt="" width={48} height={48} />
+            <div className="min-w-0">
+              <div className="d-flex align-items-center gap-2 flex-wrap">
+                <h4 className="main-title mb-0">Live Command Center</h4>
+                <span className={`badge ${isPaused ? 'text-light-warning' : 'text-light-success'} d-inline-flex align-items-center`}>
+                  {!isPaused && <span className="live-pulse"></span>}
+                  {isPaused ? 'PAUSED' : 'LIVE'}
+                </span>
               </div>
-              <strong>{kpi.v}</strong>
+              <ul className="app-line-breadcrumbs mb-0">
+                <li><a href="/boshqaruv" className="f-s-14 f-w-500" onClick={(e) => { e.preventDefault(); router.visit('/boshqaruv'); }}><span><i className="iconoir-home-alt f-s-16 align-text-top"></i> Boshqaruv</span></a></li>
+                <li className="active"><a href="#" className="f-s-14 f-w-500" onClick={(e) => e.preventDefault()}>Live Dashboard</a></li>
+              </ul>
             </div>
           </div>
-        ))}
-      </div>
 
-      <div className="row g-2 mb-3">
-        {[
-          { l: 'Yakuniy savdo', v: fmt(snapshot.kpis.paid_orders), s: `${snapshot.kpis.paid_rate.toFixed(1)}% ulush` },
-          { l: 'Seller komissiya', v: fmt(snapshot.kpis.commission) + " so'm", s: 'Tasdiqlangan tranzaksiya' },
-          { l: 'Yetkazish daromadi', v: fmt(snapshot.kpis.delivery_income) + " so'm", s: 'Paid orderlar' },
-          { l: 'Kuryer payout', v: fmt(snapshot.kpis.courier_payout) + " so'm", s: 'Topshirilgan orderlar' },
-          { l: 'Promo + cashback', v: fmt(snapshot.kpis.promo_discount + snapshot.kpis.cashback) + " so'm", s: 'Chegirma xarajati' },
-          { l: 'Chiqim + provider + soliq', v: fmt(snapshot.kpis.manual_expenses + snapshot.kpis.provider_fee + snapshot.kpis.tax) + " so'm", s: 'Marketplace xarajatlari' },
-          { l: 'Net marja', v: snapshot.kpis.profit_margin.toFixed(1) + '%', s: `Cancel ${snapshot.kpis.cancellation_rate.toFixed(1)}%`, tone: snapshot.kpis.profit_margin >= 0 ? 'ok' : 'danger' },
-        ].map((item) => (
-          <div className="col-xl-2 col-lg-4 col-md-6" key={item.l}>
-            <div className={`live-kpi${item.tone ? ` is-${item.tone}` : ''}`}>
-              <span className="d-inline-flex align-items-center gap-1">{item.l}<InfoHint tone="dark" text={liveFinanceHelps[item.l]} /></span>
-              <strong>{item.v}</strong>
-              <small style={{ color: 'var(--kc-text-muted)' }}>{item.s}</small>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="row g-2 mb-3">
-        <StatusPanel title="Main orderlar" icon="bi-receipt" counts={snapshot.main_counts} labels={{ all: 'Jami', new: 'Yangi', packing: 'Qadoq', onway: "Yo'lda", arrived: 'Yetdi', done: 'Done', cancelled: 'Bekor' }} />
-        <StatusPanel title="Seller fulfillment" icon="bi-shop-window" counts={snapshot.seller_counts} labels={{ all: 'Jami', payment_pending: "To'lov", new: 'Yangi', accepted: 'Qabul', handover: 'Kuryerda', cancelled: 'Bekor' }} />
-        <StatusPanel title="Kuryer fulfillment" icon="bi-bicycle" counts={snapshot.courier_counts} labels={{ all: 'Jami', pending: 'Kutmoqda', in_delivery: "Yo'lda", delivered: 'Yetdi', customer_received: 'Qabul', rejected: 'Bekor' }} />
-      </div>
-
-      <div className="row g-3 mb-3">
-        <div className="col-xl-4">
-          <div className="card-panel live-region-panel h-100">
-            <div className="d-flex align-items-center justify-content-between gap-2 mb-3">
-              <div className="d-flex align-items-center gap-2">
-                <div className="live-panel-title mb-0">Hududlar bo'yicha oqim</div>
-                <InfoHint tone="dark" text="Buyurtma address snapshotidan viloyat/shahar nomi olinadi. Hozir O'zbekiston ichidagi real addresslar bo'yicha yig'iladi." />
-              </div>
-              <span className="chip chip-info">{fmt(regionTotalOrders)} ta</span>
-            </div>
-
-            <div className="live-region-hero">
-              <div>
-                <small>Yetakchi hudud</small>
-                <strong>{topRegion?.name || "Ma'lumot yo'q"}</strong>
-                <span>{topRegion ? `${fmt(topRegion.value)} order · ${fmt(topRegion.revenue)} so'm` : 'Address snapshot topilmadi'}</span>
-              </div>
-              <div>
-                <small>Jami tushum</small>
-                <strong>{fmt(regionTotalRevenue)}</strong>
-                <span>so'm</span>
-              </div>
-            </div>
-
-            <div className="live-region-bars">
-              {snapshot.regions.map((region, index) => {
-                const orderShare = regionTotalOrders > 0 ? region.value / regionTotalOrders * 100 : 0;
-                const revenueShare = regionTotalRevenue > 0 ? region.revenue / regionTotalRevenue * 100 : 0;
-
-                return (
-                  <div className="live-region-row" key={region.name}>
-                    <div className="live-region-rank" style={{ background: region.color }}>{index + 1}</div>
-                    <div className="live-region-main">
-                      <div className="d-flex justify-content-between gap-2">
-                        <b>{region.name}</b>
-                        <span>{fmt(region.value)} ta</span>
-                      </div>
-                      <div className="live-region-track">
-                        <i style={{ width: `${Math.max(4, orderShare)}%` }}></i>
-                      </div>
-                      <small>{fmt(region.revenue)} so'm · {revenueShare.toFixed(1)}% tushum</small>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="live-region-heat">
-              {snapshot.regions.slice(0, 6).map((region) => {
-                const intensity = regionTotalOrders > 0 ? Math.max(0.16, region.value / regionTotalOrders) : 0.16;
-                return <span key={region.name} style={{ background: `rgba(var(--kc-ink-rgb), ${Math.min(0.34, intensity * 0.55).toFixed(2)})` }}>{region.name.slice(0, 10)}</span>;
-              })}
-            </div>
-          </div>
-        </div>
-
-        <div className="col-xl-5">
-          <div className="card-panel h-100">
-            <div className="d-flex justify-content-between align-items-center mb-2">
-              <div className="d-flex align-items-center gap-2">
-                <div className="live-panel-title mb-0">Bugungi savdo trendi</div>
-                <InfoHint tone="dark" text="Bugun yakunlangan savdolar qabul qilingan soati bo'yicha guruhlanadi. Revenue - shu soatdagi yakuniy tushum, orders - yakuniy savdo soni." />
-              </div>
-              <span className="chip chip-success">{snapshot.generated_at}</span>
-            </div>
-            <ResponsiveContainer width="100%" height={235}>
-              <AreaChart data={snapshot.chart}>
-                <defs>
-                  <linearGradient id="liveRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#8B93F8" stopOpacity={0.28} />
-                    <stop offset="100%" stopColor="#8B93F8" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="liveOrders" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#5FC79A" stopOpacity={0.22} />
-                    <stop offset="100%" stopColor="#5FC79A" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <XAxis dataKey="hour" interval={3} />
-                <YAxis hide />
-                <Tooltip contentStyle={{ background: 'var(--kc-bg-card)', border: '1px solid var(--kc-border-subtle)', borderRadius: 'var(--kc-radius)', fontSize: 12, color: 'var(--kc-text)' }} formatter={(value: number, name) => name === 'revenue' ? `${fmt(value)} so'm` : fmt(value)} />
-                <Area type="monotone" dataKey="revenue" stroke="#8B93F8" strokeWidth={1.6} fill="url(#liveRevenue)" />
-                <Area type="monotone" dataKey="orders" stroke="#5FC79A" strokeWidth={1.6} fill="url(#liveOrders)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div className="col-xl-3">
-          <div className="card-panel h-100">
-            <div className="live-panel-title">Alertlar</div>
-            <div className="live-alert-list">
-              {snapshot.alerts.length ? snapshot.alerts.map((alert) => (
-                <a href={alert.url || '#'} key={alert.title} className={`live-alert is-${alert.level}`}>
-                  <i className={`bi ${alert.icon}`}></i>
-                  <span><b>{alert.title}</b><small>{alert.text}</small></span>
-                </a>
-              )) : <div className="text-muted small">Hozircha kritik ogohlantirish yo'q.</div>}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="row g-3">
-        <div className="col-xl-5">
-          <div className="card-panel live-feed-panel">
-            <div className="d-flex justify-content-between align-items-center mb-2">
-              <div className="live-panel-title">Jonli operatsion feed</div>
-              <span className="live-pulse"></span>
-            </div>
-            <div className="live-feed-list">
-              {feed.map((row) => (
-                <a href={row.url || '#'} className="live-feed-row" key={`${row.kind}-${row.id}`}>
-                  <i className={`bi ${row.icon}`}></i>
-                  <span>
-                    <b>{row.kind} #{row.id}</b>
-                    <small>{row.customer || row.seller || row.courier || row.title} · {row.updated_at || ''}</small>
-                  </span>
-                  <em>{fmt(row.amount)} so'm</em>
-                  <strong className={`st ${toneOf(statusClass(row.status_code || row.status))}`}><i></i>{row.status}</strong>
-                </a>
+          <div className="d-flex gap-2 align-items-center flex-wrap">
+            <ul className="nav nav-tabs app-tabs-primary kc-live-speed mb-0 pb-0 border-0" role="tablist" aria-label="Yangilanish tezligi">
+              {[
+                { label: 'x1', ms: 8000 },
+                { label: 'x2', ms: 5000 },
+                { label: 'x5', ms: 2000 },
+              ].map((opt) => (
+                <li className="nav-item" key={opt.ms}>
+                  <button type="button" className={`nav-link ${speed === opt.ms ? 'active' : ''}`} onClick={() => setSpeed(opt.ms)}>{opt.label}</button>
+                </li>
               ))}
-            </div>
+            </ul>
+            <button type="button" className={`btn ${isPaused ? 'btn-light-success' : 'btn-light-warning'} icon-btn w-35 h-35 b-r-22`} onClick={() => setIsPaused(!isPaused)} title={isPaused ? 'Davom ettirish' : "To'xtatish"} aria-label={isPaused ? 'Davom ettirish' : "To'xtatish"}>
+              <i className={`bi ${isPaused ? 'bi-play-fill' : 'bi-pause-fill'} f-s-18`}></i>
+            </button>
+            <span className="kc-live-clock">
+              <i className="iconoir-clock f-s-18 text-primary"></i>{clock.toLocaleTimeString('uz-UZ')}
+            </span>
+            <button type="button" className="btn btn-light-secondary icon-btn w-35 h-35 b-r-22" onClick={() => setDarkMode((v) => !v)} title={darkMode ? "Yorug' rejim" : "Qorong'i rejim"} aria-label="Mavzuni almashtirish">
+              <i className={`${darkMode ? 'iconoir-sun-light' : 'iconoir-half-moon'} f-s-18`}></i>
+            </button>
+            <button type="button" className="btn btn-light-secondary icon-btn w-35 h-35 b-r-22" onClick={goFull} title="To'liq ekran" aria-label="To'liq ekran">
+              <i className="bi bi-arrows-fullscreen f-s-16"></i>
+            </button>
+            <button type="button" className="btn btn-primary icon-btn w-35 h-35 b-r-22" onClick={() => router.visit('/boshqaruv')} title="Boshqaruvga qaytish" aria-label="Boshqaruvga qaytish">
+              <i className="iconoir-home-alt f-s-18"></i>
+            </button>
           </div>
         </div>
 
-        <div className="col-xl-3">
-          <div className="card-panel live-feed-panel">
-            <div className="d-flex align-items-center gap-2 mb-2">
-              <div className="live-panel-title mb-0">Top mahsulotlar</div>
-              <InfoHint tone="dark" text="To'langan order itemlaridan eng ko'p sotilgan mahsulotlar. Gift sovg'alar bu ro'yxatga qo'shilmaydi." />
-            </div>
-            <div className="live-rank-list">
-              {snapshot.top_products.map((product, index) => (
-                <div className="live-rank-row" key={`${product.name}-${index}`}>
-                  <span>{index + 1}</span>
-                  <div><b>{product.name}</b><small>{fmt(product.quantity)} ta sotildi</small></div>
-                  <strong>{fmt(product.revenue)} so'm</strong>
-                </div>
-              ))}
-            </div>
-          </div>
+        {/* ── Holat qatori — Axelit "alert-light-*" ── */}
+        <div className={`alert ${lastError ? 'alert-light-warning' : 'alert-light-success'} d-flex align-items-center gap-2 mb-3`} role="status">
+          <i className={`${lastError ? 'iconoir-warning-triangle' : 'iconoir-check-circle'} f-s-20`}></i>
+          <span className="f-w-600">{lastError ? 'Live ogohlantirish:' : 'Snapshot:'}</span>
+          <span>{lastError || `So'nggi yangilanish ${snapshot.generated_at}. Aktiv oqim: ${mainActive + sellerActive + courierActive} ta.`}</span>
         </div>
 
-        <div className="col-xl-4">
-          <div className="row g-3">
-            <div className="col-md-6">
-              <SplitPanel title="To'lov holati" help="Orderlar to'lov holati bo'yicha guruhlanadi. Foiz jami order ichidagi ulush." rows={snapshot.payment_split.map((row) => ({ name: row.name, value: row.share, meta: `${fmt(row.count)} ta`, color: row.color }))} />
-            </div>
-            <div className="col-md-6">
-              <SplitPanel title="Yetkazish turi" help="Buyurtmalar delivery turi bo'yicha ajratiladi. Yonidagi summa shu turdagi orderlar tushumi." rows={snapshot.delivery_split.map((row, index) => ({ name: row.name, value: row.count, meta: `${fmt(row.revenue)} so'm`, color: ['#8B93F8', '#5FC79A', '#D6A85F', '#E58BB8', '#5FBFD0'][index % 5] }))} />
-            </div>
-            <div className="col-12">
-              <div className="card-panel">
-                <div className="live-panel-title">Online mijozlar</div>
-                <div className="live-online-list">
-                  {snapshot.online_users.length ? snapshot.online_users.map((user) => (
-                    <div key={user.id}>
-                      {user.avatar ? <img src={user.avatar} alt={user.name} /> : <i className="bi bi-person"></i>}
-                      <span><b>{user.name}</b><small>{user.last_seen}</small></span>
-                    </div>
-                  )) : <div className="text-muted small">So'nggi 5 daqiqada online mijoz topilmadi.</div>}
+        {snapshot.financialRestricted ? (
+          <div className="alert alert-light-secondary d-flex align-items-center gap-2 mb-3">
+            <i className="iconoir-lock f-s-20"></i>
+            <span>Sizning rolingizda moliyaviy ko'rsatkichlar (daromad, tushum, foyda) 0 qilib ko'rsatiladi — faqat operatsion sonlar (order, mijoz, hudud bo'yicha oqim) ochiq. Kerak bo'lsa, "Moliya" ruxsatiga ega admindan so'rang.</span>
+          </div>
+        ) : null}
+
+        {/* ── KPI vidjetlari ── */}
+        <div className="kc-live-kpis">
+          {kpis.map((kpi) => (
+            <div key={kpi.l}>
+              <div className={`card stat-card kc-live-kpi is-${kpi.tone}`}>
+                <div className="kpi-head">
+                  <span className="kpi-label d-inline-flex align-items-center gap-1">{kpi.l}<InfoHint text={liveKpiHelps[kpi.l]} /></span>
+                  <span className="stat-icon"><i className={`bi ${kpi.icon}`}></i></span>
                 </div>
+                <div className="stat-value">{kpi.v} <small>{kpi.u}</small></div>
               </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function StatusPanel({ title, icon, counts, labels }: { title: string; icon: string; counts: CountMap; labels: Record<string, string> }) {
-  return (
-    <div className="col-xl-4">
-      <div className="live-status-panel">
-        <div className="d-flex align-items-center gap-2 mb-2">
-          <i className={`bi ${icon}`}></i>
-          <b>{title}</b>
-        </div>
-        <div className="live-status-grid">
-          {Object.entries(labels).map(([key, label]) => (
-            <div key={key}>
-              <span>{label}</span>
-              <strong>{fmt(counts[key] || 0)}</strong>
             </div>
           ))}
         </div>
+
+        {/* ── Moliya — Axelit "Orders details" ro'yxati uslubida ── */}
+        <div className="card">
+          <div className="card-header d-flex align-items-center justify-content-between">
+            <h5 className="mb-0">Moliyaviy oqim</h5>
+            <span className="badge text-light-primary">Tasdiqlangan savdolar</span>
+          </div>
+          <div className="card-body">
+            <ul className="kc-live-finance">
+              {finance.map((item) => (
+                <li className={`bg-${item.tone}-300`} key={item.l}>
+                  <h6 className={`text-${item.tone}-dark f-w-600 mb-1 d-flex align-items-center gap-1`}>
+                    <span className="txt-ellipsis-1" title={item.l}>{item.l}</span>
+                    <InfoHint text={liveFinanceHelps[item.l]} />
+                  </h6>
+                  <h4 className={`text-${item.tone}-dark mb-0`}>{item.v}{item.u === '%' ? <small className="f-s-14"> %</small> : null}</h4>
+                  <p className={`text-${item.tone}-dark mb-0 f-s-13 txt-ellipsis-1`} title={item.s}>{item.u === '%' ? item.s : `${item.u} · ${item.s}`}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        {/* ── Oqim holatlari ── */}
+        <div className="row">
+          <StatusPanel title="Main orderlar" icon="bi-receipt" tone="primary" counts={snapshot.main_counts} labels={{ all: 'Jami', new: 'Yangi', packing: 'Qadoq', onway: "Yo'lda", arrived: 'Yetdi', done: 'Done', cancelled: 'Bekor' }} />
+          <StatusPanel title="Seller fulfillment" icon="bi-shop-window" tone="danger" counts={snapshot.seller_counts} labels={{ all: 'Jami', payment_pending: "To'lov", new: 'Yangi', accepted: 'Qabul', handover: 'Kuryerda', cancelled: 'Bekor' }} />
+          <StatusPanel title="Kuryer fulfillment" icon="bi-bicycle" tone="success" counts={snapshot.courier_counts} labels={{ all: 'Jami', pending: 'Kutmoqda', in_delivery: "Yo'lda", delivered: 'Yetdi', customer_received: 'Qabul', rejected: 'Bekor' }} />
+        </div>
+
+        <div className="row">
+          {/* Hududlar */}
+          <div className="col-xl-4">
+            <div className="card h-100">
+              <div className="card-header d-flex align-items-center justify-content-between gap-2">
+                <h5 className="mb-0 d-flex align-items-center gap-2">Hududlar bo'yicha oqim
+                  <InfoHint text="Buyurtma address snapshotidan viloyat/shahar nomi olinadi. Hozir O'zbekiston ichidagi real addresslar bo'yicha yig'iladi." />
+                </h5>
+                <span className="badge text-light-info">{fmt(regionTotalOrders)} ta</span>
+              </div>
+              <div className="card-body">
+                <div className="row g-2 mb-3">
+                  <div className="col-7">
+                    <div className="kc-live-tile bg-primary-300">
+                      <p className="text-primary-dark f-w-600 mb-1 f-s-13">Yetakchi hudud</p>
+                      <h5 className="text-primary-dark mb-1 txt-ellipsis-1">{topRegion?.name || "Ma'lumot yo'q"}</h5>
+                      <p className="text-primary-dark mb-0 f-s-12 txt-ellipsis-1">{topRegion ? `${fmt(topRegion.value)} order · ${fmt(topRegion.revenue)} so'm` : 'Address snapshot topilmadi'}</p>
+                    </div>
+                  </div>
+                  <div className="col-5">
+                    <div className="kc-live-tile bg-danger-300">
+                      <p className="text-danger-dark f-w-600 mb-1 f-s-13">Jami tushum</p>
+                      <h5 className="text-danger-dark mb-1 txt-ellipsis-1">{fmt(regionTotalRevenue)}</h5>
+                      <p className="text-danger-dark mb-0 f-s-12">so'm</p>
+                    </div>
+                  </div>
+                </div>
+
+                <ul className="customer-list kc-live-regions">
+                  {snapshot.regions.map((region, index) => {
+                    const orderShare = regionTotalOrders > 0 ? region.value / regionTotalOrders * 100 : 0;
+                    const revenueShare = regionTotalRevenue > 0 ? region.revenue / regionTotalRevenue * 100 : 0;
+                    const tone = toneAt(index);
+                    return (
+                      <li className="customer-list-item" key={region.name}>
+                        <span className={`text-light-${tone} f-w-600 h-35 w-35 d-flex-center b-r-50 customer-list-avtar`}>{index + 1}</span>
+                        <div className="customer-list-content flex-grow-1 min-w-0">
+                          <div className="d-flex justify-content-between gap-2">
+                            <h6 className="mb-0 txt-ellipsis-1 f-s-15">{region.name}</h6>
+                            <span className="f-w-600 text-dark f-s-14 text-nowrap">{fmt(region.value)} ta</span>
+                          </div>
+                          <div className="progress kc-live-progress my-1" role="progressbar" aria-valuenow={Math.round(orderShare)} aria-valuemin={0} aria-valuemax={100}>
+                            <div className={`progress-bar bg-${tone}`} style={{ width: `${Math.max(4, orderShare)}%` }}></div>
+                          </div>
+                          <p className="mb-0 f-s-12 text-secondary">{fmt(region.revenue)} so'm · {revenueShare.toFixed(1)}% tushum</p>
+                        </div>
+                      </li>
+                    );
+                  })}
+                  {snapshot.regions.length === 0 ? <li className="text-secondary f-s-14">Hududlar bo'yicha ma'lumot yo'q.</li> : null}
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* Savdo trendi */}
+          <div className="col-xl-5">
+            <div className="card h-100">
+              <div className="card-header d-flex justify-content-between align-items-center">
+                <h5 className="mb-0 d-flex align-items-center gap-2">Bugungi savdo trendi
+                  <InfoHint text="Bugun yakunlangan savdolar qabul qilingan soati bo'yicha guruhlanadi. Revenue - shu soatdagi yakuniy tushum, orders - yakuniy savdo soni." />
+                </h5>
+                <span className="badge text-light-success">{snapshot.generated_at}</span>
+              </div>
+              <div className="card-body">
+                <div className="d-flex gap-3 mb-2 f-s-13 f-w-500">
+                  <span className="d-inline-flex align-items-center gap-1"><span className="kc-dot" style={{ background: palette.indigo }}></span>Tushum</span>
+                  <span className="d-inline-flex align-items-center gap-1"><span className="kc-dot" style={{ background: palette.green }}></span>Buyurtmalar</span>
+                </div>
+                <ResponsiveContainer width="100%" height={280}>
+                  <AreaChart data={snapshot.chart} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="liveRevenue" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={palette.indigo} stopOpacity={0.35} />
+                        <stop offset="100%" stopColor={palette.indigo} stopOpacity={0} />
+                      </linearGradient>
+                      <linearGradient id="liveOrders" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={palette.green} stopOpacity={0.3} />
+                        <stop offset="100%" stopColor={palette.green} stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <XAxis dataKey="hour" interval={3} tickLine={false} axisLine={false} />
+                    {/* Tushum va order soni har xil o'lchovda — alohida (yashirin) o'qlar */}
+                    <YAxis yAxisId="revenue" hide />
+                    <YAxis yAxisId="orders" hide orientation="right" allowDecimals={false} />
+                    <Tooltip formatter={(value: number, name) => (name === 'revenue' ? [`${fmt(value)} so'm`, 'Tushum'] : [fmt(value), 'Buyurtmalar'])} />
+                    <Area yAxisId="revenue" type="monotone" dataKey="revenue" stroke={palette.indigo} strokeWidth={2} fill="url(#liveRevenue)" />
+                    <Area yAxisId="orders" type="monotone" dataKey="orders" stroke={palette.green} strokeWidth={2} fill="url(#liveOrders)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+
+          {/* Alertlar — Axelit "Orders details" ro'yxati */}
+          <div className="col-xl-3">
+            <div className="card order-detail-card h-100">
+              <div className="pt-3">
+                <h5 className="pa-s-20 mb-0">Alertlar</h5>
+              </div>
+              <div className="card-body">
+                <ul className="order-content-list">
+                  {snapshot.alerts.length ? snapshot.alerts.map((alert) => {
+                    const tone = alert.level === 'danger' ? 'danger' : alert.level === 'warning' ? 'warning' : alert.level === 'success' ? 'success' : 'info';
+                    return (
+                      <li className={`bg-${tone}-300`} key={alert.title}>
+                        <a href={alert.url || '#'} className="d-block">
+                          <div className="d-flex align-items-center justify-content-between gap-2">
+                            <h6 className={`text-${tone}-dark f-w-600 mb-0`}><i className={`bi ${alert.icon} me-1`}></i>{alert.title}</h6>
+                          </div>
+                          <p className={`text-${tone}-dark mb-0 txt-ellipsis-2 f-s-13`}>{alert.text}</p>
+                        </a>
+                      </li>
+                    );
+                  }) : (
+                    <li className="bg-success-300">
+                      <h6 className="text-success-dark f-w-600 mb-0"><i className="bi bi-check2-circle me-1"></i>Hammasi joyida</h6>
+                      <p className="text-success-dark mb-0 f-s-13">Hozircha kritik ogohlantirish yo'q.</p>
+                    </li>
+                  )}
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="row">
+          {/* Jonli feed — Axelit "top-products-table" */}
+          <div className="col-xl-5">
+            <div className="card h-100">
+              <div className="card-header d-flex justify-content-between align-items-center">
+                <h5 className="mb-0">Jonli operatsion feed</h5>
+                <span className="badge text-light-success d-inline-flex align-items-center"><span className="live-pulse"></span>{feed.length} ta</span>
+              </div>
+              <div className="card-body px-0 pb-2">
+                <div className="table-responsive app-scroll kc-live-scroll">
+                  <table className="table align-middle top-products-table mb-0">
+                    <thead>
+                      <tr>
+                        <th scope="col">Operatsiya</th>
+                        <th scope="col" className="text-end">Summa</th>
+                        <th scope="col" className="text-end">Holat</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {feed.map((row) => (
+                        <tr key={`${row.kind}-${row.id}`}>
+                          <td>
+                            <a href={row.url || '#'} className="d-flex align-items-center gap-2">
+                              <span className={`h-35 w-35 d-flex-center b-r-50 flex-shrink-0 text-light-${row.kind === 'Seller' ? 'danger' : row.kind === 'Kuryer' ? 'success' : 'primary'}`}><i className={`bi ${row.icon}`}></i></span>
+                              <span className="min-w-0">
+                                <h6 className="mb-0 f-s-14">{row.kind} #{row.id}</h6>
+                                <span className="d-block f-s-12 text-secondary txt-ellipsis-1">{row.customer || row.seller || row.courier || row.title} · {row.updated_at || ''}</span>
+                              </span>
+                            </a>
+                          </td>
+                          <td className="text-end text-dark f-w-600 text-nowrap">{fmt(row.amount)} so'm</td>
+                          <td className="text-end"><span className={`badge text-light-${statusTone(row.status_code || row.status)}`}>{row.status}</span></td>
+                        </tr>
+                      ))}
+                      {feed.length === 0 ? <tr><td colSpan={3} className="text-center">Hozircha operatsiya yo'q</td></tr> : null}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Top mahsulotlar — Axelit "Customer" ro'yxati */}
+          <div className="col-xl-3">
+            <div className="card h-100">
+              <div className="card-header d-flex align-items-center gap-2">
+                <h5 className="mb-0">Top mahsulotlar</h5>
+                <InfoHint text="To'langan order itemlaridan eng ko'p sotilgan mahsulotlar. Gift sovg'alar bu ro'yxatga qo'shilmaydi." />
+              </div>
+              <div className="card-body">
+                <ul className="customer-list kc-live-scroll">
+                  {snapshot.top_products.map((product, index) => (
+                    <li className="customer-list-item" key={`${product.name}-${index}`}>
+                      <span className={`text-light-${toneAt(index)} f-w-600 h-35 w-35 d-flex-center b-r-50 customer-list-avtar`}>{index + 1}</span>
+                      <div className="customer-list-content min-w-0">
+                        <h6 className="mb-0 txt-ellipsis-1 f-s-15">{product.name}</h6>
+                        <p className="mb-0 f-s-12 text-secondary">{fmt(product.quantity)} ta sotildi</p>
+                      </div>
+                      <span className="f-w-600 text-dark f-s-14 text-nowrap ms-2">{fmt(product.revenue)} so'm</span>
+                    </li>
+                  ))}
+                  {snapshot.top_products.length === 0 ? <li className="text-secondary f-s-14">Ma'lumot yo'q.</li> : null}
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div className="col-xl-4">
+            <div className="row">
+              <div className="col-md-6">
+                <SplitPanel title="To'lov holati" help="Orderlar to'lov holati bo'yicha guruhlanadi. Foiz jami order ichidagi ulush." rows={snapshot.payment_split.map((row) => ({ name: row.name, value: row.share, meta: `${fmt(row.count)} ta` }))} percent />
+              </div>
+              <div className="col-md-6">
+                <SplitPanel title="Yetkazish turi" help="Buyurtmalar delivery turi bo'yicha ajratiladi. Yonidagi summa shu turdagi orderlar tushumi." rows={snapshot.delivery_split.map((row) => ({ name: row.name, value: row.count, meta: `${fmt(row.revenue)} so'm` }))} />
+              </div>
+              <div className="col-12">
+                <div className="card">
+                  <div className="card-header"><h5 className="mb-0">Online mijozlar</h5></div>
+                  <div className="card-body">
+                    <ul className="customer-list">
+                      {snapshot.online_users.length ? snapshot.online_users.map((user, index) => (
+                        <li className="customer-list-item" key={user.id}>
+                          {user.avatar
+                            ? <img className="h-35 w-35 b-r-50 customer-list-avtar object-fit-cover" src={user.avatar} alt={user.name} />
+                            : <span className={`text-light-${toneAt(index)} f-w-600 h-35 w-35 d-flex-center b-r-50 customer-list-avtar`}>{(user.name || '?').slice(0, 1).toUpperCase()}</span>}
+                          <div className="customer-list-content min-w-0">
+                            <h6 className="mb-0 txt-ellipsis-1 f-s-15">{user.name}</h6>
+                            <p className="mb-0 f-s-12 text-secondary">{user.last_seen}</p>
+                          </div>
+                          <span className="bg-success h-10 w-10 b-r-50 d-inline-block flex-shrink-0"></span>
+                        </li>
+                      )) : <li className="text-secondary f-s-14">So'nggi 5 daqiqada online mijoz topilmadi.</li>}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
-function SplitPanel({ title, rows, help }: { title: string; rows: { name: string; value: number; meta: string; color: string }[]; help?: string }) {
+function StatusPanel({ title, icon, tone, counts, labels }: { title: string; icon: string; tone: string; counts: CountMap; labels: Record<string, string> }) {
+  return (
+    <div className="col-xl-4">
+      <div className="card">
+        <div className="card-header d-flex align-items-center gap-2">
+          <span className={`h-35 w-35 d-flex-center b-r-50 text-light-${tone} flex-shrink-0`}><i className={`bi ${icon}`}></i></span>
+          <h5 className="mb-0">{title}</h5>
+        </div>
+        <div className="card-body">
+          <div className="kc-count-grid">
+            {Object.entries(labels).map(([key, label]) => (
+              <div className={`kc-count ${key === 'all' ? `bg-${tone}-300` : ''}`} key={key}>
+                <span className={key === 'all' ? `text-${tone}-dark` : ''}>{label}</span>
+                <strong className={key === 'all' ? `text-${tone}-dark` : ''}>{fmt(counts[key] || 0)}</strong>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SplitPanel({ title, rows, help, percent }: { title: string; rows: { name: string; value: number; meta: string }[]; help?: string; percent?: boolean }) {
   const total = rows.reduce((sum, row) => sum + row.value, 0) || 1;
   return (
-    <div className="card-panel h-100">
-      <div className="d-flex align-items-center gap-2 mb-2">
-        <div className="live-panel-title mb-0">{title}</div>
-        {help ? <InfoHint tone="dark" text={help} /> : null}
+    <div className="card">
+      <div className="card-header d-flex align-items-center gap-2">
+        <h5 className="mb-0 f-s-18">{title}</h5>
+        {help ? <InfoHint text={help} /> : null}
       </div>
-      {rows.length ? rows.map((row) => {
-        const width = row.value <= 100 && title.includes("To'lov") ? row.value : row.value / total * 100;
-        return (
-          <div key={row.name} className="mb-2">
-            <div className="d-flex justify-content-between" style={{ fontSize: 11, color: 'var(--kc-text-soft)' }}>
-              <span>{row.name}</span>
-              <span>{row.meta}</span>
+      <div className="card-body">
+        {rows.length ? rows.map((row, index) => {
+          const width = percent && row.value <= 100 ? row.value : row.value / total * 100;
+          return (
+            <div key={row.name} className="mb-3">
+              <div className="d-flex justify-content-between gap-2 f-s-13 f-w-500 mb-1">
+                <span className="text-dark txt-ellipsis-1">{row.name}</span>
+                <span className="text-secondary text-nowrap">{row.meta}</span>
+              </div>
+              <div className="progress kc-live-progress" role="progressbar" aria-valuenow={Math.round(width)} aria-valuemin={0} aria-valuemax={100}>
+                <div className={`progress-bar bg-${toneAt(index)}`} style={{ width: `${Math.max(3, width)}%` }}></div>
+              </div>
             </div>
-            <div className="progress" style={{ height: 7, background: 'var(--kc-bg-sunken)' }}>
-              <div className="progress-bar" style={{ width: `${Math.max(3, width)}%`, background: row.color }}></div>
-            </div>
-          </div>
-        );
-      }) : <div className="text-muted small">Ma'lumot yo'q.</div>}
+          );
+        }) : <div className="text-secondary f-s-14">Ma'lumot yo'q.</div>}
+      </div>
     </div>
   );
 }

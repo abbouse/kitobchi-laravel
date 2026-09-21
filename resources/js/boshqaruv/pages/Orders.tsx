@@ -1,4 +1,5 @@
 import { toneOf } from '../utils/tone';
+import { PageCrumbs } from '../Layout';
 import { useEffect, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { router, usePage } from '@inertiajs/react';
@@ -616,7 +617,7 @@ export default function Orders() {
     <div>
       <div className="page-head">
         <div>
-          <h1 className="page-title">Buyurtmalar</h1>
+          <h1 className="page-title">Buyurtmalar</h1><PageCrumbs />
           <p className="page-subtitle">Mijoz, mahsulot, to'lov va fulfillment nazorati</p>
         </div>
       </div>
@@ -672,7 +673,7 @@ export default function Orders() {
               placeholder="ID, mijoz yoki telefon"
             />
           </div>
-          <button className="btn btn-sm btn-light" type="submit">Qidirish</button>
+          <button className="btn btn-sm btn-light-secondary" type="submit">Qidirish</button>
           {search ? (
             <button className="btn btn-sm btn-ghost" type="button" onClick={() => { setSearch(''); loadOrders(1); }}>Tozalash</button>
           ) : null}
@@ -680,7 +681,7 @@ export default function Orders() {
         </form>
 
         <div className="table-responsive">
-          <table className="data-table">
+          <table className="table table-bottom-border align-middle data-table">
             <thead>
               <tr>
                 <th>Buyurtma</th>
@@ -731,10 +732,10 @@ export default function Orders() {
                     <td className="right cell-sub"><span className="money">{order.date}</span></td>
                     <td className="right" onClick={(event) => event.stopPropagation()}>
                       <span className="row-actions">
-                        <button className="btn btn-sm" onClick={() => handleOpenView(order)} title="Ko'rish / boshqarish">
+                        <button className="btn btn-light-primary icon-btn w-30 h-30 b-r-22 me-2" onClick={() => handleOpenView(order)} title="Ko'rish / boshqarish">
                           <i className="bi bi-eye"></i>
                         </button>
-                        <a className="btn btn-sm" href={order.receiptUrl || '#'} title="Chekni chop etish" target="_blank">
+                        <a className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22" href={order.receiptUrl || '#'} title="Chekni chop etish" target="_blank">
                           <i className="bi bi-printer"></i>
                         </a>
                       </span>
@@ -869,7 +870,7 @@ export default function Orders() {
                           </div>
                         ))}
                         <div className="text-end mt-2">
-                          <a className="btn btn-sm btn-light" href={selectedOrd.split.manageUrl}>
+                          <a className="btn btn-sm btn-light-secondary" href={selectedOrd.split.manageUrl}>
                             <i className="bi bi-box-arrow-up-right me-1"></i>Split boshqaruvida ochish
                           </a>
                         </div>
@@ -948,7 +949,7 @@ export default function Orders() {
                 <div className="detail-panel">
                   <h6 className="fw-bold mb-3">Mahsulotlar</h6>
                   <div className="table-responsive">
-                    <table className="data-table compact-table">
+                    <table className="table table-bottom-border align-middle data-table compact-table">
                       <thead>
                         <tr>
                           <th>Mahsulot</th>
@@ -1150,7 +1151,7 @@ export default function Orders() {
                         <input name="postal_office_address" className="form-control form-control-sm" maxLength={255} defaultValue={selectedOrd.postalInfo.address} placeholder="Toshkent sh., Chilonzor t., 5-pochta bo'limi" />
                       </div>
                       <div className="col-md-2">
-                        <button className="btn btn-sm btn-primary-gradient w-100" type="submit">Saqlash</button>
+                        <button className="btn btn-sm btn-primary w-100" type="submit">Saqlash</button>
                       </div>
                     </form>
                     {selectedOrd.postalInfo.currentStatus?.title ? (
@@ -1241,7 +1242,7 @@ export default function Orders() {
                           )}
                           {selectedOrd.fiscalReceipt && ['pending', 'failed'].includes(selectedOrd.fiscalReceipt.status) && (
                             <div className="d-flex gap-1 mt-2">
-                              {selectedOrd.fiscalReceipt.syncUrl ? <button className="btn btn-sm btn-light" onClick={() => router.post(selectedOrd.fiscalReceipt!.syncUrl!, {}, { preserveScroll: true })}><i className="bi bi-cloud-download me-1"></i>Tekshirish</button> : null}
+                              {selectedOrd.fiscalReceipt.syncUrl ? <button className="btn btn-sm btn-light-secondary" onClick={() => router.post(selectedOrd.fiscalReceipt!.syncUrl!, {}, { preserveScroll: true })}><i className="bi bi-cloud-download me-1"></i>Tekshirish</button> : null}
                               {selectedOrd.fiscalReceipt.registerUrl ? <button className="btn btn-sm btn-outline-primary" onClick={() => router.post(selectedOrd.fiscalReceipt!.registerUrl!, {}, { preserveScroll: true })}><i className="bi bi-send me-1"></i>Qayta yuborish</button> : null}
                             </div>
                           )}
@@ -1282,7 +1283,7 @@ export default function Orders() {
                                   </option>
                                 ))}
                               </select>
-                              <button className="btn btn-sm btn-primary-gradient">To'lovga urinish</button>
+                              <button className="btn btn-sm btn-primary">To'lovga urinish</button>
                             </>
                           )}
                         </form>
@@ -1308,7 +1309,7 @@ export default function Orders() {
                         </select>
                         <label className="form-label small text-muted">Sabab</label>
                         <textarea name="override_note" className="form-control form-control-sm mb-3" rows={2} placeholder="Nega logistika yo'li o'zgaryapti?" />
-                        <button className="btn btn-sm btn-primary-gradient" disabled={!selectedOrd.switchModeUrl}>Oqimni yangilash</button>
+                        <button className="btn btn-sm btn-primary" disabled={!selectedOrd.switchModeUrl}>Oqimni yangilash</button>
                       </form>
                     </div>
                     <div className="col-xl-6">
@@ -1365,7 +1366,7 @@ export default function Orders() {
                     {statusOptions.map((status) => (
                       <button
                         key={status.code}
-                        className={`btn btn-sm ${normalizeStatus(selectedOrd.status) === status.code ? 'btn-primary-gradient' : 'btn-outline-secondary'}`}
+                        className={`btn btn-sm ${normalizeStatus(selectedOrd.status) === status.code ? 'btn-primary' : 'btn-outline-secondary'}`}
                         onClick={() => handleUpdateStatus(status.code)}
                         disabled={!selectedOrd.statusUrl || normalizeStatus(selectedOrd.status) === status.code}
                       >
@@ -1390,7 +1391,7 @@ export default function Orders() {
           ) : null}
           {selectedOrd?.labelUrl ? <a className="btn btn-outline-secondary" href={selectedOrd.labelUrl} target="_blank">Label</a> : null}
           {selectedOrd?.receiptUrl ? <a className="btn btn-outline-secondary" href={selectedOrd.receiptUrl} target="_blank">Chek</a> : null}
-          <Button variant="light" onClick={() => setShowView(false)}>Yopish</Button>
+          <Button variant="light-secondary" onClick={() => setShowView(false)}>Yopish</Button>
         </Modal.Footer>
       </Modal>
 
@@ -1504,8 +1505,8 @@ function MapButtons({ mapLinks }: { mapLinks?: Record<string, string> }) {
 
   return (
     <strong className="d-flex gap-2 flex-wrap justify-content-end">
-      {mapLinks.google ? <a className="btn btn-sm btn-light" href={mapLinks.google} target="_blank" rel="noreferrer"><i className="bi bi-geo-alt me-1"></i>Google Map</a> : null}
-      {mapLinks.yandex ? <a className="btn btn-sm btn-light" href={mapLinks.yandex} target="_blank" rel="noreferrer"><i className="bi bi-map me-1"></i>Yandex Map</a> : null}
+      {mapLinks.google ? <a className="btn btn-sm btn-light-secondary" href={mapLinks.google} target="_blank" rel="noreferrer"><i className="bi bi-geo-alt me-1"></i>Google Map</a> : null}
+      {mapLinks.yandex ? <a className="btn btn-sm btn-light-secondary" href={mapLinks.yandex} target="_blank" rel="noreferrer"><i className="bi bi-map me-1"></i>Yandex Map</a> : null}
     </strong>
   );
 }
@@ -1531,7 +1532,7 @@ function SellerOrdersTable({
 
   return (
     <div className="table-responsive">
-      <table className="data-table compact-table">
+      <table className="table table-bottom-border align-middle data-table compact-table">
         <thead>
           <tr>
             <th>ID</th>
@@ -1593,7 +1594,7 @@ function SellerOrdersTable({
                     va faqat backend canReassign=true deganda (buyurtma hali
                     kuryerga topshirilmagan bosqichda). */}
                 {isSuperAdmin && row.canReassign && row.reassignUrl ? (
-                  <button className="btn btn-sm btn-light" onClick={() => onReassign(row)} title="Do'konni almashtirish">
+                  <button className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22" onClick={() => onReassign(row)} title="Do'konni almashtirish">
                     <i className="bi bi-arrow-left-right"></i>
                   </button>
                 ) : <span className="text-muted small">—</span>}
@@ -1613,7 +1614,7 @@ function RefundLedgerTable({ rows }: { rows: RefundLedgerRow[] }) {
 
   return (
     <div className="table-responsive">
-      <table className="data-table compact-table">
+      <table className="table table-bottom-border align-middle data-table compact-table">
         <thead>
           <tr>
             <th>ID</th>

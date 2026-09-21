@@ -1,4 +1,5 @@
 import { FormEvent, useState } from 'react';
+import { PageCrumbs } from '../Layout';
 import { router, usePage } from '@inertiajs/react';
 import { Modal, Button, Form } from 'react-bootstrap';
 
@@ -24,11 +25,11 @@ export function Vakansiyalar() {
 
   return (
     <div>
-      <div className="page-head"><div><h1 className="page-title">Vakansiyalar</h1><p className="page-subtitle">Jami {vacancies.length} ta vakansiya</p></div>
-        <button className="btn btn-primary-gradient" onClick={() => { setEditing(null); setShowForm(true); }}><i className="bi bi-plus-lg me-1"></i>Qo'shish</button>
+      <div className="page-head"><div><h1 className="page-title">Vakansiyalar</h1><PageCrumbs /><p className="page-subtitle">Jami {vacancies.length} ta vakansiya</p></div>
+        <button className="btn btn-primary" onClick={() => { setEditing(null); setShowForm(true); }}><i className="bi bi-plus-lg me-1"></i>Qo'shish</button>
         </div>
       <div className="card-panel">
-        <div className="table-responsive"><table className="data-table">
+        <div className="table-responsive"><table className="table table-bottom-border align-middle data-table">
           <thead><tr><th>ID</th><th>Vakansiya</th><th>Shart</th><th>Joylashuv</th><th>Arizalar</th><th>Holat</th><th>Amallar</th></tr></thead>
           <tbody>{vacancies.map(vacancy => (
             <tr key={vacancy.id}>
@@ -39,8 +40,8 @@ export function Vakansiyalar() {
               <td>{vacancy.applicants} ta</td>
               <td><div className="form-check form-switch"><input type="checkbox" className="form-check-input" checked={vacancy.status === 'Active'} onChange={() => toggle(vacancy)} /></div></td>
               <td>
-                <button className="btn btn-sm btn-light me-1" onClick={() => { setEditing(vacancy); setShowForm(true); }}><i className="bi bi-pencil"></i></button>
-                <button className="btn btn-sm btn-light text-danger" onClick={() => destroy(vacancy)}><i className="bi bi-trash"></i></button>
+                <button className="btn btn-light-success icon-btn w-30 h-30 b-r-22 me-1" onClick={() => { setEditing(vacancy); setShowForm(true); }}><i className="bi bi-pencil"></i></button>
+                <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => destroy(vacancy)}><i className="bi bi-trash"></i></button>
               </td>
             </tr>
           ))}</tbody>
@@ -114,7 +115,7 @@ export function Vakansiyalar() {
               </div>
             </div>
           </Modal.Body>
-          <Modal.Footer><Button variant="light" onClick={() => setShowForm(false)}>Bekor qilish</Button><Button type="submit" className="btn-primary-gradient border-0">Saqlash</Button></Modal.Footer>
+          <Modal.Footer><Button variant="light-secondary" onClick={() => setShowForm(false)}>Bekor qilish</Button><Button type="submit" className="btn-primary border-0">Saqlash</Button></Modal.Footer>
         </Form>
       </Modal>
     </div>
@@ -146,9 +147,9 @@ export function KaryeraArizalari() {
 
   return (
     <div>
-      <div className="page-head"><div><h1 className="page-title">Karyera arizalari</h1><p className="page-subtitle">Jami {applications.length} ta ariza</p></div></div>
+      <div className="page-head"><div><h1 className="page-title">Karyera arizalari</h1><PageCrumbs /><p className="page-subtitle">Jami {applications.length} ta ariza</p></div></div>
       <div className="card-panel">
-        <div className="table-responsive"><table className="data-table">
+        <div className="table-responsive"><table className="table table-bottom-border align-middle data-table">
           <thead><tr><th>ID</th><th>Nomzod</th><th>Vakansiya</th><th>Kontakt</th><th>Sana</th><th>Status</th><th>Amallar</th></tr></thead>
           <tbody>{applications.map(application => (
             <tr key={application.id}>
@@ -159,8 +160,8 @@ export function KaryeraArizalari() {
               <td className="text-muted">{application.date || '—'}</td>
               <td><span className={`chip ${application.status === 'new' ? 'chip-info' : application.status === 'reviewed' ? 'chip-warning' : 'chip-success'}`} style={{ fontSize: 9 }}>{application.status}</span></td>
               <td>
-                <button className="btn btn-sm btn-light me-1" onClick={() => { setSelected(application); setReplyText(''); setShowDetail(true); }}><i className="bi bi-eye"></i></button>
-                {application.cvUrl ? <a className="btn btn-sm btn-light" href={application.cvUrl}><i className="bi bi-download"></i></a> : null}
+                <button className="btn btn-light-primary icon-btn w-30 h-30 b-r-22 me-1" onClick={() => { setSelected(application); setReplyText(''); setShowDetail(true); }}><i className="bi bi-eye"></i></button>
+                {application.cvUrl ? <a className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22" href={application.cvUrl}><i className="bi bi-download"></i></a> : null}
               </td>
             </tr>
           ))}</tbody>
@@ -178,7 +179,7 @@ export function KaryeraArizalari() {
             <div className="col-12 mt-3">
               <div className="d-flex gap-2">
                 {['new', 'reviewed', 'replied', 'closed'].map(s => (
-                  <button key={s} className={`btn btn-sm ${selected?.status === s ? 'btn-primary-gradient' : 'btn-outline-secondary'}`} onClick={() => updateStatus(s)}>{s}</button>
+                  <button key={s} className={`btn btn-sm ${selected?.status === s ? 'btn-primary' : 'btn-outline-secondary'}`} onClick={() => updateStatus(s)}>{s}</button>
                 ))}
               </div>
             </div>
@@ -195,7 +196,7 @@ export function KaryeraArizalari() {
                 <div className="form-text">Javob nomzodning email manziliga ({selected?.email}) yuboriladi.</div>
                 <div className="d-flex justify-content-end mt-2">
                   <button
-                    className="btn btn-primary-gradient btn-sm"
+                    className="btn btn-primary btn-sm"
                     disabled={sendingReply || replyText.trim().length < 5}
                     onClick={sendReply}
                   >
@@ -207,7 +208,7 @@ export function KaryeraArizalari() {
           </div>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="light" onClick={() => setShowDetail(false)}>Yopish</Button>
+          <Button variant="light-secondary" onClick={() => setShowDetail(false)}>Yopish</Button>
         </Modal.Footer>
       </Modal>
     </div>

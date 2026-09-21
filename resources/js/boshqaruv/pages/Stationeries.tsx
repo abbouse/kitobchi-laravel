@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { PageCrumbs } from '../Layout';
 import type { FormEvent } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Button, Modal } from 'react-bootstrap';
@@ -89,7 +90,7 @@ export default function Stationeries() {
     <div>
       <div className="page-head">
         <div>
-          <h1 className="page-title">Kanselyariya mahsulotlari</h1>
+          <h1 className="page-title">Kanselyariya mahsulotlari</h1><PageCrumbs />
           <p className="page-subtitle">Moderatsiya, ombor, variantlar va katalog nazorati</p>
         </div>
       </div>
@@ -120,7 +121,7 @@ export default function Stationeries() {
         </div>
 
         <div className="table-responsive">
-          <table className="data-table">
+          <table className="table table-bottom-border align-middle data-table">
             <thead>
               <tr>
                 <th></th>
@@ -152,12 +153,12 @@ export default function Stationeries() {
                     <td><span className={`chip ${chip}`}>{label}</span></td>
                     <td>
                       <div className="d-flex gap-1">
-                        <button className="btn btn-sm btn-light" onClick={() => openDetail(item)} title="Ko'rish / tahrirlash"><i className="bi bi-eye"></i></button>
+                        <button className="btn btn-light-primary icon-btn w-30 h-30 b-r-22" onClick={() => openDetail(item)} title="Ko'rish / tahrirlash"><i className="bi bi-eye"></i></button>
                         {item.moderateUrl && item.status !== 1 ? (
-                          <button className="btn btn-sm btn-light text-success" onClick={() => moderate(item, 1)} title="Tasdiqlash"><i className="bi bi-check-lg"></i></button>
+                          <button className="btn btn-light-success icon-btn w-30 h-30 b-r-22" onClick={() => moderate(item, 1)} title="Tasdiqlash"><i className="bi bi-check-lg"></i></button>
                         ) : null}
                         {item.moderateUrl && item.status !== 2 ? (
-                          <button className="btn btn-sm btn-light text-danger" onClick={() => setRejectTarget(item)} title="Rad etish"><i className="bi bi-x-lg"></i></button>
+                          <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => setRejectTarget(item)} title="Rad etish"><i className="bi bi-x-lg"></i></button>
                         ) : null}
                       </div>
                     </td>
@@ -304,7 +305,7 @@ export default function Stationeries() {
                             <input name="variant_image[]" type="file" accept="image/*" className="form-control" />
                           </div>
                           <div className="col-md-1 text-end">
-                            <button type="button" className="btn btn-sm btn-light text-danger" title="Variantni o'chirish" onClick={() => removeVariantRow(row.key)}>
+                            <button type="button" className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" title="Variantni o'chirish" onClick={() => removeVariantRow(row.key)}>
                               <i className="bi bi-trash"></i>
                             </button>
                           </div>
@@ -313,7 +314,7 @@ export default function Stationeries() {
                       <div className="form-text">O'chirilgan variant saqlashda butunlay o'chib ketadi (ombordagi qoldig'i bilan birga).</div>
                     </div>
 
-                    <div className="col-12"><button className="btn btn-primary-gradient">Saqlash</button></div>
+                    <div className="col-12"><button className="btn btn-primary">Saqlash</button></div>
                   </form>
                 </div>
               </div>
@@ -325,10 +326,10 @@ export default function Stationeries() {
             <>
               <Button variant="outline-danger" onClick={() => setRejectTarget(selected)}>Rad etish</Button>
               <Button variant="outline-secondary" onClick={() => moderate(selected, 0)}>Moderatsiyaga</Button>
-              <Button variant="primary" className="btn-primary-gradient" onClick={() => moderate(selected, 1)}>Tasdiqlash</Button>
+              <Button variant="primary" className="btn-primary" onClick={() => moderate(selected, 1)}>Tasdiqlash</Button>
             </>
           ) : null}
-          <Button variant="light" onClick={() => setSelected(null)}>Yopish</Button>
+          <Button variant="light-secondary" onClick={() => setSelected(null)}>Yopish</Button>
         </Modal.Footer>
       </Modal>
     </div>
@@ -355,7 +356,7 @@ function MiniOrdersTable({ rows, empty }: { rows: MiniOrder[]; empty: string }) 
   if (!rows.length) return <div className="text-muted small">{empty}</div>;
   return (
     <div className="table-responsive">
-      <table className="data-table compact-table">
+      <table className="table table-bottom-border align-middle data-table compact-table">
         <thead>
           <tr>
             <th>ID</th>
@@ -374,7 +375,7 @@ function MiniOrdersTable({ rows, empty }: { rows: MiniOrder[]; empty: string }) 
               <td>{fmt(row.amount)} so'm</td>
               <td><span className="chip chip-gray">{row.status || '—'}</span></td>
               <td>{row.date || '—'}</td>
-              <td className="text-end">{row.url ? <a className="btn btn-sm btn-light" href={row.url} title="Buyurtmani ochish"><i className="bi bi-eye"></i></a> : null}</td>
+              <td className="text-end">{row.url ? <a className="btn btn-light-primary icon-btn w-30 h-30 b-r-22" href={row.url} title="Buyurtmani ochish"><i className="bi bi-eye"></i></a> : null}</td>
             </tr>
           ))}
         </tbody>

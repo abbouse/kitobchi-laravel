@@ -1,4 +1,5 @@
 import { toneOf } from '../utils/tone';
+import { PageCrumbs } from '../Layout';
 import { useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Modal, Button, Form } from 'react-bootstrap';
@@ -94,7 +95,7 @@ export default function Tickets() {
     <div>
       <div className="page-head">
         <div>
-          <h1 className="page-title">Murojaatlar</h1>
+          <h1 className="page-title">Murojaatlar</h1><PageCrumbs />
           <p className="page-subtitle">Mijoz supporti va sellerlarning Kitobchi bilan suhbatlari</p>
         </div>
       </div>
@@ -143,7 +144,7 @@ export default function Tickets() {
         </div>
 
         <div className="table-responsive">
-          <table className="data-table">
+          <table className="table table-bottom-border align-middle data-table">
             <thead><tr><th>ID</th><th>Manba</th><th>Mavzu</th><th>Foydalanuvchi</th><th>Operator</th><th>Xabar</th><th>Reyting</th><th>Sana</th><th>Status</th><th>Amallar</th></tr></thead>
             <tbody>
               {tickets.map((ticket) => (
@@ -158,7 +159,7 @@ export default function Tickets() {
                   <td className="text-muted">{ticket.date || '—'}</td>
                   <td><span className={`st ${toneOf(statusChip(ticket.status))}`}><i></i>{statusLabel(ticket.status)}</span></td>
                   <td>
-                    <button className="btn btn-sm btn-light me-1" onClick={() => openDetail(ticket)}><i className="bi bi-eye"></i></button>
+                    <button className="btn btn-light-primary icon-btn w-30 h-30 b-r-22 me-1" onClick={() => openDetail(ticket)}><i className="bi bi-eye"></i></button>
                     {/* BUG TUZATILDI (2026-09): ilgari bu tugma
                         `ticket.replyUrl` tekshirilmasdan HAR DOIM
                         ko'rsatilar edi. Ammo backend yopilgan seller
@@ -170,8 +171,8 @@ export default function Tickets() {
                         hech qanday xabar chiqmasdan modal ochiq
                         qolaverardi. Endi tugma `closeUrl` bilan bir
                         xil andozada shartli ko'rsatiladi. */}
-                    {ticket.replyUrl ? <button className="btn btn-sm btn-primary-gradient me-1" onClick={() => handleOpenReply(ticket)}><i className="bi bi-reply"></i></button> : null}
-                    {ticket.closeUrl ? <button className="btn btn-sm btn-light" onClick={() => closeTicket(ticket)}><i className="bi bi-check2"></i></button> : null}
+                    {ticket.replyUrl ? <button className="btn btn-sm btn-primary me-1" onClick={() => handleOpenReply(ticket)}><i className="bi bi-reply"></i></button> : null}
+                    {ticket.closeUrl ? <button className="btn btn-light-success icon-btn w-30 h-30 b-r-22" onClick={() => closeTicket(ticket)}><i className="bi bi-check2"></i></button> : null}
                   </td>
                 </tr>
               ))}
@@ -193,7 +194,7 @@ export default function Tickets() {
             </div>
           )}
         </Modal.Body>
-        <Modal.Footer>{selectedTicket?.replyUrl ? <Button variant="outline-primary" onClick={() => { setShowDetail(false); handleOpenReply(selectedTicket); }}>Javob yozish</Button> : null}{selectedTicket?.closeUrl ? <Button variant="outline-danger" onClick={() => closeTicket(selectedTicket)}>Yopish</Button> : null}<Button variant="light" onClick={() => setShowDetail(false)}>Bekor qilish</Button></Modal.Footer>
+        <Modal.Footer>{selectedTicket?.replyUrl ? <Button variant="outline-primary" onClick={() => { setShowDetail(false); handleOpenReply(selectedTicket); }}>Javob yozish</Button> : null}{selectedTicket?.closeUrl ? <Button variant="outline-danger" onClick={() => closeTicket(selectedTicket)}>Yopish</Button> : null}<Button variant="light-secondary" onClick={() => setShowDetail(false)}>Bekor qilish</Button></Modal.Footer>
       </Modal>
 
       <Modal show={showReply} onHide={() => setShowReply(false)} centered>
@@ -212,7 +213,7 @@ export default function Tickets() {
             </Form.Group>
           </Modal.Body>
           <Modal.Footer>
-            <Button variant="light" onClick={() => setShowReply(false)}>Bekor qilish</Button>
+            <Button variant="light-secondary" onClick={() => setShowReply(false)}>Bekor qilish</Button>
             <Button variant="success" type="submit" className="fw-semibold"><i className="bi bi-send me-1"></i>Yuborish</Button>
           </Modal.Footer>
         </Form>

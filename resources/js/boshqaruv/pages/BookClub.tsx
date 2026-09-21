@@ -1,4 +1,5 @@
 import { toneOf } from '../utils/tone';
+import { PageCrumbs } from '../Layout';
 import { useEffect, useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Modal, Button } from 'react-bootstrap';
@@ -191,7 +192,7 @@ export default function BookClub() {
     <div>
       <div className="page-head">
         <div>
-          <h1 className="page-title">Book Club postlari</h1>
+          <h1 className="page-title">Book Club postlari</h1><PageCrumbs />
           <p className="page-subtitle">Postlar, like bosganlar, commentlar, product view va AI baholash nazorati</p>
         </div>
       </div>
@@ -215,13 +216,13 @@ export default function BookClub() {
                     {(post.text || '').slice(0, 260) || 'Matn yo‘q'}
                   </p>
                   <div className="d-flex align-items-center gap-2 flex-wrap">
-                    <span className="btn btn-sm btn-light"><i className="bi bi-heart-fill text-danger"></i> {post.likes}</span>
-                    <button className="btn btn-sm btn-light" onClick={() => openDetail(post)}><i className="bi bi-chat"></i> {post.comments}</button>
+                    <span className="btn btn-sm btn-light-secondary"><i className="bi bi-heart-fill text-danger"></i> {post.likes}</span>
+                    <button className="btn btn-sm btn-light-secondary" onClick={() => openDetail(post)}><i className="bi bi-chat"></i> {post.comments}</button>
                     <span className={`chip ${post.aiStatus === 'scored' ? 'chip-success' : post.aiStatus === 'failed' ? 'chip-danger' : 'chip-gray'}`}>AI: {post.aiStatus || '—'} {post.aiScore ?? ''}</span>
                     <span className={`st ${toneOf(moderationChipClass(post.moderationStatus))}`}><i></i>Moderatsiya: {moderationLabel(post.moderationStatus)}</span>
-                    <button className="btn btn-sm btn-light ms-auto" onClick={() => openDetail(post)} title="Tafsilot"><i className="bi bi-eye"></i></button>
-                    <button className="btn btn-sm btn-light" onClick={() => warn(post)} title="Ogohlantirish"><i className="bi bi-flag"></i></button>
-                    <button className="btn btn-sm btn-light text-danger" onClick={() => destroy(post)} title="O'chirish"><i className="bi bi-trash"></i></button>
+                    <button className="btn btn-light-primary icon-btn w-30 h-30 b-r-22 ms-auto" onClick={() => openDetail(post)} title="Tafsilot"><i className="bi bi-eye"></i></button>
+                    <button className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22" onClick={() => warn(post)} title="Ogohlantirish"><i className="bi bi-flag"></i></button>
+                    <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => destroy(post)} title="O'chirish"><i className="bi bi-trash"></i></button>
                   </div>
                 </div>
               </div>
@@ -329,7 +330,7 @@ export default function BookClub() {
           {detail ? <Button variant="outline-warning" onClick={() => warn(detail.post)}>Ogohlantirish</Button> : null}
           {detail ? <Button variant={detail.post.hiddenByAi ? 'outline-success' : 'outline-secondary'} onClick={() => setModeration(detail.post.moderationUrl, !detail.post.hiddenByAi)}>{detail.post.hiddenByAi ? 'Qayta ochish' : 'Yashirish'}</Button> : null}
           {detail ? <Button variant="outline-danger" onClick={() => destroy(detail.post)}>O'chirish</Button> : null}
-          <Button variant="light" onClick={() => { setSelectedPost(null); setDetail(null); }}>Yopish</Button>
+          <Button variant="light-secondary" onClick={() => { setSelectedPost(null); setDetail(null); }}>Yopish</Button>
         </Modal.Footer>
       </Modal>
     </div>
@@ -388,9 +389,9 @@ function CommentCard({ comment, onEdit, onDelete, onModerate }: { comment: Comme
           <div className="d-flex gap-2 flex-wrap mt-2">
             <span className="chip chip-info">AI: {comment.aiStatus || '—'} {comment.aiScore ?? ''}</span>
             {comment.moderationStatus ? <span className={`st ${toneOf(moderationChipClass(comment.moderationStatus))}`}><i></i>{moderationLabel(comment.moderationStatus)}</span> : null}
-            <button className={`btn btn-sm btn-light ${comment.hiddenByAi ? 'text-success' : 'text-secondary'}`} onClick={() => onModerate(comment.moderationUrl, !comment.hiddenByAi)} title={comment.hiddenByAi ? 'Qayta ochish' : 'Yashirish'}><i className={`bi ${comment.hiddenByAi ? 'bi-eye' : 'bi-eye-slash'}`}></i></button>
-            <button className="btn btn-sm btn-light ms-auto" onClick={onEdit}><i className="bi bi-pencil"></i></button>
-            <button className="btn btn-sm btn-light text-danger" onClick={() => onDelete(comment.destroyUrl)}><i className="bi bi-trash"></i></button>
+            <button className={`btn btn-sm btn-light-secondary ${comment.hiddenByAi ? 'text-success' : 'text-secondary'}`} onClick={() => onModerate(comment.moderationUrl, !comment.hiddenByAi)} title={comment.hiddenByAi ? 'Qayta ochish' : 'Yashirish'}><i className={`bi ${comment.hiddenByAi ? 'bi-eye' : 'bi-eye-slash'}`}></i></button>
+            <button className="btn btn-light-success icon-btn w-30 h-30 b-r-22 ms-auto" onClick={onEdit}><i className="bi bi-pencil"></i></button>
+            <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => onDelete(comment.destroyUrl)}><i className="bi bi-trash"></i></button>
           </div>
           {comment.aiNote || comment.moderationNote ? <div className="small text-muted mt-2">{comment.aiNote || comment.moderationNote}</div> : null}
           {comment.replies?.length ? (
@@ -399,7 +400,7 @@ function CommentCard({ comment, onEdit, onDelete, onModerate }: { comment: Comme
                 <div key={reply.id} className="small">
                   <div className="d-flex justify-content-between gap-2"><strong>{reply.name}</strong><span className="text-muted">{reply.date || '—'}</span></div>
                   <div className="text-muted">{reply.content}</div>
-                  <button className="btn btn-sm btn-light text-danger mt-1" onClick={() => onDelete(reply.destroyUrl, "Javob o'chirilsinmi?")}><i className="bi bi-trash"></i></button>
+                  <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22 mt-1" onClick={() => onDelete(reply.destroyUrl, "Javob o'chirilsinmi?")}><i className="bi bi-trash"></i></button>
                 </div>
               ))}
             </div>

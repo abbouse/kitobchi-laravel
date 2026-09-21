@@ -1,4 +1,5 @@
 import { usePalette, categoryColor } from '../utils/palette';
+import { PageCrumbs } from '../Layout';
 import { useState } from 'react';
 import { Link, router, usePage } from '@inertiajs/react';
 import {
@@ -177,6 +178,10 @@ const financialHelps: Record<string, string> = {
   'Marketplace marjasi': "Taxminiy net signal: seller komissiya + delivery income - promo - cashback - kuryer - chiqim - provider - soliq.",
 };
 
+
+// Axelit ro'yxatlaridagi rang navbati
+const DASH_TONES = ['primary', 'success', 'info', 'warning', 'danger', 'secondary'];
+
 export default function Dashboard() {
   const palette = usePalette();
   const { dashboard = emptyDashboard } = usePage<{ dashboard?: DashboardPayload }>().props;
@@ -224,7 +229,7 @@ export default function Dashboard() {
     <div>
       <div className="page-head">
         <div>
-          <h1 className="page-title">Boshqaruv dashboard</h1>
+          <h1 className="page-title">Boshqaruv dashboard</h1><PageCrumbs />
           <p className="page-subtitle">
             <span className="chip chip-success me-2"><span className="live-pulse"></span>Real DB</span>
             Oxirgi hisoblash: {dashboard.generatedAt}
@@ -240,11 +245,11 @@ export default function Dashboard() {
               ['year', 'Yil'],
               ['all', 'Barchasi'],
             ] as const).map(([key, label]) => (
-              <button key={key} disabled={isFiltering} className={`btn ${dashboard.range.key === key ? 'btn-primary-gradient' : 'btn-outline-secondary'}`} onClick={() => selectPeriod(key)}>
+              <button key={key} disabled={isFiltering} className={`btn ${dashboard.range.key === key ? 'btn-primary' : 'btn-outline-secondary'}`} onClick={() => selectPeriod(key)}>
                 {label}
               </button>
             ))}
-            <button disabled={isFiltering} className={`btn ${dashboard.range.key === 'custom' ? 'btn-primary-gradient' : 'btn-outline-secondary'}`} onClick={() => setShowCustomRange((value) => !value)}>
+            <button disabled={isFiltering} className={`btn ${dashboard.range.key === 'custom' ? 'btn-primary' : 'btn-outline-secondary'}`} onClick={() => setShowCustomRange((value) => !value)}>
               <i className="bi bi-calendar-range me-1"></i>Sana
             </button>
           </div>
@@ -299,7 +304,7 @@ export default function Dashboard() {
               <span className="d-block mb-1">Tugash</span>
               <input className="form-control form-control-sm" type="date" min={customFrom || undefined} max={today} value={customTo} onChange={(event) => setCustomTo(event.target.value)} />
             </label>
-            <button className="btn btn-primary-gradient btn-sm" disabled={!customFrom || !customTo || isFiltering} onClick={applyCustomRange}>
+            <button className="btn btn-primary btn-sm" disabled={!customFrom || !customTo || isFiltering} onClick={applyCustomRange}>
               {isFiltering ? <span className="spinner-border spinner-border-sm me-1"></span> : <i className="bi bi-funnel me-1"></i>}
               Ko'rsatish
             </button>
@@ -349,7 +354,7 @@ export default function Dashboard() {
                 <small className="text-muted">{dashboard.salesTrend.granularity} · yakuniy savdolar va platform signal</small>
               </div>
               <div className="btn-group btn-group-sm">
-                <button className={`btn ${chartMetric === 'revenue' ? 'btn-primary-gradient' : 'btn-outline-secondary'}`} onClick={() => setChartMetric('revenue')}>Daromad</button>
+                <button className={`btn ${chartMetric === 'revenue' ? 'btn-primary' : 'btn-outline-secondary'}`} onClick={() => setChartMetric('revenue')}>Daromad</button>
                 <button className={`btn ${chartMetric === 'profit' ? 'btn-success' : 'btn-outline-secondary'}`} onClick={() => setChartMetric('profit')}>Signal</button>
                 <button className={`btn ${chartMetric === 'orders' ? 'btn-warning' : 'btn-outline-secondary'}`} onClick={() => setChartMetric('orders')}>Order</button>
               </div>
@@ -392,12 +397,14 @@ export default function Dashboard() {
                     <Tooltip formatter={(value: number) => `${value}%`} />
                   </PieChart>
                 </ResponsiveContainer>
-                {dashboard.categoryShare.map((row, index) => (
-                  <div key={row.name} className="d-flex justify-content-between py-2 border-bottom small">
-                    <span><i className="bi bi-circle-fill me-2" style={{ color: categoryColor(palette, index) }}></i>{row.name}</span>
-                    <strong>{row.value}% · {money(row.revenue)}</strong>
-                  </div>
-                ))}
+                <ul className="kc-dash-list">
+                  {dashboard.categoryShare.map((row, index) => (
+                    <li key={row.name}>
+                      <span className="d-flex align-items-center gap-2 min-w-0"><span className="kc-dot" style={{ background: categoryColor(palette, index) }}></span><span className="text-truncate">{row.name}</span></span>
+                      <strong className="text-nowrap">{row.value}% · {money(row.revenue)}</strong>
+                    </li>
+                  ))}
+                </ul>
               </>
             ) : <div className="text-muted small">To'langan order itemlari hali topilmadi.</div>}
           </div>
@@ -431,12 +438,24 @@ export default function Dashboard() {
         <div className="col-xl-4">
           <div className="card-panel h-100">
             <div className="panel-title mb-3">Operatsion ogohlantirishlar</div>
-            {dashboard.alerts.length ? dashboard.alerts.map((alert) => (
-              <Link href={alert.url || '/boshqaruv'} key={alert.title} className="text-decoration-none d-flex gap-2 align-items-start p-2 border-bottom">
-                <i className={`bi ${alert.icon} text-warning`}></i>
-                <span><strong className="d-block text-body">{alert.title}</strong><small className="text-muted">{alert.text}</small></span>
-              </Link>
-            )) : <div className="text-muted small">Kritik ogohlantirish yo'q.</div>}
+            <ul className="order-content-list">
+              {dashboard.alerts.length ? dashboard.alerts.map((alert, index) => {
+                const tone = ['warning', 'danger', 'info', 'primary'][index % 4];
+                return (
+                  <li className={`bg-${tone}-300`} key={alert.title}>
+                    <Link href={alert.url || '/boshqaruv'} className="d-block text-decoration-none">
+                      <h6 className={`text-${tone}-dark f-w-600 mb-0`}><i className={`bi ${alert.icon} me-1`}></i>{alert.title}</h6>
+                      <p className={`text-${tone}-dark mb-0 f-s-13 txt-ellipsis-2`}>{alert.text}</p>
+                    </Link>
+                  </li>
+                );
+              }) : (
+                <li className="bg-success-300">
+                  <h6 className="text-success-dark f-w-600 mb-0"><i className="bi bi-check2-circle me-1"></i>Hammasi joyida</h6>
+                  <p className="text-success-dark mb-0 f-s-13">Kritik ogohlantirish yo'q.</p>
+                </li>
+              )}
+            </ul>
           </div>
         </div>
       </div>
@@ -989,7 +1008,7 @@ function CompactMetric({ label, value = 0, icon, href, help }: { label: string; 
 }
 
 function DistributionPanel({ title, rows, help }: { title: string; rows: Array<{ name: string; value: string }>; help?: string }) {
-  return <div className="col-xl-4"><div className="card-panel h-100"><div className="d-flex align-items-center gap-2 mb-3"><div className="panel-title">{title}</div>{help ? <InfoHint text={help} /> : null}</div>{rows.length ? rows.slice(0, 8).map((row) => <div className="d-flex justify-content-between gap-3 py-2 border-bottom small" key={row.name}><span className="text-muted text-truncate">{row.name}</span><strong className="text-nowrap">{row.value}</strong></div>) : <div className="text-muted small">Ma'lumot topilmadi.</div>}</div></div>;
+  return <div className="col-xl-4"><div className="card-panel h-100"><div className="d-flex align-items-center gap-2 mb-3"><div className="panel-title">{title}</div>{help ? <InfoHint text={help} /> : null}</div>{rows.length ? <ul className="kc-dash-list">{rows.slice(0, 8).map((row, index) => <li key={row.name}><span className="d-flex align-items-center gap-2 min-w-0"><span className={`kc-dot bg-${DASH_TONES[index % DASH_TONES.length]}`}></span><span className="text-truncate">{row.name}</span></span><strong className="text-nowrap">{row.value}</strong></li>)}</ul> : <div className="text-muted small">Ma'lumot topilmadi.</div>}</div></div>;
 }
 
 // Real P&L qatorlari: rang faqat ishorani bildiradi — kirim, chiqim yoki
@@ -1045,12 +1064,14 @@ function StatusPanel({ title, counts, labels }: { title: string; counts: Record<
     <div className="col-xl-2 col-md-4">
       <div className="card-panel h-100">
         <div className="panel-title mb-3">{title}</div>
-        {Object.entries(labels).map(([key, label]) => (
-          <div className="d-flex justify-content-between py-1 small border-bottom" key={key}>
-            <span className="text-muted">{label}</span>
-            <strong>{fmt(counts[key] || 0)}</strong>
-          </div>
-        ))}
+        <ul className="kc-dash-list">
+          {Object.entries(labels).map(([key, label]) => (
+            <li key={key} className={key === 'all' ? 'is-total' : ''}>
+              <span>{label}</span>
+              <strong>{fmt(counts[key] || 0)}</strong>
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
   );
@@ -1060,16 +1081,20 @@ function RankPanel({ title, rows, help }: { title: string; rows: Array<{ name: s
   return (
     <div className="card-panel h-100">
       <div className="d-flex align-items-center gap-2 mb-3"><div className="panel-title">{title}</div>{help ? <InfoHint text={help} /> : null}</div>
-      {rows.length ? rows.map((row, index) => (
-        <div className="d-flex align-items-center gap-2 py-2 border-bottom" key={`${row.name}-${index}`}>
-          <span className="chip chip-purple">{index + 1}</span>
-          <div style={{ minWidth: 0, flex: 1 }}>
-            <div className="fw-semibold text-truncate">{row.name}</div>
-            <small className="text-muted">{row.meta}</small>
-          </div>
-          <strong className="text-success small">{row.value}</strong>
-        </div>
-      )) : <div className="text-muted small">Ma'lumot topilmadi.</div>}
+      {rows.length ? (
+        <ul className="customer-list">
+          {rows.map((row, index) => (
+            <li className="customer-list-item gap-2" key={`${row.name}-${index}`}>
+              <span className={`text-light-${DASH_TONES[index % DASH_TONES.length]} f-w-600 h-35 w-35 d-flex-center b-r-50 customer-list-avtar`}>{index + 1}</span>
+              <div className="customer-list-content min-w-0">
+                <h6 className="mb-0 f-s-15 txt-ellipsis-1">{row.name}</h6>
+                <p className="mb-0 f-s-12 text-secondary">{row.meta}</p>
+              </div>
+              <span className="f-w-600 text-dark f-s-14 text-nowrap ms-auto">{row.value}</span>
+            </li>
+          ))}
+        </ul>
+      ) : <div className="text-muted small">Ma'lumot topilmadi.</div>}
     </div>
   );
 }
@@ -1078,17 +1103,21 @@ function RecentOrders({ rows }: { rows: DashboardPayload['recentOrders'] }) {
   return (
     <div className="card-panel h-100">
       <div className="panel-title mb-3">Oxirgi buyurtmalar</div>
-      {rows.length ? rows.slice(0, 8).map((row) => (
-        <div className="d-flex align-items-center gap-2 py-2 border-bottom" key={row.id}>
-          <span className="chip chip-gray">#{row.id}</span>
-          <div style={{ minWidth: 0, flex: 1 }}>
-            <div className="fw-semibold text-truncate">{row.customer || 'Mijoz'}</div>
-            <small className="text-muted">{row.status} · {row.updated_at || ''}</small>
-          </div>
-          <strong className="text-success small">{money(row.amount)}</strong>
-          {row.url ? <a href={row.url} className="btn btn-sm btn-light" title="Buyurtmani ochish"><i className="bi bi-eye"></i></a> : null}
-        </div>
-      )) : <div className="text-muted small">Buyurtma topilmadi.</div>}
+      {rows.length ? (
+        <ul className="customer-list">
+          {rows.slice(0, 8).map((row, index) => (
+            <li className="customer-list-item gap-2" key={row.id}>
+              <span className={`text-light-${DASH_TONES[index % DASH_TONES.length]} f-w-600 h-35 w-35 d-flex-center b-r-50 customer-list-avtar f-s-12`}>{(row.customer || 'M').trim().slice(0, 1).toUpperCase()}</span>
+              <div className="customer-list-content min-w-0">
+                <h6 className="mb-0 f-s-15 txt-ellipsis-1">{row.customer || 'Mijoz'} <span className="text-secondary f-w-500 f-s-12">#{row.id}</span></h6>
+                <p className="mb-0 f-s-12 text-secondary txt-ellipsis-1">{row.status} · {row.updated_at || ''}</p>
+              </div>
+              <span className="f-w-600 text-dark f-s-14 text-nowrap ms-auto">{money(row.amount)}</span>
+              {row.url ? <a href={row.url} className="btn btn-light-primary icon-btn w-30 h-30 b-r-22 flex-shrink-0" title="Buyurtmani ochish"><i className="ti ti-eye"></i></a> : null}
+            </li>
+          ))}
+        </ul>
+      ) : <div className="text-muted small">Buyurtma topilmadi.</div>}
     </div>
   );
 }

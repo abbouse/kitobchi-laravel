@@ -207,8 +207,8 @@ export function MapButtons({ mapLinks }: { mapLinks?: Record<string, string> }) 
 
   return (
     <div className="d-flex gap-2 flex-wrap mt-2">
-      {mapLinks.google ? <a className="btn btn-sm btn-light" href={mapLinks.google} target="_blank" rel="noreferrer"><i className="bi bi-geo-alt me-1"></i>Google Map</a> : null}
-      {mapLinks.yandex ? <a className="btn btn-sm btn-light" href={mapLinks.yandex} target="_blank" rel="noreferrer"><i className="bi bi-map me-1"></i>Yandex Map</a> : null}
+      {mapLinks.google ? <a className="btn btn-sm btn-light-secondary" href={mapLinks.google} target="_blank" rel="noreferrer"><i className="bi bi-geo-alt me-1"></i>Google Map</a> : null}
+      {mapLinks.yandex ? <a className="btn btn-sm btn-light-secondary" href={mapLinks.yandex} target="_blank" rel="noreferrer"><i className="bi bi-map me-1"></i>Yandex Map</a> : null}
     </div>
   );
 }
@@ -319,7 +319,7 @@ export function ReassignSellerModal({ order, sellers, onHide, onSubmit }: {
                         <button
                           type="button"
                           key={s.id}
-                          className="d-block w-100 text-start btn btn-light border-0 rounded-0 px-3 py-2"
+                          className="d-block w-100 text-start btn btn-light-secondary border-0 rounded-0 px-3 py-2"
                           onClick={() => { setSelected(s); setQuery(''); }}
                         >
                           {s.name}
@@ -337,7 +337,7 @@ export function ReassignSellerModal({ order, sellers, onHide, onSubmit }: {
         )}
       </Modal.Body>
       <Modal.Footer>
-        <Button variant="light" onClick={onHide}>Bekor qilish</Button>
+        <Button variant="light-secondary" onClick={onHide}>Bekor qilish</Button>
         <Button
           variant="primary"
           disabled={!selected}

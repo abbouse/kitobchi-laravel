@@ -1,4 +1,5 @@
 import { toneOf } from '../utils/tone';
+import { PageCrumbs } from '../Layout';
 import { useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Modal, Button } from 'react-bootstrap';
@@ -68,7 +69,7 @@ export default function SellerAiActions() {
     <div>
       <div className="page-head">
         <div>
-          <h1 className="page-title">Seller AI Audit</h1>
+          <h1 className="page-title">Seller AI Audit</h1><PageCrumbs />
           <p className="page-subtitle">AI preview, tasdiqlangan stock amallari va rollback tarixi</p>
         </div>
       </div>
@@ -104,7 +105,7 @@ export default function SellerAiActions() {
         </div>
 
         <div className="table-responsive">
-          <table className="data-table">
+          <table className="table table-bottom-border align-middle data-table">
             <thead><tr><th>Token</th><th>Seller</th><th>Fayl</th><th>Action</th><th>Items</th><th>Status</th><th>Sana</th><th>Amal</th></tr></thead>
             <tbody>
               {sellerAiActions.map((action) => (
@@ -116,7 +117,7 @@ export default function SellerAiActions() {
                   <td>{action.appliedCount || 0}/{action.itemsCount || 0}</td>
                   <td><span className={`st ${toneOf(statusChip(action.status))}`}><i></i>{statusLabel(action.status)}</span></td>
                   <td className="text-muted">{action.createdAt || '—'}</td>
-                  <td><button className="btn btn-sm btn-light" onClick={() => setSelected(action)}><i className="bi bi-eye"></i></button></td>
+                  <td><button className="btn btn-light-primary icon-btn w-30 h-30 b-r-22" onClick={() => setSelected(action)}><i className="bi bi-eye"></i></button></td>
                 </tr>
               ))}
               {sellerAiActions.length === 0 ? <tr><td colSpan={8} className="text-center text-muted py-5">AI action topilmadi</td></tr> : null}
@@ -155,7 +156,7 @@ export default function SellerAiActions() {
             </div>
           ) : null}
         </Modal.Body>
-        <Modal.Footer><Button variant="light" onClick={() => setSelected(null)}>Yopish</Button></Modal.Footer>
+        <Modal.Footer><Button variant="light-secondary" onClick={() => setSelected(null)}>Yopish</Button></Modal.Footer>
       </Modal>
     </div>
   );

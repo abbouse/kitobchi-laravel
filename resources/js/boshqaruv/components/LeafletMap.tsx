@@ -224,7 +224,7 @@ export function LeafletMapPicker({
                 <button
                   key={index}
                   type="button"
-                  className="btn btn-light w-100 text-start small border-0"
+                  className="btn btn-light-secondary w-100 text-start small border-0"
                   style={{ borderRadius: 0 }}
                   onClick={() => pick(row)}
                 >

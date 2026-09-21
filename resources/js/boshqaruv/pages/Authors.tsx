@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { PageCrumbs } from '../Layout';
 import type { FormEvent } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Modal, Button } from 'react-bootstrap';
@@ -79,8 +80,8 @@ export default function Authors() {
   return (
     <div>
       <div className="page-head">
-        <div><h1 className="page-title">Mualliflar</h1><p className="page-subtitle">Jami {authors.length} ta muallif</p></div>
-        <button className="btn btn-primary-gradient" onClick={() => setEditing(emptyAuthor)}><i className="bi bi-plus-lg me-1"></i>Muallif qo'shish</button>
+        <div><h1 className="page-title">Mualliflar</h1><PageCrumbs /><p className="page-subtitle">Jami {authors.length} ta muallif</p></div>
+        <button className="btn btn-primary" onClick={() => setEditing(emptyAuthor)}><i className="bi bi-plus-lg me-1"></i>Muallif qo'shish</button>
       </div>
 
       <div className="row g-3">
@@ -104,9 +105,9 @@ export default function Authors() {
                 </div>
               </div>
               <div className="d-flex gap-2 mt-3 pt-2">
-                <button className="btn btn-sm btn-light flex-fill" onClick={() => openDetail(author)}><i className="bi bi-eye"></i></button>
-                <button className="btn btn-sm btn-light flex-fill" onClick={() => setEditing(author)}><i className="bi bi-pencil"></i></button>
-                <button className="btn btn-sm btn-light text-danger" onClick={() => destroy(author)}><i className="bi bi-trash"></i></button>
+                <button className="btn btn-sm btn-light-secondary flex-fill" onClick={() => openDetail(author)}><i className="bi bi-eye"></i></button>
+                <button className="btn btn-sm btn-light-secondary flex-fill" onClick={() => setEditing(author)}><i className="bi bi-pencil"></i></button>
+                <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => destroy(author)}><i className="bi bi-trash"></i></button>
               </div>
             </div>
           </div>
@@ -145,7 +146,7 @@ function AuthorFormModal({ author, onHide }: { author: Partial<Author> | null; o
           <Field name="source_url" label="Manba URL" defaultValue={author?.sourceUrl} wide />
           {isEdit ? <div className="col-12"><label className="form-check"><input className="form-check-input" type="checkbox" checked={removeImage} onChange={(e) => setRemoveImage(e.target.checked)} /><span className="form-check-label ms-2">Hozirgi rasmni olib tashlash</span></label></div> : null}
         </div></Modal.Body>
-        <Modal.Footer><Button variant="light" onClick={onHide}>Bekor</Button><Button type="submit" variant="primary">{isEdit ? 'Saqlash' : "Qo'shish"}</Button></Modal.Footer>
+        <Modal.Footer><Button variant="light-secondary" onClick={onHide}>Bekor</Button><Button type="submit" variant="primary">{isEdit ? 'Saqlash' : "Qo'shish"}</Button></Modal.Footer>
       </form>
     </Modal>
   );
@@ -176,7 +177,7 @@ function AuthorDetailModal({ author, detail, loading, onHide, onEdit, onDelete, 
         {detail?.needsAiPortrait ? <Button variant="outline-secondary" onClick={() => author && onPrompt(author)}>AI prompt</Button> : null}
         {detail ? <Button variant="outline-primary" onClick={onEdit}>Tahrirlash</Button> : null}
         {author ? <Button variant="outline-danger" onClick={() => onDelete(author)}>O'chirish</Button> : null}
-        <Button variant="light" onClick={onHide}>Yopish</Button>
+        <Button variant="light-secondary" onClick={onHide}>Yopish</Button>
       </Modal.Footer>
     </Modal>
   );
@@ -185,7 +186,7 @@ function AuthorDetailModal({ author, detail, loading, onHide, onEdit, onDelete, 
 function BooksTable({ rows }: { rows: BookRow[] }) {
   if (!rows.length) return <div className="text-muted small">Ulangan kitob topilmadi.</div>;
 
-  return <div className="table-responsive"><table className="table data-table mb-0"><thead><tr><th>ID</th><th>Kitob</th><th>Kategoriya</th><th>Seller</th><th>Narx</th><th>Qoldiq</th><th>Sotildi</th><th>Holat</th></tr></thead><tbody>{rows.map((book) => <tr key={book.id}><td>#{book.id}</td><td className="fw-semibold">{book.name}</td><td>{book.category || '—'}</td><td>{book.seller || '—'}</td><td>{fmt(book.price)}</td><td>{book.stock}</td><td>{book.sold}</td><td><span className={`chip ${book.hidden || !book.approved ? 'chip-warning' : 'chip-success'}`}>{book.hidden ? 'Yashirin' : book.status}</span></td></tr>)}</tbody></table></div>;
+  return <div className="table-responsive"><table className="table table-bottom-border align-middle data-table mb-0"><thead><tr><th>ID</th><th>Kitob</th><th>Kategoriya</th><th>Seller</th><th>Narx</th><th>Qoldiq</th><th>Sotildi</th><th>Holat</th></tr></thead><tbody>{rows.map((book) => <tr key={book.id}><td>#{book.id}</td><td className="fw-semibold">{book.name}</td><td>{book.category || '—'}</td><td>{book.seller || '—'}</td><td>{fmt(book.price)}</td><td>{book.stock}</td><td>{book.sold}</td><td><span className={`chip ${book.hidden || !book.approved ? 'chip-warning' : 'chip-success'}`}>{book.hidden ? 'Yashirin' : book.status}</span></td></tr>)}</tbody></table></div>;
 }
 
 function Field({ name, label, defaultValue, required, wide }: { name: string; label: string; defaultValue?: string | null; required?: boolean; wide?: boolean }) {

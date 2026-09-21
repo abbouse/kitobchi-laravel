@@ -297,7 +297,7 @@ function GeocodeSearch({ onPick }: { onPick: (coords: LatLon, label: string) => 
             }
           }}
         />
-        <button type="button" className="btn btn-primary-gradient" onClick={run} disabled={busy}>
+        <button type="button" className="btn btn-primary" onClick={run} disabled={busy}>
           {busy ? <span className="spinner-border spinner-border-sm" /> : 'Qidirish'}
         </button>
       </div>
@@ -507,13 +507,13 @@ function YandexZoneEditorInner({
         </div>
         {scope === 'polygon' ? (
           <div className="btn-group btn-group-sm">
-            <button type="button" className={`btn ${drawing ? 'btn-primary-gradient' : 'btn-light'}`} onClick={() => { polygonRef.current?.editor.startDrawing(); setDrawing(true); }}>
+            <button type="button" className={`btn ${drawing ? 'btn-primary' : 'btn-light-secondary'}`} onClick={() => { polygonRef.current?.editor.startDrawing(); setDrawing(true); }}>
               <i className="bi bi-pencil me-1" />Chizish
             </button>
-            <button type="button" className="btn btn-light" onClick={() => { polygonRef.current?.editor.startEditing(); setDrawing(false); }}>
+            <button type="button" className="btn btn-light-secondary" onClick={() => { polygonRef.current?.editor.startEditing(); setDrawing(false); }}>
               <i className="bi bi-arrows-move me-1" />Tahrirlash
             </button>
-            <button type="button" className="btn btn-light text-danger" onClick={redraw}>
+            <button type="button" className="btn btn-light-secondary text-danger" onClick={redraw}>
               <i className="bi bi-arrow-counterclockwise me-1" />Qaytadan
             </button>
           </div>

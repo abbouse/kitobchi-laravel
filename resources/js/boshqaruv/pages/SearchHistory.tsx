@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { PageCrumbs } from '../Layout';
 import { router, usePage } from '@inertiajs/react';
 import PaginationControls from '../components/PaginationControls';
 
@@ -46,7 +47,7 @@ export default function SearchHistory() {
     <div>
       <div className="page-head">
         <div>
-          <h1 className="page-title">Qidiruv tarixi</h1>
+          <h1 className="page-title">Qidiruv tarixi</h1><PageCrumbs />
           <p className="page-subtitle">Foydalanuvchilar nimalarni qidiryapti va natija sifati</p>
         </div>
       </div>
@@ -138,7 +139,7 @@ export default function SearchHistory() {
         </div>
 
         <div className="table-responsive">
-          <table className="data-table">
+          <table className="table table-bottom-border align-middle data-table">
             <thead><tr><th>So'z</th><th>Foydalanuvchi</th><th>Natija</th><th>Turi</th><th>Topilgan</th><th>Qidirilgan</th><th>Draft</th><th>Oxirgi</th></tr></thead>
             <tbody>
               {searchHistory.map((item) => (

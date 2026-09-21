@@ -1,4 +1,5 @@
 import CategoryImageField, { categoryImageUrl } from '../components/CategoryImageField';
+import { PageCrumbs } from '../Layout';
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { router, usePage } from '@inertiajs/react';
@@ -39,13 +40,13 @@ export default function BookCategories() {
   return (
     <div>
       <div className="page-head">
-        <div><h1 className="page-title">Kitob kategoriyalari</h1><p className="page-subtitle">Jami {categories.length} ta kategoriya</p></div>
-        <button className="btn btn-primary-gradient" onClick={() => setEditing({ active: true })}><i className="bi bi-plus-lg me-1"></i>Kategoriya qo'shish</button>
+        <div><h1 className="page-title">Kitob kategoriyalari</h1><PageCrumbs /><p className="page-subtitle">Jami {categories.length} ta kategoriya</p></div>
+        <button className="btn btn-primary" onClick={() => setEditing({ active: true })}><i className="bi bi-plus-lg me-1"></i>Kategoriya qo'shish</button>
       </div>
 
       <div className="card-panel">
         <div className="table-responsive">
-          <table className="data-table">
+          <table className="table table-bottom-border align-middle data-table">
             <thead><tr><th>ID</th><th>Nomi</th><th>Slug</th><th>Kitoblar</th><th>Holat</th><th>Amallar</th></tr></thead>
             <tbody>
               {pagination.paginated.map((category) => (
@@ -55,7 +56,7 @@ export default function BookCategories() {
                   <td className="text-muted">{category.slug || '—'}</td>
                   <td className="num">{category.itemsCount} ta</td>
                   <td><button className={`chip border-0 ${category.active ? 'chip-success' : 'chip-gray'}`} onClick={() => toggle(category)}>{category.active ? 'Faol' : 'Nofaol'}</button></td>
-                  <td><div className="d-flex gap-2"><button className="btn btn-sm btn-light" onClick={() => setEditing(category)}><i className="bi bi-pencil"></i></button><button className="btn btn-sm btn-light text-danger" onClick={() => destroy(category)} disabled={category.itemsCount > 0}><i className="bi bi-trash"></i></button></div></td>
+                  <td><div className="d-flex gap-2"><button className="btn btn-light-success icon-btn w-30 h-30 b-r-22" onClick={() => setEditing(category)}><i className="bi bi-pencil"></i></button><button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => destroy(category)} disabled={category.itemsCount > 0}><i className="bi bi-trash"></i></button></div></td>
                 </tr>
               ))}
             </tbody>
@@ -96,7 +97,7 @@ function CategoryFormModal({ category, baseUrl, onHide }: { category: Partial<Ca
           <Field name="ofd_package_code" label="OFD qadoq kodi" defaultValue={category?.ofdPackageCode} />
           <div className="col-12 small text-muted">Fiskal chek uchun. Bo'sh qolsa .env dagi umumiy kitob kodi ishlatiladi. Kodlarni tasnif.soliq.uz dan oling.</div>
         </div></Modal.Body>
-        <Modal.Footer><Button variant="light" onClick={onHide}>Bekor</Button><Button type="submit" variant="primary">{isEdit ? 'Saqlash' : "Qo'shish"}</Button></Modal.Footer>
+        <Modal.Footer><Button variant="light-secondary" onClick={onHide}>Bekor</Button><Button type="submit" variant="primary">{isEdit ? 'Saqlash' : "Qo'shish"}</Button></Modal.Footer>
       </form>
     </Modal>
   );

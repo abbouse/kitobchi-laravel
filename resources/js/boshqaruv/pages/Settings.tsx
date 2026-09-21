@@ -1,4 +1,5 @@
 import { FormEvent, useMemo, useState } from 'react';
+import { PageCrumbs } from '../Layout';
 import { router, usePage } from '@inertiajs/react';
 
 const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n || 0);
@@ -103,7 +104,7 @@ function Toggle({ name, label, defaultChecked, icon }: { name: string; label: st
 }
 
 function SaveButton({ label = 'Saqlash' }: { label?: string }) {
-  return <button className="btn btn-primary-gradient"><i className="bi bi-check2 me-1"></i>{label}</button>;
+  return <button className="btn btn-primary"><i className="bi bi-check2 me-1"></i>{label}</button>;
 }
 
 function SectionCard({ title, icon, children }: { title: string; icon: string; children: React.ReactNode }) {
@@ -134,7 +135,7 @@ export default function Settings() {
     <div className="settings-page">
       <div className="page-head">
         <div>
-          <h1 className="page-title">Sozlamalar</h1>
+          <h1 className="page-title">Sozlamalar</h1><PageCrumbs />
           <p className="page-subtitle">App versiyalari, operatsion flaglar, cashback va komissiya sozlamalari</p>
         </div>
       </div>
@@ -142,7 +143,7 @@ export default function Settings() {
       <div className="card-panel mb-3">
         <div className="d-flex flex-wrap gap-2">
           {tabs.map((item) => (
-            <button key={item.key} type="button" onClick={() => setActiveTab(item.key)} className={`btn ${tab === item.key ? 'btn-primary-gradient' : 'btn-light'}`}>
+            <button key={item.key} type="button" onClick={() => setActiveTab(item.key)} className={`kc-tab ${tab === item.key ? 'active' : ''}`}>
               <i className={`bi ${item.icon} me-1`}></i>{item.label}
             </button>
           ))}
@@ -306,7 +307,7 @@ export default function Settings() {
           <div className="col-xl-8">
             <SectionCard title="Komissiya qoidalari" icon="bi-percent">
               <div className="table-responsive">
-                <table className="table data-table align-middle mb-0">
+                <table className="table table-bottom-border align-middle data-table mb-0">
                   <thead><tr><th>Narx dan</th><th>Narx gacha</th><th>Komissiya %</th><th></th></tr></thead>
                   <tbody>
                     {(settings.commission ?? []).map((item) => (
@@ -316,9 +317,9 @@ export default function Settings() {
                         <td><input form={`commission-${item.id}`} className="form-control form-control-sm" name="percent" type="number" min={0} max={100} defaultValue={item.percent} /></td>
                         <td className="text-end">
                           <form id={`commission-${item.id}`} className="d-inline" onSubmit={(event) => submitForm(event, 'put', item.updateUrl)}>
-                            <button className="btn btn-sm btn-light me-1"><i className="bi bi-check2"></i></button>
+                            <button className="btn btn-light-success icon-btn w-30 h-30 b-r-22 me-1"><i className="bi bi-check2"></i></button>
                           </form>
-                          <button className="btn btn-sm btn-light text-danger" onClick={() => destroy(item.destroyUrl, 'Komissiya qoidasi o‘chirilsinmi?')}><i className="bi bi-trash"></i></button>
+                          <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => destroy(item.destroyUrl, 'Komissiya qoidasi o‘chirilsinmi?')}><i className="bi bi-trash"></i></button>
                         </td>
                       </tr>
                     ))}
@@ -348,7 +349,7 @@ export default function Settings() {
           <div className="col-xl-8">
             <SectionCard title="Cashback qoidalari" icon="bi-cash-stack">
               <div className="table-responsive">
-                <table className="table data-table align-middle mb-0">
+                <table className="table table-bottom-border align-middle data-table mb-0">
                   <thead><tr><th>Tur</th><th>Xarid dan</th><th>Xarid gacha</th><th>Cashback %</th><th></th></tr></thead>
                   <tbody>
                     {(settings.cashback ?? []).map((item) => (
@@ -364,9 +365,9 @@ export default function Settings() {
                         <td><input form={`cashback-${item.id}`} className="form-control form-control-sm" name="cashback" type="number" min={0} max={100} defaultValue={item.cashback} /></td>
                         <td className="text-end">
                           <form id={`cashback-${item.id}`} className="d-inline" onSubmit={(event) => submitForm(event, 'put', item.updateUrl)}>
-                            <button className="btn btn-sm btn-light me-1"><i className="bi bi-check2"></i></button>
+                            <button className="btn btn-light-success icon-btn w-30 h-30 b-r-22 me-1"><i className="bi bi-check2"></i></button>
                           </form>
-                          <button className="btn btn-sm btn-light text-danger" onClick={() => destroy(item.destroyUrl, 'Cashback qoidasi o‘chirilsinmi?')}><i className="bi bi-trash"></i></button>
+                          <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => destroy(item.destroyUrl, 'Cashback qoidasi o‘chirilsinmi?')}><i className="bi bi-trash"></i></button>
                         </td>
                       </tr>
                     ))}

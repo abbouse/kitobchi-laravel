@@ -1,4 +1,5 @@
 import { FormEvent, Fragment, useState } from 'react';
+import { PageCrumbs } from '../Layout';
 import { router, usePage } from '@inertiajs/react';
 import PaginationControls from '../components/PaginationControls';
 
@@ -205,12 +206,12 @@ export default function Split() {
     <div>
       <div className="page-head">
         <div>
-          <h1 className="page-title">Split nazorati</h1>
+          <h1 className="page-title">Split nazorati</h1><PageCrumbs />
           <p className="page-subtitle">Nasiya tariflari, shartnomalar va foydalanuvchi limitlarini boshqarish</p>
         </div>
         {tab === 'users' ? (
           <div className="d-flex gap-2 flex-wrap">
-            <button className="btn btn-light" onClick={() => refreshProfiles()}><i className="bi bi-arrow-clockwise me-1"></i>Barchasini qayta hisoblash</button>
+            <button className="btn btn-light-secondary" onClick={() => refreshProfiles()}><i className="bi bi-arrow-clockwise me-1"></i>Barchasini qayta hisoblash</button>
           </div>
         ) : null}
       </div>
@@ -301,7 +302,7 @@ export default function Split() {
                   hint="Paylov refund xizmatining ID'si. Bo'sh qoldirsangiz standart qiymat ishlatiladi." /></div>
               </div>
               <div className="text-end mt-3">
-                <button className="btn btn-primary-gradient"><i className="bi bi-check2 me-1"></i>Saqlash</button>
+                <button className="btn btn-primary"><i className="bi bi-check2 me-1"></i>Saqlash</button>
               </div>
             </form>
           </div>
@@ -359,7 +360,7 @@ export default function Split() {
               </form>
             </div>
             <div className="table-responsive">
-              <table className="data-table">
+              <table className="table table-bottom-border align-middle data-table">
                 <thead>
                   <tr>
                     <th>User</th>
@@ -438,12 +439,12 @@ export default function Split() {
                       <td>{user.lastRefreshedAt || '—'}</td>
                       <td>
                         <div className="d-flex gap-2">
-                          <a className="btn btn-sm btn-light" href={user.profileUrl}><i className="bi bi-person-lines-fill"></i></a>
-                          <button className="btn btn-sm btn-light" onClick={() => refreshProfiles(user.id)}><i className="bi bi-arrow-clockwise"></i></button>
+                          <a className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22" href={user.profileUrl}><i className="bi bi-person-lines-fill"></i></a>
+                          <button className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22" onClick={() => refreshProfiles(user.id)}><i className="bi bi-arrow-clockwise"></i></button>
                           {user.manuallyBlocked ? (
-                            <button className="btn btn-sm btn-outline-success" onClick={() => router.post(user.unblockUrl, {}, { preserveScroll: true })}><i className="bi bi-unlock"></i></button>
+                            <button className="btn btn-light-success icon-btn w-30 h-30 b-r-22" onClick={() => router.post(user.unblockUrl, {}, { preserveScroll: true })}><i className="bi bi-unlock"></i></button>
                           ) : (
-                            <button className="btn btn-sm btn-outline-danger" onClick={() => {
+                            <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => {
                               const reason = window.prompt('Splitni bloklash sababi');
                               if (!reason) return;
                               router.post(user.blockUrl, { reason }, { preserveScroll: true });
@@ -546,7 +547,7 @@ function PlanSection({ plans, storeUrl, previewUrl }: { plans: SplitPlanRow[]; s
         </div>
       </div>
       <div className="table-responsive">
-        <table className="data-table">
+        <table className="table table-bottom-border align-middle data-table">
           <thead>
             <tr>
               <th>Nomi</th>
@@ -607,7 +608,7 @@ function PlanSection({ plans, storeUrl, previewUrl }: { plans: SplitPlanRow[]; s
               {preview.data.upfront_extra > 0 ? <> + yetkazish {fmt(preview.data.upfront_extra)} so&apos;m (1-to&apos;lovda, foizsiz)</> : null},
               jami {fmt(preview.data.total)} so&apos;m
             </strong>
-            <button className="btn btn-sm btn-light" onClick={() => setPreview(null)}><i className="bi bi-x"></i></button>
+            <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => setPreview(null)}><i className="bi bi-x"></i></button>
           </div>
           <div className="d-flex flex-wrap gap-2">
             {preview.data.installments.map((row) => (
@@ -668,18 +669,18 @@ function PlanRow({ plan, storeUrl, onPreview, previewLoading }: { plan: SplitPla
             router.post(storeUrl, Object.fromEntries(new FormData(event.currentTarget).entries()), { preserveScroll: true });
           }}
         >
-          <button className="btn btn-sm btn-light me-1" title={plan ? 'Saqlash' : "Qo'shish"}>
+          <button className="btn btn-sm btn-light-secondary me-1" title={plan ? 'Saqlash' : "Qo'shish"}>
             <i className={`bi ${plan ? 'bi-check2' : 'bi-plus-lg'}`}></i>
           </button>
         </form>
         {plan && onPreview ? (
-          <button className="btn btn-sm btn-light me-1" title="Jadval preview" onClick={onPreview} disabled={previewLoading}>
+          <button className="btn btn-sm btn-light-secondary me-1" title="Jadval preview" onClick={onPreview} disabled={previewLoading}>
             <i className={`bi ${previewLoading ? 'bi-hourglass-split' : 'bi-calendar-week'}`}></i>
           </button>
         ) : null}
         {plan ? (
           <button
-            className="btn btn-sm btn-light text-danger"
+            className="btn btn-light-danger icon-btn w-30 h-30 b-r-22"
             title="O'chirish"
             onClick={() => {
               if (plan.openContracts > 0) {
@@ -753,7 +754,7 @@ function ContractSection({
               <option key={plan.id} value={plan.id}>{plan.name} ({plan.months} oy, {plan.totalInterestPercent}%)</option>
             ))}
           </select>
-          <button className="btn btn-sm btn-primary-gradient" disabled={enabledPlans.length === 0}>
+          <button className="btn btn-sm btn-primary" disabled={enabledPlans.length === 0}>
             <i className="bi bi-plus-lg me-1"></i>Split ochish
           </button>
         </form>
@@ -762,7 +763,7 @@ function ContractSection({
         {filterOptions.map(([value, label]) => (
           <button
             key={value}
-            className={`btn btn-sm ${filter === value ? 'btn-primary-gradient' : 'btn-light'}`}
+            className={`kc-tab ${filter === value ? 'active' : ''}`}
             onClick={() => applyFilter(value)}
           >
             {value === 'overdue' ? <i className="bi bi-exclamation-triangle me-1"></i> : null}
@@ -772,7 +773,7 @@ function ContractSection({
         ))}
       </div>
       <div className="table-responsive">
-        <table className="data-table">
+        <table className="table table-bottom-border align-middle data-table">
           <thead>
             <tr>
               <th>#</th>
@@ -794,7 +795,7 @@ function ContractSection({
                 <Fragment key={contract.id}>
                   <tr>
                     <td>
-                      <button className="btn btn-sm btn-light" onClick={() => setExpandedId(expanded ? null : contract.id)}>
+                      <button className="btn btn-sm btn-light-secondary" onClick={() => setExpandedId(expanded ? null : contract.id)}>
                         <i className={`bi ${expanded ? 'bi-chevron-up' : 'bi-chevron-down'}`}></i>
                       </button>{' '}
                       <span className="fw-semibold">#{contract.id}</span>
@@ -835,11 +836,11 @@ function ContractSection({
                     </td>
                     <td>
                       <div className="d-flex gap-1 flex-wrap">
-                        <a className="btn btn-sm btn-light" href={contract.contractPdfUrl} target="_blank" rel="noreferrer" title="Shartnoma PDF (mijoz tilida)">
+                        <a className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22" href={contract.contractPdfUrl} target="_blank" rel="noreferrer" title="Shartnoma PDF (mijoz tilida)">
                           <i className="bi bi-file-earmark-pdf text-danger"></i>
                         </a>
                         {contract.overdueDays > 0 || contract.status === 'overdue' ? (
-                          <a className="btn btn-sm btn-light" href={contract.demandLetterUrl} target="_blank" rel="noreferrer" title="Undirish xati (talabnoma/pretenziya)">
+                          <a className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22" href={contract.demandLetterUrl} target="_blank" rel="noreferrer" title="Undirish xati (talabnoma/pretenziya)">
                             <i className="bi bi-envelope-exclamation text-danger"></i>
                           </a>
                         ) : null}
@@ -854,11 +855,11 @@ function ContractSection({
                         ) : null}
                         {contract.status === 'active' || contract.status === 'overdue' ? (
                           <>
-                            <button className="btn btn-sm btn-light" title="Erta yopish (qolgan ustama kechiriladi)" onClick={() => { if (confirm('Shartnoma muddatidan oldin to‘liq yopilsinmi?')) router.post(contract.settleUrl, {}, { preserveScroll: true }); }}>
+                            <button className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22" title="Erta yopish (qolgan ustama kechiriladi)" onClick={() => { if (confirm('Shartnoma muddatidan oldin to‘liq yopilsinmi?')) router.post(contract.settleUrl, {}, { preserveScroll: true }); }}>
                               <i className="bi bi-flag-fill text-primary"></i>
                             </button>
                             <button
-                              className="btn btn-sm btn-light"
+                              className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22"
                               title="Bekor qilingan mahsulot krediti (keyingi to'lovlardan ayiriladi)"
                               onClick={() => {
                                 const product = prompt('Bekor qilingan mahsulot narxi (so‘m):');
@@ -897,7 +898,7 @@ function ContractSection({
                                   <span className={`chip ${instChip}`}>{instLabel}</span>
                                   {installment.attempts > 0 ? <small className="text-muted">{installment.attempts} urinish</small> : null}
                                   {chargeable ? (
-                                    <button className="btn btn-sm btn-light" title="Hozir yechish" onClick={() => { if (confirm('Bu installment hozir yechilsinmi?')) router.post(installment.chargeUrl, {}, { preserveScroll: true }); }}>
+                                    <button className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22" title="Hozir yechish" onClick={() => { if (confirm('Bu installment hozir yechilsinmi?')) router.post(installment.chargeUrl, {}, { preserveScroll: true }); }}>
                                       <i className="bi bi-lightning-charge text-warning"></i>
                                     </button>
                                   ) : null}
@@ -936,7 +937,7 @@ function RuleSection({ title, rows, actionUrl }: { title: string; rows: SplitRul
         </div>
       </div>
       <div className="table-responsive">
-        <table className="data-table">
+        <table className="table table-bottom-border align-middle data-table">
           <thead>
             <tr>
               <th>Kategoriya</th>
@@ -962,9 +963,9 @@ function RuleSection({ title, rows, actionUrl }: { title: string; rows: SplitRul
                   <form id={`split-rule-${row.categoryType}-${row.id}`} onSubmit={(event) => submitRule(event, actionUrl)} className="d-inline">
                     <input type="hidden" name="category_type" value={row.categoryType} />
                     <input type="hidden" name="category_id" value={row.id} />
-                    <button className="btn btn-sm btn-light me-2" title="Saqlash"><i className="bi bi-check2"></i></button>
+                    <button className="btn btn-light-success icon-btn w-30 h-30 b-r-22 me-2" title="Saqlash"><i className="bi bi-check2"></i></button>
                   </form>
-                  {row.destroyUrl ? <button className="btn btn-sm btn-light text-danger" title="Qoidani o'chirish" onClick={() => resetRule(row.destroyUrl)}><i className="bi bi-trash"></i></button> : null}
+                  {row.destroyUrl ? <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" title="Qoidani o'chirish" onClick={() => resetRule(row.destroyUrl)}><i className="bi bi-trash"></i></button> : null}
                 </td>
               </tr>
             ))}

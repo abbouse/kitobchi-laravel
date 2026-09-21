@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { PageCrumbs } from '../Layout';
 import { router, usePage } from '@inertiajs/react';
 import { Modal, Button, Form } from 'react-bootstrap';
 import PaginationControls from '../components/PaginationControls';
@@ -103,8 +104,8 @@ export function Reels() {
   return (
     <div>
       <div className="page-head">
-        <div><h1 className="page-title">Reels / Shorts</h1><p className="page-subtitle">Jami {reels.length} ta reel</p></div>
-        <button className="btn btn-primary-gradient" onClick={() => { setEditing(null); setShowForm(true); }}><i className="bi bi-plus-lg me-1"></i>Reel qo'shish</button>
+        <div><h1 className="page-title">Reels / Shorts</h1><PageCrumbs /><p className="page-subtitle">Jami {reels.length} ta reel</p></div>
+        <button className="btn btn-primary" onClick={() => { setEditing(null); setShowForm(true); }}><i className="bi bi-plus-lg me-1"></i>Reel qo'shish</button>
       </div>
       <div className="row g-3">
         {reels.map(reel => (
@@ -120,9 +121,9 @@ export function Reels() {
               </div>
               <p className="text-muted small">{reel.description || '—'}</p>
               <div className="d-flex gap-2">
-                <button className="btn btn-sm btn-light flex-fill" onClick={() => setSelected(reel)}><i className="bi bi-eye"></i></button>
-                <button className="btn btn-sm btn-light" onClick={() => { setEditing(reel); setShowForm(true); }}><i className="bi bi-pencil"></i></button>
-                <button className="btn btn-sm btn-light text-danger" onClick={() => destroy(reel)}><i className="bi bi-trash"></i></button>
+                <button className="btn btn-sm btn-light-secondary flex-fill" onClick={() => setSelected(reel)}><i className="bi bi-eye"></i></button>
+                <button className="btn btn-light-success icon-btn w-30 h-30 b-r-22" onClick={() => { setEditing(reel); setShowForm(true); }}><i className="bi bi-pencil"></i></button>
+                <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => destroy(reel)}><i className="bi bi-trash"></i></button>
               </div>
             </div>
           </div>
@@ -138,7 +139,7 @@ export function Reels() {
           </div>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="light" onClick={() => setSelected(null)}>Yopish</Button>
+          <Button variant="light-secondary" onClick={() => setSelected(null)}>Yopish</Button>
         </Modal.Footer>
       </Modal>
       <Modal show={showForm} onHide={() => setShowForm(false)} centered>
@@ -149,7 +150,7 @@ export function Reels() {
             <Form.Label>Tartib</Form.Label><Form.Control name="order" type="number" min={0} required defaultValue={editing?.order ?? (reels.length + 1)} className="mb-3" />
             <Form.Label>Tavsif</Form.Label><Form.Control as="textarea" rows={4} name="description" defaultValue={editing?.description || ''} />
           </Modal.Body>
-          <Modal.Footer><Button variant="light" onClick={() => setShowForm(false)}>Bekor qilish</Button><Button type="submit" className="btn-primary-gradient border-0">Saqlash</Button></Modal.Footer>
+          <Modal.Footer><Button variant="light-secondary" onClick={() => setShowForm(false)}>Bekor qilish</Button><Button type="submit" className="btn-primary border-0">Saqlash</Button></Modal.Footer>
         </Form>
       </Modal>
     </div>
@@ -372,11 +373,11 @@ export function MarketNews() {
 
   return (
     <div>
-      <div className="page-head"><div><h1 className="page-title">Market yangiliklari</h1><p className="page-subtitle">Jami {news.length} ta yangilik</p></div>
-        <button className="btn btn-primary-gradient" onClick={() => { setEditing(null); setShowForm(true); }}><i className="bi bi-plus-lg me-1"></i>Qo'shish</button>
+      <div className="page-head"><div><h1 className="page-title">Market yangiliklari</h1><PageCrumbs /><p className="page-subtitle">Jami {news.length} ta yangilik</p></div>
+        <button className="btn btn-primary" onClick={() => { setEditing(null); setShowForm(true); }}><i className="bi bi-plus-lg me-1"></i>Qo'shish</button>
         </div>
       <div className="card-panel">
-        <div className="table-responsive"><table className="data-table">
+        <div className="table-responsive"><table className="table table-bottom-border align-middle data-table">
           <thead><tr><th>ID</th><th>Sarlavha</th><th>Action</th><th>Sana</th><th>Holat</th><th>Amallar</th></tr></thead>
           <tbody>{news.map(item => (
             <tr key={item.id}>
@@ -386,9 +387,9 @@ export function MarketNews() {
               <td className="text-muted">{item.date || '—'}</td>
               <td><div className="form-check form-switch"><input type="checkbox" className="form-check-input" checked={item.status === 'Active'} onChange={() => toggle(item)} /></div></td>
               <td>
-                <button className="btn btn-sm btn-light me-1" onClick={() => setSelected(item)}><i className="bi bi-eye"></i></button>
-                <button className="btn btn-sm btn-light me-1" onClick={() => { setEditing(item); setShowForm(true); }}><i className="bi bi-pencil"></i></button>
-                <button className="btn btn-sm btn-light text-danger" onClick={() => destroy(item)}><i className="bi bi-trash"></i></button>
+                <button className="btn btn-light-primary icon-btn w-30 h-30 b-r-22 me-1" onClick={() => setSelected(item)}><i className="bi bi-eye"></i></button>
+                <button className="btn btn-light-success icon-btn w-30 h-30 b-r-22 me-1" onClick={() => { setEditing(item); setShowForm(true); }}><i className="bi bi-pencil"></i></button>
+                <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => destroy(item)}><i className="bi bi-trash"></i></button>
               </td>
             </tr>
           ))}</tbody>
@@ -401,7 +402,7 @@ export function MarketNews() {
           <p className="text-muted">{selected?.description || '—'}</p>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="light" onClick={() => setSelected(null)}>Yopish</Button>
+          <Button variant="light-secondary" onClick={() => setSelected(null)}>Yopish</Button>
         </Modal.Footer>
       </Modal>
       <Modal show={showForm} onHide={() => setShowForm(false)} centered size="lg">
@@ -430,7 +431,7 @@ export function MarketNews() {
                       <button
                         key={locale}
                         type="button"
-                        className="btn btn-sm btn-light"
+                        className="btn btn-sm btn-light-secondary"
                         disabled={translatingLocales.length > 0}
                         onClick={() => translateFromUz([locale])}
                       >
@@ -439,7 +440,7 @@ export function MarketNews() {
                     ))}
                     <button
                       type="button"
-                      className="btn btn-sm btn-primary-gradient"
+                      className="btn btn-sm btn-primary"
                       disabled={translatingLocales.length > 0}
                       onClick={() => translateFromUz(['ru', 'en', 'ja'])}
                     >
@@ -472,7 +473,7 @@ export function MarketNews() {
               <div className="col-12"><Form.Check type="switch" label="Faol" checked={form.status} onChange={(event) => setForm((prev) => ({ ...prev, status: event.target.checked }))} /></div>
             </div>
           </Modal.Body>
-          <Modal.Footer><Button variant="light" onClick={() => setShowForm(false)}>Bekor qilish</Button><Button type="submit" className="btn-primary-gradient border-0">Saqlash</Button></Modal.Footer>
+          <Modal.Footer><Button variant="light-secondary" onClick={() => setShowForm(false)}>Bekor qilish</Button><Button type="submit" className="btn-primary border-0">Saqlash</Button></Modal.Footer>
         </Form>
       </Modal>
     </div>
@@ -542,10 +543,10 @@ export function ChatKuzatuv() {
 
   return (
     <div>
-      <div className="page-head"><div><h1 className="page-title">Chat kuzatuv</h1><p className="page-subtitle">Foydalanuvchi va seller suhbatlarini real vaqt kontekstida tekshirish</p></div></div>
+      <div className="page-head"><div><h1 className="page-title">Chat kuzatuv</h1><PageCrumbs /><p className="page-subtitle">Foydalanuvchi va seller suhbatlarini real vaqt kontekstida tekshirish</p></div></div>
       <div className="card-panel">
-        <div className="panel-head"><div className="d-flex flex-wrap gap-2">{[['all', 'Barchasi'], ['user', 'User chat'], ['seller', 'Seller chat']].map(([key, label]) => <button className={`btn btn-sm ${tab === key ? 'btn-primary-gradient' : 'btn-light'}`} key={key} onClick={() => { setTab(key); loadConversations(1, key); }}>{label}<span className="badge rounded-pill bg-light text-dark ms-2">{conversationCounts[key] || 0}</span></button>)}</div><form className="d-flex gap-2" onSubmit={(event) => { event.preventDefault(); loadConversations(); }}><input className="form-control form-control-sm" style={{ maxWidth: 280 }} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="User, telefon yoki seller" /><button className="btn btn-sm btn-outline-secondary"><i className="bi bi-search"></i></button></form></div>
-        <div className="table-responsive"><table className="data-table">
+        <div className="panel-head"><div className="d-flex flex-wrap gap-2">{[['all', 'Barchasi'], ['user', 'User chat'], ['seller', 'Seller chat']].map(([key, label]) => <button className={`kc-tab ${tab === key ? 'active' : ''}`} key={key} onClick={() => { setTab(key); loadConversations(1, key); }}>{label}<span className="badge rounded-pill bg-light text-dark ms-2">{conversationCounts[key] || 0}</span></button>)}</div><form className="d-flex gap-2" onSubmit={(event) => { event.preventDefault(); loadConversations(); }}><input className="form-control form-control-sm" style={{ maxWidth: 280 }} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="User, telefon yoki seller" /><button className="btn btn-sm btn-outline-secondary"><i className="bi bi-search"></i></button></form></div>
+        <div className="table-responsive"><table className="table table-bottom-border align-middle data-table">
           <thead><tr><th>ID</th><th>Foydalanuvchi</th><th>Qabul qiluvchi</th><th>Turi</th><th>Xabarlar</th><th>Oxirgi</th><th>Amallar</th></tr></thead>
           <tbody>{conversations.map(c => (
             <tr key={c.id}>
@@ -555,7 +556,7 @@ export function ChatKuzatuv() {
               <td><span className={`chip ${c.kind === 'seller' ? 'chip-purple' : 'chip-info'}`}>{chatKindLabel(c.kind)}</span></td>
               <td>{c.messages}</td>
               <td className="text-muted">{c.lastMsg}<br /><small>{c.date || '—'}</small></td>
-              <td><button className="btn btn-sm btn-light" onClick={() => open(c)}><i className="bi bi-eye"></i></button></td>
+              <td><button className="btn btn-light-primary icon-btn w-30 h-30 b-r-22" onClick={() => open(c)}><i className="bi bi-eye"></i></button></td>
             </tr>
           ))}{conversationPagination.total === 0 ? <tr><td colSpan={7} className="text-center text-muted py-5">Suhbat topilmadi</td></tr> : null}</tbody>
         </table></div><PaginationControls {...conversationPagination} onPageChange={(page) => loadConversations(page)} />
@@ -652,7 +653,7 @@ export function ChatKuzatuv() {
                   ))}
                   {(detail.otherConversations || []).length === 0 ? <div className="text-muted">Bu foydalanuvchining boshqa yozishmasi topilmadi.</div> : null}
                   {(detail.otherConversations || []).length > otherLimit ? (
-                    <button className="btn btn-sm btn-light w-100 mt-2" onClick={() => setOtherLimit((limit) => limit + 4)}>
+                    <button className="btn btn-sm btn-light-secondary w-100 mt-2" onClick={() => setOtherLimit((limit) => limit + 4)}>
                       Yana ko‘rsatish
                     </button>
                   ) : null}
@@ -661,7 +662,7 @@ export function ChatKuzatuv() {
             </div>
           )}
         </Modal.Body>
-        <Modal.Footer><Button variant="light" onClick={() => setShow(false)}>Yopish</Button></Modal.Footer>
+        <Modal.Footer><Button variant="light-secondary" onClick={() => setShow(false)}>Yopish</Button></Modal.Footer>
       </Modal>
     </div>
   );
@@ -782,11 +783,11 @@ export function PushNotifications() {
   return (
     <div>
       <div className="page-head">
-        <div><h1 className="page-title">Push bildirishnomalar</h1><p className="page-subtitle">Jami {notifications.length} ta yuborilgan</p></div>
-        <button className="btn btn-primary-gradient" onClick={() => { resetForm(); setShowForm(true); }}><i className="bi bi-send me-1"></i>Push yaratish</button>
+        <div><h1 className="page-title">Push bildirishnomalar</h1><PageCrumbs /><p className="page-subtitle">Jami {notifications.length} ta yuborilgan</p></div>
+        <button className="btn btn-primary" onClick={() => { resetForm(); setShowForm(true); }}><i className="bi bi-send me-1"></i>Push yaratish</button>
       </div>
       <div className="card-panel">
-        <div className="table-responsive"><table className="data-table">
+        <div className="table-responsive"><table className="table table-bottom-border align-middle data-table">
           <thead><tr><th>ID</th><th>Sarlavha</th><th>Matn</th><th>Target</th><th>Status</th><th>Sana</th><th>Amallar</th></tr></thead>
           <tbody>{notifications.map(notification => (
             <tr key={notification.id}>
@@ -819,10 +820,10 @@ export function PushNotifications() {
               <td className="text-muted">{notification.date}</td>
               <td>
                 <div className="d-flex gap-1">
-                  <button className="btn btn-sm btn-light text-primary" onClick={() => resend(notification)} title="Dublikat qilib qayta yuborish">
+                  <button className="btn btn-light-primary icon-btn w-30 h-30 b-r-22" onClick={() => resend(notification)} title="Dublikat qilib qayta yuborish">
                     <i className="bi bi-arrow-repeat"></i>
                   </button>
-                  <button className="btn btn-sm btn-light text-danger" onClick={() => destroy(notification)} title="O'chirish">
+                  <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => destroy(notification)} title="O'chirish">
                     <i className="bi bi-trash"></i>
                   </button>
                 </div>
@@ -841,7 +842,7 @@ export function PushNotifications() {
                   <button
                     key={locale}
                     type="button"
-                    className={`btn btn-sm rounded-3 ${activeLocale === locale ? 'btn-dark' : 'btn-light'}`}
+                    className={`kc-tab ${activeLocale === locale ? 'active' : ''}`}
                     onClick={() => setActiveLocale(locale)}
                   >
                     {pushLocaleLabels[locale]}
@@ -850,7 +851,7 @@ export function PushNotifications() {
               </div>
               <Button
                 type="button"
-                variant="light"
+                variant="light-secondary"
                 className="border"
                 disabled={translating}
                 onClick={translatePush}
@@ -925,7 +926,7 @@ export function PushNotifications() {
               </div>
             )}
           </Modal.Body>
-          <Modal.Footer><Button variant="light" onClick={() => setShowForm(false)}>Bekor qilish</Button><Button type="submit" className="btn-primary-gradient border-0">Yuborish</Button></Modal.Footer>
+          <Modal.Footer><Button variant="light-secondary" onClick={() => setShowForm(false)}>Bekor qilish</Button><Button type="submit" className="btn-primary border-0">Yuborish</Button></Modal.Footer>
         </Form>
       </Modal>
     </div>

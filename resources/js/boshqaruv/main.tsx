@@ -1,5 +1,9 @@
-import 'bootstrap/dist/css/bootstrap.min.css';
+// Tartib muhim: Bootstrap (Axelit bilan kelgan versiya) → ikonkalar →
+// Axelit asl uslublari → Kitobchi qatlami.
+import '../../css/axelit/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
+import '../../css/axelit/icons.css';
+import '../../css/axelit/axelit.css';
 import '../../css/boshqaruv.css';
 // Bootstrap'ning JS qismi (dropdown, modal, offcanvas va h.k.) — avval faqat
 // CSS import qilingan edi, shuning uchun data-bs-toggle="dropdown" kabi
@@ -32,6 +36,6 @@ createInertiaApp({
     createRoot(el).render(<App {...props} />);
   },
   progress: {
-    color: '#4338CA',
+    color: '#8C76F0',
   },
 });

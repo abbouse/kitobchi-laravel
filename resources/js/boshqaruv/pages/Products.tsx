@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { PageCrumbs } from '../Layout';
 import { router, usePage } from '@inertiajs/react';
 import { Modal, Button } from 'react-bootstrap';
 import PaginationControls, { useClientPagination } from '../components/PaginationControls';
@@ -56,12 +57,12 @@ export default function Products() {
     <div>
       <div className="page-head">
         <div>
-          <h1 className="page-title">Barcha mahsulotlar</h1>
+          <h1 className="page-title">Barcha mahsulotlar</h1><PageCrumbs />
           <p className="page-subtitle">Kitob, kanselyariya va sovg'alar umumiy katalogi</p>
         </div>
         <div className="d-flex gap-2">
           <a className="btn btn-outline-secondary" href="/boshqaruv/books">Kitoblar</a>
-          <a className="btn btn-primary-gradient" href="/boshqaruv/stationeries"><i className="bi bi-plus-lg me-1"></i>Kanselyariya</a>
+          <a className="btn btn-primary" href="/boshqaruv/stationeries"><i className="bi bi-plus-lg me-1"></i>Kanselyariya</a>
         </div>
       </div>
 
@@ -100,7 +101,7 @@ export default function Products() {
         </div>
 
         <div className="table-responsive">
-          <table className="data-table">
+          <table className="table table-bottom-border align-middle data-table">
             <thead><tr><th></th><th>Mahsulot</th><th>Turi</th><th>Seller</th><th>Narx</th><th>Ombor</th><th>Sotilgan</th><th>Status</th><th>Amallar</th></tr></thead>
             <tbody>
               {pagination.paginated.map((product) => (
@@ -118,8 +119,8 @@ export default function Products() {
                   <td>{product.sold}</td>
                   <td><span className={`chip ${product.approved ? 'chip-success' : 'chip-warning'}`}>{product.approved ? product.status : 'Moderatsiya'}</span></td>
                   <td>
-                    <button className="btn btn-sm btn-light me-1" onClick={() => setSelected(product)}><i className="bi bi-eye"></i></button>
-                    {product.moderateUrl ? <button className="btn btn-sm btn-light" onClick={() => moderate(product, !product.approved)}><i className="bi bi-shield-check"></i></button> : null}
+                    <button className="btn btn-light-primary icon-btn w-30 h-30 b-r-22 me-1" onClick={() => setSelected(product)}><i className="bi bi-eye"></i></button>
+                    {product.moderateUrl ? <button className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22" onClick={() => moderate(product, !product.approved)}><i className="bi bi-shield-check"></i></button> : null}
                   </td>
                 </tr>
               ))}
@@ -143,11 +144,11 @@ export default function Products() {
         </Modal.Body>
         <Modal.Footer>
           {selected?.moderateUrl ? (
-            <Button variant="primary" className="btn-primary-gradient" onClick={() => selected && moderate(selected, !selected.approved)}>
+            <Button variant="primary" className="btn-primary" onClick={() => selected && moderate(selected, !selected.approved)}>
               {selected.approved ? 'Moderatsiyaga qaytarish' : 'Tasdiqlash'}
             </Button>
           ) : null}
-          <Button variant="light" onClick={() => setSelected(null)}>Yopish</Button>
+          <Button variant="light-secondary" onClick={() => setSelected(null)}>Yopish</Button>
         </Modal.Footer>
       </Modal>
     </div>

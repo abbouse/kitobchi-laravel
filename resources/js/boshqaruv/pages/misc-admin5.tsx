@@ -1,4 +1,5 @@
 import { ChangeEvent, FormEvent, useMemo, useState } from 'react';
+import { PageCrumbs } from '../Layout';
 import { router, usePage } from '@inertiajs/react';
 import { Modal, Button, Form } from 'react-bootstrap';
 import { YandexZoneEditor, YandexPreviewMap, resolveZonesForPoint, Ring, ZoneLike, LatLon } from '../components/YandexMap';
@@ -27,8 +28,8 @@ export function MysteryBox() {
   return (
     <div>
       <div className="page-head">
-        <div><h1 className="page-title">Mystery Box</h1><p className="page-subtitle">{mysteryBox.plans.length} ta plan · {mysteryBox.subscriptions.filter(s => s.status === 'active').length} ta faol obuna</p></div>
-        <div className="d-flex gap-2"><button className="btn btn-primary-gradient" onClick={() => setPlanModal('create')}><i className="bi bi-plus-lg me-1"></i>Yangi tarif</button></div>
+        <div><h1 className="page-title">Mystery Box</h1><PageCrumbs /><p className="page-subtitle">{mysteryBox.plans.length} ta plan · {mysteryBox.subscriptions.filter(s => s.status === 'active').length} ta faol obuna</p></div>
+        <div className="d-flex gap-2"><button className="btn btn-primary" onClick={() => setPlanModal('create')}><i className="bi bi-plus-lg me-1"></i>Yangi tarif</button></div>
       </div>
 
       <div className="row g-3 mb-3">
@@ -42,8 +43,8 @@ export function MysteryBox() {
               <div className="fw-bold text-primary fs-4">{p.price.toLocaleString()} so'm<small className="text-muted fs-6">/oy</small></div>
               <div className="text-muted mb-2">{p.months} oy · {p.booksPerMonth} kitob/oy · {p.subscribers} obunachi</div>
               <div className="d-flex gap-2">
-                {p.updateUrl ? <button className="btn btn-sm btn-light" onClick={() => setPlanModal(p)}><i className="bi bi-pencil"></i></button> : null}
-                {p.destroyUrl ? <button className="btn btn-sm btn-light text-danger" onClick={() => { if (confirm(`"${p.name}" tarifi o'chirilsinmi?`)) router.delete(p.destroyUrl!, { preserveScroll: true }); }}><i className="bi bi-trash"></i></button> : null}
+                {p.updateUrl ? <button className="btn btn-light-success icon-btn w-30 h-30 b-r-22" onClick={() => setPlanModal(p)}><i className="bi bi-pencil"></i></button> : null}
+                {p.destroyUrl ? <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => { if (confirm(`"${p.name}" tarifi o'chirilsinmi?`)) router.delete(p.destroyUrl!, { preserveScroll: true }); }}><i className="bi bi-trash"></i></button> : null}
               </div>
             </div>
           </div>
@@ -52,7 +53,7 @@ export function MysteryBox() {
 
       <div className="card-panel">
         <div className="panel-title mb-3">📦 Obunalar</div>
-        <div className="table-responsive"><table className="data-table">
+        <div className="table-responsive"><table className="table table-bottom-border align-middle data-table">
           <thead><tr><th>ID</th><th>Foydalanuvchi</th><th>Plan</th><th>Status</th><th>Keyingi yetkazish</th><th>Amallar</th></tr></thead>
           <tbody>{mysteryBox.subscriptions.map(s => (
             <tr key={s.id}>
@@ -62,10 +63,10 @@ export function MysteryBox() {
               <td><span className={`chip ${s.status === 'active' ? 'chip-success' : s.status === 'paused' ? 'chip-warning' : 'chip-gray'}`} style={{ fontSize: 9 }}>{s.statusLabel || s.status}</span></td>
               <td className="text-muted">{s.nextDelivery}</td>
               <td>
-                <button className="btn btn-sm btn-light me-1" onClick={() => setSelected(s)}><i className="bi bi-eye"></i></button>
+                <button className="btn btn-light-primary icon-btn w-30 h-30 b-r-22 me-1" onClick={() => setSelected(s)}><i className="bi bi-eye"></i></button>
                 {s.status === 'active' ? <button className="btn btn-sm btn-warning me-1" onClick={() => patch(s.pauseUrl)}><i className="bi bi-pause-fill"></i></button> : null}
                 {s.status === 'paused' ? <button className="btn btn-sm btn-success me-1" onClick={() => patch(s.resumeUrl)}><i className="bi bi-play-fill"></i></button> : null}
-                {s.status === 'active' || s.status === 'paused' ? <button className="btn btn-sm btn-light text-danger" onClick={() => cancelSubscription(s.cancelUrl)}><i className="bi bi-x-lg"></i></button> : null}
+                {s.status === 'active' || s.status === 'paused' ? <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => cancelSubscription(s.cancelUrl)}><i className="bi bi-x-lg"></i></button> : null}
               </td>
             </tr>
           ))}</tbody>
@@ -86,7 +87,7 @@ export function MysteryBox() {
           {selected?.status === 'active' || selected?.status === 'paused' ? (
             <Button variant="outline-danger" onClick={() => { cancelSubscription(selected?.cancelUrl); setSelected(null); }}>Obunani bekor qilish</Button>
           ) : null}
-          <Button variant="light" onClick={() => setSelected(null)}>Yopish</Button>
+          <Button variant="light-secondary" onClick={() => setSelected(null)}>Yopish</Button>
         </Modal.Footer>
       </Modal>
 
@@ -143,8 +144,8 @@ function MysteryBoxPlanForm({ plan, action, onDone }: { plan: MysteryBoxPlan | n
         </div>
       </Modal.Body>
       <Modal.Footer>
-        <Button variant="light" onClick={onDone}>Bekor qilish</Button>
-        <button type="submit" className="btn btn-primary-gradient"><i className="bi bi-check2 me-1"></i>{plan ? 'Saqlash' : "Tarif qo'shish"}</button>
+        <Button variant="light-secondary" onClick={onDone}>Bekor qilish</Button>
+        <button type="submit" className="btn btn-primary"><i className="bi bi-check2 me-1"></i>{plan ? 'Saqlash' : "Tarif qo'shish"}</button>
       </Modal.Footer>
     </form>
   );
@@ -160,10 +161,10 @@ export function SovgAlar() {
   return (
     <div>
       <div className="page-head">
-        <div><h1 className="page-title">Sovg'alar</h1><p className="page-subtitle">Jami {gifts.length} ta sovg'a mahsuloti</p></div>
+        <div><h1 className="page-title">Sovg'alar</h1><PageCrumbs /><p className="page-subtitle">Jami {gifts.length} ta sovg'a mahsuloti</p></div>
       </div>
       <div className="card-panel">
-        <div className="table-responsive"><table className="data-table">
+        <div className="table-responsive"><table className="table table-bottom-border align-middle data-table">
           <thead><tr><th></th><th>Nomi</th><th>Seller</th><th>Narx</th><th>Ombor</th><th>Sotilgan</th><th>Status</th><th>Amallar</th></tr></thead>
           <tbody>{gifts.map(gift => (
             <tr key={gift.id}>
@@ -421,9 +422,9 @@ function RadiusMapPicker({
         <div className="d-flex align-items-center gap-2">
           <span className="chip chip-success">{numericRadius.toFixed(numericRadius % 1 === 0 ? 0 : 1)} km</span>
           <div className="btn-group btn-group-sm">
-            <button type="button" className="btn btn-light" onClick={() => setZoom((value) => Math.max(5, value - 1))}><i className="bi bi-dash"></i></button>
-            <button type="button" className="btn btn-light disabled">{zoom}</button>
-            <button type="button" className="btn btn-light" onClick={() => setZoom((value) => Math.min(15, value + 1))}><i className="bi bi-plus"></i></button>
+            <button type="button" className="btn btn-light-secondary" onClick={() => setZoom((value) => Math.max(5, value - 1))}><i className="bi bi-dash"></i></button>
+            <button type="button" className="btn btn-light-secondary disabled">{zoom}</button>
+            <button type="button" className="btn btn-light-secondary" onClick={() => setZoom((value) => Math.min(15, value + 1))}><i className="bi bi-plus"></i></button>
           </div>
         </div>
       </div>
@@ -475,9 +476,9 @@ function RadiusMapPicker({
       </div>
 
       <div className="d-flex flex-wrap gap-2 mt-3">
-        <button type="button" className="btn btn-sm btn-light" onClick={() => setPreset(41.311081, 69.240562, 28)}>Toshkent markaz · 28 km</button>
-        <button type="button" className="btn btn-sm btn-light" onClick={() => setPreset(41.311081, 69.240562, 40)}>Katta Toshkent · 40 km</button>
-        <button type="button" className="btn btn-sm btn-light" onClick={() => setPreset(41.299496, 69.240073, 45)}>Uzoq zona · 45 km</button>
+        <button type="button" className="btn btn-sm btn-light-secondary" onClick={() => setPreset(41.311081, 69.240562, 28)}>Toshkent markaz · 28 km</button>
+        <button type="button" className="btn btn-sm btn-light-secondary" onClick={() => setPreset(41.311081, 69.240562, 40)}>Katta Toshkent · 40 km</button>
+        <button type="button" className="btn btn-sm btn-light-secondary" onClick={() => setPreset(41.299496, 69.240073, 45)}>Uzoq zona · 45 km</button>
       </div>
 
       <div className="mt-3">
@@ -514,7 +515,7 @@ function DeliveryServiceForm({ service, action, onDone }: { service?: DeliverySe
         <div className="col-md-3"><LogisticsToggle name="status" label="Faol" defaultChecked={service?.active ?? true} /></div>
       </div>
       <div className="text-end mt-4">
-        <button className="btn btn-primary-gradient"><i className="bi bi-check2 me-1"></i>{service ? 'Saqlash' : "Xizmat qo'shish"}</button>
+        <button className="btn btn-primary"><i className="bi bi-check2 me-1"></i>{service ? 'Saqlash' : "Xizmat qo'shish"}</button>
       </div>
     </form>
   );
@@ -615,9 +616,9 @@ function DeliveryRuleForm({ rule, services, action, onDone }: { rule?: DeliveryR
                   height={360}
                 />
                 <div className="d-flex flex-wrap gap-2 mt-3">
-                  <button type="button" className="btn btn-sm btn-light" onClick={() => { setLat('41.311081'); setLon('69.240562'); setRadius('28'); }}>Toshkent markaz · 28 km</button>
-                  <button type="button" className="btn btn-sm btn-light" onClick={() => { setLat('41.311081'); setLon('69.240562'); setRadius('40'); }}>Katta Toshkent · 40 km</button>
-                  <button type="button" className="btn btn-sm btn-light" onClick={() => { setLat('41.299496'); setLon('69.240073'); setRadius('45'); }}>Uzoq zona · 45 km</button>
+                  <button type="button" className="btn btn-sm btn-light-secondary" onClick={() => { setLat('41.311081'); setLon('69.240562'); setRadius('28'); }}>Toshkent markaz · 28 km</button>
+                  <button type="button" className="btn btn-sm btn-light-secondary" onClick={() => { setLat('41.311081'); setLon('69.240562'); setRadius('40'); }}>Katta Toshkent · 40 km</button>
+                  <button type="button" className="btn btn-sm btn-light-secondary" onClick={() => { setLat('41.299496'); setLon('69.240073'); setRadius('45'); }}>Uzoq zona · 45 km</button>
                 </div>
                 <div className="mt-3">
                   <label className="form-label small text-muted fw-semibold">Radius: {radiusLabel} km</label>
@@ -655,7 +656,7 @@ function DeliveryRuleForm({ rule, services, action, onDone }: { rule?: DeliveryR
         </div>
       </div>
       <div className="text-end mt-4">
-        <button className="btn btn-primary-gradient"><i className="bi bi-check2 me-1"></i>{rule?.updateUrl ? 'Saqlash' : "Qoida qo'shish"}</button>
+        <button className="btn btn-primary"><i className="bi bi-check2 me-1"></i>{rule?.updateUrl ? 'Saqlash' : "Qoida qo'shish"}</button>
       </div>
     </form>
   );
@@ -783,10 +784,10 @@ export function Logistika() {
   return (
     <div>
       <div className="page-head">
-        <div><h1 className="page-title">Logistika</h1><p className="page-subtitle">Kuryer yetkazish zonalarini xaritada belgilang — polygon (taksi uslubi) yoki radius.</p></div>
+        <div><h1 className="page-title">Logistika</h1><PageCrumbs /><p className="page-subtitle">Kuryer yetkazish zonalarini xaritada belgilang — polygon (taksi uslubi) yoki radius.</p></div>
         <div className="d-flex gap-2">
-          <button className="btn btn-light" onClick={() => setEditingService(null)}><i className="bi bi-truck me-1"></i>Xizmat</button>
-          <button className="btn btn-primary-gradient" onClick={() => setEditingRule(null)}><i className="bi bi-plus-circle me-1"></i>Zona qoidasi</button>
+          <button className="btn btn-light-secondary" onClick={() => setEditingService(null)}><i className="bi bi-truck me-1"></i>Xizmat</button>
+          <button className="btn btn-primary" onClick={() => setEditingRule(null)}><i className="bi bi-plus-circle me-1"></i>Zona qoidasi</button>
         </div>
       </div>
 
@@ -835,14 +836,14 @@ export function Logistika() {
                 <small className="text-muted">A122 resolver ishlatadigan narx, radius, COD va priority sozlamalari</small>
               </div>
               <div className="d-flex gap-2 align-items-center">
-                <button type="button" className="btn btn-sm btn-light" onClick={exportGeoJson} title="Zonalarni GeoJSON qilib yuklab olish"><i className="bi bi-download me-1"></i>GeoJSON</button>
+                <button type="button" className="btn btn-sm btn-light-secondary" onClick={exportGeoJson} title="Zonalarni GeoJSON qilib yuklab olish"><i className="bi bi-download me-1"></i>GeoJSON</button>
                 <form className="d-flex gap-2" onSubmit={(event) => submitLogistics(event, 'get', indexUrl)}>
                   <select className="form-select form-select-sm" name="cod_filter" defaultValue={logisticsFilters.codFilter || ''}>
                     <option value="">COD: barchasi</option>
                     <option value="on">COD bor</option>
                     <option value="off">COD yo'q</option>
                   </select>
-                  <button className="btn btn-sm btn-light"><i className="bi bi-funnel"></i></button>
+                  <button className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22"><i className="bi bi-funnel"></i></button>
                 </form>
               </div>
             </div>
@@ -853,14 +854,14 @@ export function Logistika() {
               </div>
               <div className="btn-group btn-group-sm">
                 {(['all', 'polygon', 'radius', 'country'] as const).map((value) => (
-                  <button key={value} type="button" className={`btn ${ruleScope === value ? 'btn-primary-gradient' : 'btn-light'}`} onClick={() => setRuleScope(value)}>
+                  <button key={value} type="button" className={`kc-tab ${ruleScope === value ? 'active' : ''}`} onClick={() => setRuleScope(value)}>
                     {value === 'all' ? 'Barchasi' : value === 'polygon' ? 'Polygon' : value === 'radius' ? 'Radius' : 'Mamlakat'}
                   </button>
                 ))}
               </div>
             </div>
             <div className="table-responsive">
-              <table className="data-table">
+              <table className="table table-bottom-border align-middle data-table">
                 <thead><tr>
                   <th>Zona</th>
                   <th>Scope</th>
@@ -897,9 +898,9 @@ export function Logistika() {
                       </button>
                     </td>
                     <td className="text-end" style={{ whiteSpace: 'nowrap' }}>
-                      <button className="btn btn-sm btn-light me-1" title="Nusxalash" onClick={() => duplicateZone(rule)}><i className="bi bi-files"></i></button>
-                      <button className="btn btn-sm btn-light me-1" title="Tahrirlash" onClick={() => setEditingRule(rule)}><i className="bi bi-pencil"></i></button>
-                      <button className="btn btn-sm btn-light text-danger" title="O'chirish" onClick={() => removeLogistics(rule.destroyUrl, `${rule.zoneName} qoidasi o'chirilsinmi?`)}><i className="bi bi-trash"></i></button>
+                      <button className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22 me-1" title="Nusxalash" onClick={() => duplicateZone(rule)}><i className="bi bi-files"></i></button>
+                      <button className="btn btn-light-success icon-btn w-30 h-30 b-r-22 me-1" title="Tahrirlash" onClick={() => setEditingRule(rule)}><i className="bi bi-pencil"></i></button>
+                      <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" title="O'chirish" onClick={() => removeLogistics(rule.destroyUrl, `${rule.zoneName} qoidasi o'chirilsinmi?`)}><i className="bi bi-trash"></i></button>
                     </td>
                   </tr>
                 ))}
@@ -927,7 +928,7 @@ export function Logistika() {
                 <div className="small text-muted mb-2 d-flex align-items-center flex-wrap gap-2">
                   <span><i className="bi bi-geo-alt me-1"></i>{previewPoint[0].toFixed(5)}, {previewPoint[1].toFixed(5)}</span>
                   {previewMatches.length > 1 ? <span className="chip chip-warning">{previewMatches.length} zona mos · overlap</span> : null}
-                  <button type="button" className="btn btn-sm btn-light ms-auto" onClick={() => setPreviewPoint(null)}><i className="bi bi-x"></i></button>
+                  <button type="button" className="btn btn-light-danger icon-btn w-30 h-30 b-r-22 ms-auto" onClick={() => setPreviewPoint(null)}><i className="bi bi-x"></i></button>
                 </div>
                 {previewMatches.length === 0 ? (
                   <div className="alert alert-warning py-2 px-3 small mb-0">Bu nuqta hech qaysi zonaga tushmaydi — checkoutda kuryer <b>ko'rsatilmaydi</b>.</div>
@@ -966,7 +967,7 @@ export function Logistika() {
                   <div className="col-md-6"><LogisticsInput name="preview_total_sum" label="Buyurtma summasi" type="number" min={0} defaultValue={logisticsFilters.previewTotalSum || 0} /></div>
                   <div className="col-md-6"><LogisticsInput name="preview_address" label="Manzil" defaultValue={logisticsFilters.previewAddress} /></div>
                 </div>
-                <div className="text-end mt-2"><button className="btn btn-light btn-sm"><i className="bi bi-calculator me-1"></i>Server narxi</button></div>
+                <div className="text-end mt-2"><button className="btn btn-light-secondary btn-sm"><i className="bi bi-calculator me-1"></i>Server narxi</button></div>
               </form>
               {logisticsPreview ? (
                 <div className="mt-2 d-flex flex-column gap-2">
@@ -995,11 +996,11 @@ export function Logistika() {
               <i className="bi bi-search position-absolute" style={{ left: 12, top: 9, color: 'var(--kc-text-muted)' }}></i>
               <input className="form-control form-control-sm" style={{ paddingLeft: 32 }} placeholder="Xizmat qidirish" value={serviceQuery} onChange={(event) => setServiceQuery(event.target.value)} />
             </div>
-            <button className="btn btn-sm btn-light" onClick={() => setEditingService(null)}><i className="bi bi-plus-circle me-1"></i>Xizmat qo'shish</button>
+            <button className="btn btn-sm btn-light-secondary" onClick={() => setEditingService(null)}><i className="bi bi-plus-circle me-1"></i>Xizmat qo'shish</button>
           </div>
         </div>
         <div className="table-responsive">
-          <table className="data-table">
+          <table className="table table-bottom-border align-middle data-table">
             <thead><tr><th>ID</th><th>Xizmat</th><th>Turi</th><th>Narx/kg</th><th>Bepuldan</th><th>Muddat</th><th>Mamlakat</th><th>Holat</th><th>Amallar</th></tr></thead>
             <tbody>{filteredServices.map(service => (
               <tr key={service.id}>
@@ -1012,8 +1013,8 @@ export function Logistika() {
                 <td>{service.country || '—'} {service.capital ? '· poytaxt' : ''}</td>
                 <td><span className={`chip ${service.active ? 'chip-success' : 'chip-gray'}`}>{service.active ? 'Faol' : 'Nofaol'}</span></td>
                 <td>
-                  <button className="btn btn-sm btn-light me-1" onClick={() => setEditingService(service)}><i className="bi bi-pencil"></i></button>
-                  <button className="btn btn-sm btn-light text-danger" onClick={() => removeLogistics(service.destroyUrl, `${service.name} xizmati o'chirilsinmi?`)}><i className="bi bi-trash"></i></button>
+                  <button className="btn btn-light-success icon-btn w-30 h-30 b-r-22 me-1" onClick={() => setEditingService(service)}><i className="bi bi-pencil"></i></button>
+                  <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => removeLogistics(service.destroyUrl, `${service.name} xizmati o'chirilsinmi?`)}><i className="bi bi-trash"></i></button>
                 </td>
               </tr>
             ))}

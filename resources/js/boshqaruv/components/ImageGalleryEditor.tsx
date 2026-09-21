@@ -67,7 +67,7 @@ export default function ImageGalleryEditor({
                 <button
                   type="button"
                   title="Asosiy rasm qilish"
-                  className="btn btn-light btn-sm"
+                  className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22"
                   style={{ position: 'absolute', top: 2, left: 2, padding: '1px 5px', fontSize: 10, lineHeight: 1 }}
                   onClick={() => makeCover(url)}
                 >

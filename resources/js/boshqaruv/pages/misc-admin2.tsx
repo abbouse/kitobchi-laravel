@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { PageCrumbs } from '../Layout';
 import { router, usePage } from '@inertiajs/react';
 import { Modal, Button, Form } from 'react-bootstrap';
 import PaginationControls from '../components/PaginationControls';
@@ -19,7 +20,7 @@ export function Blogerlar() {
   return (
     <div>
       <div className="page-head">
-        <div><h1 className="page-title">Hamkor blogerlar</h1><p className="page-subtitle">Jami {bloggers.length} ta bloger · shipment va hamkorlik nazorati</p></div>
+        <div><h1 className="page-title">Hamkor blogerlar</h1><PageCrumbs /><p className="page-subtitle">Jami {bloggers.length} ta bloger · shipment va hamkorlik nazorati</p></div>
       </div>
       <div className="row g-3">
         {bloggers.map(blogger => (
@@ -35,8 +36,8 @@ export function Blogerlar() {
               </div>
               <div className="small text-muted mb-3">{blogger.address || blogger.activeUntil || '—'}</div>
               <div className="d-flex gap-2">
-                <button className="btn btn-sm btn-light flex-fill" onClick={() => setSelected(blogger)}><i className="bi bi-eye"></i></button>
-                <button className="btn btn-sm btn-light text-danger" onClick={() => destroy(blogger)}><i className="bi bi-trash"></i></button>
+                <button className="btn btn-sm btn-light-secondary flex-fill" onClick={() => setSelected(blogger)}><i className="bi bi-eye"></i></button>
+                <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => destroy(blogger)}><i className="bi bi-trash"></i></button>
               </div>
             </div>
           </div>
@@ -54,7 +55,7 @@ export function Blogerlar() {
           </div>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="light" onClick={() => setSelected(null)}>Yopish</Button>
+          <Button variant="light-secondary" onClick={() => setSelected(null)}>Yopish</Button>
         </Modal.Footer>
       </Modal>
     </div>
@@ -139,9 +140,9 @@ export function Shikoyatlar() {
 
   return (
     <div>
-      <div className="page-head"><div><h1 className="page-title">Shikoyatlar</h1><p className="page-subtitle">Jami {complaintPagination.total} ta shikoyat</p></div></div>
+      <div className="page-head"><div><h1 className="page-title">Shikoyatlar</h1><PageCrumbs /><p className="page-subtitle">Jami {complaintPagination.total} ta shikoyat</p></div></div>
       <div className="card-panel">
-        <div className="table-responsive"><table className="data-table">
+        <div className="table-responsive"><table className="table table-bottom-border align-middle data-table">
           <thead><tr><th>ID</th><th>Foydalanuvchi</th><th>Sabab</th><th>Turi</th><th>Sana</th><th>Status</th><th>Amallar</th></tr></thead>
           <tbody>{complaints.map(complaint => (
             <tr key={complaint.id}>
@@ -152,8 +153,8 @@ export function Shikoyatlar() {
               <td className="text-muted">{complaint.date}</td>
               <td><span className={`chip ${complaint.status === 'pending' ? 'chip-warning' : complaint.status === 'reviewed' ? 'chip-success' : 'chip-gray'}`} style={{ fontSize: 9 }}>{complaintStatusLabel(complaint.status)}</span></td>
               <td>
-                <button className="btn btn-sm btn-light me-1" onClick={() => { setSelected(complaint); setShowDetail(true); }}><i className="bi bi-eye"></i></button>
-                <button className="btn btn-sm btn-light text-danger" onClick={() => destroy(complaint)}><i className="bi bi-trash"></i></button>
+                <button className="btn btn-light-primary icon-btn w-30 h-30 b-r-22 me-1" onClick={() => { setSelected(complaint); setShowDetail(true); }}><i className="bi bi-eye"></i></button>
+                <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => destroy(complaint)}><i className="bi bi-trash"></i></button>
               </td>
             </tr>
           ))}</tbody>
@@ -261,11 +262,11 @@ export function Shikoyatlar() {
           </div>
           <div className="d-flex gap-2 mt-3">
             {[['pending', 'Qayta ochish'], ['reviewed', "Ko'rildi"], ['dismissed', 'Rad etish']].map(([status, label]) => (
-              <button key={status} className={`btn btn-sm ${selected?.status === status ? 'btn-primary-gradient' : 'btn-outline-secondary'}`} onClick={() => updateStatus(status)}>{label}</button>
+              <button key={status} className={`btn btn-sm ${selected?.status === status ? 'btn-primary' : 'btn-outline-secondary'}`} onClick={() => updateStatus(status)}>{label}</button>
             ))}
           </div>
         </Modal.Body>
-        <Modal.Footer><Button variant="light" onClick={() => setShowDetail(false)}>Yopish</Button></Modal.Footer>
+        <Modal.Footer><Button variant="light-secondary" onClick={() => setShowDetail(false)}>Yopish</Button></Modal.Footer>
       </Modal>
     </div>
   );
@@ -286,10 +287,10 @@ export function GiftSertifikatlar() {
   return (
     <div>
       <div className="page-head">
-        <div><h1 className="page-title">Gift sertifikatlar</h1><p className="page-subtitle">Jami {giftCertificates.length} ta · {giftCertificates.filter(s => s.status === 'active').length} ta aktiv · {totalActive.toLocaleString()} so'm</p></div>
+        <div><h1 className="page-title">Gift sertifikatlar</h1><PageCrumbs /><p className="page-subtitle">Jami {giftCertificates.length} ta · {giftCertificates.filter(s => s.status === 'active').length} ta aktiv · {totalActive.toLocaleString()} so'm</p></div>
       </div>
       <div className="card-panel">
-        <div className="table-responsive"><table className="data-table">
+        <div className="table-responsive"><table className="table table-bottom-border align-middle data-table">
           <thead><tr><th>ID</th><th>Kod</th><th>Summa</th><th>Xaridor</th><th>Qabul qiluvchi</th><th>Muddati</th><th>Status</th><th>Amallar</th></tr></thead>
           <tbody>{giftCertificates.map(certificate => (
             <tr key={certificate.id}>
