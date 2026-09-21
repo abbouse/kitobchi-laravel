@@ -623,7 +623,7 @@ export default function Orders() {
 
       <div className="kpi-strip row g-3 mb-4">
         {[
-          { label: 'Jami buyurtmalar', val: orderCounts.all || 0, icon: 'bi-receipt', color: 'var(--kc-cat-indigo)' },
+          { label: 'Jami buyurtmalar', val: orderCounts.all || 0, icon: 'bi-receipt', color: 'var(--kc-ink)' },
           { label: 'Yetkazilgan', val: orderCounts.paid || 0, icon: 'bi-check-circle', color: 'var(--kc-ok)' },
           { label: 'Jarayonda', val: (orderCounts.pending || 0) + (orderCounts.shipped || 0), icon: 'bi-hourglass-split', color: 'var(--kc-warn)' },
           { label: 'Qaytgan', val: orderCounts.returned || 0, icon: 'bi-arrow-counterclockwise', color: 'var(--kc-cat-orange)' },

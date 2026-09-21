@@ -54,7 +54,7 @@ export default function Promokodlar() {
 
       <div className="kpi-strip row g-3 mb-4">
         {[
-          { label: 'Jami promokod', value: promocodes.length, icon: 'bi-ticket-perforated', color: 'var(--kc-cat-indigo)' },
+          { label: 'Jami promokod', value: promocodes.length, icon: 'bi-ticket-perforated', color: 'var(--kc-ink)' },
           { label: 'Faol', value: activeCount, icon: 'bi-check-circle', color: 'var(--kc-ok)' },
           { label: 'Ishlatilgan', value: usedTotal, icon: 'bi-bag-check', color: 'var(--kc-warn)' },
           { label: 'Foizli kodlar', value: promocodes.filter((promo) => promo.type === 'percent').length, icon: 'bi-percent', color: 'var(--kc-cat-violet)' },

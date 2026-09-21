@@ -13,8 +13,16 @@
   <link rel="manifest" href="{{ asset('site.webmanifest') }}?v=20260822_2">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  {{-- Panel shriftlari: interfeys uchun Schibsted Grotesk, raqamlar (summa, ID, vaqt) uchun IBM Plex Mono --}}
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Schibsted+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  {{-- Panel shrifti: Montserrat (Axelit dizayn tizimi) --}}
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+  {{-- Mavzu birinchi chizishdan oldin qo'llanadi — qorong'i rejimda oq "chaqnash" bo'lmaydi --}}
+  <script>
+    try {
+      if (localStorage.getItem('boshqaruv-theme') === 'dark') {
+        document.documentElement.setAttribute('data-bs-theme', 'dark');
+      }
+    } catch (e) {}
+  </script>
   {{-- Leaflet (interaktiv xarita) — bepul, kalitsiz, OpenStreetMap --}}
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />

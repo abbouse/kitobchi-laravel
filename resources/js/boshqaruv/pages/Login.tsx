@@ -79,7 +79,7 @@ export default function Login() {
                 <input type="checkbox" className="form-check-input" id="remember" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
                 <label className="form-check-label small" htmlFor="remember">Eslab qolish</label>
               </div>
-              <a href="#" className="small text-decoration-none" style={{ color: 'var(--kc-cat-indigo)', fontWeight: 600 }}>Parolni unutdingizmi?</a>
+              <a href="#" className="small text-decoration-none" style={{ color: 'var(--kc-ink)', fontWeight: 600 }}>Parolni unutdingizmi?</a>
             </div>
             <button type="submit" className="btn btn-primary-gradient w-100 py-2 mb-3">
               <i className="bi bi-box-arrow-in-right me-2"></i>Kirish

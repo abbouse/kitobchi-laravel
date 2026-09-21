@@ -234,7 +234,7 @@ export default function Split() {
       {tab === 'users' ? (
       <div className="kpi-strip row g-3 mb-4">
         {[
-          ['Profil yozuvlari', splitSummary.profiles, 'bi-database-check', 'var(--kc-cat-indigo)'],
+          ['Profil yozuvlari', splitSummary.profiles, 'bi-database-check', 'var(--kc-ink)'],
           ['Mos userlar', splitSummary.eligible, 'bi-patch-check', 'var(--kc-ok)'],
           ['Kartasi lock bo‘ladiganlar', splitSummary.locked, 'bi-lock', 'var(--kc-danger)'],
           ['Split bloklanganlar', splitSummary.blocked, 'bi-slash-circle', 'var(--kc-cat-dred)'],

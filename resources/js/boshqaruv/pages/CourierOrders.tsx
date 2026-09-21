@@ -155,7 +155,7 @@ export default function CourierOrders() {
       <div className="page-head"><div><h1 className="page-title">{isOrderPage ? 'Kuryer buyurtmalari' : 'Kuryerlar'}</h1><p className="page-subtitle">{isOrderPage ? 'Kuryer orderlari, statuslar, mijoz qidiruvi va jarimalar' : 'Kuryer profillari, online holat, lokatsiya, verifikatsiya va balans'}</p></div></div>
       <div className="kpi-strip row g-3 mb-4">
         {(isOrderPage ? [
-          ['Jami order', courierOrderCounts.all || 0, 'bi-truck', 'var(--kc-cat-indigo)'],
+          ['Jami order', courierOrderCounts.all || 0, 'bi-truck', 'var(--kc-ink)'],
           ["Yo'lda", courierOrderCounts.in_delivery || 0, 'bi-signpost-split', 'var(--kc-cat-navy)'],
           ['Yetkazildi', courierOrderCounts.delivered || 0, 'bi-check-circle', 'var(--kc-ok)'],
           ['Mijoz qabul qildi', courierOrderCounts.customer_received || 0, 'bi-bag-check', 'var(--kc-cat-violet)'],

@@ -22,19 +22,19 @@ const TOKENS = {
   danger: '--kc-danger',
   info: '--kc-info',
   neutral: '--kc-neutral',
-  indigo: '--kc-cat-indigo',
-  violet: '--kc-cat-violet',
-  dviolet: '--kc-cat-dviolet',
-  navy: '--kc-cat-navy',
-  steel: '--kc-cat-steel',
-  teal: '--kc-cat-teal',
-  green: '--kc-cat-green',
-  dgreen: '--kc-cat-dgreen',
-  amber: '--kc-cat-amber',
-  orange: '--kc-cat-orange',
-  plum: '--kc-cat-plum',
-  red: '--kc-cat-red',
-  dred: '--kc-cat-dred',
+  indigo: '--kc-chart-indigo',
+  violet: '--kc-chart-violet',
+  dviolet: '--kc-chart-dviolet',
+  navy: '--kc-chart-navy',
+  steel: '--kc-chart-steel',
+  teal: '--kc-chart-teal',
+  green: '--kc-chart-green',
+  dgreen: '--kc-chart-dgreen',
+  amber: '--kc-chart-amber',
+  orange: '--kc-chart-orange',
+  plum: '--kc-chart-plum',
+  red: '--kc-chart-red',
+  dred: '--kc-chart-dred',
 } as const;
 
 export type PaletteKey = keyof typeof TOKENS;
@@ -42,12 +42,12 @@ export type Palette = Record<PaletteKey, string>;
 
 /** SSR va birinchi render uchun zaxira qiymatlar (yorug' mavzu). */
 const FALLBACK: Palette = {
-  ink: '#4338CA', text: '#16172A', soft: '#535873', muted: '#656A81',
-  line: '#E0E3F0', grid: '#E0E3F0', surface: '#FFFFFF', page: '#F4F5FB',
-  ok: '#15764D', warn: '#9A6207', danger: '#B03236', info: '#2456A8', neutral: '#5B6079',
-  indigo: '#4338CA', violet: '#6532C4', dviolet: '#4C2E9E', navy: '#234F97',
-  steel: '#1D5A8A', teal: '#12626F', green: '#15764D', dgreen: '#0F5D3D',
-  amber: '#9A6207', orange: '#92500F', plum: '#962E68', red: '#B03236', dred: '#8A1F24',
+  ink: '#6A4FE3', text: '#15264B', soft: '#5E5C65', muted: '#6B6A78',
+  line: '#E0DFD6', grid: '#E0DFD6', surface: '#FFFFFF', page: '#F6F6F6',
+  ok: '#147834', warn: '#6B6010', danger: '#B8089A', info: '#2E5EE7', neutral: '#5A4C55',
+  indigo: '#8C76F0', violet: '#B3A5F7', dviolet: '#3C2A9E', navy: '#2E5EE7',
+  steel: '#6C8FEF', teal: '#1C8C8C', green: '#1E8A43', dgreen: '#0E5A27',
+  amber: '#CDD13A', orange: '#E39A3B', plum: '#F00AC8', red: '#D91BAE', dred: '#7A1480',
 };
 
 export function readPalette(scope?: Element | null): Palette {

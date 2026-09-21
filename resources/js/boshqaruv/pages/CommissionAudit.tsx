@@ -74,7 +74,7 @@ export default function CommissionAudit() {
 
       <div className="kpi-strip row g-3 mb-3">
         {[
-          ['Yozuvlar', commissionAuditTotals.rows || 0, 'bi-list-check', 'var(--kc-cat-indigo)'],
+          ['Yozuvlar', commissionAuditTotals.rows || 0, 'bi-list-check', 'var(--kc-ink)'],
           ['Farq bor', commissionAuditTotals.mismatches || 0, 'bi-exclamation-triangle', 'var(--kc-danger)'],
           [isCourier ? 'Km formula' : 'Seller qoidasi', commissionAuditTotals.sellerSpecific || 0, isCourier ? 'bi-signpost-split' : 'bi-shop', 'var(--kc-ok)'],
           ['Balansga qo‘shilgan', commissionAuditTotals.balanceAdded || 0, 'bi-wallet2', 'var(--kc-cat-steel)'],

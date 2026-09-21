@@ -110,7 +110,7 @@ const STAGE_ORDER = ['inbound', 'qc', 'packing', 'dispatch', 'delivery'] as cons
 
 // Hub kartasidagi kichik pipeline chizig'i
 function PipelineBar({ pipeline, stages }: { pipeline?: HubPipeline; stages: FulfillmentStage[] }) {
-  const stageList = stages.length ? stages : STAGE_ORDER.map((k) => ({ key: k, label: k, icon: 'bi-dot', color: 'var(--kc-cat-indigo)' }));
+  const stageList = stages.length ? stages : STAGE_ORDER.map((k) => ({ key: k, label: k, icon: 'bi-dot', color: 'var(--kc-ink)' }));
   const total = STAGE_ORDER.reduce((sum, key) => sum + (pipeline?.[key] || 0), 0);
 
   if (!pipeline || total === 0) {
@@ -356,7 +356,7 @@ export default function Hubs() {
 
       <div className="kpi-strip row g-3 mb-4">
         {[
-          { label: 'Jami hub', value: hubStats.total ?? hubs.length, icon: 'bi-building', color: 'var(--kc-cat-indigo)' },
+          { label: 'Jami hub', value: hubStats.total ?? hubs.length, icon: 'bi-building', color: 'var(--kc-ink)' },
           { label: 'Faol hub', value: hubStats.active ?? hubs.filter((hub) => hub.active).length, icon: 'bi-check-circle', color: 'var(--kc-ok)' },
           { label: 'Xodimlar', value: hubStats.staff ?? hubStaff.length, icon: 'bi-people', color: 'var(--kc-cat-violet)' },
           { label: 'Fulfillment', value: fmt(totalFulfillments), icon: 'bi-box-seam', color: 'var(--kc-warn)' },

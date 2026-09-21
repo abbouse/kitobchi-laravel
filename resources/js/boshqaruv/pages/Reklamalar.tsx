@@ -58,7 +58,7 @@ export default function Reklamalar() {
 
       <div className="kpi-strip row g-3 mb-4">
         {[
-          { label: 'Jami reklama', value: ads.length, icon: 'bi-megaphone', color: 'var(--kc-cat-indigo)' },
+          { label: 'Jami reklama', value: ads.length, icon: 'bi-megaphone', color: 'var(--kc-ink)' },
           { label: 'Moderatsiyada', value: pending, icon: 'bi-hourglass-split', color: 'var(--kc-warn)' },
           { label: 'Tasdiqlangan', value: ads.filter((ad) => chip(ad.status) === 'chip-success').length, icon: 'bi-check-circle', color: 'var(--kc-ok)' },
           { label: 'Budget', value: `${fmt(totalBudget)} so'm`, icon: 'bi-cash-stack', color: 'var(--kc-cat-violet)' },

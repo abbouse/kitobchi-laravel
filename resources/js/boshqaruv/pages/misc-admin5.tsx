@@ -56,7 +56,7 @@ export function MysteryBox() {
           <thead><tr><th>ID</th><th>Foydalanuvchi</th><th>Plan</th><th>Status</th><th>Keyingi yetkazish</th><th>Amallar</th></tr></thead>
           <tbody>{mysteryBox.subscriptions.map(s => (
             <tr key={s.id}>
-              <td className="fw-semibold" style={{ color: 'var(--kc-cat-indigo)' }}>#{s.id}</td>
+              <td className="fw-semibold" style={{ color: 'var(--kc-ink)' }}>#{s.id}</td>
               <td className="fw-semibold">{s.user}</td>
               <td><span className="chip chip-purple" style={{ fontSize: 9 }}>{s.plan}</span></td>
               <td><span className={`chip ${s.status === 'active' ? 'chip-success' : s.status === 'paused' ? 'chip-warning' : 'chip-gray'}`} style={{ fontSize: 9 }}>{s.statusLabel || s.status}</span></td>
@@ -528,7 +528,7 @@ function DeliveryRuleForm({ rule, services, action, onDone }: { rule?: DeliveryR
   const [polygon, setPolygon] = useState<Ring | null>(
     Array.isArray(rule?.polygon) && (rule?.polygon?.length ?? 0) >= 3 ? (rule!.polygon as Ring) : null,
   );
-  const [color, setColor] = useState(rule?.color || (rule?.scope === 'radius' ? 'var(--kc-ok)' : 'var(--kc-cat-indigo)'));
+  const [color, setColor] = useState(rule?.color || (rule?.scope === 'radius' ? 'var(--kc-ok)' : 'var(--kc-ink)'));
 
   if (!action) return null;
 
@@ -683,7 +683,7 @@ export function Logistika() {
   const postalServices = deliveryServices.filter((service) => service.type === 'mail_service');
   const radiusRules = deliveryRules.filter((rule) => rule.scope === 'radius');
   const polygonRules = deliveryRules.filter((rule) => rule.scope === 'polygon');
-  const zoneColor = (rule: DeliveryRule) => rule.color || (rule.scope === 'polygon' ? 'var(--kc-cat-indigo)' : 'var(--kc-ok)');
+  const zoneColor = (rule: DeliveryRule) => rule.color || (rule.scope === 'polygon' ? 'var(--kc-ink)' : 'var(--kc-ok)');
 
   // Client-side resolver uchun to'liq zona ma'lumoti (aqlli preview + overlap)
   const previewZones: ZoneLike[] = deliveryRules.map((rule) => ({
@@ -792,9 +792,9 @@ export function Logistika() {
 
       <div className="kpi-strip row g-3 mb-4">
         {[
-          { label: 'Xizmatlar', value: logisticsStats.services ?? deliveryServices.length, icon: 'bi-truck', color: 'var(--kc-cat-indigo)' },
+          { label: 'Xizmatlar', value: logisticsStats.services ?? deliveryServices.length, icon: 'bi-truck', color: 'var(--kc-ink)' },
           { label: 'Faol xizmat', value: logisticsStats.activeServices ?? deliveryServices.filter((item) => item.active).length, icon: 'bi-check-circle', color: 'var(--kc-ok)' },
-          { label: 'Polygon zona', value: logisticsStats.polygonRules ?? polygonRules.length, icon: 'bi-pentagon', color: 'var(--kc-cat-indigo)' },
+          { label: 'Polygon zona', value: logisticsStats.polygonRules ?? polygonRules.length, icon: 'bi-pentagon', color: 'var(--kc-ink)' },
           { label: 'Radius zona', value: logisticsStats.radiusRules ?? radiusRules.length, icon: 'bi-record-circle', color: 'var(--kc-ok)' },
           { label: 'COD qoidalari', value: logisticsStats.codRules ?? deliveryRules.filter((item) => item.codAllowed).length, icon: 'bi-cash-coin', color: 'var(--kc-cat-violet)' },
         ].map((item) => (
@@ -810,7 +810,7 @@ export function Logistika() {
 
       <div className="row g-3 mb-4">
         {[
-          { step: '1', title: 'Xizmat', icon: 'bi-truck', color: 'var(--kc-cat-indigo)', text: 'Kuryer yoki pochta kanali (Kitobchi kuryer, UzPost). Bir marta ochiladi.' },
+          { step: '1', title: 'Xizmat', icon: 'bi-truck', color: 'var(--kc-ink)', text: 'Kuryer yoki pochta kanali (Kitobchi kuryer, UzPost). Bir marta ochiladi.' },
           { step: '2', title: 'Zona chegarasi', icon: 'bi-pentagon', color: 'var(--kc-cat-violet)', text: 'Polygon qilib xaritada chizasiz yoki radius berasiz — narx, COD, ETA shu yerda.' },
           { step: '3', title: 'Preview', icon: 'bi-calculator', color: 'var(--kc-ok)', text: 'Koordinata kiritib, checkoutda qaysi yetkazish chiqishini oldindan tekshirasiz.' },
         ].map((item) => (
@@ -1003,7 +1003,7 @@ export function Logistika() {
             <thead><tr><th>ID</th><th>Xizmat</th><th>Turi</th><th>Narx/kg</th><th>Bepuldan</th><th>Muddat</th><th>Mamlakat</th><th>Holat</th><th>Amallar</th></tr></thead>
             <tbody>{filteredServices.map(service => (
               <tr key={service.id}>
-                <td className="fw-semibold" style={{ color: 'var(--kc-cat-indigo)' }}>#{service.id}</td>
+                <td className="fw-semibold" style={{ color: 'var(--kc-ink)' }}>#{service.id}</td>
                 <td className="fw-semibold">{service.name}</td>
                 <td><span className="chip chip-gray">{service.type || '—'}</span></td>
                 <td>{service.price === 0 ? <span className="chip chip-success">Bepul</span> : <span className="fw-semibold">{service.price.toLocaleString()} so'm</span>}</td>

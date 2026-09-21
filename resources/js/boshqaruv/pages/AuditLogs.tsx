@@ -51,7 +51,7 @@ export default function AuditLogs() {
 
       <div className="kpi-strip row g-3 mb-3">
         {[
-          ['Jami', auditLogTotals.all || 0, 'bi-clipboard-data', 'var(--kc-cat-indigo)'],
+          ['Jami', auditLogTotals.all || 0, 'bi-clipboard-data', 'var(--kc-ink)'],
           ['Bugun', auditLogTotals.today || 0, 'bi-calendar2-day', 'var(--kc-ok)'],
           ['Xatolik', auditLogTotals.failed || 0, 'bi-exclamation-triangle', 'var(--kc-danger)'],
         ].map(([label, value, icon, color]) => (

@@ -134,7 +134,7 @@ export default function Transaksiyalar() {
 
       <div className="kpi-strip row g-3 mb-4">
         {[
-          { label: `${ownerLabel} tranzaksiya`, value: transactionTotals.all || 0, icon: 'bi-receipt', color: 'var(--kc-cat-indigo)' },
+          { label: `${ownerLabel} tranzaksiya`, value: transactionTotals.all || 0, icon: 'bi-receipt', color: 'var(--kc-ink)' },
           { label: 'Tasdiqlangan', value: totals.approved, icon: 'bi-check-circle', color: 'var(--kc-ok)' },
           { label: 'Kutilmoqda', value: totals.pending, icon: 'bi-hourglass-split', color: 'var(--kc-warn)' },
           { label: 'Jami summa', value: `${fmt(totals.income)} so'm`, icon: 'bi-wallet2', color: 'var(--kc-cat-steel)' },

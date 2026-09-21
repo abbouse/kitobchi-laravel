@@ -158,7 +158,7 @@ export default function Books() {
           { key: 'pending', label: 'Moderatsiyada', val: bookCounts.pending || 0, hint: 'Avval ko‘rib chiqilishi kerak', color: 'var(--kc-warn)' },
           { key: 'active', label: 'Faol kitoblar', val: bookCounts.active || 0, hint: 'Xaridorga ko‘rinayotganlar', color: 'var(--kc-ok)' },
           { key: 'rejected', label: 'Rad etilgan', val: bookCounts.rejected || 0, hint: 'Qayta ko‘rib chiqilishi mumkin', color: 'var(--kc-danger)' },
-          { key: 'all', label: 'Jami katalog', val: bookCounts.all || 0, hint: 'Barcha yozuvlar', color: 'var(--kc-cat-indigo)' },
+          { key: 'all', label: 'Jami katalog', val: bookCounts.all || 0, hint: 'Barcha yozuvlar', color: 'var(--kc-ink)' },
         ].map((item) => (
           <div className="col-xl-3 col-md-6" key={item.key}>
             <button
