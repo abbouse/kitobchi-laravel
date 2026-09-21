@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, router, usePage } from '@inertiajs/react';
+import { tiIcon } from './utils/icons';
 
 /*
  * Boshqaruv karkasi — Axelit shablonining aynan o'zi (litsenziyalangan):
@@ -13,69 +14,69 @@ import { Link, router, usePage } from '@inertiajs/react';
 // middleware qo'llangan). `perm: null` — hech qanday ruxsat talab qilinmaydi,
 // tizimga kirgan har bir admin ko'radi (faqat Dashboard/Live Dashboard).
 const nav = [
-  { group: 'Asosiy', section: 'Asosiy', icon: 'bi-grid', ax: 'iconoir-home-alt', items: [
-    { to: '/boshqaruv', match: '/boshqaruv', label: 'Dashboard', icon: 'bi-speedometer2', ax: 'iconoir-home-alt', perm: null as string | null },
-    { to: '/boshqaruv/live', match: '/boshqaruv/live', label: 'Live Dashboard', icon: 'bi-broadcast', ax: 'iconoir-antenna-signal', badge: 'LIVE', perm: null as string | null },
+  { group: 'Asosiy', section: 'Asosiy', icon: 'ti-layout-grid', ax: 'iconoir-home-alt', items: [
+    { to: '/boshqaruv', match: '/boshqaruv', label: 'Dashboard', icon: 'ti-gauge', ax: 'iconoir-home-alt', perm: null as string | null },
+    { to: '/boshqaruv/live', match: '/boshqaruv/live', label: 'Live Dashboard', icon: 'ti-broadcast', ax: 'iconoir-antenna-signal', badge: 'LIVE', perm: null as string | null },
   ]},
-  { group: 'Katalog', section: 'Savdo', icon: 'bi-book', ax: 'iconoir-book-stack', items: [
-    { to: '/boshqaruv/books', match: '/boshqaruv/books', label: 'Kitoblar', icon: 'bi-book', perm: 'catalog' },
-    { to: '/boshqaruv/book-categories', match: '/boshqaruv/book-categories', label: 'Kitob kategoriyalari', icon: 'bi-bookmarks', perm: 'catalog' },
-    { to: '/boshqaruv/stationeries', match: '/boshqaruv/stationeries', label: 'Kanselyariya', icon: 'bi-pencil-square', perm: 'catalog' },
-    { to: '/boshqaruv/stationery-categories', match: '/boshqaruv/stationery-categories', label: 'Kanstovar kategoriyalari', icon: 'bi-tags', perm: 'catalog' },
-    { to: '/boshqaruv/authors', match: '/boshqaruv/authors', label: 'Mualliflar', icon: 'bi-person-vcard', perm: 'catalog' },
-    { to: '/boshqaruv/publishers', match: '/boshqaruv/publishers', label: 'Nashriyotlar', icon: 'bi-building', perm: 'catalog' },
+  { group: 'Katalog', section: 'Savdo', icon: 'ti-book', ax: 'iconoir-book-stack', items: [
+    { to: '/boshqaruv/books', match: '/boshqaruv/books', label: 'Kitoblar', icon: 'ti-book', perm: 'catalog' },
+    { to: '/boshqaruv/book-categories', match: '/boshqaruv/book-categories', label: 'Kitob kategoriyalari', icon: 'ti-bookmarks', perm: 'catalog' },
+    { to: '/boshqaruv/stationeries', match: '/boshqaruv/stationeries', label: 'Kanselyariya', icon: 'ti-edit', perm: 'catalog' },
+    { to: '/boshqaruv/stationery-categories', match: '/boshqaruv/stationery-categories', label: 'Kanstovar kategoriyalari', icon: 'ti-tags', perm: 'catalog' },
+    { to: '/boshqaruv/authors', match: '/boshqaruv/authors', label: 'Mualliflar', icon: 'ti-id', perm: 'catalog' },
+    { to: '/boshqaruv/publishers', match: '/boshqaruv/publishers', label: 'Nashriyotlar', icon: 'ti-building', perm: 'catalog' },
   ]},
-  { group: 'Buyurtmalar', section: 'Savdo', icon: 'bi-receipt', ax: 'iconoir-shopping-bag', items: [
-    { to: '/boshqaruv/orders', match: '/boshqaruv/orders', label: 'Buyurtmalar', icon: 'bi-receipt', perm: 'orders' },
-    { to: '/boshqaruv/users', match: '/boshqaruv/users', label: 'Foydalanuvchilar', icon: 'bi-people', perm: 'users' },
-    { to: '/boshqaruv/split', match: '/boshqaruv/split', label: 'Split nazorati', icon: 'bi-wallet2', perm: 'split' },
-    { to: '/boshqaruv/search-history', match: '/boshqaruv/search-history', label: 'Qidiruv tarixi', icon: 'bi-clock-history', perm: 'search-history' },
+  { group: 'Buyurtmalar', section: 'Savdo', icon: 'ti-receipt', ax: 'iconoir-shopping-bag', items: [
+    { to: '/boshqaruv/orders', match: '/boshqaruv/orders', label: 'Buyurtmalar', icon: 'ti-receipt', perm: 'orders' },
+    { to: '/boshqaruv/users', match: '/boshqaruv/users', label: 'Foydalanuvchilar', icon: 'ti-users', perm: 'users' },
+    { to: '/boshqaruv/split', match: '/boshqaruv/split', label: 'Split nazorati', icon: 'ti-wallet', perm: 'split' },
+    { to: '/boshqaruv/search-history', match: '/boshqaruv/search-history', label: 'Qidiruv tarixi', icon: 'ti-history', perm: 'search-history' },
   ]},
-  { group: 'Savdo va logistika', section: 'Savdo', icon: 'bi-truck', ax: 'iconoir-delivery-truck', items: [
-    { to: '/boshqaruv/sellers', match: '/boshqaruv/sellers', label: 'Sotuvchilar', icon: 'bi-shop-window', perm: 'sellers' },
-    { to: '/boshqaruv/seller-orders', match: '/boshqaruv/seller-orders', label: 'Seller buyurtmalari', icon: 'bi-shop', perm: 'sellers' },
-    { to: '/boshqaruv/couriers', match: '/boshqaruv/couriers', label: 'Kuryerlar', icon: 'bi-bicycle', perm: 'couriers' },
-    { to: '/boshqaruv/courier-orders', match: '/boshqaruv/courier-orders', label: 'Kuryer buyurtmalari', icon: 'bi-truck', perm: 'couriers' },
-    { to: '/boshqaruv/hubs', match: '/boshqaruv/hubs', label: 'Hub fulfillment', icon: 'bi-building', perm: 'hubs' },
-    { to: '/boshqaruv/transactions', match: '/boshqaruv/transactions', label: 'Tranzaksiyalar', icon: 'bi-cash-coin', perm: 'finance' },
-    { to: '/boshqaruv/fiscalization', match: '/boshqaruv/fiscalization', label: 'Fiskalizatsiya', icon: 'bi-qr-code', perm: 'finance' },
-    { to: '/boshqaruv/commission-audit', match: '/boshqaruv/commission-audit', label: 'Komissiya audit', icon: 'bi-percent', perm: 'finance' },
-    { to: '/boshqaruv/audit-logs', match: '/boshqaruv/audit-logs', label: 'Audit log', icon: 'bi-clipboard-data', perm: 'audit-logs' },
-    { to: '/boshqaruv/seller-ai-actions', match: '/boshqaruv/seller-ai-actions', label: 'Seller AI audit', icon: 'bi-robot', perm: 'seller-ai' },
-    { to: '/boshqaruv/expenses', match: '/boshqaruv/expenses', label: 'Chiqimlar', icon: 'bi-wallet2', perm: 'finance' },
-    { to: '/boshqaruv/logistika', match: '/boshqaruv/logistika', label: 'Logistika', icon: 'bi-geo-alt', perm: 'logistika' },
+  { group: 'Savdo va logistika', section: 'Savdo', icon: 'ti-truck', ax: 'iconoir-delivery-truck', items: [
+    { to: '/boshqaruv/sellers', match: '/boshqaruv/sellers', label: 'Sotuvchilar', icon: 'ti-building-store', perm: 'sellers' },
+    { to: '/boshqaruv/seller-orders', match: '/boshqaruv/seller-orders', label: 'Seller buyurtmalari', icon: 'ti-building-store', perm: 'sellers' },
+    { to: '/boshqaruv/couriers', match: '/boshqaruv/couriers', label: 'Kuryerlar', icon: 'ti-bike', perm: 'couriers' },
+    { to: '/boshqaruv/courier-orders', match: '/boshqaruv/courier-orders', label: 'Kuryer buyurtmalari', icon: 'ti-truck', perm: 'couriers' },
+    { to: '/boshqaruv/hubs', match: '/boshqaruv/hubs', label: 'Hub fulfillment', icon: 'ti-building', perm: 'hubs' },
+    { to: '/boshqaruv/transactions', match: '/boshqaruv/transactions', label: 'Tranzaksiyalar', icon: 'ti-coins', perm: 'finance' },
+    { to: '/boshqaruv/fiscalization', match: '/boshqaruv/fiscalization', label: 'Fiskalizatsiya', icon: 'ti-qrcode', perm: 'finance' },
+    { to: '/boshqaruv/commission-audit', match: '/boshqaruv/commission-audit', label: 'Komissiya audit', icon: 'ti-percentage', perm: 'finance' },
+    { to: '/boshqaruv/audit-logs', match: '/boshqaruv/audit-logs', label: 'Audit log', icon: 'ti-clipboard-data', perm: 'audit-logs' },
+    { to: '/boshqaruv/seller-ai-actions', match: '/boshqaruv/seller-ai-actions', label: 'Seller AI audit', icon: 'ti-robot', perm: 'seller-ai' },
+    { to: '/boshqaruv/expenses', match: '/boshqaruv/expenses', label: 'Chiqimlar', icon: 'ti-wallet', perm: 'finance' },
+    { to: '/boshqaruv/logistika', match: '/boshqaruv/logistika', label: 'Logistika', icon: 'ti-map-pin', perm: 'logistika' },
   ]},
-  { group: 'Marketing', section: "O'sish", icon: 'bi-megaphone', ax: 'iconoir-megaphone', items: [
-    { to: '/boshqaruv/reklamalar', match: '/boshqaruv/reklamalar', label: 'Reklamalar', icon: 'bi-megaphone', perm: 'marketing' },
-    { to: '/boshqaruv/promokodlar', match: '/boshqaruv/promokodlar', label: 'Promokodlar', icon: 'bi-ticket-perforated', perm: 'marketing' },
-    { to: '/boshqaruv/blogerlar', match: '/boshqaruv/blogerlar', label: 'Blogerlar', icon: 'bi-people', perm: 'marketing' },
-    { to: '/boshqaruv/gift-sertifikatlar', match: '/boshqaruv/gift-sertifikatlar', label: 'Gift sertifikatlar', icon: 'bi-gift', perm: 'marketing' },
-    { to: '/boshqaruv/market-news', match: '/boshqaruv/market-news', label: 'Market yangiliklari', icon: 'bi-newspaper', perm: 'marketing' },
-    { to: '/boshqaruv/collections', match: '/boshqaruv/collections', label: "To'plamlar", icon: 'bi-collection', perm: 'marketing' },
-    { to: '/boshqaruv/reels', match: '/boshqaruv/reels', label: 'Reels / Shorts', icon: 'bi-camera-reels', perm: 'marketing' },
-    { to: '/boshqaruv/book-club', match: '/boshqaruv/book-club', label: 'Book Club', icon: 'bi-journal-bookmark', perm: 'book-club' },
+  { group: 'Marketing', section: "O'sish", icon: 'ti-speakerphone', ax: 'iconoir-megaphone', items: [
+    { to: '/boshqaruv/reklamalar', match: '/boshqaruv/reklamalar', label: 'Reklamalar', icon: 'ti-speakerphone', perm: 'marketing' },
+    { to: '/boshqaruv/promokodlar', match: '/boshqaruv/promokodlar', label: 'Promokodlar', icon: 'ti-ticket', perm: 'marketing' },
+    { to: '/boshqaruv/blogerlar', match: '/boshqaruv/blogerlar', label: 'Blogerlar', icon: 'ti-users', perm: 'marketing' },
+    { to: '/boshqaruv/gift-sertifikatlar', match: '/boshqaruv/gift-sertifikatlar', label: 'Gift sertifikatlar', icon: 'ti-gift', perm: 'marketing' },
+    { to: '/boshqaruv/market-news', match: '/boshqaruv/market-news', label: 'Market yangiliklari', icon: 'ti-news', perm: 'marketing' },
+    { to: '/boshqaruv/collections', match: '/boshqaruv/collections', label: "To'plamlar", icon: 'ti-stack-2', perm: 'marketing' },
+    { to: '/boshqaruv/reels', match: '/boshqaruv/reels', label: 'Reels / Shorts', icon: 'ti-movie', perm: 'marketing' },
+    { to: '/boshqaruv/book-club', match: '/boshqaruv/book-club', label: 'Book Club', icon: 'ti-bookmark', perm: 'book-club' },
   ]},
-  { group: 'Mijozlarga xizmat', section: 'Jamoa va tizim', icon: 'bi-headset', ax: 'iconoir-headset-help', items: [
-    { to: '/boshqaruv/tickets', match: '/boshqaruv/tickets', label: 'Support', icon: 'bi-headset', perm: 'support' },
-    { to: '/boshqaruv/tickets?tickets_source=seller', match: '/boshqaruv/tickets?tickets_source=seller', label: 'Seller tiketlari', icon: 'bi-chat-left-text', perm: 'support' },
-    { to: '/boshqaruv/shikoyatlar', match: '/boshqaruv/shikoyatlar', label: 'Shikoyatlar', icon: 'bi-exclamation-triangle', perm: 'support' },
-    { to: '/boshqaruv/chat', match: '/boshqaruv/chat', label: 'Chat kuzatuv', icon: 'bi-chat-dots', perm: 'support' },
-    { to: '/boshqaruv/push', match: '/boshqaruv/push', label: 'Push bildirishnomalar', icon: 'bi-bell', perm: 'push' },
+  { group: 'Mijozlarga xizmat', section: 'Jamoa va tizim', icon: 'ti-headset', ax: 'iconoir-headset-help', items: [
+    { to: '/boshqaruv/tickets', match: '/boshqaruv/tickets', label: 'Support', icon: 'ti-headset', perm: 'support' },
+    { to: '/boshqaruv/tickets?tickets_source=seller', match: '/boshqaruv/tickets?tickets_source=seller', label: 'Seller tiketlari', icon: 'ti-message', perm: 'support' },
+    { to: '/boshqaruv/shikoyatlar', match: '/boshqaruv/shikoyatlar', label: 'Shikoyatlar', icon: 'ti-alert-triangle', perm: 'support' },
+    { to: '/boshqaruv/chat', match: '/boshqaruv/chat', label: 'Chat kuzatuv', icon: 'ti-message-dots', perm: 'support' },
+    { to: '/boshqaruv/push', match: '/boshqaruv/push', label: 'Push bildirishnomalar', icon: 'ti-bell', perm: 'push' },
   ]},
-  { group: 'HR va tashkilot', section: 'Jamoa va tizim', icon: 'bi-people', ax: 'iconoir-community', items: [
-    { to: '/boshqaruv/vakansiyalar', match: '/boshqaruv/vakansiyalar', label: 'Vakansiyalar', icon: 'bi-person-badge', perm: 'hr' },
-    { to: '/boshqaruv/karyera-arizalari', match: '/boshqaruv/karyera-arizalari', label: 'Karyera arizalari', icon: 'bi-file-earmark-person', perm: 'hr' },
-    { to: '/boshqaruv/hub-arizalari', match: '/boshqaruv/hub-arizalari', label: 'Hub arizalari', icon: 'bi-building-add', perm: 'hubs' },
-    { to: '/boshqaruv/adminlar', match: '/boshqaruv/adminlar', label: 'Adminlar', icon: 'bi-shield-lock', perm: 'admins' },
+  { group: 'HR va tashkilot', section: 'Jamoa va tizim', icon: 'ti-users', ax: 'iconoir-community', items: [
+    { to: '/boshqaruv/vakansiyalar', match: '/boshqaruv/vakansiyalar', label: 'Vakansiyalar', icon: 'ti-id-badge', perm: 'hr' },
+    { to: '/boshqaruv/karyera-arizalari', match: '/boshqaruv/karyera-arizalari', label: 'Karyera arizalari', icon: 'ti-file-certificate', perm: 'hr' },
+    { to: '/boshqaruv/hub-arizalari', match: '/boshqaruv/hub-arizalari', label: 'Hub arizalari', icon: 'ti-home-plus', perm: 'hubs' },
+    { to: '/boshqaruv/adminlar', match: '/boshqaruv/adminlar', label: 'Adminlar', icon: 'ti-shield-lock', perm: 'admins' },
   ]},
-  { group: 'Premium', section: "O'sish", icon: 'bi-gem', ax: 'iconoir-crown', items: [
-    { to: '/boshqaruv/mystery-box', match: '/boshqaruv/mystery-box', label: 'Mystery Box', icon: 'bi-box-seam', perm: 'premium' },
-    { to: '/boshqaruv/sovgalar', match: '/boshqaruv/sovgalar', label: "Sovg'alar", icon: 'bi-gift-fill', perm: 'premium' },
+  { group: 'Premium', section: "O'sish", icon: 'ti-diamond', ax: 'iconoir-crown', items: [
+    { to: '/boshqaruv/mystery-box', match: '/boshqaruv/mystery-box', label: 'Mystery Box', icon: 'ti-package', perm: 'premium' },
+    { to: '/boshqaruv/sovgalar', match: '/boshqaruv/sovgalar', label: "Sovg'alar", icon: 'ti-gift', perm: 'premium' },
   ]},
-  { group: 'Tizim', section: 'Jamoa va tizim', icon: 'bi-gear', ax: 'iconoir-settings', items: [
-    { to: '/boshqaruv/siyosatlar', match: '/boshqaruv/siyosatlar', label: 'Siyosatlar', icon: 'bi-file-earmark-text', perm: 'settings' },
-    { to: '/boshqaruv/api-clients', match: '/boshqaruv/api-clients', label: 'API mijozlar', icon: 'bi-code-slash', perm: 'settings' },
-    { to: '/boshqaruv/settings', match: '/boshqaruv/settings', label: 'Sozlamalar', icon: 'bi-gear', perm: 'settings' },
+  { group: 'Tizim', section: 'Jamoa va tizim', icon: 'ti-settings', ax: 'iconoir-settings', items: [
+    { to: '/boshqaruv/siyosatlar', match: '/boshqaruv/siyosatlar', label: 'Siyosatlar', icon: 'ti-file-text', perm: 'settings' },
+    { to: '/boshqaruv/api-clients', match: '/boshqaruv/api-clients', label: 'API mijozlar', icon: 'ti-code', perm: 'settings' },
+    { to: '/boshqaruv/settings', match: '/boshqaruv/settings', label: 'Sozlamalar', icon: 'ti-settings', perm: 'settings' },
   ]},
 ];
 
@@ -105,7 +106,7 @@ function navMatches(url: string, match: string) {
   return url.startsWith(match);
 }
 
-function findCurrentNav(url: string) {
+export function findCurrentNav(url: string) {
   return (nav as NavGroup[])
     .flatMap((g) => g.items.map((it) => ({ ...it, group: g.group, groupAx: g.ax, groupFirst: g.items[0]?.to || '/boshqaruv' })))
     .filter((it) => navMatches(url, it.match))
@@ -122,7 +123,7 @@ export function PageCrumbs() {
   if (!cur) return null;
   const isHome = cur.match === '/boshqaruv';
   return (
-    <ul className="app-line-breadcrumbs kc-crumbs">
+    <ul className="app-line-breadcrumbs mt-1 mb-2">
       <li>
         <Link href={isHome ? '/boshqaruv' : cur.groupFirst} className="f-s-14 f-w-500">
           <span><i className={`${cur.groupAx} f-s-16 align-text-top`}></i> {cur.group === 'Asosiy' ? 'Boshqaruv' : cur.group}</span>
@@ -140,11 +141,11 @@ const SECTIONS = ['Savdo', "O'sish", 'Jamoa va tizim'];
 
 // ── Global qidiruv: bo'lim nomi bo'yicha sakrash + asosiy ro'yxatlarda qidirish ──
 const searchTargets = [
-  { label: 'Buyurtmalardan qidirish', path: '/boshqaruv/orders', icon: 'bi-receipt', tone: 'primary' },
-  { label: 'Foydalanuvchilardan qidirish', path: '/boshqaruv/users', icon: 'bi-people', tone: 'success' },
-  { label: 'Kitoblardan qidirish', path: '/boshqaruv/books', icon: 'bi-book', tone: 'warning' },
-  { label: 'Kanselyariyadan qidirish', path: '/boshqaruv/stationeries', icon: 'bi-pencil-square', tone: 'info' },
-  { label: 'Tranzaksiyalardan qidirish', path: '/boshqaruv/transactions', icon: 'bi-cash-coin', tone: 'danger' },
+  { label: 'Buyurtmalardan qidirish', path: '/boshqaruv/orders', icon: 'ti-receipt', tone: 'primary' },
+  { label: 'Foydalanuvchilardan qidirish', path: '/boshqaruv/users', icon: 'ti-users', tone: 'success' },
+  { label: 'Kitoblardan qidirish', path: '/boshqaruv/books', icon: 'ti-book', tone: 'warning' },
+  { label: 'Kanselyariyadan qidirish', path: '/boshqaruv/stationeries', icon: 'ti-edit', tone: 'info' },
+  { label: 'Tranzaksiyalardan qidirish', path: '/boshqaruv/transactions', icon: 'ti-coins', tone: 'danger' },
 ];
 
 const TONES = ['primary', 'success', 'warning', 'info', 'danger', 'secondary'];
@@ -238,7 +239,7 @@ function SearchCanvas({ visibleNav, open, onClose }: { visibleNav: NavGroup[]; o
               role="button"
             >
               <div className={`h-35 w-35 d-flex-center b-r-15 overflow-hidden bg-light-${r.tone} search-list-avtar`}>
-                <i className={`bi ${r.icon} f-s-18`}></i>
+                <i className={`${tiIcon(r.icon)} f-s-18`}></i>
               </div>
               <div className="search-list-content">
                 <h6 className="mb-0 text-dark txt-ellipsis-1">{r.label}</h6>
@@ -249,7 +250,7 @@ function SearchCanvas({ visibleNav, open, onClose }: { visibleNav: NavGroup[]; o
           {results.length === 0 ? (
             <li className="search-list-item">
               <div className="h-35 w-35 d-flex-center b-r-15 overflow-hidden bg-light-secondary search-list-avtar">
-                <i className="bi bi-search f-s-18"></i>
+                <i className="ti ti-search f-s-18"></i>
               </div>
               <div className="search-list-content">
                 <h6 className="mb-0 text-dark">Hech narsa topilmadi</h6>
@@ -502,19 +503,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   >
                     <i className="iconoir-view-grid"></i>
                   </span>
-                  {currentNav && currentNav.match !== '/boshqaruv' ? (
-                    <span className="header-current d-none d-lg-inline txt-ellipsis-1">{currentNav.label}</span>
-                  ) : null}
                 </div>
 
                 <div className="col-6 col-sm-8 d-flex align-items-center justify-content-end header-right p-0">
                   <ul className="d-flex align-items-center">
-                    <li className="header-status d-none d-xl-block">
-                      <span className="head-icon">
-                        <i className="iconoir-check-circle text-success f-s-22 me-1"></i>
-                        <span className="f-w-600">Tizim barqaror</span>
-                      </span>
-                    </li>
 
                     <li className="header-searchbar">
                       <a
@@ -556,7 +548,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                         aria-expanded={profileOpen}
                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSearchOpen(false); setProfileOpen((v) => !v); }}
                       >
-                        <span className="b-r-50 h-35 w-35 d-flex-center bg-light-primary f-s-14 f-w-600 kc-avatar">{initials}</span>
+                        <span className="b-r-50 h-35 w-35 d-flex-center bg-light-primary f-s-14 f-w-600">{initials}</span>
                       </a>
                       <div className={`offcanvas offcanvas-end header-profile-canvas ${profileOpen ? 'show' : ''}`} tabIndex={-1} aria-label="Profil">
                         <div className="offcanvas-body app-scroll">
@@ -622,7 +614,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </header>
 
           <main>
-            <div className="container-fluid">{children}</div>
+            <div className="container-fluid">
+              <div className="kc-page-body">{children}</div>
+              {/* Ko'rish/tahrirlash oynalari shu yerda alohida sahifa sifatida ochiladi (components/AppModal) */}
+              <div id="kc-show-root"></div>
+            </div>
           </main>
         </div>
       </div>
@@ -631,8 +627,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         className="go-top"
         role="button"
         aria-label="Yuqoriga"
-        style={{
-          display: scroll > 0 ? 'grid' : 'none',
+        style={{ display: scroll > 0 ? 'grid' : 'none',
           background: `conic-gradient(rgba(var(--info),1), rgba(var(--primary),1), rgba(var(--danger),1), rgba(var(--info-dark),1), rgba(var(--primary-dark),1), rgba(var(--danger-dark),1) ${scroll}%, rgba(var(--primary),.3) ${scroll}%)`,
         }}
         onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
@@ -658,19 +653,19 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </div>
       </footer>
 
-      <div className="kc-toast-stack">
+      <div className="toast-container position-fixed bottom-0 end-0 p-3 mb-5">
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className={`toast d-block ${toast.type === 'success' ? 'b-1-success bg-light-success' : 'b-1-danger bg-light-danger'}`}
+            className={`toast d-block bg-white ${toast.type === 'success' ? 'b-1-success' : 'b-1-danger'}`}
             role={toast.type === 'success' ? 'status' : 'alert'}
             aria-live="assertive"
             aria-atomic="true"
           >
             <div className="d-flex align-items-center">
-              <div className="toast-body d-flex align-items-center gap-2 f-w-500">
+              <div className={`toast-body d-flex align-items-center gap-2 f-w-500 ${toast.type === 'success' ? 'text-success' : 'text-danger'}`}>
                 <i className={toast.type === 'success' ? 'iconoir-check-circle f-s-20' : 'iconoir-warning-circle f-s-20'}></i>
-                <span>{toast.text}</span>
+                <span className="text-dark">{toast.text}</span>
               </div>
               <button type="button" className="btn-close me-2 m-auto" onClick={() => dismiss(toast.id)} aria-label="Yopish"></button>
             </div>

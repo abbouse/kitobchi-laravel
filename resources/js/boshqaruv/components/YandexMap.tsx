@@ -192,8 +192,8 @@ function normalizeRing(ring: any): Ring {
 function MapFallback({ height, state }: { height: number; state: ReadyState }) {
   return (
     <div
-      className="d-flex flex-column align-items-center justify-content-center text-center text-muted small border rounded-4 gap-2 p-3"
-      style={{ height, background: 'var(--kc-bg-subtle)' }}
+      className="d-flex flex-column align-items-center justify-content-center text-center text-muted f-s-13 b-1-light b-r-15 gap-2 p-3 bg-light-secondary"
+      style={{ height }}
     >
       {state === 'loading' ? (
         <>
@@ -202,8 +202,8 @@ function MapFallback({ height, state }: { height: number; state: ReadyState }) {
         </>
       ) : (
         <>
-          <i className="bi bi-key fs-4 text-warning" />
-          <div className="fw-semibold text-dark">Yandex Maps kaliti sozlanmagan</div>
+          <i className="ti ti-key f-s-24 text-warning" />
+          <div className="f-w-600 text-dark">Yandex Maps kaliti sozlanmagan</div>
           <div>
             <code>.env</code> faylida <code>YANDEX_MAPS_API_KEY</code> ni to'ldiring.
             Koordinatalarni pastdagi maydonlarga qo'lda ham kiritishingiz mumkin.
@@ -234,11 +234,11 @@ class MapErrorBoundary extends Component<{ height: number; children: ReactNode }
     if (this.state.failed) {
       return (
         <div
-          className="d-flex flex-column align-items-center justify-content-center text-center text-muted small border rounded-4 gap-2 p-3"
-          style={{ height: this.props.height, background: 'var(--kc-bg-subtle)' }}
+          className="d-flex flex-column align-items-center justify-content-center text-center text-muted f-s-13 b-1-light b-r-15 gap-2 p-3 bg-light-secondary"
+          style={{ height: this.props.height }}
         >
-          <i className="bi bi-exclamation-triangle fs-4 text-warning" />
-          <div className="fw-semibold text-dark">Xaritani ochishda xatolik</div>
+          <i className="ti ti-alert-triangle f-s-24 text-warning" />
+          <div className="f-w-600 text-dark">Xaritani ochishda xatolik</div>
           <div>Sahifani yangilang. Muammo qaytarilsa, Yandex kaliti yoki internet aloqasini tekshiring.</div>
         </div>
       );
@@ -284,7 +284,7 @@ function GeocodeSearch({ onPick }: { onPick: (coords: LatLon, label: string) => 
   return (
     <div className="position-relative">
       <div className="input-group input-group-sm">
-        <span className="input-group-text bg-white"><i className="bi bi-search" /></span>
+        <span className="input-group-text bg-white"><i className="ti ti-search" /></span>
         <input
           className="form-control"
           placeholder="Manzil qidirish (masalan: Chilonzor, Toshkent)"
@@ -302,19 +302,19 @@ function GeocodeSearch({ onPick }: { onPick: (coords: LatLon, label: string) => 
         </button>
       </div>
       {results.length > 0 ? (
-        <div className="list-group position-absolute w-100 shadow-sm" style={{ zIndex: 5, maxHeight: 220, overflowY: 'auto' }}>
+        <div className="list-group position-absolute w-100 overflow-y-auto" style={{ zIndex: 5, maxHeight: 220 }}>
           {results.map((item, index) => (
             <button
               type="button"
               key={`${item.label}-${index}`}
-              className="list-group-item list-group-item-action small text-start"
+              className="list-group-item list-group-item-action f-s-13 text-start"
               onClick={() => {
                 onPick(item.coords, item.label);
                 setResults([]);
                 setQuery(item.label);
               }}
             >
-              <i className="bi bi-geo-alt me-1 text-primary" />
+              <i className="ti ti-map-pin me-1 text-primary" />
               {item.label}
             </button>
           ))}
@@ -508,24 +508,24 @@ function YandexZoneEditorInner({
         {scope === 'polygon' ? (
           <div className="btn-group btn-group-sm">
             <button type="button" className={`btn ${drawing ? 'btn-primary' : 'btn-light-secondary'}`} onClick={() => { polygonRef.current?.editor.startDrawing(); setDrawing(true); }}>
-              <i className="bi bi-pencil me-1" />Chizish
+              <i className="ti ti-pencil me-1" />Chizish
             </button>
             <button type="button" className="btn btn-light-secondary" onClick={() => { polygonRef.current?.editor.startEditing(); setDrawing(false); }}>
-              <i className="bi bi-arrows-move me-1" />Tahrirlash
+              <i className="ti ti-arrows-move me-1" />Tahrirlash
             </button>
             <button type="button" className="btn btn-light-secondary text-danger" onClick={redraw}>
-              <i className="bi bi-arrow-counterclockwise me-1" />Qaytadan
+              <i className="ti ti-rotate me-1" />Qaytadan
             </button>
           </div>
         ) : null}
       </div>
       {scope === 'polygon' ? (
-        <div className="alert alert-light border py-2 px-3 small mb-2">
-          <i className="bi bi-info-circle me-1 text-primary" />
+        <div className="alert alert-border-secondary py-2 px-3 f-s-13 mb-2">
+          <i className="ti ti-info-circle me-1 text-primary" />
           Xaritaga bosib zona burchaklarini qo'ying. Tugatish uchun oxirgi nuqtaga ikki marta bosing. Keyin nuqtalarni sudrab tuzatishingiz mumkin.
         </div>
       ) : null}
-      <div ref={mapEl} style={{ height, borderRadius: 'var(--kc-radius-lg)', overflow: 'hidden' }} />
+      <div className="b-r-18 overflow-hidden" ref={mapEl} style={{ height }} />
     </div>
   );
 }
@@ -639,13 +639,13 @@ function YandexZonesOverviewInner({
 
   if (zones.length === 0) {
     return (
-      <div className="d-flex align-items-center justify-content-center text-muted small border rounded-4" style={{ height }}>
-        <span><i className="bi bi-geo me-1" />Xaritali zona hali qo'shilmagan</span>
+      <div className="d-flex align-items-center justify-content-center text-muted f-s-13 b-1-light b-r-15" style={{ height }}>
+        <span><i className="ti ti-map-pin me-1" />Xaritali zona hali qo'shilmagan</span>
       </div>
     );
   }
 
-  return <div ref={mapEl} style={{ height, borderRadius: 'var(--kc-radius-lg)', overflow: 'hidden' }} />;
+  return <div className="b-r-18 overflow-hidden" ref={mapEl} style={{ height }} />;
 }
 
 // Tashqi eksportlar — har biri MapErrorBoundary bilan o'ralgan (xarita xatosi sahifani buzmasin).
@@ -761,11 +761,11 @@ function YandexPreviewMapInner({
       <div className="mb-2">
         <GeocodeSearch onPick={(coords) => onPickRef.current(coords)} />
       </div>
-      <div className="alert alert-light border py-2 px-3 small mb-2">
-        <i className="bi bi-cursor me-1 text-primary" />
+      <div className="alert alert-border-secondary py-2 px-3 f-s-13 mb-2">
+        <i className="ti ti-pointer me-1 text-primary" />
         Xaritaga bosing yoki manzil qidiring — mos zonalar ajraladi, <b className="text-danger">g'olib qizil</b> bo'ladi.
       </div>
-      <div ref={mapEl} style={{ height, borderRadius: 'var(--kc-radius-lg)', overflow: 'hidden' }} />
+      <div className="b-r-18 overflow-hidden" ref={mapEl} style={{ height }} />
     </div>
   );
 }

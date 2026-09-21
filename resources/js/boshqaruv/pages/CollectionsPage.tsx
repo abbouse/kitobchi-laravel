@@ -1,7 +1,10 @@
 import { ChangeEvent, DragEvent, FormEvent, useEffect, useMemo, useState } from 'react';
 import { PageCrumbs } from '../Layout';
 import { router, usePage } from '@inertiajs/react';
-import { Button, Form, Modal } from 'react-bootstrap';
+import { Button, Form } from 'react-bootstrap';
+import Modal from '../components/AppModal';
+
+import { StatWidget } from '../components/Axelit';
 
 type ProductType = 'book' | 'stationery';
 type TranslateLocale = 'ru' | 'en' | 'ja';
@@ -129,9 +132,9 @@ type AiRecommendation = {
 const money = (n: number) => `${(Number(n) || 0).toLocaleString('ru-RU')} so'm`;
 
 const InfoRow = ({ label, value, strong = false }: { label: string; value: string; strong?: boolean }) => (
-  <div className="col-md-6 d-flex justify-content-between border-bottom py-1" style={{ gap: 8 }}>
+  <div className="col-md-6 d-flex justify-content-between b-b-1-light py-1" style={{ gap: 8 }}>
     <span className="text-muted">{label}</span>
-    <span className={strong ? 'fw-bold' : 'fw-semibold'} style={{ textAlign: 'right' }}>{value}</span>
+    <span className={strong ? 'f-w-600' : 'f-w-600'} style={{ textAlign: 'right' }}>{value}</span>
   </div>
 );
 
@@ -230,9 +233,9 @@ const defaultForm = {
 
 const TypeBadge = ({ type }: { type: ProductType }) =>
   type === 'stationery' ? (
-    <span className="chip chip-purple"><i className="bi bi-pencil-fill me-1"></i>Kanselyariya</span>
+    <span className="badge text-light-primary"><i className="ti ti-pencil me-1"></i>Kanselyariya</span>
   ) : (
-    <span className="chip chip-gray"><i className="bi bi-book me-1"></i>Kitob</span>
+    <span className="badge text-light-secondary"><i className="ti ti-book me-1"></i>Kitob</span>
   );
 
 export default function CollectionsPage() {
@@ -472,11 +475,11 @@ export default function CollectionsPage() {
     return (
       <div
         key={node.key}
-        className={`border rounded-4 p-2 mb-2 ${level === 2 ? 'ms-3' : ''}`}
-        style={{ borderColor: activeKey === node.key ? 'var(--kc-cat-violet)' : undefined, background: activeKey === node.key ? 'var(--kc-ink-tint)' : undefined }}
+        className={`b-1-light b-r-15 p-2 mb-2 ${level === 2 ? 'ms-3' : ''}`}
+        style={{ borderColor: activeKey === node.key ? 'rgba(var(--primary), 1)' : undefined, background: activeKey === node.key ? 'rgba(var(--primary), .1)' : undefined }}
       >
         <div className="d-flex gap-2 align-items-center mb-2 flex-wrap">
-          <span className={`chip ${isGroup ? 'chip-purple' : 'chip-gray'}`}>
+          <span className={`badge ${isGroup ? 'text-light-primary' : 'text-light-secondary'}`}>
             {level === 2 ? "Ichki bo'lim" : isGroup ? "Bo'lim (guruh)" : "Bo'lim"}
           </span>
           {!isGroup ? (
@@ -489,13 +492,13 @@ export default function CollectionsPage() {
               {activeKey === node.key ? '◉ Faol' : '◉ Shu yerga'}
             </button>
           ) : null}
-          <span className="small text-muted">
+          <span className="f-s-13 text-muted">
             {isGroup ? `${node.children.length} ichki bo'lim` : `${node.items.length} mahsulot`}
           </span>
           <div className="ms-auto d-flex gap-1">
-            <button type="button" className="btn btn-sm btn-light-secondary py-0" title="Yuqoriga" onClick={() => moveNode(node.key, -1)}><i className="bi bi-arrow-up"></i></button>
-            <button type="button" className="btn btn-sm btn-light-secondary py-0" title="Pastga" onClick={() => moveNode(node.key, 1)}><i className="bi bi-arrow-down"></i></button>
-            <button type="button" className="btn btn-sm btn-light-secondary text-danger py-0" title="O'chirish" onClick={() => removeSection(node.key)}><i className="bi bi-trash"></i></button>
+            <button type="button" className="btn btn-sm btn-light-secondary py-0" title="Yuqoriga" onClick={() => moveNode(node.key, -1)}><i className="ti ti-arrow-up"></i></button>
+            <button type="button" className="btn btn-sm btn-light-secondary py-0" title="Pastga" onClick={() => moveNode(node.key, 1)}><i className="ti ti-arrow-down"></i></button>
+            <button type="button" className="btn btn-sm btn-light-secondary text-danger py-0" title="O'chirish" onClick={() => removeSection(node.key)}><i className="ti ti-trash"></i></button>
           </div>
         </div>
         <div className="row g-1 mb-2">
@@ -509,35 +512,35 @@ export default function CollectionsPage() {
         </div>
         {!isGroup ? (
           <>
-            <div className="small text-muted mb-2" style={{ fontSize: 11 }}>
+            <div className="text-muted mb-2 f-s-11">
               Avto narx: <b>{total.toLocaleString('ru-RU')} so'm</b>. Bo'sh = avto; kamaytirmoqchi bo'lsangiz yozing.
             </div>
             {node.items.length > 0 ? (
               <div className="mb-2">
                 {node.items.map((item, index) => (
-                  <div key={`${item.productType}-${item.productId}-${index}`} className="d-flex align-items-center gap-2 small border rounded-3 p-1 mb-1" style={{ borderColor: !item.available ? 'var(--kc-danger)' : undefined }}>
-                    {item.image ? <img src={item.image} alt="" width={24} height={24} style={{ borderRadius: 4, objectFit: 'cover' }} /> : null}
+                  <div key={`${item.productType}-${item.productId}-${index}`} className="d-flex align-items-center gap-2 f-s-13 b-1-light b-r-10 p-1 mb-1" style={{ borderColor: !item.available ? 'rgba(var(--danger), 1)' : undefined }}>
+                    {item.image ? <img className="b-r-4 object-fit-cover" src={item.image} alt="" width={24} height={24} /> : null}
                     <span className="text-truncate flex-fill">{item.name}</span>
                     <div className="input-group input-group-sm" style={{ width: 96 }}>
                       <button type="button" className="btn btn-light-secondary" onClick={() => updateSectionItem(node.key, index, { quantity: Math.max(1, item.quantity - 1) })}>−</button>
                       <span className="form-control text-center bg-white">{item.quantity}</span>
                       <button type="button" className="btn btn-light-secondary" onClick={() => updateSectionItem(node.key, index, { quantity: item.quantity + 1 })}>+</button>
                     </div>
-                    <button type="button" className="btn btn-sm btn-light-secondary text-danger py-0" onClick={() => removeSectionItem(node.key, index)}><i className="bi bi-x-lg"></i></button>
+                    <button type="button" className="btn btn-sm btn-light-secondary text-danger py-0" onClick={() => removeSectionItem(node.key, index)}><i className="ti ti-x"></i></button>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="small text-muted mb-2">Mahsulot yo'q — "◉ Shu yerga" ni bosing, so'ng chapdan qidiruvdan qo'shing.</div>
+              <div className="f-s-13 text-muted mb-2">Mahsulot yo'q — "◉ Shu yerga" ni bosing, so'ng chapdan qidiruvdan qo'shing.</div>
             )}
           </>
         ) : (
-          <div className="small text-muted mb-2"><i className="bi bi-info-circle me-1"></i>Bu bo'lim ichki bo'limlarga bo'lingan — mahsulotlar faqat ichki bo'limlarga qo'shiladi.</div>
+          <div className="f-s-13 text-muted mb-2"><i className="ti ti-info-circle me-1"></i>Bu bo'lim ichki bo'limlarga bo'lingan — mahsulotlar faqat ichki bo'limlarga qo'shiladi.</div>
         )}
         {level === 1 ? (
           <div>
             {node.children.map((child) => renderNode(child, 2))}
-            <button type="button" className="btn btn-sm btn-light-secondary" onClick={() => addChildSection(node.key)}><i className="bi bi-plus me-1"></i>Ichki bo'lim</button>
+            <button type="button" className="btn btn-sm btn-light-secondary" onClick={() => addChildSection(node.key)}><i className="ti ti-plus me-1"></i>Ichki bo'lim</button>
           </div>
         ) : null}
       </div>
@@ -857,14 +860,14 @@ export default function CollectionsPage() {
   return (
     <div>
 
-      <div className="page-head">
+      <div className="d-flex align-items-end justify-content-between flex-wrap gap-3 mx-1 mb-3">
         <div>
-          <h1 className="page-title">To'plamlar</h1><PageCrumbs />
-          <p className="page-subtitle">Banner orqali ochiladigan tayyor kitob va kanselyariya to'plamlari, ularning sahifa dizayni</p>
+          <h4 className="main-title mb-0">To'plamlar</h4><PageCrumbs />
+          <p className="mb-0 text-secondary">Banner orqali ochiladigan tayyor kitob va kanselyariya to'plamlari, ularning sahifa dizayni</p>
         </div>
         <div className="d-flex gap-2">
           <button className="btn btn-light-secondary" onClick={() => { setAiError(null); setAiOpen(true); }}>
-            <i className="bi bi-stars me-1"></i>AI tavsiya
+            <i className="ti ti-sparkles me-1"></i>AI tavsiya
           </button>
           <button
             className="btn btn-primary"
@@ -873,65 +876,65 @@ export default function CollectionsPage() {
               setShowForm(true);
             }}
           >
-            <i className="bi bi-plus-lg me-1"></i>To'plam qo'shish
+            <i className="ti ti-plus me-1"></i>To'plam qo'shish
           </button>
         </div>
       </div>
 
       <Modal show={aiOpen} onHide={() => setAiOpen(false)} centered size="lg" scrollable>
         <Modal.Header closeButton>
-          <Modal.Title className="fs-5 fw-bold"><i className="bi bi-stars me-2 text-warning"></i>AI to'plam tavsiyasi</Modal.Title>
+          <Modal.Title className="f-s-20 f-w-600"><i className="ti ti-sparkles me-2 text-warning"></i>AI to'plam tavsiyasi</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <div className="rounded-4 border bg-light-subtle p-3 mb-3 small text-muted">
+          <div className="b-r-15 b-1-light bg-light-subtle p-3 mb-3 f-s-13 text-muted">
             AI bizning real talab ma'lumotimiz (sotuv, savat, ko'rish, qidiruv) va bozor bilimi asosida ombordagi kitoblardan mavzuli to'plam hamda marketing narxini (seller komissiyasi + soliq hisobga olingan) tavsiya qiladi.
           </div>
           <div className="row g-2 align-items-end mb-3">
             <div className="col-md-6">
-              <label className="form-label small text-muted fw-semibold">Mavzu (ixtiyoriy)</label>
+              <label className="form-label f-s-13 text-muted f-w-600">Mavzu (ixtiyoriy)</label>
               <input className="form-control" placeholder="masalan: Shaxsiy rivojlanish" value={aiThemeHint} onChange={(e) => setAiThemeHint(e.target.value)} />
             </div>
             <div className="col-md-3">
-              <label className="form-label small text-muted fw-semibold">Kitob soni</label>
+              <label className="form-label f-s-13 text-muted f-w-600">Kitob soni</label>
               <input className="form-control" type="number" min={2} max={12} placeholder="auto" value={aiSize} onChange={(e) => setAiSize(e.target.value)} />
             </div>
             <div className="col-md-3">
               <button className="btn btn-primary w-100" onClick={runAiRecommend} disabled={aiLoading}>
-                {aiLoading ? <span className="spinner-border spinner-border-sm" /> : <><i className="bi bi-magic me-1"></i>Tahlil</>}
+                {aiLoading ? <span className="spinner-border spinner-border-sm" /> : <><i className="ti ti-wand me-1"></i>Tahlil</>}
               </button>
             </div>
           </div>
 
-          {aiError ? <div className="alert alert-danger py-2 px-3 small mb-3">{aiError}</div> : null}
+          {aiError ? <div className="alert alert-light-danger py-2 px-3 f-s-13 mb-3">{aiError}</div> : null}
           {aiLoading ? <div className="text-center text-muted py-4"><span className="spinner-border spinner-border-sm me-2" />Chuqur tahlil qilinmoqda…</div> : null}
 
           {aiResult ? (
             <div>
               <div className="mb-3">
-                <div className="fw-bold fs-5">{aiResult.theme.title_uz || '—'}</div>
+                <div className="f-w-600 f-s-20">{aiResult.theme.title_uz || '—'}</div>
                 {aiResult.theme.subtitle_uz ? <div className="text-muted">{aiResult.theme.subtitle_uz}</div> : null}
-                {aiResult.theme.description_uz ? <div className="small text-muted mt-1">{aiResult.theme.description_uz}</div> : null}
+                {aiResult.theme.description_uz ? <div className="f-s-13 text-muted mt-1">{aiResult.theme.description_uz}</div> : null}
               </div>
 
-              <div className="table-responsive mb-3">
-                <table className="table table-bottom-border align-middle data-table">
+              <div className="table-responsive app-scroll mb-3">
+                <table className="table table-bottom-border align-middle">
                   <thead><tr><th></th><th>Kitob</th><th>Narx</th><th>Talab (sot/savat/ko'r)</th></tr></thead>
                   <tbody>
                     {aiResult.books.map((b) => (
                       <tr key={b.id}>
-                        <td><div className="thumb" style={{ width: 34, height: 44 }}>{b.image ? <img src={b.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <i className="bi bi-book"></i>}</div></td>
-                        <td><div className="fw-semibold">{b.name}</div><small className="text-muted">{[b.author, b.seller].filter(Boolean).join(' · ')}</small></td>
-                        <td className="fw-semibold">{money(b.price)}</td>
-                        <td><span className="chip chip-gray">{b.sales} / {b.carts} / {b.views}</span></td>
+                        <td><div className="b-r-10 overflow-hidden d-flex-center bg-light-primary flex-shrink-0 w-35 h-45">{b.image ? <img className="w-100 h-100 object-fit-cover" src={b.image} alt="" /> : <i className="ti ti-book"></i>}</div></td>
+                        <td><div className="f-w-600">{b.name}</div><small className="text-muted">{[b.author, b.seller].filter(Boolean).join(' · ')}</small></td>
+                        <td className="f-w-600">{money(b.price)}</td>
+                        <td><span className="badge text-light-secondary">{b.sales} / {b.carts} / {b.views}</span></td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
 
-              <div className="rounded-4 border p-3 mb-3">
-                <div className="fw-bold mb-2"><i className="bi bi-cash-coin me-1 text-success"></i>Narx tahlili — marketing, margin-himoyalangan</div>
-                <div className="row g-2 small">
+              <div className="b-r-15 b-1-light p-3 mb-3">
+                <div className="f-w-600 mb-2"><i className="ti ti-coins me-1 text-success"></i>Narx tahlili — marketing, margin-himoyalangan</div>
+                <div className="row g-2 f-s-13">
                   <InfoRow label="Alohida narx (jami)" value={money(aiResult.pricing.gross_retail)} />
                   <InfoRow label="Chegirma" value={`−${money(aiResult.pricing.applied_discount)} · ${aiResult.pricing.applied_discount_percent}%`} />
                   <InfoRow label="To'plam narxi" value={money(aiResult.pricing.bundle_price)} strong />
@@ -942,15 +945,15 @@ export default function CollectionsPage() {
                   <InfoRow label="Platforma sof margini" value={money(aiResult.pricing.platform_net)} strong />
                   <InfoRow label={`Margin poli (${aiResult.pricing.margin_floor_percent}%)`} value={money(aiResult.pricing.margin_floor)} />
                 </div>
-                {aiResult.pricing.discount_clamped ? <div className="small text-warning mt-2"><i className="bi bi-shield-check me-1"></i>Chegirma margin-poliga qarab avtomatik cheklandi (margin himoyalandi).</div> : null}
+                {aiResult.pricing.discount_clamped ? <div className="f-s-13 text-warning mt-2"><i className="ti ti-shield-check me-1"></i>Chegirma margin-poliga qarab avtomatik cheklandi (margin himoyalandi).</div> : null}
               </div>
 
-              {aiResult.market_analysis ? <div className="rounded-4 border p-3 mb-3"><div className="fw-semibold mb-1"><i className="bi bi-graph-up-arrow me-1 text-primary"></i>Bozor tahlili (AI bilimi)</div><div className="small text-muted">{aiResult.market_analysis}</div></div> : null}
+              {aiResult.market_analysis ? <div className="b-r-15 b-1-light p-3 mb-3"><div className="f-w-600 mb-1"><i className="ti ti-trending-up me-1 text-primary"></i>Bozor tahlili (AI bilimi)</div><div className="f-s-13 text-muted">{aiResult.market_analysis}</div></div> : null}
 
-              {aiResult.reasoning ? <div className="rounded-4 border p-3 mb-3"><div className="fw-semibold mb-1"><i className="bi bi-lightbulb me-1 text-warning"></i>AI izohi</div><div className="small text-muted">{aiResult.reasoning}</div></div> : null}
+              {aiResult.reasoning ? <div className="b-r-15 b-1-light p-3 mb-3"><div className="f-w-600 mb-1"><i className="ti ti-bulb me-1 text-warning"></i>AI izohi</div><div className="f-s-13 text-muted">{aiResult.reasoning}</div></div> : null}
 
-              <div className="small text-muted">
-                <i className="bi bi-graph-up me-1"></i>{aiResult.demand.method} · {aiResult.demand.window_days} kun · {aiResult.demand.candidate_count} nomzod
+              <div className="f-s-13 text-muted">
+                <i className="ti ti-chart-line me-1"></i>{aiResult.demand.method} · {aiResult.demand.window_days} kun · {aiResult.demand.candidate_count} nomzod
                 {aiResult.demand.top_searches.length ? <div className="mt-1">Top qidiruvlar: {aiResult.demand.top_searches.slice(0, 8).join(', ')}</div> : null}
               </div>
             </div>
@@ -958,169 +961,166 @@ export default function CollectionsPage() {
         </Modal.Body>
         <Modal.Footer>
           <Button variant="light-secondary" onClick={() => setAiOpen(false)}>Yopish</Button>
-          <Button variant="success" disabled={!aiResult} onClick={applyAiRecommendation}><i className="bi bi-check2 me-1"></i>Qabul qilish va tahrirlash</Button>
+          <Button variant="success" disabled={!aiResult} onClick={applyAiRecommendation}><i className="ti ti-check me-1"></i>Qabul qilish va tahrirlash</Button>
         </Modal.Footer>
       </Modal>
 
-      <div className="kpi-strip row g-3 mb-4">
+      <div className="row">
         {[
-          { label: 'Jami to‘plam', value: collections.length, icon: 'bi-collection' },
-          { label: 'Faol', value: collections.filter((item) => item.isActive).length, icon: 'bi-check-circle' },
-          { label: 'Mahsulotlar', value: collections.reduce((sum, item) => sum + item.itemCount, 0), icon: 'bi-box-seam' },
+          { label: 'Jami to‘plam', value: collections.length, icon: 'ti-stack-2' },
+          { label: 'Faol', value: collections.filter((item) => item.isActive).length, icon: 'ti-circle-check' },
+          { label: 'Mahsulotlar', value: collections.reduce((sum, item) => sum + item.itemCount, 0), icon: 'ti-package' },
           {
             label: totalUnavailable > 0 ? 'Tugagan mahsulot' : 'Jami summa',
             value: totalUnavailable > 0 ? totalUnavailable : `${fmt(collections.reduce((sum, item) => sum + item.totalAmount, 0))} so'm`,
-            icon: totalUnavailable > 0 ? 'bi-exclamation-triangle' : 'bi-cash-stack',
+            icon: totalUnavailable > 0 ? 'ti-alert-triangle' : 'ti-cash',
             danger: totalUnavailable > 0,
           },
-        ].map((stat) => (
-          <div className="col-xl-3 col-md-6" key={stat.label}>
-            <div className="stat-card">
-              <div>
-                <div className={`stat-value${(stat as any).danger ? ' text-danger' : ''}`}>{stat.value}</div>
-                <div className="stat-label">{stat.label}</div>
-              </div>
-            </div>
-          </div>
-        ))}
+        ].map((stat, kpiIndex) => (<div className="col-xl-3 col-md-6" key={stat.label}>
+          <StatWidget index={kpiIndex} variant={(stat as { danger?: boolean }).danger ? 'danger' : undefined} label={stat.label} value={stat.value} />
+        </div>))}
       </div>
 
       {/* Qidiruv + filtr paneli */}
-      <div className="card-panel mb-3">
-        <div className="row g-2 align-items-center">
-          <div className="col-lg-5">
-            <div className="position-relative">
-              <i className="bi bi-search position-absolute" style={{ left: 14, top: 11, color: 'var(--kc-text-muted)' }}></i>
-              <Form.Control
-                value={listQuery}
-                onChange={(event) => setListQuery(event.target.value)}
-                placeholder="To'plam nomi yoki slug bo'yicha qidiring"
-                style={{ paddingLeft: 38 }}
-              />
+      <div className="card">
+<div className="card-body">
+          <div className="row g-2 align-items-center">
+            <div className="col-lg-5">
+              <div className="position-relative">
+                <i className="ti ti-search position-absolute text-secondary" style={{ left: 14, top: 11 }}></i>
+                <Form.Control
+                  value={listQuery}
+                  onChange={(event) => setListQuery(event.target.value)}
+                  placeholder="To'plam nomi yoki slug bo'yicha qidiring"
+                  style={{ paddingLeft: 38 }}
+                />
+              </div>
             </div>
-          </div>
-          <div className="col-lg-4">
-            <div className="btn-group w-100" role="group">
-              {([
-                ['all', 'Barchasi'],
-                ['active', 'Faol'],
-                ['hidden', 'Yashirin'],
-              ] as [StatusFilter, string][]).map(([value, label]) => (
-                <button
-                  key={value}
-                  type="button"
-                  className={`kc-tab ${statusFilter === value ? 'active' : ''}`}
-                  onClick={() => setStatusFilter(value)}
-                >
-                  {label}
-                </button>
-              ))}
+            <div className="col-lg-4">
+              <div className="nav nav-tabs app-tabs-primary flex-wrap" role="group">
+                {([
+                  ['all', 'Barchasi'],
+                  ['active', 'Faol'],
+                  ['hidden', 'Yashirin'],
+                ] as [StatusFilter, string][]).map(([value, label]) => (
+                  <div key={value} className="nav-item"><button
+                      type="button"
+                      className={`nav-link ${statusFilter === value ? 'active' : ''}`}
+                      onClick={() => setStatusFilter(value)}>
+                      {label}
+                    </button></div>
+                ))}
+              </div>
             </div>
-          </div>
-          <div className="col-lg-3">
-            <Form.Select value={sortOption} onChange={(event) => setSortOption(event.target.value as SortOption)}>
-              <option value="sort">Tartib bo'yicha</option>
-              <option value="newest">Yangi qo'shilgan</option>
-              <option value="name">Nomi (A-Z)</option>
-              <option value="items">Ko'p mahsulotli</option>
-              <option value="amount">Qimmat summa</option>
-            </Form.Select>
+            <div className="col-lg-3">
+              <Form.Select value={sortOption} onChange={(event) => setSortOption(event.target.value as SortOption)}>
+                <option value="sort">Tartib bo'yicha</option>
+                <option value="newest">Yangi qo'shilgan</option>
+                <option value="name">Nomi (A-Z)</option>
+                <option value="items">Ko'p mahsulotli</option>
+                <option value="amount">Qimmat summa</option>
+              </Form.Select>
+            </div>
           </div>
         </div>
-      </div>
+</div>
 
       {visibleCollections.length === 0 ? (
-        <div className="card-panel text-center py-5">
-          <i className="bi bi-collection fs-1 text-muted"></i>
-          <div className="mt-2 fw-semibold">To'plam topilmadi</div>
-          <div className="text-muted small">Qidiruv yoki filtrlarni o'zgartiring, yoki yangi to'plam qo'shing.</div>
+        <div className="card">
+          <div className="card-body py-5 text-center">
+            <i className="ti ti-stack-2 f-s-40 text-muted"></i>
+            <div className="mt-2 f-w-600">To'plam topilmadi</div>
+            <div className="text-muted f-s-13">Qidiruv yoki filtrlarni o'zgartiring, yoki yangi to'plam qo'shing.</div>
+          </div>
         </div>
       ) : null}
 
-      <div className="row g-3">
+      <div className="row">
         {visibleCollections.map((collection) => {
           const outOfStock = collection.itemCount - collection.availableItemCount;
           return (
             <div className="col-xl-6" key={collection.id}>
-              <div className="card-panel h-100">
-                <div
-                  className="rounded-4 p-3 mb-3 text-white"
-                  style={{ background: `linear-gradient(135deg, ${collection.gradientFrom}, ${collection.gradientTo})` }}
-                >
-                  <div className="d-flex justify-content-between align-items-start gap-3">
-                    <div>
-                      <div className="small opacity-75">/{collection.slug}</div>
-                      <div className="fw-bold fs-4">{collection.titleUz}</div>
-                      <div className="small mt-1" style={{ maxWidth: 420 }}>{collection.subtitleUz || 'Subtitle kiritilmagan'}</div>
+              <div className="card h-100">
+                <div className="card-body">
+                  <div
+                    className="b-r-15 p-3 mb-3 text-white"
+                    style={{ background: `linear-gradient(135deg, ${collection.gradientFrom}, ${collection.gradientTo})` }}
+                  >
+                    <div className="d-flex justify-content-between align-items-start gap-3">
+                      <div>
+                        <div className="f-s-13 opacity-75">/{collection.slug}</div>
+                        <div className="f-w-600 f-s-24">{collection.titleUz}</div>
+                        <div className="f-s-13 mt-1" style={{ maxWidth: 420 }}>{collection.subtitleUz || 'Subtitle kiritilmagan'}</div>
+                      </div>
+                      <span className={`badge ${collection.isActive ? 'text-light-success' : 'text-light-secondary'}`}>{collection.isActive ? 'Faol' : 'Yashirin'}</span>
                     </div>
-                    <span className={`chip ${collection.isActive ? 'chip-success' : 'chip-gray'}`}>{collection.isActive ? 'Faol' : 'Yashirin'}</span>
                   </div>
-                </div>
 
-                <div className="d-flex flex-wrap gap-2 mb-3">
-                  <span className="chip chip-gray">{collection.itemCount} ta mahsulot</span>
-                  <span className="chip chip-gray">{collection.availableItemCount} ta tayyor</span>
-                  {outOfStock > 0 ? <span className="chip" style={{ background: 'var(--kc-danger-bg)', color: 'var(--kc-danger)' }}>{outOfStock} ta tugagan</span> : null}
-                  {collection.customTotalPrice ? <span className="chip chip-purple">Qo'lda narx</span> : null}
-                  {(collection.sections?.length ?? 0) > 0 ? <span className="chip" style={{ background: 'var(--kc-ink-tint)', color: 'var(--kc-ink)' }}><i className="bi bi-diagram-3 me-1"></i>{collection.sections!.length} bo'lim</span> : null}
-                  <span className="chip chip-gray">{fmt(collection.totalAmount)} so'm</span>
-                </div>
+                  <div className="d-flex flex-wrap gap-2 mb-3">
+                    <span className="badge text-light-secondary">{collection.itemCount} ta mahsulot</span>
+                    <span className="badge text-light-secondary">{collection.availableItemCount} ta tayyor</span>
+                    {outOfStock > 0 ? <span className="badge text-danger" style={{ background: 'rgba(var(--danger), .3)' }}>{outOfStock} ta tugagan</span> : null}
+                    {collection.customTotalPrice ? <span className="badge text-light-primary">Qo'lda narx</span> : null}
+                    {(collection.sections?.length ?? 0) > 0 ? <span className="badge text-primary" style={{ background: 'rgba(var(--primary), .1)' }}><i className="ti ti-hierarchy me-1"></i>{collection.sections!.length} bo'lim</span> : null}
+                    <span className="badge text-light-secondary">{fmt(collection.totalAmount)} so'm</span>
+                  </div>
 
-                {collection.customTotalPrice ? (
-                  <div className="small text-muted mb-3">Asl yig'indi: {fmt(collection.baseTotalAmount)} so'm</div>
-                ) : null}
+                  {collection.customTotalPrice ? (
+                    <div className="f-s-13 text-muted mb-3">Asl yig'indi: {fmt(collection.baseTotalAmount)} so'm</div>
+                  ) : null}
 
-                <div className="table-responsive mb-3" style={{ maxHeight: 220, overflowY: 'auto' }}>
-                  <table className="table table-bottom-border align-middle data-table">
-                    <thead>
-                      <tr>
-                        <th>Mahsulot</th>
-                        <th>Tur</th>
-                        <th>Soni</th>
-                        <th>Narx</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {flattenCollectionItems(collection).map((item, idx) => (
-                        <tr key={`${collection.id}-${item.productType}-${item.productId}-${idx}`} style={!item.available ? { opacity: 0.55 } : undefined}>
-                          <td>
-                            <div className="d-flex align-items-center gap-2">
-                              {item.image ? (
-                                <img src={item.image} alt="" width={34} height={34} style={{ borderRadius: 8, objectFit: 'cover' }} />
-                              ) : (
-                                <div style={{ width: 34, height: 34, borderRadius: 8, background: 'var(--kc-bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                  <i className={`bi ${item.productType === 'stationery' ? 'bi-pencil' : 'bi-book'} text-muted`}></i>
-                                </div>
-                              )}
-                              <div style={{ minWidth: 0 }}>
-                                <div className="fw-semibold text-truncate" style={{ maxWidth: 180 }}>{item.name}</div>
-                                {item.sectionName ? <small className="text-primary d-block"><i className="bi bi-diagram-3 me-1"></i>{item.sectionName}</small> : null}
-                                <small className="text-muted">{item.author || (item.available ? item.seller : 'Tugagan')}</small>
-                              </div>
-                            </div>
-                          </td>
-                          <td><TypeBadge type={item.productType} /></td>
-                          <td>{item.quantity}</td>
-                          <td>{fmt(item.price)}</td>
+                  <div className="table-responsive app-scroll mb-3 overflow-y-auto" style={{ maxHeight: 220 }}>
+                    <table className="table table-bottom-border align-middle">
+                      <thead>
+                        <tr>
+                          <th>Mahsulot</th>
+                          <th>Tur</th>
+                          <th>Soni</th>
+                          <th>Narx</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {flattenCollectionItems(collection).map((item, idx) => (
+                          <tr key={`${collection.id}-${item.productType}-${item.productId}-${idx}`} style={!item.available ? { opacity: 0.55 } : undefined}>
+                            <td>
+                              <div className="d-flex align-items-center gap-2">
+                                {item.image ? (
+                                  <img className="b-r-8 object-fit-cover" src={item.image} alt="" width={34} height={34} />
+                                ) : (
+                                  <div className="b-r-8 bg-light-secondary d-flex align-items-center justify-content-center" style={{ width: 34, height: 34 }}>
+                                    <i className={`ti ${item.productType === 'stationery' ? 'ti-pencil' : 'ti-book'} text-muted`}></i>
+                                  </div>
+                                )}
+                                <div className="min-w-0">
+                                  <div className="f-w-600 text-truncate" style={{ maxWidth: 180 }}>{item.name}</div>
+                                  {item.sectionName ? <small className="text-primary d-block"><i className="ti ti-hierarchy me-1"></i>{item.sectionName}</small> : null}
+                                  <p className="mb-0 text-secondary">{item.author || (item.available ? item.seller : 'Tugagan')}</p>
+                                </div>
+                              </div>
+                            </td>
+                            <td><TypeBadge type={item.productType} /></td>
+                            <td>{item.quantity}</td>
+                            <td>{fmt(item.price)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
 
-                <div className="d-flex gap-2">
-                  <button className="btn btn-sm btn-light-secondary flex-fill" onClick={() => { hydrateForm(collection); setShowForm(true); }}>
-                    <i className="bi bi-pencil me-1"></i>Tahrirlash
-                  </button>
-                  <button className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22" title="Nusxa olish" onClick={() => duplicate(collection)}>
-                    <i className="bi bi-files"></i>
-                  </button>
-                  <button className="btn btn-sm btn-light-secondary" title={collection.isActive ? 'Yashirish' : 'Faollashtirish'} onClick={() => toggle(collection)}>
-                    <i className={`bi ${collection.isActive ? 'bi-eye-slash' : 'bi-eye'}`}></i>
-                  </button>
-                  <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" title="O'chirish" onClick={() => destroy(collection)}>
-                    <i className="bi bi-trash"></i>
-                  </button>
+                  <div className="d-flex gap-2">
+                    <button className="btn btn-sm btn-light-secondary flex-fill" onClick={() => { hydrateForm(collection); setShowForm(true); }}>
+                      <i className="ti ti-pencil me-1"></i>Tahrirlash
+                    </button>
+                    <button className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22" title="Nusxa olish" onClick={() => duplicate(collection)}>
+                      <i className="ti ti-files"></i>
+                    </button>
+                    <button className="btn btn-sm btn-light-secondary" title={collection.isActive ? 'Yashirish' : 'Faollashtirish'} onClick={() => toggle(collection)}>
+                      <i className={`ti ${collection.isActive ? 'ti-eye-off' : 'ti-eye'}`}></i>
+                    </button>
+                    <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" title="O'chirish" onClick={() => destroy(collection)}>
+                      <i className="ti ti-trash"></i>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1131,12 +1131,12 @@ export default function CollectionsPage() {
       <Modal show={showForm} onHide={() => { setShowForm(false); resetForm(); }} size="xl" centered>
         <Form onSubmit={submit}>
           <Modal.Header closeButton>
-            <Modal.Title className="fs-5 fw-bold">{editing ? "To'plamni tahrirlash" : "To'plam qo'shish"}</Modal.Title>
+            <Modal.Title className="f-s-20 f-w-600">{editing ? "To'plamni tahrirlash" : "To'plam qo'shish"}</Modal.Title>
           </Modal.Header>
           <Modal.Body>
             {Object.keys(errors).length > 0 ? (
-              <div className="alert alert-danger">
-                <div className="fw-semibold mb-1">To'plamni saqlashda xatolik bor.</div>
+              <div className="alert alert-light-danger">
+                <div className="f-w-600 mb-1">To'plamni saqlashda xatolik bor.</div>
                 <ul className="mb-0 ps-3">
                   {Object.entries(errors).map(([key, value]) => (
                     <li key={key}>{value}</li>
@@ -1183,10 +1183,10 @@ export default function CollectionsPage() {
                   </div>
 
                   <div className="col-12">
-                    <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 rounded-4 border px-3 py-2">
+                    <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 b-r-15 b-1-light px-3 py-2">
                       <div>
-                        <div className="fw-semibold">UZ matndan AI tarjima</div>
-                        <div className="small text-muted">Nomi, subtitle, tavsif va bo'lim nomlari RU, EN, JA maydonlariga to'ldiriladi.</div>
+                        <div className="f-w-600">UZ matndan AI tarjima</div>
+                        <div className="f-s-13 text-muted">Nomi, subtitle, tavsif va bo'lim nomlari RU, EN, JA maydonlariga to'ldiriladi.</div>
                       </div>
                       <div className="d-flex flex-wrap gap-2">
                         {(['ru', 'en', 'ja'] as TranslateLocale[]).map((locale) => (
@@ -1259,14 +1259,14 @@ export default function CollectionsPage() {
                   <div className="col-12">
                     <Form.Label>Hero rasm</Form.Label>
                     <Form.Control type="file" accept="image/*" onChange={onHeroChange} />
-                    {heroPreview ? <img src={heroPreview} alt="" className="mt-2 rounded-3" style={{ maxHeight: 90 }} /> : null}
+                    {heroPreview ? <img src={heroPreview} alt="" className="mt-2 b-r-10" style={{ maxHeight: 90 }} /> : null}
                   </div>
                   <div className="col-12 d-flex flex-wrap gap-4">
                     <Form.Check type="switch" label="Faol" checked={form.isActive} onChange={(event) => setForm((prev) => ({ ...prev, isActive: event.target.checked }))} />
                     <Form.Check
                       type="switch"
                       id="festive-effect-switch"
-                      label={<span><i className="bi bi-stars text-warning me-1"></i>Bayramona effekt (yulduzcha animatsiyasi)</span>}
+                      label={<span><i className="ti ti-sparkles text-warning me-1"></i>Bayramona effekt (yulduzcha animatsiyasi)</span>}
                       checked={form.festiveEffect}
                       onChange={(event) => setForm((prev) => ({ ...prev, festiveEffect: event.target.checked }))}
                     />
@@ -1275,193 +1275,194 @@ export default function CollectionsPage() {
               </div>
 
               <div className="col-lg-5">
-                <div className="rounded-4 p-3 mb-3 text-white" style={{ background: `linear-gradient(135deg, ${form.gradientFrom}, ${form.gradientTo})` }}>
-                  <div className="small opacity-75">Preview</div>
-                  <div className="fw-bold fs-4 mt-2">{form.titleUz || "To'plam nomi"}</div>
-                  <div className="small mt-2">{form.subtitleUz || 'Subtitle shu yerda ko‘rinadi'}</div>
+                <div className="b-r-15 p-3 mb-3 text-white" style={{ background: `linear-gradient(135deg, ${form.gradientFrom}, ${form.gradientTo})` }}>
+                  <div className="f-s-13 opacity-75">Preview</div>
+                  <div className="f-w-600 f-s-24 mt-2">{form.titleUz || "To'plam nomi"}</div>
+                  <div className="f-s-13 mt-2">{form.subtitleUz || 'Subtitle shu yerda ko‘rinadi'}</div>
                   {Number((form as any).customTotalPrice || 0) > 0 ? (
-                    <div className="small mt-2 opacity-75">Asl yig'indi: {fmt(totalAmount)} so'm</div>
+                    <div className="f-s-13 mt-2 opacity-75">Asl yig'indi: {fmt(totalAmount)} so'm</div>
                   ) : null}
                   <button
                     type="button"
-                    className="btn mt-3"
-                    style={{ background: form.buttonBgColor, color: form.buttonTextColor, borderRadius: 999, paddingInline: 18 }}
+                    className="btn mt-3 b-r-50"
+                    style={{ background: form.buttonBgColor, color: form.buttonTextColor, paddingInline: 18 }}
                   >
                     {fmt(Number((form as any).customTotalPrice || 0) > 0 ? Number((form as any).customTotalPrice || 0) : totalAmount)} so'mga sotib olish
                   </button>
                 </div>
 
-                <div className="card-panel">
-                  <div className="d-flex justify-content-between align-items-center mb-2">
-                    <div className="fw-bold">Mahsulot qo'shish</div>
-                    <span className="text-muted small">{bookCount} kitob · {stationeryCount} kanselyariya</span>
-                  </div>
-
-                  {/* Kitob / Kanselyariya tab */}
-                  <div className="btn-group w-100 mb-2" role="group">
-                    <button
-                      type="button"
-                      className={`kc-tab ${searchType === 'book' ? 'active' : ''}`}
-                      onClick={() => { setSearchType('book'); setSearchResults([]); }}
-                    >
-                      <i className="bi bi-book me-1"></i>Kitob
-                    </button>
-                    <button
-                      type="button"
-                      className={`kc-tab ${searchType === 'stationery' ? 'active' : ''}`}
-                      onClick={() => { setSearchType('stationery'); setSearchResults([]); }}
-                    >
-                      <i className="bi bi-pencil me-1"></i>Kanselyariya
-                    </button>
-                  </div>
-
-                  <Form.Control
-                    value={search}
-                    onChange={(event) => setSearch(event.target.value)}
-                    placeholder={searchType === 'book' ? "Nomi, muallif yoki artikul bo'yicha" : "Nomi, artikul yoki barkod bo'yicha"}
-                    className="mb-2"
-                  />
-
-                  <div className="d-flex align-items-center gap-2 mb-2 small flex-wrap">
-                    <span className="text-muted">Qo'shilmoqda:</span>
-                    <span className={`chip ${activeKey === 'root' && sections.length > 0 ? 'chip-warning' : 'chip-purple'}`}>
-                      {activeKey === 'root' && sections.length > 0 ? "Bo'lim tanlang!" : findNodeName(activeKey)}
-                    </span>
-                    {activeKey !== 'root' && sections.length === 0 ? (
-                      <button type="button" className="btn btn-sm btn-light-secondary py-0" onClick={() => setActiveKey('root')}>To'plamga (umumiy)</button>
-                    ) : null}
-                  </div>
-
-                  <div className="border rounded-4 p-2 mb-3" style={{ minHeight: 112, maxHeight: 220, overflowY: 'auto' }}>
-                    {searchLoading ? <div className="text-muted small">Qidirilmoqda...</div> : null}
-                    {!searchLoading && searchResults.length === 0 ? <div className="text-muted small">Qidirsangiz natijalar shu yerda chiqadi.</div> : null}
-                    {searchResults.map((product) => (
-                      <button
-                        type="button"
-                        key={itemKey(product.productType, product.id)}
-                        className="btn btn-light-secondary w-100 text-start mb-2 d-flex align-items-center gap-2"
-                        onClick={() => addProduct(product)}
-                      >
-                        {product.image ? (
-                          <img src={product.image} alt="" width={36} height={36} style={{ borderRadius: 8, objectFit: 'cover' }} />
-                        ) : (
-                          <div style={{ width: 36, height: 36, borderRadius: 8, background: 'var(--kc-bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <i className={`bi ${product.productType === 'stationery' ? 'bi-pencil' : 'bi-book'} text-muted`}></i>
-                          </div>
-                        )}
-                        <div style={{ minWidth: 0 }}>
-                          <div className="fw-semibold text-truncate">{product.name}</div>
-                          <div className="small text-muted text-truncate">
-                            {product.author || product.seller || '—'} · {fmt(product.price)} so'm · {product.stock > 0 ? `${product.stock} dona` : 'tugagan'}
-                          </div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-
-                  {sections.length > 0 ? (
-                    <div className="alert alert-light border py-2 px-3 small mb-2">
-                      <i className="bi bi-info-circle me-1"></i>Bu bo'limli to'plam — mahsulotlar faqat bo'limlar ichida boshqariladi (bo'limsiz mahsulot qo'shilmaydi).
+                <div className="card">
+                  <div className="card-body">
+                    <div className="d-flex justify-content-between align-items-center mb-2">
+                      <div className="f-w-600">Mahsulot qo'shish</div>
+                      <span className="text-muted f-s-13">{bookCount} kitob · {stationeryCount} kanselyariya</span>
                     </div>
-                  ) : (
-                    <>
-                      <div className="d-flex justify-content-between align-items-center mb-1">
-                        <div className="fw-semibold small">Tanlangan ({items.length})</div>
-                        {unavailableCount > 0 ? <span className="small text-danger">{unavailableCount} ta tugagan</span> : null}
-                      </div>
-                      <div className="small text-muted mb-2">Tartibni sudrab (drag) o'zgartiring.</div>
-                    </>
-                  )}
 
-                  <div className="border rounded-4 p-2" style={{ maxHeight: 360, overflowY: 'auto', display: sections.length > 0 ? 'none' : undefined }}>
-                    {items.length === 0 ? <div className="text-muted small">Hali mahsulot tanlanmagan.</div> : null}
-                    {items.map((item, index) => (
-                      <div
-                        key={`${item.productType}-${item.productId}-${index}`}
-                        className="border rounded-4 p-2 mb-2"
-                        draggable
-                        onDragStart={() => onDragStart(index)}
-                        onDragOver={onDragOver}
-                        onDrop={() => onDrop(index)}
-                        style={{
-                          cursor: 'grab',
-                          background: dragIndex === index ? 'var(--kc-ink-tint)' : undefined,
-                          borderColor: !item.available ? 'var(--kc-danger)' : undefined,
-                        }}
-                      >
-                        <div className="d-flex justify-content-between gap-2">
-                          <div className="d-flex align-items-center gap-2" style={{ minWidth: 0 }}>
-                            <i className="bi bi-grip-vertical text-muted"></i>
-                            {item.image ? (
-                              <img src={item.image} alt="" width={32} height={32} style={{ borderRadius: 6, objectFit: 'cover' }} />
-                            ) : null}
-                            <div style={{ minWidth: 0 }}>
-                              <div className="fw-semibold text-truncate">{item.name}</div>
-                              <div className="small text-muted text-truncate">
-                                {item.productType === 'stationery' ? 'Kanselyariya' : 'Kitob'} · {item.seller || '—'}
-                                {!item.available ? ' · tugagan' : ''}
+                    {/* Kitob / Kanselyariya tab */}
+                    <div className="nav nav-tabs app-tabs-primary flex-wrap mb-2" role="group">
+                      <div className="nav-item"><button
+                          type="button"
+                          className={`nav-link ${searchType === 'book' ? 'active' : ''}`}
+                          onClick={() => { setSearchType('book'); setSearchResults([]); }}
+                        >
+                          <i className="ti ti-book me-1"></i>Kitob
+                        </button></div>
+                      <div className="nav-item"><button
+                          type="button"
+                          className={`nav-link ${searchType === 'stationery' ? 'active' : ''}`}
+                          onClick={() => { setSearchType('stationery'); setSearchResults([]); }}
+                        >
+                          <i className="ti ti-pencil me-1"></i>Kanselyariya
+                        </button></div>
+                    </div>
+
+                    <Form.Control
+                      value={search}
+                      onChange={(event) => setSearch(event.target.value)}
+                      placeholder={searchType === 'book' ? "Nomi, muallif yoki artikul bo'yicha" : "Nomi, artikul yoki barkod bo'yicha"}
+                      className="mb-2"
+                    />
+
+                    <div className="d-flex align-items-center gap-2 mb-2 f-s-13 flex-wrap">
+                      <span className="text-muted">Qo'shilmoqda:</span>
+                      <span className={`badge ${activeKey === 'root' && sections.length > 0 ? 'text-light-warning' : 'text-light-primary'}`}>
+                        {activeKey === 'root' && sections.length > 0 ? "Bo'lim tanlang!" : findNodeName(activeKey)}
+                      </span>
+                      {activeKey !== 'root' && sections.length === 0 ? (
+                        <button type="button" className="btn btn-sm btn-light-secondary py-0" onClick={() => setActiveKey('root')}>To'plamga (umumiy)</button>
+                      ) : null}
+                    </div>
+
+                    <div className="b-1-light b-r-15 p-2 mb-3 overflow-y-auto" style={{ minHeight: 112, maxHeight: 220 }}>
+                      {searchLoading ? <div className="text-muted f-s-13">Qidirilmoqda...</div> : null}
+                      {!searchLoading && searchResults.length === 0 ? <div className="text-muted f-s-13">Qidirsangiz natijalar shu yerda chiqadi.</div> : null}
+                      {searchResults.map((product) => (
+                        <button
+                          type="button"
+                          key={itemKey(product.productType, product.id)}
+                          className="btn btn-light-secondary w-100 text-start mb-2 d-flex align-items-center gap-2"
+                          onClick={() => addProduct(product)}
+                        >
+                          {product.image ? (
+                            <img className="b-r-8 object-fit-cover" src={product.image} alt="" width={36} height={36} />
+                          ) : (
+                            <div className="b-r-8 bg-light-secondary d-flex align-items-center justify-content-center" style={{ width: 36, height: 36 }}>
+                              <i className={`ti ${product.productType === 'stationery' ? 'ti-pencil' : 'ti-book'} text-muted`}></i>
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <div className="f-w-600 text-truncate">{product.name}</div>
+                            <div className="f-s-13 text-muted text-truncate">
+                              {product.author || product.seller || '—'} · {fmt(product.price)} so'm · {product.stock > 0 ? `${product.stock} dona` : 'tugagan'}
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+
+                    {sections.length > 0 ? (
+                      <div className="alert alert-border-secondary py-2 px-3 f-s-13 mb-2">
+                        <i className="ti ti-info-circle me-1"></i>Bu bo'limli to'plam — mahsulotlar faqat bo'limlar ichida boshqariladi (bo'limsiz mahsulot qo'shilmaydi).
+                      </div>
+                    ) : (
+                      <>
+                        <div className="d-flex justify-content-between align-items-center mb-1">
+                          <div className="f-w-600 f-s-13">Tanlangan ({items.length})</div>
+                          {unavailableCount > 0 ? <span className="f-s-13 text-danger">{unavailableCount} ta tugagan</span> : null}
+                        </div>
+                        <div className="f-s-13 text-muted mb-2">Tartibni sudrab (drag) o'zgartiring.</div>
+                      </>
+                    )}
+
+                    <div className="b-1-light b-r-15 p-2 overflow-y-auto" style={{ maxHeight: 360, display: sections.length > 0 ? 'none' : undefined }}>
+                      {items.length === 0 ? <div className="text-muted f-s-13">Hali mahsulot tanlanmagan.</div> : null}
+                      {items.map((item, index) => (
+                        <div
+                          key={`${item.productType}-${item.productId}-${index}`}
+                          className="b-1-light b-r-15 p-2 mb-2"
+                          draggable
+                          onDragStart={() => onDragStart(index)}
+                          onDragOver={onDragOver}
+                          onDrop={() => onDrop(index)}
+                          style={{ cursor: 'grab',
+                            background: dragIndex === index ? 'rgba(var(--primary), .1)' : undefined,
+                            borderColor: !item.available ? 'rgba(var(--danger), 1)' : undefined,
+                          }}
+                        >
+                          <div className="d-flex justify-content-between gap-2">
+                            <div className="d-flex align-items-center gap-2 min-w-0">
+                              <i className="ti ti-grip-vertical text-muted"></i>
+                              {item.image ? (
+                                <img className="b-r-6 object-fit-cover" src={item.image} alt="" width={32} height={32} />
+                              ) : null}
+                              <div className="min-w-0">
+                                <div className="f-w-600 text-truncate">{item.name}</div>
+                                <div className="f-s-13 text-muted text-truncate">
+                                  {item.productType === 'stationery' ? 'Kanselyariya' : 'Kitob'} · {item.seller || '—'}
+                                  {!item.available ? ' · tugagan' : ''}
+                                </div>
                               </div>
                             </div>
+                            <button type="button" className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => removeItem(index)}>
+                              <i className="ti ti-trash"></i>
+                            </button>
                           </div>
-                          <button type="button" className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => removeItem(index)}>
-                            <i className="bi bi-trash"></i>
-                          </button>
-                        </div>
-                        <div className="row g-2 mt-1">
-                          <div className="col-6">
-                            <Form.Label className="small text-muted mb-1">Soni</Form.Label>
-                            <div className="input-group input-group-sm">
-                              <button type="button" className="btn btn-light-secondary" onClick={() => updateItem(index, { quantity: Math.max(1, item.quantity - 1) })}>−</button>
-                              <Form.Control
-                                type="number"
-                                min={1}
-                                className="text-center"
-                                value={item.quantity}
-                                onChange={(event) => updateItem(index, { quantity: Math.max(1, Number(event.target.value || 1)) })}
-                              />
-                              <button type="button" className="btn btn-light-secondary" onClick={() => updateItem(index, { quantity: item.quantity + 1 })}>+</button>
+                          <div className="row g-2 mt-1">
+                            <div className="col-6">
+                              <Form.Label className="f-s-13 text-muted mb-1">Soni</Form.Label>
+                              <div className="input-group input-group-sm">
+                                <button type="button" className="btn btn-light-secondary" onClick={() => updateItem(index, { quantity: Math.max(1, item.quantity - 1) })}>−</button>
+                                <Form.Control
+                                  type="number"
+                                  min={1}
+                                  className="text-center"
+                                  value={item.quantity}
+                                  onChange={(event) => updateItem(index, { quantity: Math.max(1, Number(event.target.value || 1)) })}
+                                />
+                                <button type="button" className="btn btn-light-secondary" onClick={() => updateItem(index, { quantity: item.quantity + 1 })}>+</button>
+                              </div>
+                            </div>
+                            <div className="col-6">
+                              <Form.Label className="f-s-13 text-muted mb-1">Jami narx</Form.Label>
+                              <Form.Control value={`${fmt(item.price * item.quantity)} so'm`} disabled />
                             </div>
                           </div>
-                          <div className="col-6">
-                            <Form.Label className="small text-muted mb-1">Jami narx</Form.Label>
-                            <Form.Control value={`${fmt(item.price * item.quantity)} so'm`} disabled />
-                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="mt-3">
-                    <div className="d-flex justify-content-between align-items-center mb-1">
-                      <div className="fw-semibold small"><i className="bi bi-diagram-3 me-1"></i>Bo'limlar (ixtiyoriy)</div>
-                      <button type="button" className="btn btn-sm btn-light-secondary" onClick={addSection}><i className="bi bi-plus-lg me-1"></i>Bo'lim</button>
+                      ))}
                     </div>
-                    <div className="small text-muted mb-2">Bo'lim qo'shsangiz to'plam sinf/tur bo'yicha bo'linadi (har biriga 4 tilda nom + alohida narx). Bo'lim ichida ichki bo'lim bo'lsa — u <b>guruh</b>ga aylanadi (mahsulot faqat ichki bo'limlarga). Bo'lim qo'shmasangiz oddiy to'plam bo'lib qoladi.</div>
-                    {sections.length > 0 ? (() => {
-                      let leaves = 0;
-                      let products = 0;
-                      let autoTotal = 0;
-                      const walk = (n: SectionNode) => {
-                        if (n.children.length > 0) {
-                          n.children.forEach(walk);
-                        } else {
-                          leaves += 1;
-                          products += n.items.length;
-                          autoTotal += sectionItemsTotal(n);
-                        }
-                      };
-                      sections.forEach(walk);
-                      return (
-                        <div className="d-flex flex-wrap gap-2 mb-2">
-                          <span className="chip chip-purple">{sections.length} bosh bo'lim</span>
-                          <span className="chip chip-gray">{leaves} sotiladigan bo'lim</span>
-                          <span className="chip chip-gray">{products} mahsulot</span>
-                          <span className="chip chip-success">avto jami: {autoTotal.toLocaleString('ru-RU')} so'm</span>
-                        </div>
-                      );
-                    })() : null}
-                    {sections.length === 0 ? <div className="text-muted small">Bo'lim yo'q. "Bo'lim" tugmasini bosib qo'shing.</div> : null}
-                    {sections.map((section) => renderNode(section, 1))}
+
+                    <div className="mt-3">
+                      <div className="d-flex justify-content-between align-items-center mb-1">
+                        <div className="f-w-600 f-s-13"><i className="ti ti-hierarchy me-1"></i>Bo'limlar (ixtiyoriy)</div>
+                        <button type="button" className="btn btn-sm btn-light-secondary" onClick={addSection}><i className="ti ti-plus me-1"></i>Bo'lim</button>
+                      </div>
+                      <div className="f-s-13 text-muted mb-2">Bo'lim qo'shsangiz to'plam sinf/tur bo'yicha bo'linadi (har biriga 4 tilda nom + alohida narx). Bo'lim ichida ichki bo'lim bo'lsa — u <b>guruh</b>ga aylanadi (mahsulot faqat ichki bo'limlarga). Bo'lim qo'shmasangiz oddiy to'plam bo'lib qoladi.</div>
+                      {sections.length > 0 ? (() => {
+                        let leaves = 0;
+                        let products = 0;
+                        let autoTotal = 0;
+                        const walk = (n: SectionNode) => {
+                          if (n.children.length > 0) {
+                            n.children.forEach(walk);
+                          } else {
+                            leaves += 1;
+                            products += n.items.length;
+                            autoTotal += sectionItemsTotal(n);
+                          }
+                        };
+                        sections.forEach(walk);
+                        return (
+                          <div className="d-flex flex-wrap gap-2 mb-2">
+                            <span className="badge text-light-primary">{sections.length} bosh bo'lim</span>
+                            <span className="badge text-light-secondary">{leaves} sotiladigan bo'lim</span>
+                            <span className="badge text-light-secondary">{products} mahsulot</span>
+                            <span className="badge text-light-success">avto jami: {autoTotal.toLocaleString('ru-RU')} so'm</span>
+                          </div>
+                        );
+                      })() : null}
+                      {sections.length === 0 ? <div className="text-muted f-s-13">Bo'lim yo'q. "Bo'lim" tugmasini bosib qo'shing.</div> : null}
+                      {sections.map((section) => renderNode(section, 1))}
+                    </div>
                   </div>
                 </div>
               </div>

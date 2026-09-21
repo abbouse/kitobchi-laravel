@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Button, Modal } from 'react-bootstrap';
+import { Button } from 'react-bootstrap';
+import Modal from './AppModal';
 
 /**
  * Mahsulotni rad etish sababini so'raydigan oyna. Ilgari bu o'rinda native
@@ -34,10 +35,10 @@ export default function ModerationRejectModal({
   return (
     <Modal show={show} onHide={handleHide} centered>
       <Modal.Header closeButton>
-        <Modal.Title className="fs-5 fw-bold">Rad etish sababi{itemLabel ? ` — ${itemLabel}` : ''}</Modal.Title>
+        <Modal.Title className="f-s-20 f-w-600">Rad etish sababi{itemLabel ? ` — ${itemLabel}` : ''}</Modal.Title>
       </Modal.Header>
       <Modal.Body>
-        <label className="form-label small text-muted">Sabab (ixtiyoriy, sellerga ko'rinadi)</label>
+        <label className="form-label f-s-13 text-muted">Sabab (ixtiyoriy, sellerga ko'rinadi)</label>
         <textarea
           className="form-control"
           rows={3}

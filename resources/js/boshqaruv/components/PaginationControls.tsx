@@ -39,8 +39,8 @@ export default function PaginationControls({
     .filter((item) => item === 1 || item === totalPages || Math.abs(item - page) <= 1);
 
   return (
-    <div className="pagination-bar">
-      <p className="mb-0 f-s-15 f-w-500 txt-ellipsis-1 pagination-info">{from}-{to} / {total}</p>
+    <div className="d-flex align-items-center justify-content-between flex-wrap gap-3 pt-3">
+      <p className="mb-0 f-s-15 f-w-500 txt-ellipsis-1">{from}-{to} / {total}</p>
       {/* Axelit: "pagination app-pagination" */}
       <ul className="pagination app-pagination justify-content-end">
         <li className={`page-item ${page <= 1 ? 'disabled' : ''}`}>
@@ -53,7 +53,7 @@ export default function PaginationControls({
           return (
             <Fragment key={item}>
               {prev && item - prev > 1 ? (
-                <li className="page-item disabled gap"><span className="page-link">…</span></li>
+                <li className="page-item disabled"><span className="page-link">…</span></li>
               ) : null}
               <li className={`page-item ${item === page ? 'active' : ''}`}>
                 <button type="button" className="page-link" onClick={() => onPageChange(item)} aria-current={item === page ? 'page' : undefined}>

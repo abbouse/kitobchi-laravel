@@ -35,10 +35,10 @@ export default function CategoryImageField({ current }: { current?: string | nul
     <div className="col-12">
       <label className="form-label" htmlFor="category-icon-image">Kategoriya rasmi</label>
       <div className="d-flex align-items-center gap-3 flex-wrap">
-        <div className="thumb-square" style={{ width: 56, height: 56 }}>
+        <div className="b-r-10 overflow-hidden d-flex-center bg-light-primary flex-shrink-0 w-55 h-55">
           {shown
-            ? <img src={shown} alt="" />
-            : <i className="bi bi-image" style={{ fontSize: 18 }}></i>}
+            ? <img className="w-100 h-100 object-fit-cover" src={shown} alt="" />
+            : <i className="ti ti-photo f-s-18"></i>}
         </div>
         <div className="flex-grow-1" style={{ minWidth: 220 }}>
           <input
@@ -53,7 +53,7 @@ export default function CategoryImageField({ current }: { current?: string | nul
               if (file) setRemove(false);
             }}
           />
-          <div className="cell-sub mt-1">
+          <div className="f-s-13 text-secondary mt-1">
             Kvadrat PNG yoki SVG, 2 MB gacha. Bo'sh qolsa bosh sahifada kategoriya nomining bosh harfi ko'rsatiladi.
           </div>
         </div>
@@ -67,7 +67,7 @@ export default function CategoryImageField({ current }: { current?: string | nul
               checked={remove}
               onChange={(event) => { setRemove(event.target.checked); if (event.target.checked) setPreview(null); }}
             />
-            <span className="form-check-label ms-2 cell-sub">Rasmni o'chirish</span>
+            <span className="form-check-label ms-2 f-s-13 text-secondary">Rasmni o'chirish</span>
           </label>
         ) : null}
       </div>

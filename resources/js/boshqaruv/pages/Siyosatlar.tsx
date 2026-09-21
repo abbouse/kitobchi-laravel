@@ -1,7 +1,8 @@
 import { router, usePage } from '@inertiajs/react';
 import { PageCrumbs } from '../Layout';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { Button, Form, Modal } from 'react-bootstrap';
+import { Button, Form } from 'react-bootstrap';
+import Modal from '../components/AppModal';
 import { splitPolicyPreset } from './policyPresets';
 
 type TranslateLocale = 'ru' | 'en' | 'ja';
@@ -274,299 +275,307 @@ export default function Siyosatlar() {
 
   return (
     <div>
-      <div className="page-head">
+      <div className="d-flex align-items-end justify-content-between flex-wrap gap-3 mx-1 mb-3">
         <div>
-          <h1 className="page-title">Siyosatlar va qoidalar</h1><PageCrumbs />
-          <p className="page-subtitle">Legal sahifalar va appda ko‘rinadigan siyosatlarni boshqarish</p>
+          <h4 className="main-title mb-0">Siyosatlar va qoidalar</h4><PageCrumbs />
+          <p className="mb-0 text-secondary">Legal sahifalar va appda ko‘rinadigan siyosatlarni boshqarish</p>
         </div>
         <button className="btn btn-primary" onClick={openCreate}>
-          <i className="bi bi-plus-lg me-1"></i>Siyosat qo‘shish
+          <i className="ti ti-plus me-1"></i>Siyosat qo‘shish
         </button>
       </div>
 
-      <div className="row g-3 mb-3">
+      <div className="row">
         <div className="col-md-3">
-          <div className="card-panel h-100">
-            <div className="small text-muted">Jami siyosat</div>
-            <div className="fs-4 fw-bold mt-2">{counts.all}</div>
+          <div className="card h-100">
+            <div className="card-body">
+              <div className="f-s-13 text-muted">Jami siyosat</div>
+              <div className="f-s-24 f-w-600 mt-2">{counts.all}</div>
+            </div>
           </div>
         </div>
         <div className="col-md-3">
-          <div className="card-panel h-100">
-            <div className="small text-muted">Faol</div>
-            <div className="fs-4 fw-bold mt-2 text-success">{counts.active}</div>
+          <div className="card h-100">
+            <div className="card-body">
+              <div className="f-s-13 text-muted">Faol</div>
+              <div className="f-s-24 f-w-600 mt-2 text-success">{counts.active}</div>
+            </div>
           </div>
         </div>
         <div className="col-md-3">
-          <div className="card-panel h-100">
-            <div className="small text-muted">Appda ko‘rinadi</div>
-            <div className="fs-4 fw-bold mt-2 text-primary">{counts.inApp}</div>
+          <div className="card h-100">
+            <div className="card-body">
+              <div className="f-s-13 text-muted">Appda ko‘rinadi</div>
+              <div className="f-s-24 f-w-600 mt-2 text-primary">{counts.inApp}</div>
+            </div>
           </div>
         </div>
         <div className="col-md-3">
-          <div className="card-panel h-100">
-            <div className="small text-muted">Tarjima kerak</div>
-            <div className="fs-4 fw-bold mt-2 text-warning">{counts.needsTranslation}</div>
+          <div className="card h-100">
+            <div className="card-body">
+              <div className="f-s-13 text-muted">Tarjima kerak</div>
+              <div className="f-s-24 f-w-600 mt-2 text-warning">{counts.needsTranslation}</div>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="card-panel mb-3">
-        <div className="row g-3 align-items-end">
-          <div className="col-lg-6">
-            <Form.Label>Qidiruv</Form.Label>
-            <Form.Control
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Sarlavha, slug yoki matn bo‘yicha qidiring"
-            />
-          </div>
-          <div className="col-lg-3">
-            <Form.Label>Filter</Form.Label>
-            <Form.Select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}>
-              <option value="all">Barchasi</option>
-              <option value="active">Faqat faol</option>
-              <option value="inactive">Faqat yashirin</option>
-              <option value="in_app">Appda ko‘rinadi</option>
-              <option value="needs_translation">Tarjima kerak</option>
-            </Form.Select>
-          </div>
-          <div className="col-lg-3">
-            <button type="button" className="btn btn-light-secondary w-100" onClick={() => { setQuery(''); setStatusFilter('all'); }}>
-              Filterlarni tozalash
-            </button>
+      <div className="card">
+<div className="card-body">
+          <div className="row g-3 align-items-end">
+            <div className="col-lg-6">
+              <Form.Label>Qidiruv</Form.Label>
+              <Form.Control
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Sarlavha, slug yoki matn bo‘yicha qidiring"
+              />
+            </div>
+            <div className="col-lg-3">
+              <Form.Label>Filter</Form.Label>
+              <Form.Select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}>
+                <option value="all">Barchasi</option>
+                <option value="active">Faqat faol</option>
+                <option value="inactive">Faqat yashirin</option>
+                <option value="in_app">Appda ko‘rinadi</option>
+                <option value="needs_translation">Tarjima kerak</option>
+              </Form.Select>
+            </div>
+            <div className="col-lg-3">
+              <button type="button" className="btn btn-light-secondary w-100" onClick={() => { setQuery(''); setStatusFilter('all'); }}>
+                Filterlarni tozalash
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+</div>
 
-      <div className="card-panel">
-        <div className="table-responsive">
-          <table className="table table-bottom-border align-middle data-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Sarlavha</th>
-                <th>Slug / URL</th>
-                <th>Tillar</th>
-                <th>Tartib</th>
-                <th>App</th>
-                <th>Holat</th>
-                <th>Amallar</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredPolicies.map((policy) => {
-                const translationsReady = completedTranslations(policy);
-                const excerpt = stripHtml(policy.content).slice(0, 110);
+      <div className="card">
+<div className="card-body">
+          <div className="table-responsive app-scroll">
+            <table className="table table-bottom-border align-middle">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Sarlavha</th>
+                  <th>Slug / URL</th>
+                  <th>Tillar</th>
+                  <th>Tartib</th>
+                  <th>App</th>
+                  <th>Holat</th>
+                  <th>Amallar</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredPolicies.map((policy) => {
+                  const translationsReady = completedTranslations(policy);
+                  const excerpt = stripHtml(policy.content).slice(0, 110);
 
-                return (
-                  <tr key={policy.id}>
-                    <td className="cell-id">#{policy.id}</td>
-                    <td>
-                      <div className="fw-semibold">{policy.title}</div>
-                      {policy.updatedAtLabel ? (
-                        <div className="small text-muted mb-1">Yangilangan: {policy.updatedAtLabel}</div>
-                      ) : null}
-                      <div className="small text-muted">{excerpt || 'Matn yo‘q'}{excerpt.length >= 110 ? '…' : ''}</div>
-                    </td>
-                    <td>
-                      <div><code>{policy.slug}</code></div>
-                      {policy.publicUrl ? (
-                        <a href={policy.publicUrl} target="_blank" rel="noreferrer" className="small">
-                          Ochiq sahifa
-                        </a>
-                      ) : null}
-                    </td>
-                    <td>
-                      <div className="d-flex flex-wrap gap-1">
-                        {locales.map((locale) => (
-                          <span key={locale} className={`chip ${translationReady(policy, locale) ? 'chip-success' : 'chip-gray'}`}>
-                            {localeLabels[locale]}
-                          </span>
-                        ))}
-                      </div>
-                      <div className="small text-muted mt-1">{translationsReady}/3 til</div>
-                    </td>
-                    <td>{policy.sortOrder}</td>
-                    <td>
-                      <span className={`chip ${policy.showInApp ? 'chip-success' : 'chip-gray'}`}>
-                        {policy.showInApp ? 'Ko‘rinadi' : 'Yashirin'}
-                      </span>
-                    </td>
-                    <td>
-                      <div className="form-check form-switch">
-                        <input
-                          type="checkbox"
-                          className="form-check-input"
-                          checked={policy.status === 'Active'}
-                          onChange={() => toggle(policy)}
-                        />
-                      </div>
-                    </td>
-                    <td>
-                      <div className="d-flex gap-1">
-                        <button className="btn btn-light-success icon-btn w-30 h-30 b-r-22" onClick={() => openEdit(policy)}>
-                          <i className="bi bi-pencil"></i>
-                        </button>
+                  return (
+                    <tr key={policy.id}>
+                      <td className="f-w-600 text-nowrap">#{policy.id}</td>
+                      <td>
+                        <div className="f-w-600">{policy.title}</div>
+                        {policy.updatedAtLabel ? (
+                          <div className="f-s-13 text-muted mb-1">Yangilangan: {policy.updatedAtLabel}</div>
+                        ) : null}
+                        <div className="f-s-13 text-muted">{excerpt || 'Matn yo‘q'}{excerpt.length >= 110 ? '…' : ''}</div>
+                      </td>
+                      <td>
+                        <div><code>{policy.slug}</code></div>
                         {policy.publicUrl ? (
-                          <a className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22" href={policy.publicUrl} target="_blank" rel="noreferrer">
-                            <i className="bi bi-box-arrow-up-right"></i>
+                          <a href={policy.publicUrl} target="_blank" rel="noreferrer" className="f-s-13">
+                            Ochiq sahifa
                           </a>
                         ) : null}
-                        <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => destroy(policy)}>
-                          <i className="bi bi-trash"></i>
-                        </button>
-                      </div>
-                    </td>
+                      </td>
+                      <td>
+                        <div className="d-flex flex-wrap gap-1">
+                          {locales.map((locale) => (
+                            <span key={locale} className={`badge ${translationReady(policy, locale) ? 'text-light-success' : 'text-light-secondary'}`}>
+                              {localeLabels[locale]}
+                            </span>
+                          ))}
+                        </div>
+                        <div className="f-s-13 text-muted mt-1">{translationsReady}/3 til</div>
+                      </td>
+                      <td>{policy.sortOrder}</td>
+                      <td>
+                        <span className={`badge ${policy.showInApp ? 'text-light-success' : 'text-light-secondary'}`}>
+                          {policy.showInApp ? 'Ko‘rinadi' : 'Yashirin'}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="form-check form-switch">
+                          <input
+                            type="checkbox"
+                            className="form-check-input"
+                            checked={policy.status === 'Active'}
+                            onChange={() => toggle(policy)}
+                          />
+                        </div>
+                      </td>
+                      <td>
+                        <div className="d-flex gap-1">
+                          <button className="btn btn-light-success icon-btn w-30 h-30 b-r-22" onClick={() => openEdit(policy)}>
+                            <i className="ti ti-pencil"></i>
+                          </button>
+                          {policy.publicUrl ? (
+                            <a className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22" href={policy.publicUrl} target="_blank" rel="noreferrer">
+                              <i className="ti ti-external-link"></i>
+                            </a>
+                          ) : null}
+                          <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => destroy(policy)}>
+                            <i className="ti ti-trash"></i>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {filteredPolicies.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="text-center py-5 text-secondary"><i className="iconoir-archive d-flex justify-content-center mb-2 f-s-30 text-primary"></i>Mos siyosat topilmadi.
+                                        </td>
                   </tr>
-                );
-              })}
-              {filteredPolicies.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="text-center text-muted py-5">
-                    Mos siyosat topilmadi.
-                  </td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+</div>
 
       <Modal show={showForm} onHide={closeModal} centered size="xl">
         <Form onSubmit={submit}>
           <Modal.Header closeButton>
-            <Modal.Title className="fs-5 fw-bold">
+            <Modal.Title className="f-s-20 f-w-600">
               {editing ? 'Siyosatni tahrirlash' : 'Siyosat qo‘shish'}
             </Modal.Title>
           </Modal.Header>
-          <Modal.Body style={{ maxHeight: 'calc(100vh - 140px)', overflowY: 'auto' }}>
-            <div className="row g-3">
+          <Modal.Body className="overflow-y-auto" style={{ maxHeight: 'calc(100vh - 140px)' }}>
+            <div className="row">
               {Object.keys(errors).length > 0 ? (
                 <div className="col-12">
-                  <div className="alert alert-danger rounded-4 mb-0">
+                  <div className="alert alert-light-danger mb-0">
                     Majburiy maydonlarni tekshiring va qayta saqlang.
                   </div>
                 </div>
               ) : null}
 
               <div className="col-12">
-                <div className="rounded-4 border p-3">
-                  <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-                    <div>
-                      <div className="fw-semibold">Asosiy sozlamalar</div>
-                      <div className="small text-muted">Slug, tartib, faollik va appda ko‘rinishini boshqaring.</div>
+                <div className="card"><div className="card-body">
+                    <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                      <div>
+                        <div className="f-w-600">Asosiy sozlamalar</div>
+                        <div className="f-s-13 text-muted">Slug, tartib, faollik va appda ko‘rinishini boshqaring.</div>
+                      </div>
+                      <div className="d-flex flex-wrap gap-2">
+                        <button type="button" className="btn btn-sm btn-dark" onClick={applySplitPreset}>
+                          Nasiya shabloni
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-light-secondary"
+                          onClick={() => setForm((prev) => ({ ...prev, slug: slugify(prev.slug || prev.title) }))}
+                        >
+                          Slug yaratish
+                        </button>
+                        <button type="button" className="btn btn-sm btn-light-secondary" onClick={resetForm}>
+                          Tozalash
+                        </button>
+                      </div>
                     </div>
-                    <div className="d-flex flex-wrap gap-2">
-                      <button type="button" className="btn btn-sm btn-dark" onClick={applySplitPreset}>
-                        Nasiya shabloni
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-sm btn-light-secondary"
-                        onClick={() => setForm((prev) => ({ ...prev, slug: slugify(prev.slug || prev.title) }))}
-                      >
-                        Slug yaratish
-                      </button>
-                      <button type="button" className="btn btn-sm btn-light-secondary" onClick={resetForm}>
-                        Tozalash
-                      </button>
-                    </div>
-                  </div>
 
-                  <div className="row g-3">
-                    <div className="col-md-7">
-                      <Form.Label>Sarlavha (UZ)</Form.Label>
-                      <Form.Control
-                        required
-                        value={form.title}
-                        onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
-                        placeholder="Masalan: Kitobchi nasiya xizmati shartlari"
-                        isInvalid={!!fieldError('title')}
-                      />
-                      <Form.Control.Feedback type="invalid">{fieldError('title')}</Form.Control.Feedback>
+                    <div className="row g-3">
+                      <div className="col-md-7">
+                        <Form.Label>Sarlavha (UZ)</Form.Label>
+                        <Form.Control
+                          required
+                          value={form.title}
+                          onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
+                          placeholder="Masalan: Kitobchi nasiya xizmati shartlari"
+                          isInvalid={!!fieldError('title')}
+                        />
+                        <Form.Control.Feedback type="invalid">{fieldError('title')}</Form.Control.Feedback>
+                      </div>
+                      <div className="col-md-5">
+                        <Form.Label>Slug</Form.Label>
+                        <Form.Control
+                          value={form.slug}
+                          onChange={(event) => setForm((prev) => ({ ...prev, slug: event.target.value }))}
+                          placeholder="nasiya-shartlari"
+                          isInvalid={!!fieldError('slug')}
+                        />
+                        <Form.Control.Feedback type="invalid">{fieldError('slug')}</Form.Control.Feedback>
+                      </div>
+                      <div className="col-md-3">
+                        <Form.Label>Tartib</Form.Label>
+                        <Form.Control
+                          type="number"
+                          min={0}
+                          value={form.sortOrder}
+                          onChange={(event) => setForm((prev) => ({ ...prev, sortOrder: Number(event.target.value || 0) }))}
+                          isInvalid={!!fieldError('sort_order')}
+                        />
+                        <Form.Control.Feedback type="invalid">{fieldError('sort_order')}</Form.Control.Feedback>
+                      </div>
+                      <div className="col-md-3 d-flex align-items-end">
+                        <Form.Check
+                          type="switch"
+                          label="Faol"
+                          checked={form.isActive}
+                          onChange={(event) => setForm((prev) => ({ ...prev, isActive: event.target.checked }))}
+                        />
+                      </div>
+                      <div className="col-md-3 d-flex align-items-end">
+                        <Form.Check
+                          type="switch"
+                          label="Appda ko‘rinsin"
+                          checked={form.showInApp}
+                          onChange={(event) => setForm((prev) => ({ ...prev, showInApp: event.target.checked }))}
+                        />
+                      </div>
+                      <div className="col-md-3 d-flex align-items-end">
+                        {editing?.publicUrl ? (
+                          <a href={editing.publicUrl} target="_blank" rel="noreferrer" className="btn btn-light-secondary w-100">
+                            Ochiq sahifa
+                          </a>
+                        ) : (
+                          <div className="f-s-13 text-muted">Saqlangandan keyin ochiq sahifa havolasi chiqadi.</div>
+                        )}
+                      </div>
                     </div>
-                    <div className="col-md-5">
-                      <Form.Label>Slug</Form.Label>
-                      <Form.Control
-                        value={form.slug}
-                        onChange={(event) => setForm((prev) => ({ ...prev, slug: event.target.value }))}
-                        placeholder="nasiya-shartlari"
-                        isInvalid={!!fieldError('slug')}
-                      />
-                      <Form.Control.Feedback type="invalid">{fieldError('slug')}</Form.Control.Feedback>
-                    </div>
-                    <div className="col-md-3">
-                      <Form.Label>Tartib</Form.Label>
-                      <Form.Control
-                        type="number"
-                        min={0}
-                        value={form.sortOrder}
-                        onChange={(event) => setForm((prev) => ({ ...prev, sortOrder: Number(event.target.value || 0) }))}
-                        isInvalid={!!fieldError('sort_order')}
-                      />
-                      <Form.Control.Feedback type="invalid">{fieldError('sort_order')}</Form.Control.Feedback>
-                    </div>
-                    <div className="col-md-3 d-flex align-items-end">
-                      <Form.Check
-                        type="switch"
-                        label="Faol"
-                        checked={form.isActive}
-                        onChange={(event) => setForm((prev) => ({ ...prev, isActive: event.target.checked }))}
-                      />
-                    </div>
-                    <div className="col-md-3 d-flex align-items-end">
-                      <Form.Check
-                        type="switch"
-                        label="Appda ko‘rinsin"
-                        checked={form.showInApp}
-                        onChange={(event) => setForm((prev) => ({ ...prev, showInApp: event.target.checked }))}
-                      />
-                    </div>
-                    <div className="col-md-3 d-flex align-items-end">
-                      {editing?.publicUrl ? (
-                        <a href={editing.publicUrl} target="_blank" rel="noreferrer" className="btn btn-light-secondary w-100">
-                          Ochiq sahifa
-                        </a>
-                      ) : (
-                        <div className="small text-muted">Saqlangandan keyin ochiq sahifa havolasi chiqadi.</div>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                  </div></div>
               </div>
 
               <div className="col-12">
                 <Form.Label>Matn (UZ, HTML bo‘lishi mumkin)</Form.Label>
-                <Form.Control
-                  as="textarea"
-                  rows={18}
-                  required
-                  value={form.content}
-                  onChange={(event) => setForm((prev) => ({ ...prev, content: event.target.value }))}
-                  style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}
-                  isInvalid={!!fieldError('content')}
-                />
+                <Form.Control className="font-monospace"
+         as="textarea"
+         rows={18}
+         required
+         value={form.content}
+         onChange={(event) => setForm((prev) => ({ ...prev, content: event.target.value }))}
+         isInvalid={!!fieldError('content')}
+        />
                 <Form.Control.Feedback type="invalid">{fieldError('content')}</Form.Control.Feedback>
               </div>
 
               <div className="col-12">
-                <div className="rounded-4 border overflow-hidden">
-                  <div className="px-3 py-2 border-bottom bg-light d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <div className="b-r-15 b-1-light overflow-hidden">
+                  <div className="px-3 py-2 b-b-1-light bg-light-secondary d-flex flex-wrap justify-content-between align-items-center gap-2">
                     <div>
-                      <div className="fw-semibold">Tarjimalar</div>
-                      <div className="small text-muted">Har bir til uchun sarlavha va matn alohida saqlanadi.</div>
+                      <div className="f-w-600">Tarjimalar</div>
+                      <div className="f-s-13 text-muted">Har bir til uchun sarlavha va matn alohida saqlanadi.</div>
                     </div>
-                    <div className="btn-group btn-group-sm">
+                    <div className="nav nav-tabs app-tabs-primary flex-wrap">
                       {locales.map((locale) => (
-                        <button
-                          key={locale}
-                          type="button"
-                          className={`kc-tab ${activeLocale === locale ? 'active' : ''}`}
-                          onClick={() => setActiveLocale(locale)}
-                        >
-                          {localeLabels[locale]}
-                        </button>
+                        <div key={locale} className="nav-item"><button
+                            type="button"
+                            className={`nav-link ${activeLocale === locale ? 'active' : ''}`}
+                            onClick={() => setActiveLocale(locale)}>
+                            {localeLabels[locale]}
+                          </button></div>
                       ))}
                     </div>
                   </div>
@@ -595,7 +604,7 @@ export default function Siyosatlar() {
                       <div className="col-md-7 d-flex align-items-end">
                         <div className="d-flex flex-wrap gap-1">
                           {locales.map((locale) => (
-                            <span key={locale} className={`chip ${(form.translations[locale].title.trim() || form.translations[locale].content.trim()) ? 'chip-success' : 'chip-gray'}`}>
+                            <span key={locale} className={`badge ${(form.translations[locale].title.trim() || form.translations[locale].content.trim()) ? 'text-light-success' : 'text-light-secondary'}`}>
                               {localeLabels[locale]}
                             </span>
                           ))}

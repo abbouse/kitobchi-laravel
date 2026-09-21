@@ -1,7 +1,8 @@
 import { FormEvent, useMemo, useState } from 'react';
 import { PageCrumbs } from '../Layout';
 import { router, usePage } from '@inertiajs/react';
-import { Modal, Button, Form } from 'react-bootstrap';
+import { Button, Form } from 'react-bootstrap';
+import Modal from '../components/AppModal';
 
 type PanelModule = { key: string; label: string; superOnly: boolean };
 type PanelRolePreset = { key: string; label: string; permissions: string[]; readOnly: boolean };
@@ -79,42 +80,44 @@ export function Adminlar() {
 
   return (
     <div>
-      <div className="page-head">
-        <div><h1 className="page-title">Adminlar</h1><PageCrumbs /><p className="page-subtitle">Jami {admins.length} ta admin — rol va ruxsatlar shu yerda boshqariladi</p></div>
-        <button className="btn btn-primary" onClick={() => openForm(null)}><i className="bi bi-plus-lg me-1"></i>Admin qo'shish</button>
+      <div className="d-flex align-items-end justify-content-between flex-wrap gap-3 mx-1 mb-3">
+        <div><h4 className="main-title mb-0">Adminlar</h4><PageCrumbs /><p className="mb-0 text-secondary">Jami {admins.length} ta admin — rol va ruxsatlar shu yerda boshqariladi</p></div>
+        <button className="btn btn-primary" onClick={() => openForm(null)}><i className="ti ti-plus me-1"></i>Admin qo'shish</button>
       </div>
-      <div className="card-panel">
-        <div className="table-responsive"><table className="table table-bottom-border align-middle data-table">
-          <thead><tr><th>ID</th><th>Ism</th><th>Email</th><th>Rol</th><th>Ruxsatlar</th><th>Oxirgi kirish</th><th>Holat</th><th>Amallar</th></tr></thead>
-          <tbody>{admins.map(admin => (
-            <tr key={admin.id}>
-              <td className="fw-semibold" style={{ color: 'var(--kc-ink)' }}>#{admin.id}</td>
-              <td className="fw-semibold">{admin.name}</td>
-              <td className="text-muted">{admin.email}</td>
-              <td>
-                <span className="chip chip-purple" style={{ fontSize: 9 }}>{admin.role}</span>
-                {admin.isReadOnly && <span className="chip chip-gray ms-1" style={{ fontSize: 9 }}>faqat ko'rish</span>}
-              </td>
-              <td>
-                {admin.isSuperAdmin ? (
-                  <span className="text-muted small">hammasi</span>
-                ) : (
-                  <span className="text-muted small">{(admin.permissions || []).length} ta modul</span>
-                )}
-              </td>
-              <td className="text-muted">{admin.lastLogin || '—'}</td>
-              <td><div className="form-check form-switch"><input type="checkbox" className="form-check-input" checked={admin.active} onChange={() => toggle(admin)} /></div></td>
-              <td>
-                <button className="btn btn-light-success icon-btn w-30 h-30 b-r-22 me-1" onClick={() => openForm(admin)}><i className="bi bi-pencil"></i></button>
-                <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => destroy(admin)}><i className="bi bi-trash"></i></button>
-              </td>
-            </tr>
-          ))}</tbody>
-        </table></div>
-      </div>
+      <div className="card">
+<div className="card-body">
+          <div className="table-responsive app-scroll"><table className="table table-bottom-border align-middle">
+            <thead><tr><th>ID</th><th>Ism</th><th>Email</th><th>Rol</th><th>Ruxsatlar</th><th>Oxirgi kirish</th><th>Holat</th><th>Amallar</th></tr></thead>
+            <tbody>{admins.map(admin => (
+              <tr key={admin.id}>
+                <td className="f-w-600 text-primary">#{admin.id}</td>
+                <td className="f-w-600">{admin.name}</td>
+                <td className="text-muted">{admin.email}</td>
+                <td>
+                  <span className="badge text-light-primary f-s-9">{admin.role}</span>
+                  {admin.isReadOnly && <span className="badge text-light-secondary ms-1 f-s-9">faqat ko'rish</span>}
+                </td>
+                <td>
+                  {admin.isSuperAdmin ? (
+                    <span className="text-muted f-s-13">hammasi</span>
+                  ) : (
+                    <span className="text-muted f-s-13">{(admin.permissions || []).length} ta modul</span>
+                  )}
+                </td>
+                <td className="text-muted">{admin.lastLogin || '—'}</td>
+                <td><div className="form-check form-switch"><input type="checkbox" className="form-check-input" checked={admin.active} onChange={() => toggle(admin)} /></div></td>
+                <td>
+                  <button className="btn btn-light-success icon-btn w-30 h-30 b-r-22 me-1" onClick={() => openForm(admin)}><i className="ti ti-pencil"></i></button>
+                  <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => destroy(admin)}><i className="ti ti-trash"></i></button>
+                </td>
+              </tr>
+            ))}</tbody>
+          </table></div>
+        </div>
+</div>
       <Modal show={showForm} onHide={() => setShowForm(false)} centered size="lg">
         <Form onSubmit={submit}>
-          <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">{editing ? 'Adminni tahrirlash' : "Admin qo'shish"}</Modal.Title></Modal.Header>
+          <Modal.Header closeButton><Modal.Title className="f-s-20 f-w-600">{editing ? 'Adminni tahrirlash' : "Admin qo'shish"}</Modal.Title></Modal.Header>
           <Modal.Body>
             <Form.Label>Ism</Form.Label><Form.Control name="name" required defaultValue={editing?.name || ''} className="mb-3" />
             <Form.Label>Email</Form.Label><Form.Control name="email" type="email" required defaultValue={editing?.email || ''} className="mb-3" />
@@ -126,7 +129,7 @@ export function Adminlar() {
             {selectedRole !== 'superadmin' && (
               <>
                 <Form.Label>Ruxsat berilgan bo'limlar</Form.Label>
-                <div className="row g-1 mb-2 p-2" style={{ background: 'var(--kc-bg-subtle)', borderRadius: 8, maxHeight: 220, overflowY: 'auto' }}>
+                <div className="row g-1 mb-2 p-2 bg-light-secondary b-r-8 overflow-y-auto" style={{ maxHeight: 220 }}>
                   {modules.map((m) => (
                     <div className="col-6" key={m.key}>
                       <Form.Check
@@ -150,7 +153,7 @@ export function Adminlar() {
               </>
             )}
             {selectedRole === 'superadmin' && (
-              <div className="text-muted small mb-3"><i className="bi bi-info-circle me-1"></i>Super Admin barcha bo'limga to'liq kirish huquqiga ega — ruxsatlarni alohida belgilash shart emas.</div>
+              <div className="text-muted f-s-13 mb-3"><i className="ti ti-info-circle me-1"></i>Super Admin barcha bo'limga to'liq kirish huquqiga ega — ruxsatlarni alohida belgilash shart emas.</div>
             )}
 
             <Form.Label>Parol {editing ? <span className="text-muted">(bo'sh qoldirilsa o'zgarmaydi)</span> : null}</Form.Label>
@@ -220,97 +223,99 @@ export function ApiClients() {
 
   return (
     <div>
-      <div className="page-head">
-        <div><h1 className="page-title">API mijozlar</h1><PageCrumbs /><p className="page-subtitle">Jami {apiClients.length} ta client</p></div>
+      <div className="d-flex align-items-end justify-content-between flex-wrap gap-3 mx-1 mb-3">
+        <div><h4 className="main-title mb-0">API mijozlar</h4><PageCrumbs /><p className="mb-0 text-secondary">Jami {apiClients.length} ta client</p></div>
         <div className="d-flex gap-2">
-          <a className="btn btn-outline-secondary" href="/developers/api"><i className="bi bi-file-earmark-code me-1"></i>Docs</a>
-          <button className="btn btn-outline-secondary" onClick={() => setShowLogs(true)}><i className="bi bi-journal-code me-1"></i>API Logs</button>
-          <button className="btn btn-primary" onClick={() => { setEditing(null); setShowForm(true); }}><i className="bi bi-plus-lg me-1"></i>Client qo'shish</button>
+          <a className="btn btn-outline-secondary" href="/developers/api"><i className="ti ti-file-code me-1"></i>Docs</a>
+          <button className="btn btn-outline-secondary" onClick={() => setShowLogs(true)}><i className="ti ti-file-code me-1"></i>API Logs</button>
+          <button className="btn btn-primary" onClick={() => { setEditing(null); setShowForm(true); }}><i className="ti ti-plus me-1"></i>Client qo'shish</button>
         </div>
       </div>
       {(apiClientsMeta?.warnings || []).length ? (
-        <div className="alert alert-warning border-0 shadow-sm rounded-4">
-          <div className="fw-semibold mb-1">Sahifa himoyalangan rejimda ishlayapti</div>
+        <div className="alert alert-light-warning">
+          <div className="f-w-600 mb-1">Sahifa himoyalangan rejimda ishlayapti</div>
           <ul className="mb-0 ps-3">
             {(apiClientsMeta?.warnings || []).map((warning) => <li key={warning}>{warning}</li>)}
           </ul>
         </div>
       ) : null}
-      <div className="card-panel">
-        <div className="table-responsive"><table className="table table-bottom-border align-middle data-table">
-          <thead><tr><th>ID</th><th>Nomi</th><th>Credentials (App ID & Secret)</th><th>So'rovlar</th><th>Limit</th><th>Holat</th><th>Amallar</th></tr></thead>
-          <tbody>{apiClients.map(client => (
-            <tr key={client.id}>
-              <td className="fw-semibold" style={{ color: 'var(--kc-ink)' }}>#{client.id}</td>
-              <td className="fw-semibold">{client.name}{client.sellerName ? <div className="text-muted small"><i className="bi bi-shop me-1"></i>{client.sellerName}</div> : (client.sellerId ? <div className="text-muted small"><i className="bi bi-shop me-1"></i>#{client.sellerId}</div> : null)}</td>
-              <td>
-                <div className="d-flex flex-column gap-1" style={{ minWidth: 260 }}>
-                  <div className="d-flex align-items-center gap-1">
-                    <span className="badge bg-secondary-subtle text-dark border px-1" style={{ fontSize: 9 }}>ID</span>
-                    <code style={{ fontSize: 11, background: 'var(--kc-bg-subtle)', padding: '2px 6px', borderRadius: 4 }}>{client.key}</code>
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-link p-0 text-muted"
-                      title="App ID nusxalash"
-                      onClick={() => copyToClipboard(client.key, `id-${client.id}`)}
-                    >
-                      <i className={`bi ${copiedKey === `id-${client.id}` ? 'bi-check2 text-success' : 'bi-clipboard'}`}></i>
-                    </button>
-                  </div>
-                  {client.secret ? (
+      <div className="card">
+<div className="card-body">
+          <div className="table-responsive app-scroll"><table className="table table-bottom-border align-middle">
+            <thead><tr><th>ID</th><th>Nomi</th><th>Credentials (App ID & Secret)</th><th>So'rovlar</th><th>Limit</th><th>Holat</th><th>Amallar</th></tr></thead>
+            <tbody>{apiClients.map(client => (
+              <tr key={client.id}>
+                <td className="f-w-600 text-primary">#{client.id}</td>
+                <td className="f-w-600">{client.name}{client.sellerName ? <div className="text-muted f-s-13"><i className="ti ti-building-store me-1"></i>{client.sellerName}</div> : (client.sellerId ? <div className="text-muted f-s-13"><i className="ti ti-building-store me-1"></i>#{client.sellerId}</div> : null)}</td>
+                <td>
+                  <div className="d-flex flex-column gap-1" style={{ minWidth: 260 }}>
                     <div className="d-flex align-items-center gap-1">
-                      <span className="badge bg-secondary-subtle text-dark border px-1" style={{ fontSize: 9 }}>Secret</span>
-                      <code style={{ fontSize: 11, background: 'var(--kc-bg-subtle)', padding: '2px 6px', borderRadius: 4, letterSpacing: showSecret[client.id] ? 'normal' : '2px' }}>
-                        {showSecret[client.id] ? client.secret : '••••••••••••••••'}
-                      </code>
-                      <button
-                        type="button"
-                        className="btn btn-sm btn-link p-0 text-muted ms-1"
-                        title={showSecret[client.id] ? "Yashirish" : "Ko'rish"}
-                        onClick={() => setShowSecret(prev => ({ ...prev, [client.id]: !prev[client.id] }))}
-                      >
-                        <i className={`bi ${showSecret[client.id] ? 'bi-eye-slash' : 'bi-eye'}`}></i>
-                      </button>
+                      <span className="badge bg-light-secondary text-dark b-1-light px-1 f-s-9">ID</span>
+                      <code className="f-s-11 bg-light-secondary b-r-4" style={{ padding: '2px 6px' }}>{client.key}</code>
                       <button
                         type="button"
                         className="btn btn-sm btn-link p-0 text-muted"
-                        title="App Secret nusxalash"
-                        onClick={() => copyToClipboard(client.secret || '', `sec-${client.id}`)}
+                        title="App ID nusxalash"
+                        onClick={() => copyToClipboard(client.key, `id-${client.id}`)}
                       >
-                        <i className={`bi ${copiedKey === `sec-${client.id}` ? 'bi-check2 text-success' : 'bi-clipboard'}`}></i>
+                        <i className={`ti ${copiedKey === `id-${client.id}` ? 'ti-check text-success' : 'ti-clipboard'}`}></i>
                       </button>
                     </div>
-                  ) : null}
-                </div>
-              </td>
-              <td>{client.requests.toLocaleString()}</td>
-              <td>{client.rateLimitSecond != null || client.rateLimitMinute != null ? `${client.rateLimitSecond ?? 0}/s · ${client.rateLimitMinute ?? 0}/m` : 'Limitlar sozlanmagan'}</td>
-              <td><div className="form-check form-switch"><input type="checkbox" className="form-check-input" checked={client.active} onChange={() => patch(client.toggleUrl)} /></div></td>
-              <td>
-                <button className="btn btn-light-success icon-btn w-30 h-30 b-r-22 me-1" onClick={() => { setEditing(client); setShowForm(true); }}><i className="bi bi-pencil"></i></button>
-                <button className="btn btn-sm btn-light-secondary me-1" title="Webhooklar" onClick={() => { setSelectedEvents([]); setWebhookClientId(client.id); }}>
-                  <i className="bi bi-broadcast"></i>
-                  {(client.webhooks?.length || 0) > 0 ? <span className="badge bg-secondary ms-1" style={{ fontSize: 9 }}>{client.webhooks!.length}</span> : null}
-                </button>
-                <button className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22 me-1" title="Secret kalitni qayta yaratish" onClick={() => { if (confirm(`${client.name} uchun API kalit qayta yaratilsinmi? Eski kalit darhol ishlamay qoladi.`)) patch(client.regenerateUrl); }}><i className="bi bi-arrow-repeat"></i></button>
-                <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => destroy(client)}><i className="bi bi-trash"></i></button>
-              </td>
-            </tr>
-          ))}</tbody>
-        </table></div>
-      </div>
+                    {client.secret ? (
+                      <div className="d-flex align-items-center gap-1">
+                        <span className="badge bg-light-secondary text-dark b-1-light px-1 f-s-9">Secret</span>
+                        <code className="f-s-11 bg-light-secondary b-r-4" style={{ padding: '2px 6px', letterSpacing: showSecret[client.id] ? 'normal' : '2px' }}>
+                          {showSecret[client.id] ? client.secret : '••••••••••••••••'}
+                        </code>
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-link p-0 text-muted ms-1"
+                          title={showSecret[client.id] ? "Yashirish" : "Ko'rish"}
+                          onClick={() => setShowSecret(prev => ({ ...prev, [client.id]: !prev[client.id] }))}
+                        >
+                          <i className={`ti ${showSecret[client.id] ? 'ti-eye-off' : 'ti-eye'}`}></i>
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-link p-0 text-muted"
+                          title="App Secret nusxalash"
+                          onClick={() => copyToClipboard(client.secret || '', `sec-${client.id}`)}
+                        >
+                          <i className={`ti ${copiedKey === `sec-${client.id}` ? 'ti-check text-success' : 'ti-clipboard'}`}></i>
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
+                </td>
+                <td>{client.requests.toLocaleString()}</td>
+                <td>{client.rateLimitSecond != null || client.rateLimitMinute != null ? `${client.rateLimitSecond ?? 0}/s · ${client.rateLimitMinute ?? 0}/m` : 'Limitlar sozlanmagan'}</td>
+                <td><div className="form-check form-switch"><input type="checkbox" className="form-check-input" checked={client.active} onChange={() => patch(client.toggleUrl)} /></div></td>
+                <td>
+                  <button className="btn btn-light-success icon-btn w-30 h-30 b-r-22 me-1" onClick={() => { setEditing(client); setShowForm(true); }}><i className="ti ti-pencil"></i></button>
+                  <button className="btn btn-sm btn-light-secondary me-1" title="Webhooklar" onClick={() => { setSelectedEvents([]); setWebhookClientId(client.id); }}>
+                    <i className="ti ti-broadcast"></i>
+                    {(client.webhooks?.length || 0) > 0 ? <span className="badge bg-secondary ms-1 f-s-9">{client.webhooks!.length}</span> : null}
+                  </button>
+                  <button className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22 me-1" title="Secret kalitni qayta yaratish" onClick={() => { if (confirm(`${client.name} uchun API kalit qayta yaratilsinmi? Eski kalit darhol ishlamay qoladi.`)) patch(client.regenerateUrl); }}><i className="ti ti-repeat"></i></button>
+                  <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => destroy(client)}><i className="ti ti-trash"></i></button>
+                </td>
+              </tr>
+            ))}</tbody>
+          </table></div>
+        </div>
+</div>
       <Modal show={showLogs} onHide={() => setShowLogs(false)} centered size="lg">
-        <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">API Logs (oxirgi 50 ta)</Modal.Title></Modal.Header>
+        <Modal.Header closeButton><Modal.Title className="f-s-20 f-w-600">API Logs (oxirgi 50 ta)</Modal.Title></Modal.Header>
         <Modal.Body>
-          <div className="table-responsive"><table className="table table-bottom-border align-middle data-table">
+          <div className="table-responsive app-scroll"><table className="table table-bottom-border align-middle">
             <thead><tr><th>Method</th><th>Path</th><th>Status</th><th>Vaqt</th><th>Client</th></tr></thead>
             <tbody>{apiLogs.map((log) => (
               <tr key={log.id}>
-                <td><span className={`chip ${log.method === 'GET' ? 'chip-success' : log.method === 'POST' ? 'chip-info' : 'chip-danger'}`} style={{ fontSize: 9, fontFamily: 'monospace' }}>{log.method}</span></td>
-                <td className="fw-semibold" style={{ fontSize: 11 }}>{log.path}</td>
-                <td><span className={`chip ${log.status < 300 ? 'chip-success' : log.status < 400 ? 'chip-warning' : 'chip-danger'}`} style={{ fontSize: 9 }}>{log.status}</span></td>
-                <td className="text-muted small">{log.date}</td>
-                <td className="text-muted small">{log.client}</td>
+                <td><span className={`badge ${log.method === 'GET' ? 'text-light-success' : log.method === 'POST' ? 'text-light-info' : 'text-light-danger'} f-s-9 font-monospace`}>{log.method}</span></td>
+                <td className="f-w-600 f-s-11">{log.path}</td>
+                <td><span className={`badge ${log.status < 300 ? 'text-light-success' : log.status < 400 ? 'text-light-warning' : 'text-light-danger'} f-s-9`}>{log.status}</span></td>
+                <td className="text-muted f-s-13">{log.date}</td>
+                <td className="text-muted f-s-13">{log.client}</td>
               </tr>
             ))}</tbody>
           </table></div>
@@ -319,11 +324,11 @@ export function ApiClients() {
       </Modal>
       <Modal show={showForm} onHide={() => setShowForm(false)} centered>
         <Form onSubmit={submit}>
-          <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">{editing ? 'API mijozni tahrirlash' : "API mijoz qo'shish"}</Modal.Title></Modal.Header>
+          <Modal.Header closeButton><Modal.Title className="f-s-20 f-w-600">{editing ? 'API mijozni tahrirlash' : "API mijoz qo'shish"}</Modal.Title></Modal.Header>
           <Modal.Body>
             <Form.Label>Nomi</Form.Label><Form.Control name="name" required defaultValue={editing?.name || ''} className="mb-3" />
             <Form.Label>Abilities</Form.Label><Form.Control name="abilities" placeholder="read, stock:write" defaultValue={editing?.abilities || 'read'} className="mb-1" />
-            <div className="text-muted small mb-3">Seller integratsiyasi uchun: <code>read, stock:write</code></div>
+            <div className="text-muted f-s-13 mb-3">Seller integratsiyasi uchun: <code>read, stock:write</code></div>
             <Form.Label>Seller ID <span className="text-muted">(ixtiyoriy — kalitni do'konga bog'lash)</span></Form.Label>
             <Form.Control name="seller_id" type="number" min={1} placeholder="Masalan: 12" defaultValue={editing?.sellerId ?? ''} className="mb-3" />
             <Form.Label>Ruxsat etilgan IP'lar <span className="text-muted">(ixtiyoriy, vergul/qator bilan; bo'sh = hamma)</span></Form.Label>
@@ -339,19 +344,19 @@ export function ApiClients() {
       </Modal>
       <Modal show={webhookClient !== null} onHide={() => setWebhookClientId(null)} centered size="lg">
         <Modal.Header closeButton>
-          <Modal.Title className="fs-5 fw-bold">Webhooklar — {webhookClient?.name}</Modal.Title>
+          <Modal.Title className="f-s-20 f-w-600">Webhooklar — {webhookClient?.name}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           {(webhookClient?.webhooks || []).length ? (
-            <div className="table-responsive mb-4"><table className="table table-bottom-border align-middle data-table">
+            <div className="table-responsive app-scroll mb-4"><table className="table table-bottom-border align-middle">
               <thead><tr><th>URL</th><th>Hodisalar</th><th>Xato</th><th>Holat</th><th></th></tr></thead>
               <tbody>{(webhookClient?.webhooks || []).map((w) => (
                 <tr key={w.id}>
-                  <td style={{ fontSize: 11 }}><code>{w.url}</code></td>
-                  <td>{w.events.map((e) => <span key={e} className="chip chip-info me-1 mb-1" style={{ fontSize: 9 }}>{e}</span>)}</td>
-                  <td>{w.failures > 0 ? <span className="chip chip-danger" style={{ fontSize: 9 }}>{w.failures}</span> : <span className="text-muted">—</span>}</td>
+                  <td className="f-s-11"><code>{w.url}</code></td>
+                  <td>{w.events.map((e) => <span key={e} className="badge text-light-info me-1 mb-1 f-s-9">{e}</span>)}</td>
+                  <td>{w.failures > 0 ? <span className="badge text-light-danger f-s-9">{w.failures}</span> : <span className="text-muted">—</span>}</td>
                   <td><div className="form-check form-switch"><input type="checkbox" className="form-check-input" checked={w.active} onChange={() => patch(w.toggleUrl)} /></div></td>
-                  <td><button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => removeWebhook(w.destroyUrl)}><i className="bi bi-trash"></i></button></td>
+                  <td><button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => removeWebhook(w.destroyUrl)}><i className="ti ti-trash"></i></button></td>
                 </tr>
               ))}</tbody>
             </table></div>
@@ -366,7 +371,7 @@ export function ApiClients() {
                 <Form.Check inline key={ev} type="checkbox" id={`ev-${ev}`} label={ev} checked={selectedEvents.includes(ev)} onChange={() => toggleEvent(ev)} />
               ))}
             </div>
-            <div className="text-muted small mb-3">Imzo: har yetkazishda <code>X-Kitobchi-Signature: sha256=HMAC(secret, body)</code>. Secret webhook yaratilganda avtomatik beriladi.</div>
+            <div className="text-muted f-s-13 mb-3">Imzo: har yetkazishda <code>X-Kitobchi-Signature: sha256=HMAC(secret, body)</code>. Secret webhook yaratilganda avtomatik beriladi.</div>
             <Button type="submit" className="btn-primary border-0" disabled={selectedEvents.length === 0}>Webhook qo'shish</Button>
           </Form>
         </Modal.Body>

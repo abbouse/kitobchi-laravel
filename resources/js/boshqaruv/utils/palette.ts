@@ -8,58 +8,62 @@ import { useEffect, useState } from 'react';
  * `getComputedStyle` orqali o'qiladi va mavzu almashganda qayta hisoblanadi.
  */
 
+// Har bir kalit: [Axelit o'zgaruvchisi, shaffoflik]. RGB uchlik o'zgaruvchilar
+// (--primary, --success ...) rgba() ga, qolganlari (--font-color ...) o'zicha.
 const TOKENS = {
-  ink: '--kc-ink',
-  text: '--kc-text',
-  soft: '--kc-text-soft',
-  muted: '--kc-text-muted',
-  line: '--kc-border-subtle',
-  grid: '--kc-border-subtle',
-  surface: '--kc-bg-card',
-  page: '--kc-bg-page',
-  ok: '--kc-ok',
-  warn: '--kc-warn',
-  danger: '--kc-danger',
-  info: '--kc-info',
-  neutral: '--kc-neutral',
-  indigo: '--kc-chart-indigo',
-  violet: '--kc-chart-violet',
-  dviolet: '--kc-chart-dviolet',
-  navy: '--kc-chart-navy',
-  steel: '--kc-chart-steel',
-  teal: '--kc-chart-teal',
-  green: '--kc-chart-green',
-  dgreen: '--kc-chart-dgreen',
-  amber: '--kc-chart-amber',
-  orange: '--kc-chart-orange',
-  plum: '--kc-chart-plum',
-  red: '--kc-chart-red',
-  dred: '--kc-chart-dred',
+  ink: ['--primary', 1],
+  text: ['--font-color', 1],
+  soft: ['--dark', 0.75],
+  muted: ['--secondary', 1],
+  line: ['--border_color', 1],
+  grid: ['--grid_color', 1],
+  surface: ['--white', 1],
+  page: ['--bodybg-color', 1],
+  ok: ['--success', 1],
+  warn: ['--warning-dark', 1],
+  danger: ['--danger', 1],
+  info: ['--info', 1],
+  neutral: ['--secondary', 1],
+  indigo: ['--primary', 1],
+  violet: ['--primary', 0.45],
+  dviolet: ['--primary-dark', 1],
+  navy: ['--info', 1],
+  steel: ['--info', 0.45],
+  teal: ['--info-dark', 1],
+  green: ['--success', 1],
+  dgreen: ['--success', 0.5],
+  amber: ['--warning', 1],
+  orange: ['--warning-dark', 1],
+  plum: ['--danger', 1],
+  red: ['--danger', 0.45],
+  dred: ['--danger-dark', 1],
 } as const;
 
 export type PaletteKey = keyof typeof TOKENS;
 export type Palette = Record<PaletteKey, string>;
 
-/** SSR va birinchi render uchun zaxira qiymatlar (yorug' mavzu). */
+/** SSR va birinchi render uchun zaxira qiymatlar (Axelit yorug' mavzusi). */
 const FALLBACK: Palette = {
-  ink: '#8C76F0', text: '#15264B', soft: 'rgba(40, 38, 50, .75)', muted: '#646464',
-  line: '#E0DFD6', grid: '#E0DFD6', surface: '#FFFFFF', page: '#F6F6F6',
-  ok: '#147834', warn: '#63591D', danger: '#F00AC8', info: '#2E5EE7', neutral: '#646464',
-  indigo: '#8C76F0', violet: 'rgba(140, 118, 240, .45)', dviolet: '#241187', navy: '#2E5EE7',
-  steel: 'rgba(46, 94, 231, .45)', teal: '#083C80', green: '#147834', dgreen: 'rgba(20, 120, 52, .5)',
-  amber: '#D7DC41', orange: '#63591D', plum: '#F00AC8', red: 'rgba(240, 10, 200, .45)', dred: '#660F6A',
+  ink: 'rgb(140, 118, 240)', text: '#15264b', soft: 'rgba(40, 38, 50, .75)', muted: 'rgb(100, 100, 100)',
+  line: '#e0dfd6', grid: 'rgba(144, 164, 246, .21)', surface: 'rgb(255, 255, 255)', page: '#f6f6f6',
+  ok: 'rgb(20, 120, 52)', warn: 'rgb(99, 89, 29)', danger: 'rgb(240, 10, 200)', info: 'rgb(46, 94, 231)', neutral: 'rgb(100, 100, 100)',
+  indigo: 'rgb(140, 118, 240)', violet: 'rgba(140, 118, 240, .45)', dviolet: 'rgb(36, 17, 135)', navy: 'rgb(46, 94, 231)',
+  steel: 'rgba(46, 94, 231, .45)', teal: 'rgb(8, 60, 128)', green: 'rgb(20, 120, 52)', dgreen: 'rgba(20, 120, 52, .5)',
+  amber: 'rgb(215, 220, 65)', orange: 'rgb(99, 89, 29)', plum: 'rgb(240, 10, 200)', red: 'rgba(240, 10, 200, .45)', dred: 'rgb(102, 15, 106)',
 };
 
 export function readPalette(scope?: Element | null): Palette {
   if (typeof window === 'undefined' || typeof getComputedStyle !== 'function') {
     return { ...FALLBACK };
   }
-  // Tokenlar body'da qayta hisoblanadi (qorong'i rejim body.dark da yoqiladi)
+  // Axelit qorong'i mavzusi body.dark da — qiymatlar body'dan o'qiladi
   const styles = getComputedStyle(scope || document.body || document.documentElement);
   const out = {} as Palette;
   (Object.keys(TOKENS) as PaletteKey[]).forEach((key) => {
-    const value = styles.getPropertyValue(TOKENS[key]).trim();
-    out[key] = value || FALLBACK[key];
+    const [name, alpha] = TOKENS[key];
+    const raw = styles.getPropertyValue(name).trim();
+    if (!raw) { out[key] = FALLBACK[key]; return; }
+    out[key] = /^\d+\s*,\s*\d+\s*,\s*\d+$/.test(raw) ? `rgba(${raw}, ${alpha})` : raw;
   });
   return out;
 }

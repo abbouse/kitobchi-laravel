@@ -1,9 +1,12 @@
-import { toneOf } from '../utils/tone';
+import { toneOf, toneBadge } from '../utils/tone';
 import { PageCrumbs } from '../Layout';
 import { useMemo, useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
-import { Button, Modal } from 'react-bootstrap';
+import { Button } from 'react-bootstrap';
+import Modal from '../components/AppModal';
 import PaginationControls from '../components/PaginationControls';
+
+import { StatWidget } from '../components/Axelit';
 
 const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n || 0);
 type Counts = Record<string, number>;
@@ -100,11 +103,11 @@ const courierLabel = (status?: string) => ({
 }[String(status || '')] || status || '—');
 
 const chip = (status?: string, badge?: string) => {
-  if (badge === 'badge-success' || status === 'approved' || status === 'delivered' || status === 'customer_received') return 'chip-success';
-  if (badge === 'badge-danger' || status === 'rejected' || status === 'blocked' || status === 'cancelled' || status === 'returned') return 'chip-danger';
-  if (badge === 'badge-info' || status === 'pending') return 'chip-info';
-  if (badge === 'badge-warning' || status === 'in_delivery') return 'chip-warning';
-  return 'chip-gray';
+  if (badge === 'badge-success' || status === 'approved' || status === 'delivered' || status === 'customer_received') return 'text-light-success';
+  if (badge === 'badge-danger' || status === 'rejected' || status === 'blocked' || status === 'cancelled' || status === 'returned') return 'text-light-danger';
+  if (badge === 'badge-info' || status === 'pending') return 'text-light-info';
+  if (badge === 'badge-warning' || status === 'in_delivery') return 'text-light-warning';
+  return 'text-light-secondary';
 };
 
 export default function CourierOrders() {
@@ -153,45 +156,55 @@ export default function CourierOrders() {
 
   return (
     <div>
-      <div className="page-head"><div><h1 className="page-title">{isOrderPage ? 'Kuryer buyurtmalari' : 'Kuryerlar'}</h1><PageCrumbs /><p className="page-subtitle">{isOrderPage ? 'Kuryer orderlari, statuslar, mijoz qidiruvi va jarimalar' : 'Kuryer profillari, online holat, lokatsiya, verifikatsiya va balans'}</p></div></div>
-      <div className="kpi-strip row g-3 mb-4">
+      <div className="d-flex align-items-end justify-content-between flex-wrap gap-3 mx-1 mb-3"><div><h4 className="main-title mb-0">{isOrderPage ? 'Kuryer buyurtmalari' : 'Kuryerlar'}</h4><PageCrumbs /><p className="mb-0 text-secondary">{isOrderPage ? 'Kuryer orderlari, statuslar, mijoz qidiruvi va jarimalar' : 'Kuryer profillari, online holat, lokatsiya, verifikatsiya va balans'}</p></div></div>
+      <div className="row">
         {(isOrderPage ? [
-          ['Jami order', courierOrderCounts.all || 0, 'bi-truck', 'var(--kc-ink)'],
-          ["Yo'lda", courierOrderCounts.in_delivery || 0, 'bi-signpost-split', 'var(--kc-cat-navy)'],
-          ['Yetkazildi', courierOrderCounts.delivered || 0, 'bi-check-circle', 'var(--kc-ok)'],
-          ['Mijoz qabul qildi', courierOrderCounts.customer_received || 0, 'bi-bag-check', 'var(--kc-cat-violet)'],
+          ['Jami order', courierOrderCounts.all || 0, 'ti-truck', 'rgba(var(--primary), 1)'],
+          ["Yo'lda", courierOrderCounts.in_delivery || 0, 'ti-directions', 'rgba(var(--info), 1)'],
+          ['Yetkazildi', courierOrderCounts.delivered || 0, 'ti-circle-check', 'rgba(var(--success), 1)'],
+          ['Mijoz qabul qildi', courierOrderCounts.customer_received || 0, 'ti-shopping-bag', 'rgba(var(--primary), 1)'],
         ] : [
-          ['Kutilmoqda', courierCounts.pending || 0, 'bi-hourglass-split', 'var(--kc-warn)'],
-          ['Faol kuryer', courierCounts.approved || 0, 'bi-bicycle', 'var(--kc-ok)'],
-          ['Online', onlineCount, 'bi-broadcast-pin', 'var(--kc-cat-navy)'],
-          ['Kuryer balansi', `${fmt(totalBalance)} so'm`, 'bi-wallet2', 'var(--kc-cat-violet)'],
-        ]).map(([label, value, icon, color]) => <div className="col-xl-3 col-md-6" key={String(label)}><div className="stat-card"><div className="d-flex align-items-center gap-3"><div><div className="stat-value">{value}</div><div className="stat-label">{label}</div></div></div></div></div>)}
+          ['Kutilmoqda', courierCounts.pending || 0, 'ti-hourglass', 'rgba(var(--warning-dark), 1)'],
+          ['Faol kuryer', courierCounts.approved || 0, 'ti-bike', 'rgba(var(--success), 1)'],
+          ['Online', onlineCount, 'ti-broadcast', 'rgba(var(--info), 1)'],
+          ['Kuryer balansi', `${fmt(totalBalance)} so'm`, 'ti-wallet', 'rgba(var(--primary), 1)'],
+        ]).map(([label, value, icon, color], kpiIndex) => <div className="col-xl-3 col-md-6" key={String(label)}><StatWidget index={kpiIndex} label={label} value={value} /></div>)}
       </div>
 
-      {!isOrderPage ? <div className="card-panel">
-        <div className="panel-head"><div><div className="panel-title">Kuryerlar jadvali</div><small className="text-muted">{courierPagination.total} ta kuryer topildi</small></div><input className="form-control form-control-sm" style={{ maxWidth: 280 }} value={courierSearch} onChange={(e) => setCourierSearch(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && load({ couriers_page: 1 })} placeholder="Ism, telefon, hudud yoki raqam" /></div>
-        <div className="kc-tabs d-flex flex-wrap gap-2 mb-3">{courierTabs.map((tab) => <button key={tab.key} className={`kc-tab ${courierTab === tab.key ? 'active' : ''}`} onClick={() => { setCourierTab(tab.key); load({ couriers_page: 1, couriers_tab: tab.key }); }}>{tab.label}<span className="badge rounded-pill bg-light text-dark ms-2">{fmt(courierCounts[tab.key] || 0)}</span></button>)}</div>
-        <div className="table-responsive"><table className="table table-bottom-border align-middle data-table"><thead><tr><th>ID</th><th>Kuryer</th><th>Ish holati</th><th>Hudud</th><th>Transport</th><th className="right">Buyurtma</th><th className="right">Balans</th><th>Ogohlantirish</th><th>Holat</th><th>Amallar</th></tr></thead><tbody>
-          {couriers.map((courier) => <tr key={courier.id}>
-            <td className="cell-id">#{courier.id}</td>
-            <td><div className="d-flex align-items-center gap-2"><Avatar row={courier} /><div><div className="fw-semibold">{courier.name}</div><small className="text-muted">{courier.phone || '—'}</small></div></div></td>
-            <td><span className={`chip ${courier.isOnline ? 'chip-success' : 'chip-gray'}`}>{courier.isOnline ? 'Online' : 'Offline'}</span><small className="d-block text-muted">{courier.availabilityUpdatedAt || courier.location?.updatedAt || '—'}</small></td>
-            <td>{courier.region || '—'}</td><td><div>{courier.transportLabel || courier.transport || '—'}</div><small className="text-muted">{courier.plate || courier.vehicle}</small></td>
-            <td className="right money">{courier.orders || 0}</td><td>{fmt(courier.balance || 0)} so'm</td>
-            <td><span className={`chip ${(courier.warningCount || 0) > 0 ? 'chip-warning' : 'chip-gray'}`}>{courier.warningCount || 0}/3</span></td>
-            <td><span className={`st ${toneOf(chip(courier.status))}`}><i></i>{courierLabel(courier.status)}</span></td>
-            <td><button className="btn btn-light-primary icon-btn w-30 h-30 b-r-22 me-1" onClick={() => setSelectedCourier(courier)}><i className="bi bi-eye"></i></button>{courier.status !== 'approved' ? <button className="btn btn-light-success icon-btn w-30 h-30 b-r-22 me-1" onClick={() => patch(courier.actions?.approveUrl, {}, 'Kuryer tasdiqlansinmi?')}><i className="bi bi-check2-circle"></i></button> : null}<button className="btn btn-light-warning icon-btn w-30 h-30 b-r-22" onClick={() => warn(courier)}><i className="bi bi-exclamation-triangle"></i></button></td>
-          </tr>)}{courierPagination.total === 0 ? <tr><td colSpan={10} className="text-center text-muted py-5">Kuryer topilmadi</td></tr> : null}
-        </tbody></table></div><PaginationControls {...courierPagination} onPageChange={(page) => load({ couriers_page: page })} />
+      {!isOrderPage ? <div className="card">
+        <div className="card-header d-flex align-items-center justify-content-between gap-2 flex-wrap"><div><h5 className="f-w-600">Kuryerlar jadvali</h5><small className="text-muted">{courierPagination.total} ta kuryer topildi</small></div><input className="form-control form-control-sm" style={{ maxWidth: 280 }} value={courierSearch} onChange={(e) => setCourierSearch(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && load({ couriers_page: 1 })} placeholder="Ism, telefon, hudud yoki raqam" /></div>
+        <div className="card-body">
+
+          <div className="nav nav-tabs app-tabs-primary flex-wrap mb-3">{courierTabs.map((tab) => <div key={tab.key} className="nav-item"><button
+              className={`nav-link ${courierTab === tab.key ? 'active' : ''}`}
+              onClick={() => { setCourierTab(tab.key); load({ couriers_page: 1, couriers_tab: tab.key }); }}>{tab.label}<span className="badge text-light-secondary ms-2">{fmt(courierCounts[tab.key] || 0)}</span></button></div>)}</div>
+          <div className="table-responsive app-scroll"><table className="table table-bottom-border align-middle"><thead><tr><th>ID</th><th>Kuryer</th><th>Ish holati</th><th>Hudud</th><th>Transport</th><th className="text-end">Buyurtma</th><th className="text-end">Balans</th><th>Ogohlantirish</th><th>Holat</th><th>Amallar</th></tr></thead><tbody>
+            {couriers.map((courier) => <tr key={courier.id}>
+              <td className="f-w-600 text-nowrap">#{courier.id}</td>
+              <td><div className="d-flex align-items-center gap-2"><Avatar row={courier} /><div><div className="f-w-600">{courier.name}</div><small className="text-muted">{courier.phone || '—'}</small></div></div></td>
+              <td><span className={`badge ${courier.isOnline ? 'text-light-success' : 'text-light-secondary'}`}>{courier.isOnline ? 'Online' : 'Offline'}</span><small className="d-block text-muted">{courier.availabilityUpdatedAt || courier.location?.updatedAt || '—'}</small></td>
+              <td>{courier.region || '—'}</td><td><div>{courier.transportLabel || courier.transport || '—'}</div><small className="text-muted">{courier.plate || courier.vehicle}</small></td>
+              <td className="text-end f-w-600 text-nowrap">{courier.orders || 0}</td><td>{fmt(courier.balance || 0)} so'm</td>
+              <td><span className={`badge ${(courier.warningCount || 0) > 0 ? 'text-light-warning' : 'text-light-secondary'}`}>{courier.warningCount || 0}/3</span></td>
+              <td><span className={`badge text-uppercase ${toneBadge(toneOf(chip(courier.status)))}`}>{courierLabel(courier.status)}</span></td>
+              <td><button className="btn btn-light-primary icon-btn w-30 h-30 b-r-22 me-1" onClick={() => setSelectedCourier(courier)}><i className="ti ti-eye"></i></button>{courier.status !== 'approved' ? <button className="btn btn-light-success icon-btn w-30 h-30 b-r-22 me-1" onClick={() => patch(courier.actions?.approveUrl, {}, 'Kuryer tasdiqlansinmi?')}><i className="ti ti-circle-check"></i></button> : null}<button className="btn btn-light-warning icon-btn w-30 h-30 b-r-22" onClick={() => warn(courier)}><i className="ti ti-alert-triangle"></i></button></td>
+            </tr>)}{courierPagination.total === 0 ? <tr><td colSpan={10} className="text-center py-5 text-secondary"><i className="iconoir-archive d-flex justify-content-center mb-2 f-s-30 text-primary"></i>Kuryer topilmadi</td></tr> : null}
+          </tbody></table></div><PaginationControls {...courierPagination} onPageChange={(page) => load({ couriers_page: page })} />
+        </div>
       </div> : null}
 
-      {isOrderPage ? <div className="card-panel">
-        <div className="panel-head"><div><div className="panel-title">Kuryer buyurtmalari</div><small className="text-muted">{courierOrderPagination.total} ta yozuv topildi</small></div><input className="form-control form-control-sm" style={{ maxWidth: 360 }} value={orderSearch} onChange={(e) => setOrderSearch(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && load({ courier_orders_page: 1 })} placeholder="Order ID, mijoz raqami/ismi yoki kuryer" /></div>
-        <div className="kc-tabs d-flex flex-wrap gap-2 mb-3">{orderTabs.map((tab) => <button key={tab.key} className={`kc-tab ${orderTab === tab.key ? 'active' : ''}`} onClick={() => { setOrderTab(tab.key); load({ courier_orders_page: 1, courier_orders_tab: tab.key }); }}>{tab.label}<span className="badge rounded-pill bg-light text-dark ms-2">{fmt(courierOrderCounts[tab.key] || 0)}</span></button>)}</div>
-        <div className="table-responsive"><table className="table table-bottom-border align-middle data-table"><thead><tr><th>ID</th><th>Kuryer</th><th>Mijoz</th><th>Summa</th><th>To'lov</th><th>Holat</th><th>Sana</th><th>Amallar</th></tr></thead><tbody>
-          {courierOrders.map((order) => <tr key={order.id}><td><strong>#{order.id}</strong><small className="d-block text-muted">ORD #{order.orderId || '—'}</small></td><td><div className="fw-semibold">{order.courier}</div><small className="text-muted">{order.courierPhone || '—'}</small></td><td><div>{order.customer}</div><small className="text-muted">{order.customerPhone || '—'}</small></td><td><strong>{fmt(order.amount)} so'm</strong><small className="d-block text-muted">Ulush: {fmt((order.courierPrice || 0) + (order.bonus || 0))}</small></td><td>{order.paymentStatus || '—'}</td><td><select className={`form-select form-select-sm ${chip(order.status, order.statusBadge)}`} value={order.status} onChange={(e) => patch(order.statusUrl, { status: e.target.value })}>{Object.entries(courierOrderStatuses).map(([value, meta]) => <option key={value} value={value}>{meta.label}</option>)}</select></td><td className="text-muted">{order.date || '—'}</td><td><button className="btn btn-light-primary icon-btn w-30 h-30 b-r-22" onClick={() => setSelectedOrder(order)}><i className="bi bi-eye"></i></button></td></tr>)}
-          {courierOrderPagination.total === 0 ? <tr><td colSpan={8} className="text-center text-muted py-5">Buyurtma topilmadi</td></tr> : null}
-        </tbody></table></div><PaginationControls {...courierOrderPagination} onPageChange={(page) => load({ courier_orders_page: page })} />
+      {isOrderPage ? <div className="card">
+        <div className="card-header d-flex align-items-center justify-content-between gap-2 flex-wrap"><div><h5 className="f-w-600">Kuryer buyurtmalari</h5><small className="text-muted">{courierOrderPagination.total} ta yozuv topildi</small></div><input className="form-control form-control-sm" style={{ maxWidth: 360 }} value={orderSearch} onChange={(e) => setOrderSearch(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && load({ courier_orders_page: 1 })} placeholder="Order ID, mijoz raqami/ismi yoki kuryer" /></div>
+        <div className="card-body">
+
+          <div className="nav nav-tabs app-tabs-primary flex-wrap mb-3">{orderTabs.map((tab) => <div key={tab.key} className="nav-item"><button
+              className={`nav-link ${orderTab === tab.key ? 'active' : ''}`}
+              onClick={() => { setOrderTab(tab.key); load({ courier_orders_page: 1, courier_orders_tab: tab.key }); }}>{tab.label}<span className="badge text-light-secondary ms-2">{fmt(courierOrderCounts[tab.key] || 0)}</span></button></div>)}</div>
+          <div className="table-responsive app-scroll"><table className="table table-bottom-border align-middle"><thead><tr><th>ID</th><th>Kuryer</th><th>Mijoz</th><th>Summa</th><th>To'lov</th><th>Holat</th><th>Sana</th><th>Amallar</th></tr></thead><tbody>
+            {courierOrders.map((order) => <tr key={order.id}><td><strong>#{order.id}</strong><small className="d-block text-muted">ORD #{order.orderId || '—'}</small></td><td><div className="f-w-600">{order.courier}</div><small className="text-muted">{order.courierPhone || '—'}</small></td><td><div>{order.customer}</div><small className="text-muted">{order.customerPhone || '—'}</small></td><td><strong>{fmt(order.amount)} so'm</strong><small className="d-block text-muted">Ulush: {fmt((order.courierPrice || 0) + (order.bonus || 0))}</small></td><td>{order.paymentStatus || '—'}</td><td><select className={`form-select form-select-sm ${chip(order.status, order.statusBadge)}`} value={order.status} onChange={(e) => patch(order.statusUrl, { status: e.target.value })}>{Object.entries(courierOrderStatuses).map(([value, meta]) => <option key={value} value={value}>{meta.label}</option>)}</select></td><td className="text-muted">{order.date || '—'}</td><td><button className="btn btn-light-primary icon-btn w-30 h-30 b-r-22" onClick={() => setSelectedOrder(order)}><i className="ti ti-eye"></i></button></td></tr>)}
+            {courierOrderPagination.total === 0 ? <tr><td colSpan={8} className="text-center py-5 text-secondary"><i className="iconoir-archive d-flex justify-content-center mb-2 f-s-30 text-primary"></i>Buyurtma topilmadi</td></tr> : null}
+          </tbody></table></div><PaginationControls {...courierOrderPagination} onPageChange={(page) => load({ courier_orders_page: page })} />
+        </div>
       </div> : null}
       <CourierModal courier={selectedCourier} onHide={() => setSelectedCourier(null)} onPatch={patch} onWarn={warn} onResetPassword={resetPassword} onEdit={(courier) => setEditingCourier(courier)} />
       <CourierEditModal courier={editingCourier} onHide={() => setEditingCourier(null)} />
@@ -206,20 +219,22 @@ function CourierModal({ courier, onHide, onPatch, onWarn, onResetPassword, onEdi
     if (!courier?.actions?.uploadDocumentUrl) return;
     router.post(courier.actions.uploadDocumentUrl, new FormData(event.currentTarget), { preserveScroll: true });
   };
-  return <Modal show={!!courier} onHide={onHide} size="xl" centered dialogClassName="kc-sheet"><Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">{courier?.name}</Modal.Title></Modal.Header><Modal.Body>{!courier ? null : <div className="row g-3">
-    <Info title="Asosiy ma'lumotlar" rows={[['Telefon', courier.phone || '—'], ['Hudud', courier.region || '—'], ['Ish faoliyati', courier.isOnline ? 'Online' : 'Offline'], ['Holat yangilangan', courier.availabilityUpdatedAt || '—'], ['Holat', courierLabel(courier.status)], ['Verifikatsiya', courier.verificationLabel || courier.verificationStatus || '—'], ['Ro‘yxatdan o‘tgan', courier.joined || '—'], ['Ogohlantirish', `${courier.warningCount || 0}/3`]]} />
-    <Info title="Moliya" rows={[['Balans', `${fmt(courier.balance || 0)} so'm`], ['Rezerv', `${fmt(courier.reserved || 0)} so'm`], ['Daromad', `${fmt(courier.totalEarned || 0)} so'm`], ['Yechilgan', `${fmt(courier.totalWithdrawal || 0)} so'm`], ['Buyurtmalar', String(courier.orders || 0)], ['Karta', String(courier.payment?.card || '—')]]} />
-    <Info title="Transport va shaxs" rows={[['Transport', courier.transportLabel || courier.transport || '—'], ['Avtomobil', [courier.vehicle, courier.vehicleColor].filter(Boolean).join(', ') || '—'], ['Raqam', courier.plate || '—'], ['INN', String(courier.identity?.inn || '—')], ['Tug‘ilgan sana', String(courier.identity?.birthdate || '—')], ['Pasport', String(courier.identity?.passport || '—')], ['Pasport berilgan', String(courier.identity?.passportIssuedAt || '—')], ['Guvohnoma', String(courier.identity?.license || '—')], ['Guvohnoma tugaydi', String(courier.identity?.licenseExpiresAt || '—')], ['Qolgan kun', String(courier.identity?.licenseDaysRemaining ?? '—')]]} />
-    <Info title="Lokatsiya va manzil" rows={[['Uy manzili', String(courier.payment?.homeAddress || '—')], ['Karta egasi', String(courier.payment?.cardHolder || '—')], ['Latitude', String(courier.location?.lat || '—')], ['Longitude', String(courier.location?.lon || '—')], ['Lokatsiya yangilangan', String(courier.location?.updatedAt || '—')], ['Tasdiqlangan sana', courier.verifiedAt || '—'], ['Verifikatsiya izohi', courier.verificationNotes || '—']]} />
-    <div className="col-xl-6"><div className="detail-panel h-100"><h6 className="fw-bold mb-3">Joriy lokatsiya xaritasi</h6><div className="small text-muted mb-2">Kuryerning oxirgi yuborgan koordinatasi asosida ochiladi.</div><MapButtons mapLinks={(courier.location?.mapLinks || {}) as Record<string, string>} /></div></div>
-    <ListBlock title="Oxirgi buyurtmalar" items={courier.recentOrders || []} render={(item) => <><strong>#{item.id} / ORD #{item.orderId} · {fmt(Number(item.amount || 0))} so'm</strong><span>{String(item.customer || 'Mijoz')} · {String(item.status || '—')} · {String(item.date || '—')}</span></>} />
-    <ListBlock title="Tranzaksiyalar" items={courier.transactions || []} render={(item) => {
-      const isExpense = item.type === 'expense' || item.category === 'penalty' || item.category === 'withdrawal' || item.category === 'reversal';
-      return <><strong className={isExpense ? 'text-danger' : 'text-success'}>{isExpense ? '-' : '+'}{fmt(Number(item.net || item.amount || 0))} so'm · {String(item.status || '—')}</strong><span>{String(item.description || item.category || 'Tranzaksiya')} · {String(item.date || '—')}</span></>;
-    }} />
-    <div className="col-12"><div className="detail-panel"><h6 className="fw-bold mb-3">Hujjatlar</h6><form onSubmit={uploadDocument} className="row g-2 mb-3"><div className="col-md-3"><select name="type" className="form-select form-select-sm" required><option value="passport">Pasport</option><option value="driver_license">Haydovchi guvohnomasi</option><option value="vehicle_reg">Transport guvohnomasi</option><option value="vehicle_insurance">Sug'urta polisi</option><option value="inn_certificate">STIR guvohnomasi</option><option value="medical_cert">Tibbiy ma'lumotnoma</option><option value="photo_with_passport">Pasport bilan selfi</option><option value="other">Boshqa</option></select></div><div className="col-md-4"><input type="file" name="file" className="form-control form-control-sm" accept=".pdf,image/*" required /></div><div className="col-md-3"><input name="description" className="form-control form-control-sm" placeholder="Izoh" /></div><div className="col-md-2"><Button size="sm" type="submit">Yuklash</Button></div></form>{(courier.documents || []).map((item) => <div className="d-flex justify-content-between align-items-center border-top py-2 gap-2" key={String(item.id)}><div><strong>{String(item.typeLabel || item.type || 'Hujjat')}</strong><div className="small text-muted">{String(item.name || '—')} · {String(item.date || '—')}</div><div className="small">{String(item.description || '')}</div></div><div className="d-flex gap-2">{item.url ? <a href={String(item.url)} target="_blank" rel="noreferrer" className="btn btn-sm btn-light-secondary">Ko'rish</a> : null}{item.deleteUrl ? <button type="button" className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => confirm("Hujjat o'chirilsinmi?") && router.delete(String(item.deleteUrl), { preserveScroll: true })}><i className="bi bi-trash"></i></button> : null}</div></div>)}{(courier.documents || []).length === 0 ? <div className="text-muted small">Hujjat topilmadi</div> : null}</div></div>
-    <ListBlock title={`Ogohlantirishlar (${courier.warningCount || 0}/3)`} items={courier.banLogs || []} render={(item) => <><strong>{String(item.title || '—')}</strong><span>{String(item.message || '')} · {String(item.date || '—')}</span></>} />
-  </div>}</Modal.Body><Modal.Footer>{courier ? <Button variant="outline-warning" onClick={() => onWarn(courier)}>Ogohlantirish</Button> : null}{courier ? <Button variant="outline-primary" onClick={() => onEdit(courier)}>Tahrirlash</Button> : null}{courier ? <Button variant="outline-secondary" onClick={() => onResetPassword(courier)}>Parol reset</Button> : null}{courier?.status !== 'approved' ? <Button variant="outline-success" onClick={() => onPatch(courier?.actions?.approveUrl, {}, 'Kuryer tasdiqlansinmi?')}>Tasdiqlash</Button> : null}<Button variant="outline-danger" onClick={() => onPatch(courier?.actions?.rejectUrl, {}, 'Kuryer rad etilsinmi?')}>Rad etish</Button>{courier?.status === 'blocked' ? <Button variant="outline-primary" onClick={() => onPatch(courier?.actions?.unblockUrl, { message: 'Admin tomonidan blokdan chiqarildi.' }, 'Kuryer blokdan chiqarilsinmi?')}>Blokdan chiqarish</Button> : null}<Button variant="light-secondary" onClick={onHide}>Yopish</Button></Modal.Footer></Modal>;
+  return (
+    <Modal show={!!courier} onHide={onHide} size="xl" centered><Modal.Header closeButton><Modal.Title className="f-s-20 f-w-600">{courier?.name}</Modal.Title></Modal.Header><Modal.Body>{!courier ? null : <div className="row">
+          <Info title="Asosiy ma'lumotlar" rows={[['Telefon', courier.phone || '—'], ['Hudud', courier.region || '—'], ['Ish faoliyati', courier.isOnline ? 'Online' : 'Offline'], ['Holat yangilangan', courier.availabilityUpdatedAt || '—'], ['Holat', courierLabel(courier.status)], ['Verifikatsiya', courier.verificationLabel || courier.verificationStatus || '—'], ['Ro‘yxatdan o‘tgan', courier.joined || '—'], ['Ogohlantirish', `${courier.warningCount || 0}/3`]]} />
+          <Info title="Moliya" rows={[['Balans', `${fmt(courier.balance || 0)} so'm`], ['Rezerv', `${fmt(courier.reserved || 0)} so'm`], ['Daromad', `${fmt(courier.totalEarned || 0)} so'm`], ['Yechilgan', `${fmt(courier.totalWithdrawal || 0)} so'm`], ['Buyurtmalar', String(courier.orders || 0)], ['Karta', String(courier.payment?.card || '—')]]} />
+          <Info title="Transport va shaxs" rows={[['Transport', courier.transportLabel || courier.transport || '—'], ['Avtomobil', [courier.vehicle, courier.vehicleColor].filter(Boolean).join(', ') || '—'], ['Raqam', courier.plate || '—'], ['INN', String(courier.identity?.inn || '—')], ['Tug‘ilgan sana', String(courier.identity?.birthdate || '—')], ['Pasport', String(courier.identity?.passport || '—')], ['Pasport berilgan', String(courier.identity?.passportIssuedAt || '—')], ['Guvohnoma', String(courier.identity?.license || '—')], ['Guvohnoma tugaydi', String(courier.identity?.licenseExpiresAt || '—')], ['Qolgan kun', String(courier.identity?.licenseDaysRemaining ?? '—')]]} />
+          <Info title="Lokatsiya va manzil" rows={[['Uy manzili', String(courier.payment?.homeAddress || '—')], ['Karta egasi', String(courier.payment?.cardHolder || '—')], ['Latitude', String(courier.location?.lat || '—')], ['Longitude', String(courier.location?.lon || '—')], ['Lokatsiya yangilangan', String(courier.location?.updatedAt || '—')], ['Tasdiqlangan sana', courier.verifiedAt || '—'], ['Verifikatsiya izohi', courier.verificationNotes || '—']]} />
+          <div className="col-xl-6"><div className="card h-100"><div className="card-header"><h5 className="mb-0">Joriy lokatsiya xaritasi</h5></div><div className="card-body"><div className="f-s-13 text-muted mb-2">Kuryerning oxirgi yuborgan koordinatasi asosida ochiladi.</div><MapButtons mapLinks={(courier.location?.mapLinks || {}) as Record<string, string>} /></div></div></div>
+          <ListBlock title="Oxirgi buyurtmalar" items={courier.recentOrders || []} render={(item) => <><strong>#{item.id} / ORD #{item.orderId} · {fmt(Number(item.amount || 0))} so'm</strong><span>{String(item.customer || 'Mijoz')} · {String(item.status || '—')} · {String(item.date || '—')}</span></>} />
+          <ListBlock title="Tranzaksiyalar" items={courier.transactions || []} render={(item) => {
+            const isExpense = item.type === 'expense' || item.category === 'penalty' || item.category === 'withdrawal' || item.category === 'reversal';
+            return <><strong className={isExpense ? 'text-danger' : 'text-success'}>{isExpense ? '-' : '+'}{fmt(Number(item.net || item.amount || 0))} so'm · {String(item.status || '—')}</strong><span>{String(item.description || item.category || 'Tranzaksiya')} · {String(item.date || '—')}</span></>;
+          }} />
+          <div className="col-12"><div className="card"><div className="card-header"><h5 className="mb-0">Hujjatlar</h5></div><div className="card-body"><form onSubmit={uploadDocument} className="row g-2 mb-3"><div className="col-md-3"><select name="type" className="form-select form-select-sm" required><option value="passport">Pasport</option><option value="driver_license">Haydovchi guvohnomasi</option><option value="vehicle_reg">Transport guvohnomasi</option><option value="vehicle_insurance">Sug'urta polisi</option><option value="inn_certificate">STIR guvohnomasi</option><option value="medical_cert">Tibbiy ma'lumotnoma</option><option value="photo_with_passport">Pasport bilan selfi</option><option value="other">Boshqa</option></select></div><div className="col-md-4"><input type="file" name="file" className="form-control form-control-sm" accept=".pdf,image/*" required /></div><div className="col-md-3"><input name="description" className="form-control form-control-sm" placeholder="Izoh" /></div><div className="col-md-2"><Button size="sm" type="submit">Yuklash</Button></div></form>{(courier.documents || []).map((item) => <div className="d-flex justify-content-between align-items-center b-t-1-light py-2 gap-2" key={String(item.id)}><div><strong>{String(item.typeLabel || item.type || 'Hujjat')}</strong><div className="f-s-13 text-muted">{String(item.name || '—')} · {String(item.date || '—')}</div><div className="f-s-13">{String(item.description || '')}</div></div><div className="d-flex gap-2">{item.url ? <a href={String(item.url)} target="_blank" rel="noreferrer" className="btn btn-sm btn-light-secondary">Ko'rish</a> : null}{item.deleteUrl ? <button type="button" className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => confirm("Hujjat o'chirilsinmi?") && router.delete(String(item.deleteUrl), { preserveScroll: true })}><i className="ti ti-trash"></i></button> : null}</div></div>)}{(courier.documents || []).length === 0 ? <div className="text-muted f-s-13">Hujjat topilmadi</div> : null}</div></div></div>
+          <ListBlock title={`Ogohlantirishlar (${courier.warningCount || 0}/3)`} items={courier.banLogs || []} render={(item) => <><strong>{String(item.title || '—')}</strong><span>{String(item.message || '')} · {String(item.date || '—')}</span></>} />
+        </div>}</Modal.Body><Modal.Footer>{courier ? <Button variant="outline-warning" onClick={() => onWarn(courier)}>Ogohlantirish</Button> : null}{courier ? <Button variant="outline-primary" onClick={() => onEdit(courier)}>Tahrirlash</Button> : null}{courier ? <Button variant="outline-secondary" onClick={() => onResetPassword(courier)}>Parol reset</Button> : null}{courier?.status !== 'approved' ? <Button variant="outline-success" onClick={() => onPatch(courier?.actions?.approveUrl, {}, 'Kuryer tasdiqlansinmi?')}>Tasdiqlash</Button> : null}<Button variant="outline-danger" onClick={() => onPatch(courier?.actions?.rejectUrl, {}, 'Kuryer rad etilsinmi?')}>Rad etish</Button>{courier?.status === 'blocked' ? <Button variant="outline-primary" onClick={() => onPatch(courier?.actions?.unblockUrl, { message: 'Admin tomonidan blokdan chiqarildi.' }, 'Kuryer blokdan chiqarilsinmi?')}>Blokdan chiqarish</Button> : null}<Button variant="light-secondary" onClick={onHide}>Yopish</Button></Modal.Footer></Modal>
+  );
 }
 
 function OrderModal({ order, statuses, onHide, onPatch }: { order: CourierOrder | null; statuses: Record<string, StatusMeta>; onHide: () => void; onPatch: (url?: string, data?: Record<string, string>) => void }) {
@@ -232,26 +247,28 @@ function OrderModal({ order, statuses, onHide, onPatch }: { order: CourierOrder 
     router.post(order.penaltyUrl, new FormData(event.currentTarget), { preserveScroll: true });
   };
 
-  return <Modal show={!!order} onHide={onHide} size="xl" centered dialogClassName="kc-sheet"><Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">Kuryer order #{order?.id}</Modal.Title></Modal.Header><Modal.Body>{!order ? null : <div className="row g-3">
-    <Info title="Yetkazma" rows={[['Asosiy order', `#${order.orderId || '—'}`], ['Kuryer', order.courier], ['Kuryer telefoni', order.courierPhone || '—'], ['Hudud', order.courierRegion || '—'], ['Mijoz', order.customer], ['Mijoz telefoni', order.customerPhone || '—']]} />
-    <Info title="Hisob-kitob" rows={[['Yetkazma summasi', `${fmt(order.amount)} so'm`], ['Order summasi', `${fmt(order.mainOrderAmount || 0)} so'm`], ['Kuryer ulushi', `${fmt(order.courierPrice || 0)} so'm`], ['Bonus', `${fmt(order.bonus || 0)} so'm`], ['Jami payout', `${fmt((order.courierPrice || 0) + (order.bonus || 0))} so'm`], ['Settled', `${fmt(order.settledAmount || 0)} so'm`]]} />
-    <Info title="Km payout breakdown" rows={[['Masofa', `${Number(order.taskDistanceKm || 0).toFixed(2)} km`], ['Leg', order.taskLeg || '—'], ['Bazaviy haq', `${fmt(order.taskBaseFeeAmount || 0)} so'm`], ['Km haqi', `${fmt(order.taskDistanceFeeAmount || 0)} so'm`], ['Masofa bonusi', `${fmt(order.taskBonusAmount || 0)} so'm`], ['Task jami', `${fmt(order.taskFeeAmount || 0)} so'm`]]} />
-    <Info title="Jarayon" rows={[['Holat', order.statusLabel || order.status], ['To‘lov', order.paymentStatus || '—'], ['Yetkazish turi', order.deliveryType || '—'], ['Olingan vaqt', order.pickedUpAt || '—'], ['Kutish rejimi', 'O‘chirilgan'], ['Kechikish', 'Hisoblanmaydi']]} />
-    <Info title="Manzil" rows={[['Qabul qiluvchi', order.address?.fullName || '—'], ['Telefon', order.address?.phone || '—'], ['Viloyat', order.address?.region || '—'], ['Tuman', order.address?.district || '—'], ['Ko‘cha', order.address?.street || '—'], ['Uy', order.address?.home || '—']]} />
-    <div className="col-12"><div className="detail-panel"><h6 className="fw-bold mb-2">Xaritada ochish</h6><MapButtons mapLinks={(order.address?.mapLinks || {}) as Record<string, string>} /></div></div>
-    <div className="col-12"><div className="detail-panel"><h6 className="fw-bold mb-3">Mahsulotlar</h6>{(order.items || []).map((item, index) => <div className="d-flex justify-content-between border-bottom py-2" key={`${item.name}-${index}`}><div><strong>{item.name}</strong><div className="small text-muted">{item.author || item.type || '—'}</div></div><div className="text-end">{item.quantity} x {fmt(item.price)}<div className="fw-semibold">{fmt(item.quantity * item.price)} so'm</div></div></div>)}{(order.items || []).length === 0 ? <div className="text-muted">Mahsulot topilmadi</div> : null}</div></div>
-    <div className="col-12"><div className="detail-panel border border-danger-subtle bg-danger-subtle bg-opacity-10"><div className="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3"><div><h6 className="fw-bold mb-1 text-danger"><i className="bi bi-shield-exclamation me-2"></i>Kuryerga jarima qo‘llash</h6><div className="small text-muted">Jarima mijoz shikoyati va order holatiga qarab avtomatik hisoblanadi. Tasdiqlansa kuryer balansidan yechiladi.</div></div>{activePenalty ? <span className="chip chip-danger">{fmt(activePenalty.amount)} so'm</span> : null}</div><form onSubmit={submitPenalty} className="row g-2"><div className="col-md-5"><label className="form-label small fw-semibold">Shikoyat sababi</label><select name="reason" className="form-select" value={activePenalty?.key || penaltyReason} onChange={(event) => setPenaltyReason(event.target.value)}>{(order.penaltyRules || []).map((rule) => <option key={rule.key} value={rule.key}>{rule.label} · {fmt(rule.amount)} so'm</option>)}</select></div><div className="col-md-7"><label className="form-label small fw-semibold">Admin izohi</label><input name="note" className="form-control" placeholder="Mijoz shikoyati, dalil yoki operator izohi" /></div>{activePenalty ? <div className="col-12"><div className="small text-muted">{activePenalty.description}</div></div> : null}<div className="col-12"><Button type="submit" variant="outline-danger" disabled={!order.penaltyUrl || !activePenalty}><i className="bi bi-cash-coin me-2"></i>Jarimani qo‘llash</Button></div></form></div></div>
-  </div>}</Modal.Body><Modal.Footer>{order ? <select className="form-select" style={{ maxWidth: 280 }} value={order.status} onChange={(e) => onPatch(order.statusUrl, { status: e.target.value })}>{Object.entries(statuses).map(([value, meta]) => <option key={value} value={value}>{meta.label}</option>)}</select> : null}<Button variant="light-secondary" onClick={onHide}>Yopish</Button></Modal.Footer></Modal>;
+  return (
+    <Modal show={!!order} onHide={onHide} size="xl" centered><Modal.Header closeButton><Modal.Title className="f-s-20 f-w-600">Kuryer order #{order?.id}</Modal.Title></Modal.Header><Modal.Body>{!order ? null : <div className="row">
+            <Info title="Yetkazma" rows={[['Asosiy order', `#${order.orderId || '—'}`], ['Kuryer', order.courier], ['Kuryer telefoni', order.courierPhone || '—'], ['Hudud', order.courierRegion || '—'], ['Mijoz', order.customer], ['Mijoz telefoni', order.customerPhone || '—']]} />
+            <Info title="Hisob-kitob" rows={[['Yetkazma summasi', `${fmt(order.amount)} so'm`], ['Order summasi', `${fmt(order.mainOrderAmount || 0)} so'm`], ['Kuryer ulushi', `${fmt(order.courierPrice || 0)} so'm`], ['Bonus', `${fmt(order.bonus || 0)} so'm`], ['Jami payout', `${fmt((order.courierPrice || 0) + (order.bonus || 0))} so'm`], ['Settled', `${fmt(order.settledAmount || 0)} so'm`]]} />
+            <Info title="Km payout breakdown" rows={[['Masofa', `${Number(order.taskDistanceKm || 0).toFixed(2)} km`], ['Leg', order.taskLeg || '—'], ['Bazaviy haq', `${fmt(order.taskBaseFeeAmount || 0)} so'm`], ['Km haqi', `${fmt(order.taskDistanceFeeAmount || 0)} so'm`], ['Masofa bonusi', `${fmt(order.taskBonusAmount || 0)} so'm`], ['Task jami', `${fmt(order.taskFeeAmount || 0)} so'm`]]} />
+            <Info title="Jarayon" rows={[['Holat', order.statusLabel || order.status], ['To‘lov', order.paymentStatus || '—'], ['Yetkazish turi', order.deliveryType || '—'], ['Olingan vaqt', order.pickedUpAt || '—'], ['Kutish rejimi', 'O‘chirilgan'], ['Kechikish', 'Hisoblanmaydi']]} />
+            <Info title="Manzil" rows={[['Qabul qiluvchi', order.address?.fullName || '—'], ['Telefon', order.address?.phone || '—'], ['Viloyat', order.address?.region || '—'], ['Tuman', order.address?.district || '—'], ['Ko‘cha', order.address?.street || '—'], ['Uy', order.address?.home || '—']]} />
+            <div className="col-12"><div className="card"><div className="card-header"><h5 className="mb-0">Xaritada ochish</h5></div><div className="card-body"><MapButtons mapLinks={(order.address?.mapLinks || {}) as Record<string, string>} /></div></div></div>
+            <div className="col-12"><div className="card"><div className="card-header"><h5 className="mb-0">Mahsulotlar</h5></div><div className="card-body">{(order.items || []).map((item, index) => <div className="d-flex justify-content-between b-b-1-light py-2" key={`${item.name}-${index}`}><div><strong>{item.name}</strong><div className="f-s-13 text-muted">{item.author || item.type || '—'}</div></div><div className="text-end">{item.quantity} x {fmt(item.price)}<div className="f-w-600">{fmt(item.quantity * item.price)} so'm</div></div></div>)}{(order.items || []).length === 0 ? <div className="text-muted">Mahsulot topilmadi</div> : null}</div></div></div>
+            <div className="col-12"><div className="card"><div className="card-body b-1-danger bg-light-danger bg-opacity-10"><div className="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3"><div><h6 className="f-w-600 mb-1 text-danger"><i className="ti ti-shield-x me-2"></i>Kuryerga jarima qo‘llash</h6><div className="f-s-13 text-muted">Jarima mijoz shikoyati va order holatiga qarab avtomatik hisoblanadi. Tasdiqlansa kuryer balansidan yechiladi.</div></div>{activePenalty ? <span className="badge text-light-danger">{fmt(activePenalty.amount)} so'm</span> : null}</div><form onSubmit={submitPenalty} className="row g-2"><div className="col-md-5"><label className="form-label f-s-13 f-w-600">Shikoyat sababi</label><select name="reason" className="form-select" value={activePenalty?.key || penaltyReason} onChange={(event) => setPenaltyReason(event.target.value)}>{(order.penaltyRules || []).map((rule) => <option key={rule.key} value={rule.key}>{rule.label} · {fmt(rule.amount)} so'm</option>)}</select></div><div className="col-md-7"><label className="form-label f-s-13 f-w-600">Admin izohi</label><input name="note" className="form-control" placeholder="Mijoz shikoyati, dalil yoki operator izohi" /></div>{activePenalty ? <div className="col-12"><div className="f-s-13 text-muted">{activePenalty.description}</div></div> : null}<div className="col-12"><Button type="submit" variant="outline-danger" disabled={!order.penaltyUrl || !activePenalty}><i className="ti ti-coins me-2"></i>Jarimani qo‘llash</Button></div></form></div></div></div>
+          </div>}</Modal.Body><Modal.Footer>{order ? <select className="form-select" style={{ maxWidth: 280 }} value={order.status} onChange={(e) => onPatch(order.statusUrl, { status: e.target.value })}>{Object.entries(statuses).map(([value, meta]) => <option key={value} value={value}>{meta.label}</option>)}</select> : null}<Button variant="light-secondary" onClick={onHide}>Yopish</Button></Modal.Footer></Modal>
+  );
 }
 
 function Avatar({ row }: { row: Courier }) {
-  return <div className="resource-avatar">{row.photo ? <img src={row.photo} alt="" /> : row.name.slice(0, 2).toUpperCase()}</div>;
+  return <div className="h-55 w-55 d-flex-center b-r-50 bg-light-primary f-w-600 f-s-18 overflow-hidden flex-shrink-0">{row.photo ? <img className="w-100 h-100 object-fit-cover" src={row.photo} alt="" /> : row.name.slice(0, 2).toUpperCase()}</div>;
 }
 function Info({ title, rows }: { title: string; rows: Array<[string, string]> }) {
-  return <div className="col-xl-6"><div className="detail-panel h-100"><h6 className="fw-bold mb-3">{title}</h6><div className="row g-2">{rows.map(([label, value]) => <div className="col-sm-6" key={label}><small className="text-muted d-block">{label}</small><span className="fw-semibold">{value}</span></div>)}</div></div></div>;
+  return <div className="col-xl-6"><div className="card h-100"><div className="card-header"><h5 className="mb-0">{title}</h5></div><div className="card-body"><div className="row g-2">{rows.map(([label, value]) => <div className="col-sm-6" key={label}><small className="text-muted d-block">{label}</small><span className="f-w-600">{value}</span></div>)}</div></div></div></div>;
 }
 function ListBlock({ title, items, render }: { title: string; items: AnyRow[]; render: (item: AnyRow) => JSX.Element }) {
-  return <div className="col-xl-6"><div className="detail-panel h-100"><h6 className="fw-bold mb-3">{title}</h6>{items.map((item, index) => <div className="border-bottom py-2 d-flex flex-column" key={String(item.id || index)}>{render(item)}</div>)}{items.length === 0 ? <div className="text-muted small">Ma'lumot topilmadi</div> : null}</div></div>;
+  return <div className="col-xl-6"><div className="card h-100"><div className="card-header"><h5 className="mb-0">{title}</h5></div><div className="card-body">{items.map((item, index) => <div className="b-b-1-light py-2 d-flex flex-column" key={String(item.id || index)}>{render(item)}</div>)}{items.length === 0 ? <div className="text-muted f-s-13">Ma'lumot topilmadi</div> : null}</div></div></div>;
 }
 
 function CourierEditModal({ courier, onHide }: { courier: Courier | null; onHide: () => void }) {
@@ -263,7 +280,7 @@ function CourierEditModal({ courier, onHide }: { courier: Courier | null; onHide
     router.post(courier.actions.updateUrl, form, { preserveScroll: true, onSuccess: onHide });
   };
 
-  return <Modal show={!!courier} onHide={onHide} centered size="xl"><form onSubmit={submit}><Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">Kuryer tahrirlash</Modal.Title></Modal.Header><Modal.Body><div className="row g-3">
+  return <Modal show={!!courier} onHide={onHide} centered size="xl"><form onSubmit={submit}><Modal.Header closeButton><Modal.Title className="f-s-20 f-w-600">Kuryer tahrirlash</Modal.Title></Modal.Header><Modal.Body><div className="row g-3">
     <SectionTitle title="Asosiy ma'lumotlar" />
     <FormInput name="first_name" label="Ism" defaultValue={courier?.firstName || courier?.name?.split(' ')[0]} required />
     <FormInput name="last_name" label="Familiya" defaultValue={courier?.lastName || courier?.name?.split(' ').slice(1).join(' ')} required />
@@ -303,16 +320,16 @@ function FormInput({ name, label, defaultValue, required, type = 'text' }: { nam
 }
 
 function SectionTitle({ title }: { title: string }) {
-  return <div className="col-12 mt-4"><h6 className="fw-bold mb-0">{title}</h6></div>;
+  return <div className="col-12 mt-4"><h6 className="f-w-600 mb-0">{title}</h6></div>;
 }
 
 function MapButtons({ mapLinks }: { mapLinks?: Record<string, string> }) {
-  if (!mapLinks?.google && !mapLinks?.yandex) return <span className="text-muted small">Xarita linki yo'q</span>;
+  if (!mapLinks?.google && !mapLinks?.yandex) return <span className="text-muted f-s-13">Xarita linki yo'q</span>;
 
   return (
     <div className="d-flex gap-2 flex-wrap mt-2">
-      {mapLinks.google ? <a className="btn btn-sm btn-light-secondary" href={mapLinks.google} target="_blank" rel="noreferrer"><i className="bi bi-geo-alt me-1"></i>Google Map</a> : null}
-      {mapLinks.yandex ? <a className="btn btn-sm btn-light-secondary" href={mapLinks.yandex} target="_blank" rel="noreferrer"><i className="bi bi-map me-1"></i>Yandex Map</a> : null}
+      {mapLinks.google ? <a className="btn btn-sm btn-light-secondary" href={mapLinks.google} target="_blank" rel="noreferrer"><i className="ti ti-map-pin me-1"></i>Google Map</a> : null}
+      {mapLinks.yandex ? <a className="btn btn-sm btn-light-secondary" href={mapLinks.yandex} target="_blank" rel="noreferrer"><i className="ti ti-map me-1"></i>Yandex Map</a> : null}
     </div>
   );
 }

@@ -57,37 +57,37 @@ export default function ImageGalleryEditor({
           {kept.map((url, index) => (
             <div
               key={url}
-              className="position-relative"
-              style={{ width: cardHeight, height: cardHeight, border: '1px solid var(--kc-border-subtle)', borderRadius: 8, overflow: 'hidden', background: 'var(--kc-bg-subtle)' }}
+              className="position-relative b-r-8 overflow-hidden bg-light-secondary"
+              style={{ width: cardHeight, height: cardHeight, border: '1px solid var(--border_color)' }}
             >
-              <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <img className="w-100 h-100 object-fit-cover" src={url} alt="" />
               {index === 0 ? (
-                <span className="chip chip-success" style={{ position: 'absolute', top: 2, left: 2, fontSize: 8, padding: '1px 5px' }}>Asosiy</span>
+                <span className="badge text-light-success position-absolute f-s-8" style={{ top: 2, left: 2, padding: '1px 5px' }}>Asosiy</span>
               ) : (
                 <button
                   type="button"
                   title="Asosiy rasm qilish"
-                  className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22"
-                  style={{ position: 'absolute', top: 2, left: 2, padding: '1px 5px', fontSize: 10, lineHeight: 1 }}
+                  className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22 position-absolute f-s-10 lh-1"
+                  style={{ top: 2, left: 2, padding: '1px 5px' }}
                   onClick={() => makeCover(url)}
                 >
-                  <i className="bi bi-star"></i>
+                  <i className="ti ti-star"></i>
                 </button>
               )}
               <button
                 type="button"
                 title="Rasmni o'chirish"
-                className="btn btn-danger btn-sm"
-                style={{ position: 'absolute', top: 2, right: 2, padding: '1px 5px', fontSize: 10, lineHeight: 1 }}
+                className="btn btn-danger btn-sm position-absolute f-s-10 lh-1"
+                style={{ top: 2, right: 2, padding: '1px 5px' }}
                 onClick={() => removeExisting(url)}
               >
-                <i className="bi bi-x"></i>
+                <i className="ti ti-x"></i>
               </button>
             </div>
           ))}
         </div>
       ) : (
-        <div className="text-muted small mb-2">Hozircha rasm yo'q.</div>
+        <div className="text-muted f-s-13 mb-2">Hozircha rasm yo'q.</div>
       )}
 
       <input className="form-control form-control-sm" type="file" name={fileFieldName} multiple accept="image/*" onChange={onFilesSelected} />
@@ -97,12 +97,12 @@ export default function ImageGalleryEditor({
           {previews.map((item) => (
             <div
               key={item.url}
-              className="position-relative"
-              style={{ width: cardHeight, height: cardHeight, border: '1px dashed var(--kc-cat-dviolet)', borderRadius: 8, overflow: 'hidden' }}
+              className="position-relative b-r-8 overflow-hidden"
+              style={{ width: cardHeight, height: cardHeight, border: '1px dashed rgba(var(--primary-dark), 1)' }}
               title={item.file.name}
             >
-              <img src={item.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              <span className="chip chip-info" style={{ position: 'absolute', bottom: 2, left: 2, fontSize: 8, padding: '1px 5px' }}>Yangi</span>
+              <img className="w-100 h-100 object-fit-cover" src={item.url} alt="" />
+              <span className="badge text-light-info position-absolute f-s-8" style={{ bottom: 2, left: 2, padding: '1px 5px' }}>Yangi</span>
             </div>
           ))}
         </div>

@@ -1,7 +1,6 @@
 // Tartib muhim: Bootstrap (Axelit bilan kelgan versiya) → ikonkalar →
 // Axelit asl uslublari → Kitobchi qatlami.
 import '../../css/axelit/bootstrap.min.css';
-import 'bootstrap-icons/font/bootstrap-icons.css';
 import '../../css/axelit/icons.css';
 import '../../css/axelit/axelit.css';
 import '../../css/boshqaruv.css';

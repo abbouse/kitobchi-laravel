@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { PageCrumbs } from '../Layout';
 import type { FormEvent } from 'react';
 import { router, usePage } from '@inertiajs/react';
-import { Button, Modal } from 'react-bootstrap';
+import { Button } from 'react-bootstrap';
+import Modal from '../components/AppModal';
 import PaginationControls from '../components/PaginationControls';
 import ImageGalleryEditor from '../components/ImageGalleryEditor';
 import ModerationRejectModal from '../components/ModerationRejectModal';
@@ -22,7 +23,7 @@ interface StatItem {
 }
 
 const statusLabel = (status?: number): [string, string] =>
-  status === 1 ? ['Tasdiqlangan', 'chip-success'] : status === 2 ? ['Rad etilgan', 'chip-danger'] : ['Moderatsiya', 'chip-warning'];
+  status === 1 ? ['Tasdiqlangan', 'text-light-success'] : status === 2 ? ['Rad etilgan', 'text-light-danger'] : ['Moderatsiya', 'text-light-warning'];
 
 let variantRowSeq = -1;
 const nextVariantRowKey = () => variantRowSeq--;
@@ -88,88 +89,93 @@ export default function Stationeries() {
 
   return (
     <div>
-      <div className="page-head">
+      <div className="d-flex align-items-end justify-content-between flex-wrap gap-3 mx-1 mb-3">
         <div>
-          <h1 className="page-title">Kanselyariya mahsulotlari</h1><PageCrumbs />
-          <p className="page-subtitle">Moderatsiya, ombor, variantlar va katalog nazorati</p>
+          <h4 className="main-title mb-0">Kanselyariya mahsulotlari</h4><PageCrumbs />
+          <p className="mb-0 text-secondary">Moderatsiya, ombor, variantlar va katalog nazorati</p>
         </div>
       </div>
 
-      <div className="card-panel">
-        <div className="panel-head">
+      <div className="card">
+        <div className="card-header d-flex align-items-center justify-content-between gap-2 flex-wrap">
           <div>
-            <div className="panel-title">Mahsulotlar</div>
-            <small className="text-muted">{stationeryPagination.total} ta mahsulot topildi</small>
+            <h5 className="f-w-600">Mahsulotlar</h5>
+            <p className="mb-0 text-secondary">{stationeryPagination.total} ta mahsulot topildi</p>
           </div>
           <form className="d-flex gap-2" onSubmit={(event) => { event.preventDefault(); loadItems(); }}>
             <input className="form-control form-control-sm" style={{ maxWidth: 300 }} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Nomi, kategoriya, barcode yoki seller" />
-            <button className="btn btn-sm btn-outline-secondary"><i className="bi bi-search"></i></button>
+            <button className="btn btn-sm btn-outline-secondary"><i className="ti ti-search"></i></button>
           </form>
         </div>
+        <div className="card-body">
 
-        <div className="kc-tabs d-flex flex-wrap gap-2 mb-3">
-          {[
-            ['pending', 'Moderatsiya'],
-            ['active', 'Tasdiqlangan'],
-            ['rejected', 'Rad etilgan'],
-            ['all', 'Barchasi'],
-          ].map(([key, label]) => (
-            <button className={`kc-tab ${tab === key ? 'active' : ''}`} key={key} onClick={() => { setTab(key); loadItems(1, key); }}>
-              {label}<span className="badge rounded-pill bg-light text-dark ms-2">{stationeryCounts[key] || 0}</span>
-            </button>
-          ))}
-        </div>
 
-        <div className="table-responsive">
-          <table className="table table-bottom-border align-middle data-table">
-            <thead>
-              <tr>
-                <th></th>
-                <th>Mahsulot</th>
-                <th>Seller</th>
-                <th>Narx</th>
-                <th>Ombor</th>
-                <th>Sotilgan</th>
-                <th>Ko'rish</th>
-                <th>Status</th>
-                <th>Amallar</th>
-              </tr>
-            </thead>
-            <tbody>
-              {stationeries.map((item) => {
-                const [label, chip] = statusLabel(item.status);
-                return (
-                  <tr key={item.id}>
-                    <td><div className="thumb">{item.icon ? <img src={item.icon} alt="" /> : <i className="bi bi-pencil-square"></i>}</div></td>
-                    <td><strong>{item.name}</strong><small className="d-block text-muted">#{item.id} · {item.category}</small></td>
-                    <td>{item.seller || 'Ichki katalog'}</td>
-                    <td>
-                      <strong>{fmt(item.discountPrice || item.price)} so'm</strong>
-                      {item.discountPrice ? <small className="d-block text-muted text-decoration-line-through">{fmt(item.price)}</small> : null}
-                    </td>
-                    <td>{item.stock} + {item.variantStock || 0}</td>
-                    <td>{fmt(item.sold)}</td>
-                    <td>{fmt(item.views || 0)}</td>
-                    <td><span className={`chip ${chip}`}>{label}</span></td>
-                    <td>
-                      <div className="d-flex gap-1">
-                        <button className="btn btn-light-primary icon-btn w-30 h-30 b-r-22" onClick={() => openDetail(item)} title="Ko'rish / tahrirlash"><i className="bi bi-eye"></i></button>
-                        {item.moderateUrl && item.status !== 1 ? (
-                          <button className="btn btn-light-success icon-btn w-30 h-30 b-r-22" onClick={() => moderate(item, 1)} title="Tasdiqlash"><i className="bi bi-check-lg"></i></button>
-                        ) : null}
-                        {item.moderateUrl && item.status !== 2 ? (
-                          <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => setRejectTarget(item)} title="Rad etish"><i className="bi bi-x-lg"></i></button>
-                        ) : null}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-              {stationeryPagination.total === 0 ? <tr><td className="text-muted text-center py-5" colSpan={9}>Bu bo'limda mahsulot topilmadi</td></tr> : null}
-            </tbody>
-          </table>
+          <div className="nav nav-tabs app-tabs-primary flex-wrap mb-3">
+            {[
+              ['pending', 'Moderatsiya'],
+              ['active', 'Tasdiqlangan'],
+              ['rejected', 'Rad etilgan'],
+              ['all', 'Barchasi'],
+            ].map(([key, label]) => (
+              <div key={key} className="nav-item"><button
+                  className={`nav-link ${tab === key ? 'active' : ''}`}
+                  onClick={() => { setTab(key); loadItems(1, key); }}>
+                  {label}<span className="badge text-light-secondary ms-2">{stationeryCounts[key] || 0}</span>
+                </button></div>
+            ))}
+          </div>
+
+          <div className="table-responsive app-scroll">
+            <table className="table table-bottom-border align-middle">
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>Mahsulot</th>
+                  <th>Seller</th>
+                  <th>Narx</th>
+                  <th>Ombor</th>
+                  <th>Sotilgan</th>
+                  <th>Ko'rish</th>
+                  <th>Status</th>
+                  <th>Amallar</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stationeries.map((item) => {
+                  const [label, chip] = statusLabel(item.status);
+                  return (
+                    <tr key={item.id}>
+                      <td><div className="w-40 h-55 b-r-10 overflow-hidden d-flex-center bg-light-primary flex-shrink-0">{item.icon ? <img className="w-100 h-100 object-fit-cover" src={item.icon} alt="" /> : <i className="ti ti-edit"></i>}</div></td>
+                      <td><strong>{item.name}</strong><small className="d-block text-muted">#{item.id} · {item.category}</small></td>
+                      <td>{item.seller || 'Ichki katalog'}</td>
+                      <td>
+                        <strong>{fmt(item.discountPrice || item.price)} so'm</strong>
+                        {item.discountPrice ? <small className="d-block text-muted text-decoration-line-through">{fmt(item.price)}</small> : null}
+                      </td>
+                      <td>{item.stock} + {item.variantStock || 0}</td>
+                      <td>{fmt(item.sold)}</td>
+                      <td>{fmt(item.views || 0)}</td>
+                      <td><span className={`badge ${chip}`}>{label}</span></td>
+                      <td>
+                        <div className="d-flex gap-1">
+                          <button className="btn btn-light-primary icon-btn w-30 h-30 b-r-22" onClick={() => openDetail(item)} title="Ko'rish / tahrirlash"><i className="ti ti-eye"></i></button>
+                          {item.moderateUrl && item.status !== 1 ? (
+                            <button className="btn btn-light-success icon-btn w-30 h-30 b-r-22" onClick={() => moderate(item, 1)} title="Tasdiqlash"><i className="ti ti-check"></i></button>
+                          ) : null}
+                          {item.moderateUrl && item.status !== 2 ? (
+                            <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => setRejectTarget(item)} title="Rad etish"><i className="ti ti-x"></i></button>
+                          ) : null}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {stationeryPagination.total === 0 ? <tr><td className="text-center py-5 text-secondary" colSpan={9}><i className="iconoir-archive d-flex justify-content-center mb-2 f-s-30 text-primary"></i>Bu bo'limda mahsulot topilmadi</td></tr> : null}
+              </tbody>
+            </table>
+          </div>
+          <PaginationControls {...stationeryPagination} onPageChange={(page) => loadItems(page)} />
         </div>
-        <PaginationControls {...stationeryPagination} onPageChange={(page) => loadItems(page)} />
       </div>
 
       <ModerationRejectModal
@@ -179,22 +185,22 @@ export default function Stationeries() {
         onConfirm={confirmReject}
       />
 
-      <Modal show={!!selected} onHide={() => setSelected(null)} centered size="xl" scrollable dialogClassName="kc-sheet">
+      <Modal show={!!selected} onHide={() => setSelected(null)} centered size="xl" scrollable>
         <Modal.Header closeButton>
-          <Modal.Title className="fs-5 fw-bold">{selected?.name}</Modal.Title>
+          <Modal.Title className="f-s-20 f-w-600">{selected?.name}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           {!selected ? null : (
-            <div className="row g-3">
+            <div className="row">
               <div className="col-xl-4">
-                <div className="detail-panel h-100">
-                  <div className="product-preview mb-3">
-                    {selected.icon ? <img src={selected.icon} alt="" style={{ width: '100%', maxHeight: 260, objectFit: 'contain' }} /> : <div className="text-muted text-center py-5">Rasm yo'q</div>}
-                  </div>
-                  <div className="d-flex flex-wrap gap-1">
-                    {selected.images?.slice(1, 5).map((image) => <img key={image} src={image} alt="" className="thumb" />)}
-                  </div>
-                </div>
+                <div className="card h-100"><div className="card-body">
+                    <div className="b-1-light b-r-15 p-2 mb-3">
+                      {selected.icon ? <img src={selected.icon} alt="" style={{ width: '100%', maxHeight: 260, objectFit: 'contain' }} /> : <div className="text-muted text-center py-5">Rasm yo'q</div>}
+                    </div>
+                    <div className="d-flex flex-wrap gap-1">
+                      {selected.images?.slice(1, 5).map((image) => <img key={image} src={image} alt="" className="w-40 h-55 b-r-10 object-fit-cover flex-shrink-0" />)}
+                    </div>
+                  </div></div>
               </div>
 
               <Info title="Asosiy ma'lumotlar" rows={[
@@ -218,17 +224,16 @@ export default function Stationeries() {
               ]} />
 
               <div className="col-xl-6">
-                <div className="detail-panel h-100">
-                  <h6 className="fw-bold mb-3">Variantlar</h6>
-                  {(selected.variants || []).length === 0 ? <div className="text-muted mb-2">Variant mavjud emas</div> : null}
-                  {(selected.variants || []).map((variant) => (
-                    <div className="d-flex justify-content-between border-bottom py-2" key={variant.id}>
-                      <span>{variant.name}</span>
-                      <strong>{variant.stock} dona</strong>
-                    </div>
-                  ))}
-                  <div className="text-muted small mt-2">Variantlarni qo'shish/o'chirish uchun pastdagi "Admin tahriri" formasidan foydalaning.</div>
-                </div>
+                <div className="card h-100"><div className="card-header"><h5 className="mb-0">Variantlar</h5></div><div className="card-body">
+                    {(selected.variants || []).length === 0 ? <div className="text-muted mb-2">Variant mavjud emas</div> : null}
+                    {(selected.variants || []).map((variant) => (
+                      <div className="d-flex justify-content-between b-b-1-light py-2" key={variant.id}>
+                        <span>{variant.name}</span>
+                        <strong>{variant.stock} dona</strong>
+                      </div>
+                    ))}
+                    <div className="text-muted f-s-13 mt-2">Variantlarni qo'shish/o'chirish uchun pastdagi "Admin tahriri" formasidan foydalaning.</div>
+                  </div></div>
               </div>
 
               <Info title="Admin nazorati" rows={[
@@ -244,79 +249,78 @@ export default function Stationeries() {
               ]} />
 
               {selected.aiModerationNote ? (
-                <div className="col-12"><div className="detail-panel"><h6 className="fw-bold mb-2">AI moderatsiya sababi</h6><div className="text-muted">{selected.aiModerationNote}</div></div></div>
+                <div className="col-12"><div className="card"><div className="card-header"><h5 className="mb-0">AI moderatsiya sababi</h5></div><div className="card-body"><div className="text-muted">{selected.aiModerationNote}</div></div></div></div>
               ) : null}
 
-              <div className="col-12"><div className="detail-panel"><h6 className="fw-bold mb-2">Tavsif</h6><div className="text-muted">{selected.description || 'Tavsif kiritilmagan'}</div></div></div>
+              <div className="col-12"><div className="card"><div className="card-header"><h5 className="mb-0">Tavsif</h5></div><div className="card-body"><div className="text-muted">{selected.description || 'Tavsif kiritilmagan'}</div></div></div></div>
 
-              <div className="col-xl-6"><div className="detail-panel h-100"><h6 className="fw-bold mb-3">Shu mahsulot buyurtmalari</h6><MiniOrdersTable rows={selected.recentOrders || []} empty="Bu kanselyariya bo'yicha buyurtma topilmadi" /></div></div>
-              <div className="col-xl-6"><div className="detail-panel h-100"><h6 className="fw-bold mb-3">Seller orderlar</h6><MiniOrdersTable rows={selected.sellerOrders || []} empty="Seller order topilmadi" /></div></div>
+              <div className="col-xl-6"><div className="card h-100"><div className="card-header"><h5 className="mb-0">Shu mahsulot buyurtmalari</h5></div><div className="card-body"><MiniOrdersTable rows={selected.recentOrders || []} empty="Bu kanselyariya bo'yicha buyurtma topilmadi" /></div></div></div>
+              <div className="col-xl-6"><div className="card h-100"><div className="card-header"><h5 className="mb-0">Seller orderlar</h5></div><div className="card-body"><MiniOrdersTable rows={selected.sellerOrders || []} empty="Seller order topilmadi" /></div></div></div>
 
               <div className="col-12">
-                <div className="detail-panel">
-                  <h6 className="fw-bold mb-3">Admin tahriri</h6>
-                  <form className="row g-3" onSubmit={submitEdit}>
-                    <div className="col-md-6"><label className="form-label small text-muted">Nomi</label><input name="name" className="form-control" defaultValue={selected.name} required /></div>
-                    <div className="col-md-3"><label className="form-label small text-muted">Kategoriya</label><select name="category_id" className="form-select" defaultValue={selected.categoryId || ''} required>{stationeryFormOptions.categories.map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</select></div>
-                    <div className="col-md-3"><label className="form-label small text-muted">Seller</label><select name="seller_id" className="form-select" defaultValue={selected.sellerId || ''}><option value="">Ichki katalog</option>{stationeryFormOptions.sellers.map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</select></div>
-                    <div className="col-md-3"><label className="form-label small text-muted">Barcode</label><input name="barcode" className="form-control" defaultValue={selected.barcode || ''} /></div>
-                    <div className="col-md-3"><label className="form-label small text-muted">Material</label><input name="material" className="form-control" defaultValue={selected.material || ''} /></div>
-                    <div className="col-md-3"><label className="form-label small text-muted">Narx</label><input name="price" type="number" min={0} className="form-control" defaultValue={selected.price} required /></div>
-                    <div className="col-md-3"><label className="form-label small text-muted">Chegirma narxi</label><input name="discount_price" type="number" min={0} className="form-control" defaultValue={selected.discountPrice || ''} /></div>
-                    <div className="col-md-3"><label className="form-label small text-muted">Chegirma muddati</label><input name="discountExpiresAt" type="datetime-local" className="form-control" defaultValue={toInputDate(selected.discountExpiresAt)} /></div>
-                    <div className="col-md-3"><label className="form-label small text-muted">Ombor</label><input name="stock" type="number" min={0} className="form-control" defaultValue={selected.stock} required /></div>
-                    <div className="col-md-3"><label className="form-label small text-muted">Moderatsiya</label><select name="is_approved" className="form-select" defaultValue={selected.status ?? 0}><option value="0">Moderatsiya</option><option value="1">Tasdiqlangan</option><option value="2">Rad etilgan</option></select></div>
-                    <div className="col-md-6 d-flex align-items-end gap-3 flex-wrap">
-                      <label className="form-check"><input name="status" value="1" className="form-check-input" type="checkbox" defaultChecked={selected.active} /> <span className="form-check-label">Faol</span></label>
-                      <label className="form-check"><input name="is_hidden" value="1" className="form-check-input" type="checkbox" defaultChecked={selected.hidden} /> <span className="form-check-label">Yashirish</span></label>
-                      <label className="form-check"><input name="recommended" value="1" className="form-check-input" type="checkbox" defaultChecked={selected.recommended} /> <span className="form-check-label">Tavsiya</span></label>
-                    </div>
-                    <div className="col-md-3"><label className="form-label small text-muted">Tavsiya muddati</label><input name="recommendedExpiresAt" type="datetime-local" className="form-control" defaultValue={toInputDate(selected.recommendedExpiresAt)} /></div>
-
-                    <div className="col-12">
-                      <label className="form-label small text-muted">Rasmlar</label>
-                      <ImageGalleryEditor key={selected.id} images={selected.rawImages || selected.images || []} />
-                    </div>
-
-                    <div className="col-12"><label className="form-label small text-muted">Tavsif</label><textarea name="description" className="form-control" rows={4} defaultValue={selected.description || ''} /></div>
-
-                    <div className="col-12">
-                      <div className="d-flex align-items-center justify-content-between mb-2">
-                        <h6 className="fw-bold mb-0">Variantlar</h6>
-                        <button type="button" className="btn btn-sm btn-outline-secondary" onClick={addVariantRow}>
-                          <i className="bi bi-plus-lg me-1"></i>Variant qo'shish
-                        </button>
+                <div className="card"><div className="card-header"><h5 className="mb-0">Admin tahriri</h5></div><div className="card-body">
+                    <form className="row g-3" onSubmit={submitEdit}>
+                      <div className="col-md-6"><label className="form-label f-s-13 text-muted">Nomi</label><input name="name" className="form-control" defaultValue={selected.name} required /></div>
+                      <div className="col-md-3"><label className="form-label f-s-13 text-muted">Kategoriya</label><select name="category_id" className="form-select" defaultValue={selected.categoryId || ''} required>{stationeryFormOptions.categories.map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</select></div>
+                      <div className="col-md-3"><label className="form-label f-s-13 text-muted">Seller</label><select name="seller_id" className="form-select" defaultValue={selected.sellerId || ''}><option value="">Ichki katalog</option>{stationeryFormOptions.sellers.map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</select></div>
+                      <div className="col-md-3"><label className="form-label f-s-13 text-muted">Barcode</label><input name="barcode" className="form-control" defaultValue={selected.barcode || ''} /></div>
+                      <div className="col-md-3"><label className="form-label f-s-13 text-muted">Material</label><input name="material" className="form-control" defaultValue={selected.material || ''} /></div>
+                      <div className="col-md-3"><label className="form-label f-s-13 text-muted">Narx</label><input name="price" type="number" min={0} className="form-control" defaultValue={selected.price} required /></div>
+                      <div className="col-md-3"><label className="form-label f-s-13 text-muted">Chegirma narxi</label><input name="discount_price" type="number" min={0} className="form-control" defaultValue={selected.discountPrice || ''} /></div>
+                      <div className="col-md-3"><label className="form-label f-s-13 text-muted">Chegirma muddati</label><input name="discountExpiresAt" type="datetime-local" className="form-control" defaultValue={toInputDate(selected.discountExpiresAt)} /></div>
+                      <div className="col-md-3"><label className="form-label f-s-13 text-muted">Ombor</label><input name="stock" type="number" min={0} className="form-control" defaultValue={selected.stock} required /></div>
+                      <div className="col-md-3"><label className="form-label f-s-13 text-muted">Moderatsiya</label><select name="is_approved" className="form-select" defaultValue={selected.status ?? 0}><option value="0">Moderatsiya</option><option value="1">Tasdiqlangan</option><option value="2">Rad etilgan</option></select></div>
+                      <div className="col-md-6 d-flex align-items-end gap-3 flex-wrap">
+                        <label className="form-check"><input name="status" value="1" className="form-check-input" type="checkbox" defaultChecked={selected.active} /> <span className="form-check-label">Faol</span></label>
+                        <label className="form-check"><input name="is_hidden" value="1" className="form-check-input" type="checkbox" defaultChecked={selected.hidden} /> <span className="form-check-label">Yashirish</span></label>
+                        <label className="form-check"><input name="recommended" value="1" className="form-check-input" type="checkbox" defaultChecked={selected.recommended} /> <span className="form-check-label">Tavsiya</span></label>
                       </div>
-                      {variantRows.length === 0 ? <div className="text-muted small mb-2">Variant yo'q — kerak bo'lsa yuqoridagi tugma bilan qo'shing.</div> : null}
-                      {variantRows.map((row) => (
-                        <div className="row g-2 mb-2 align-items-center" key={row.key}>
-                          <input type="hidden" name="variant_id[]" value={row.id || ''} />
-                          <input type="hidden" name="variant_image_existing[]" value={row.image || ''} />
-                          <div className="col-md-1">
-                            {row.image ? <img src={row.image} alt="" className="thumb" style={{ width: 36, height: 36 }} /> : <div className="thumb" style={{ width: 36, height: 36 }}><i className="bi bi-image text-muted"></i></div>}
-                          </div>
-                          <div className="col-md-3">
-                            <input name="variant_color_name[]" className="form-control" placeholder="Rang/variant" value={row.name} onChange={(event) => updateVariantRow(row.key, { name: event.target.value })} />
-                          </div>
-                          <div className="col-md-2">
-                            <input name="variant_stock[]" type="number" min={0} className="form-control" placeholder="Stock" value={row.stock} onChange={(event) => updateVariantRow(row.key, { stock: Number(event.target.value) })} />
-                          </div>
-                          <div className="col-md-5">
-                            <input name="variant_image[]" type="file" accept="image/*" className="form-control" />
-                          </div>
-                          <div className="col-md-1 text-end">
-                            <button type="button" className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" title="Variantni o'chirish" onClick={() => removeVariantRow(row.key)}>
-                              <i className="bi bi-trash"></i>
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                      <div className="form-text">O'chirilgan variant saqlashda butunlay o'chib ketadi (ombordagi qoldig'i bilan birga).</div>
-                    </div>
+                      <div className="col-md-3"><label className="form-label f-s-13 text-muted">Tavsiya muddati</label><input name="recommendedExpiresAt" type="datetime-local" className="form-control" defaultValue={toInputDate(selected.recommendedExpiresAt)} /></div>
 
-                    <div className="col-12"><button className="btn btn-primary">Saqlash</button></div>
-                  </form>
-                </div>
+                      <div className="col-12">
+                        <label className="form-label f-s-13 text-muted">Rasmlar</label>
+                        <ImageGalleryEditor key={selected.id} images={selected.rawImages || selected.images || []} />
+                      </div>
+
+                      <div className="col-12"><label className="form-label f-s-13 text-muted">Tavsif</label><textarea name="description" className="form-control" rows={4} defaultValue={selected.description || ''} /></div>
+
+                      <div className="col-12">
+                        <div className="d-flex align-items-center justify-content-between mb-2">
+                          <h6 className="f-w-600 mb-0">Variantlar</h6>
+                          <button type="button" className="btn btn-sm btn-outline-secondary" onClick={addVariantRow}>
+                            <i className="ti ti-plus me-1"></i>Variant qo'shish
+                          </button>
+                        </div>
+                        {variantRows.length === 0 ? <div className="text-muted f-s-13 mb-2">Variant yo'q — kerak bo'lsa yuqoridagi tugma bilan qo'shing.</div> : null}
+                        {variantRows.map((row) => (
+                          <div className="row g-2 mb-2 align-items-center" key={row.key}>
+                            <input type="hidden" name="variant_id[]" value={row.id || ''} />
+                            <input type="hidden" name="variant_image_existing[]" value={row.image || ''} />
+                            <div className="col-md-1">
+                              {row.image ? <img src={row.image} alt="" className="b-r-10 object-fit-cover flex-shrink-0 w-35 h-35" /> : <div className="b-r-10 overflow-hidden d-flex-center bg-light-primary flex-shrink-0 w-35 h-35"><i className="ti ti-photo text-muted"></i></div>}
+                            </div>
+                            <div className="col-md-3">
+                              <input name="variant_color_name[]" className="form-control" placeholder="Rang/variant" value={row.name} onChange={(event) => updateVariantRow(row.key, { name: event.target.value })} />
+                            </div>
+                            <div className="col-md-2">
+                              <input name="variant_stock[]" type="number" min={0} className="form-control" placeholder="Stock" value={row.stock} onChange={(event) => updateVariantRow(row.key, { stock: Number(event.target.value) })} />
+                            </div>
+                            <div className="col-md-5">
+                              <input name="variant_image[]" type="file" accept="image/*" className="form-control" />
+                            </div>
+                            <div className="col-md-1 text-end">
+                              <button type="button" className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" title="Variantni o'chirish" onClick={() => removeVariantRow(row.key)}>
+                                <i className="ti ti-trash"></i>
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                        <div className="form-text">O'chirilgan variant saqlashda butunlay o'chib ketadi (ombordagi qoldig'i bilan birga).</div>
+                      </div>
+
+                      <div className="col-12"><button className="btn btn-primary">Saqlash</button></div>
+                    </form>
+                  </div></div>
               </div>
             </div>
           )}
@@ -339,24 +343,23 @@ export default function Stationeries() {
 function Info({ title, rows }: { title: string; rows: Array<[string, string]> }) {
   return (
     <div className="col-xl-4">
-      <div className="detail-panel h-100">
-        <h6 className="fw-bold mb-3">{title}</h6>
-        {rows.map(([label, value]) => (
-          <div className="border-bottom py-2" key={label}>
-            <small className="text-muted d-block">{label}</small>
-            <strong>{value}</strong>
-          </div>
-        ))}
-      </div>
+      <div className="card h-100"><div className="card-header"><h5 className="mb-0">{title}</h5></div><div className="card-body">
+          {rows.map(([label, value]) => (
+            <div className="b-b-1-light py-2" key={label}>
+              <small className="text-muted d-block">{label}</small>
+              <strong>{value}</strong>
+            </div>
+          ))}
+        </div></div>
     </div>
   );
 }
 
 function MiniOrdersTable({ rows, empty }: { rows: MiniOrder[]; empty: string }) {
-  if (!rows.length) return <div className="text-muted small">{empty}</div>;
+  if (!rows.length) return <div className="text-muted f-s-13">{empty}</div>;
   return (
-    <div className="table-responsive">
-      <table className="table table-bottom-border align-middle data-table compact-table">
+    <div className="table-responsive app-scroll">
+      <table className="table table-bottom-border align-middle">
         <thead>
           <tr>
             <th>ID</th>
@@ -373,9 +376,9 @@ function MiniOrdersTable({ rows, empty }: { rows: MiniOrder[]; empty: string }) 
               <td>#{row.id}</td>
               <td><strong>{row.customer}</strong><small className="d-block text-muted">{row.phone || row.seller || ''}</small></td>
               <td>{fmt(row.amount)} so'm</td>
-              <td><span className="chip chip-gray">{row.status || '—'}</span></td>
+              <td><span className="badge text-light-secondary">{row.status || '—'}</span></td>
               <td>{row.date || '—'}</td>
-              <td className="text-end">{row.url ? <a className="btn btn-light-primary icon-btn w-30 h-30 b-r-22" href={row.url} title="Buyurtmani ochish"><i className="bi bi-eye"></i></a> : null}</td>
+              <td className="text-end">{row.url ? <a className="btn btn-light-primary icon-btn w-30 h-30 b-r-22" href={row.url} title="Buyurtmani ochish"><i className="ti ti-eye"></i></a> : null}</td>
             </tr>
           ))}
         </tbody>

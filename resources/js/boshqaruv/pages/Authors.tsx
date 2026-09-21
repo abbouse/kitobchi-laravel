@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { PageCrumbs } from '../Layout';
 import type { FormEvent } from 'react';
 import { router, usePage } from '@inertiajs/react';
-import { Modal, Button } from 'react-bootstrap';
+import { Button } from 'react-bootstrap';
+import Modal from '../components/AppModal';
 import PaginationControls, { useClientPagination } from '../components/PaginationControls';
 
 const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n || 0);
@@ -79,35 +80,37 @@ export default function Authors() {
 
   return (
     <div>
-      <div className="page-head">
-        <div><h1 className="page-title">Mualliflar</h1><PageCrumbs /><p className="page-subtitle">Jami {authors.length} ta muallif</p></div>
-        <button className="btn btn-primary" onClick={() => setEditing(emptyAuthor)}><i className="bi bi-plus-lg me-1"></i>Muallif qo'shish</button>
+      <div className="d-flex align-items-end justify-content-between flex-wrap gap-3 mx-1 mb-3">
+        <div><h4 className="main-title mb-0">Mualliflar</h4><PageCrumbs /><p className="mb-0 text-secondary">Jami {authors.length} ta muallif</p></div>
+        <button className="btn btn-primary" onClick={() => setEditing(emptyAuthor)}><i className="ti ti-plus me-1"></i>Muallif qo'shish</button>
       </div>
 
-      <div className="row g-3">
+      <div className="row">
         {pagination.paginated.map((author, i) => (
           <div className="col-xl-4 col-md-6" key={author.id}>
-            <div className="card-panel h-100 d-flex flex-column justify-content-between">
-              <div>
-                <div className="d-flex align-items-center gap-3 mb-3">
-                  <div className="resource-avatar">
-                    {author.image ? <img src={author.image} alt={author.name} /> : initials(author.name)}
+            <div className="card h-100">
+              <div className="card-body d-flex flex-column justify-content-between">
+                <div>
+                  <div className="d-flex align-items-center gap-3 mb-3">
+                    <div className="h-55 w-55 d-flex-center b-r-50 bg-light-primary f-w-600 f-s-18 overflow-hidden flex-shrink-0">
+                      {author.image ? <img className="w-100 h-100 object-fit-cover" src={author.image} alt={author.name} /> : initials(author.name)}
+                    </div>
+                    <div className="min-w-0" style={{ flex: 1 }}>
+                      <div className="f-w-600 text-truncate">{author.name}</div>
+                      <div className="text-muted f-s-13 mt-1 text-truncate">{author.bio || 'Muallif katalogi'}</div>
+                    </div>
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div className="fw-bold text-truncate">{author.name}</div>
-                    <div className="text-muted small mt-1 text-truncate">{author.bio || 'Muallif katalogi'}</div>
+                  <div className="d-flex justify-content-around pt-3 b-t-1-light text-center">
+                    <Metric value={author.books} label="Kitob" tone="text-primary" />
+                    <Metric value={author.hasMultipleAuthors ? 'Guruh' : 'Yakka'} label="Tur" tone="text-info" />
+                    <Metric value={author.needsAiPortrait ? 'AI' : 'OK'} label="Rasm" tone="text-success" />
                   </div>
                 </div>
-                <div className="d-flex justify-content-around pt-3 border-top text-center">
-                  <Metric value={author.books} label="Kitob" tone="text-primary" />
-                  <Metric value={author.hasMultipleAuthors ? 'Guruh' : 'Yakka'} label="Tur" tone="text-info" />
-                  <Metric value={author.needsAiPortrait ? 'AI' : 'OK'} label="Rasm" tone="text-success" />
+                <div className="d-flex gap-2 mt-3 pt-2">
+                  <button className="btn btn-sm btn-light-secondary flex-fill" onClick={() => openDetail(author)}><i className="ti ti-eye"></i></button>
+                  <button className="btn btn-sm btn-light-secondary flex-fill" onClick={() => setEditing(author)}><i className="ti ti-pencil"></i></button>
+                  <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => destroy(author)}><i className="ti ti-trash"></i></button>
                 </div>
-              </div>
-              <div className="d-flex gap-2 mt-3 pt-2">
-                <button className="btn btn-sm btn-light-secondary flex-fill" onClick={() => openDetail(author)}><i className="bi bi-eye"></i></button>
-                <button className="btn btn-sm btn-light-secondary flex-fill" onClick={() => setEditing(author)}><i className="bi bi-pencil"></i></button>
-                <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => destroy(author)}><i className="bi bi-trash"></i></button>
               </div>
             </div>
           </div>
@@ -136,7 +139,7 @@ function AuthorFormModal({ author, onHide }: { author: Partial<Author> | null; o
   return (
     <Modal show={!!author} onHide={onHide} size="lg" centered>
       <form onSubmit={submit}>
-        <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">{isEdit ? 'Muallifni tahrirlash' : "Muallif qo'shish"}</Modal.Title></Modal.Header>
+        <Modal.Header closeButton><Modal.Title className="f-s-20 f-w-600">{isEdit ? 'Muallifni tahrirlash' : "Muallif qo'shish"}</Modal.Title></Modal.Header>
         <Modal.Body><div className="row g-3">
           <Field name="name" label="Nomi" defaultValue={author?.name} required />
           <Field name="image" label="Rasm URL yoki storage path" defaultValue={author?.rawImage} />
@@ -155,22 +158,21 @@ function AuthorFormModal({ author, onHide }: { author: Partial<Author> | null; o
 function AuthorDetailModal({ author, detail, loading, onHide, onEdit, onDelete, onPrompt }: { author: Author | null; detail: AuthorDetail | null; loading: boolean; onHide: () => void; onEdit: () => void; onDelete: (author: Author) => void; onPrompt: (author: Author) => void }) {
   return (
     <Modal show={!!author} onHide={onHide} size="xl" centered>
-      <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">{author?.name}</Modal.Title></Modal.Header>
+      <Modal.Header closeButton><Modal.Title className="f-s-20 f-w-600">{author?.name}</Modal.Title></Modal.Header>
       <Modal.Body>
-        {loading ? <div className="text-center text-muted py-5">Ma'lumot yuklanmoqda...</div> : !detail ? <div className="text-muted">Muallif tanlanmagan.</div> : <div className="row g-3">
-          <div className="col-lg-4"><div className="detail-panel h-100 text-center">
-            <div className="resource-avatar mx-auto mb-3" style={{ width: 96, height: 96, fontSize: 32 }}>{detail.image ? <img src={detail.image} alt={detail.name} /> : initials(detail.name)}</div>
-            <h4 className="fw-bold">{detail.name}</h4>
-            <div className="text-muted small text-break">{detail.sourceUrl || detail.externalId || 'Manba kiritilmagan'}</div>
-            <div className="d-grid gap-2 mt-3">
-              <span className={`chip ${detail.needsAiPortrait ? 'chip-warning' : 'chip-success'}`}>{detail.needsAiPortrait ? 'AI portret kerak' : 'Rasm holati yaxshi'}</span>
-              <span className="chip chip-info">{detail.hasMultipleAuthors ? 'Ko‘p muallifli yozuv' : 'Yakka muallif'}</span>
-            </div>
-          </div></div>
-          <div className="col-lg-8"><div className="detail-panel h-100">
-            <h6 className="fw-bold mb-3">Ulangan kitoblar ({fmt(detail.booksCount)})</h6>
-            <BooksTable rows={detail.books} />
-          </div></div>
+        {loading ? <div className="text-center text-muted py-5">Ma'lumot yuklanmoqda...</div> : !detail ? <div className="text-muted">Muallif tanlanmagan.</div> : <div className="row">
+          <div className="col-lg-4"><div className="card h-100"><div className="card-body text-center">
+              <div className="d-flex-center b-r-50 bg-light-primary f-w-600 overflow-hidden flex-shrink-0 mx-auto mb-3 f-s-32 w-95 h-95">{detail.image ? <img className="w-100 h-100 object-fit-cover" src={detail.image} alt={detail.name} /> : initials(detail.name)}</div>
+              <h4 className="f-w-600">{detail.name}</h4>
+              <div className="text-muted f-s-13 text-break">{detail.sourceUrl || detail.externalId || 'Manba kiritilmagan'}</div>
+              <div className="d-grid gap-2 mt-3">
+                <span className={`badge ${detail.needsAiPortrait ? 'text-light-warning' : 'text-light-success'}`}>{detail.needsAiPortrait ? 'AI portret kerak' : 'Rasm holati yaxshi'}</span>
+                <span className="badge text-light-info">{detail.hasMultipleAuthors ? 'Ko‘p muallifli yozuv' : 'Yakka muallif'}</span>
+              </div>
+            </div></div></div>
+          <div className="col-lg-8"><div className="card h-100"><div className="card-header"><h5 className="mb-0">Ulangan kitoblar ({fmt(detail.booksCount)})</h5></div><div className="card-body">
+              <BooksTable rows={detail.books} />
+            </div></div></div>
         </div>}
       </Modal.Body>
       <Modal.Footer>
@@ -184,9 +186,9 @@ function AuthorDetailModal({ author, detail, loading, onHide, onEdit, onDelete, 
 }
 
 function BooksTable({ rows }: { rows: BookRow[] }) {
-  if (!rows.length) return <div className="text-muted small">Ulangan kitob topilmadi.</div>;
+  if (!rows.length) return <div className="text-muted f-s-13">Ulangan kitob topilmadi.</div>;
 
-  return <div className="table-responsive"><table className="table table-bottom-border align-middle data-table mb-0"><thead><tr><th>ID</th><th>Kitob</th><th>Kategoriya</th><th>Seller</th><th>Narx</th><th>Qoldiq</th><th>Sotildi</th><th>Holat</th></tr></thead><tbody>{rows.map((book) => <tr key={book.id}><td>#{book.id}</td><td className="fw-semibold">{book.name}</td><td>{book.category || '—'}</td><td>{book.seller || '—'}</td><td>{fmt(book.price)}</td><td>{book.stock}</td><td>{book.sold}</td><td><span className={`chip ${book.hidden || !book.approved ? 'chip-warning' : 'chip-success'}`}>{book.hidden ? 'Yashirin' : book.status}</span></td></tr>)}</tbody></table></div>;
+  return <div className="table-responsive app-scroll"><table className="table table-bottom-border align-middle mb-0"><thead><tr><th>ID</th><th>Kitob</th><th>Kategoriya</th><th>Seller</th><th>Narx</th><th>Qoldiq</th><th>Sotildi</th><th>Holat</th></tr></thead><tbody>{rows.map((book) => <tr key={book.id}><td>#{book.id}</td><td className="f-w-600">{book.name}</td><td>{book.category || '—'}</td><td>{book.seller || '—'}</td><td>{fmt(book.price)}</td><td>{book.stock}</td><td>{book.sold}</td><td><span className={`badge ${book.hidden || !book.approved ? 'text-light-warning' : 'text-light-success'}`}>{book.hidden ? 'Yashirin' : book.status}</span></td></tr>)}</tbody></table></div>;
 }
 
 function Field({ name, label, defaultValue, required, wide }: { name: string; label: string; defaultValue?: string | null; required?: boolean; wide?: boolean }) {
@@ -194,7 +196,7 @@ function Field({ name, label, defaultValue, required, wide }: { name: string; la
 }
 
 function Metric({ value, label, tone }: { value: string | number; label: string; tone: string }) {
-  return <div><div className={`fw-bold ${tone}`} style={{ fontSize: 20 }}>{value}</div><small className="text-muted">{label}</small></div>;
+  return <div><div className={`f-w-600 ${tone} f-s-20`}>{value}</div><small className="text-muted">{label}</small></div>;
 }
 
 function initials(name?: string) {

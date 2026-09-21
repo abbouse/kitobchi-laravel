@@ -4,10 +4,11 @@ import { createPortal } from 'react-dom';
 interface InfoHintProps {
   title?: string;
   text: string;
+  /** eski API bilan moslik uchun (ko'rinishga ta'sir qilmaydi) */
   tone?: 'light' | 'dark';
 }
 
-export default function InfoHint({ title = 'Bu qanday hisoblanadi?', text, tone = 'light' }: InfoHintProps) {
+export default function InfoHint({ title = 'Bu qanday hisoblanadi?', text }: InfoHintProps) {
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState({ top: 0, left: 0 });
   const buttonRef = useRef<HTMLButtonElement | null>(null);
@@ -52,7 +53,7 @@ export default function InfoHint({ title = 'Bu qanday hisoblanadi?', text, tone 
       <button
         ref={buttonRef}
         type="button"
-        className={`info-hint-btn ${tone === 'dark' ? 'is-dark' : ''}`}
+        className="bg-transparent border-0 p-0 text-secondary d-inline-flex align-items-center f-s-16 lh-1 flex-shrink-0"
         aria-label={title}
         aria-expanded={open}
         onClick={(event) => {
@@ -61,12 +62,13 @@ export default function InfoHint({ title = 'Bu qanday hisoblanadi?', text, tone 
           setOpen((value) => !value);
         }}
       >
-        ?
+        <i className="ti ti-info-circle"></i>
       </button>
       {open && createPortal(
-        <div className={`info-hint-popover ${tone === 'dark' ? 'is-dark' : ''}`} style={position} role="dialog">
-          <div className="info-hint-title">{title}</div>
-          <div className="info-hint-text">{text}</div>
+        // Bootstrap/Axelit popover markupi
+        <div className="popover bs-popover-bottom show" style={{ position: 'fixed', top: position.top, left: position.left, maxWidth: 320 }} role="dialog">
+          <div className="popover-header f-w-600">{title}</div>
+          <div className="popover-body">{text}</div>
         </div>,
         document.body,
       )}

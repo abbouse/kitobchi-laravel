@@ -1,7 +1,8 @@
 import { FormEvent, useState } from 'react';
 import { PageCrumbs } from '../Layout';
 import { router, usePage } from '@inertiajs/react';
-import { Modal, Button, Form } from 'react-bootstrap';
+import { Button, Form } from 'react-bootstrap';
+import Modal from '../components/AppModal';
 
 // ===== VAKANSIYALAR =====
 export function Vakansiyalar() {
@@ -25,33 +26,35 @@ export function Vakansiyalar() {
 
   return (
     <div>
-      <div className="page-head"><div><h1 className="page-title">Vakansiyalar</h1><PageCrumbs /><p className="page-subtitle">Jami {vacancies.length} ta vakansiya</p></div>
-        <button className="btn btn-primary" onClick={() => { setEditing(null); setShowForm(true); }}><i className="bi bi-plus-lg me-1"></i>Qo'shish</button>
+      <div className="d-flex align-items-end justify-content-between flex-wrap gap-3 mx-1 mb-3"><div><h4 className="main-title mb-0">Vakansiyalar</h4><PageCrumbs /><p className="mb-0 text-secondary">Jami {vacancies.length} ta vakansiya</p></div>
+        <button className="btn btn-primary" onClick={() => { setEditing(null); setShowForm(true); }}><i className="ti ti-plus me-1"></i>Qo'shish</button>
         </div>
-      <div className="card-panel">
-        <div className="table-responsive"><table className="table table-bottom-border align-middle data-table">
-          <thead><tr><th>ID</th><th>Vakansiya</th><th>Shart</th><th>Joylashuv</th><th>Arizalar</th><th>Holat</th><th>Amallar</th></tr></thead>
-          <tbody>{vacancies.map(vacancy => (
-            <tr key={vacancy.id}>
-              <td className="fw-semibold" style={{ color: 'var(--kc-ink)' }}>#{vacancy.id}</td>
-              <td className="fw-semibold">{vacancy.title}</td>
-              <td>{vacancy.contractType || '—'}</td>
-              <td>{vacancy.location || '—'}</td>
-              <td>{vacancy.applicants} ta</td>
-              <td><div className="form-check form-switch"><input type="checkbox" className="form-check-input" checked={vacancy.status === 'Active'} onChange={() => toggle(vacancy)} /></div></td>
-              <td>
-                <button className="btn btn-light-success icon-btn w-30 h-30 b-r-22 me-1" onClick={() => { setEditing(vacancy); setShowForm(true); }}><i className="bi bi-pencil"></i></button>
-                <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => destroy(vacancy)}><i className="bi bi-trash"></i></button>
-              </td>
-            </tr>
-          ))}</tbody>
-        </table></div>
-      </div>
+      <div className="card">
+<div className="card-body">
+          <div className="table-responsive app-scroll"><table className="table table-bottom-border align-middle">
+            <thead><tr><th>ID</th><th>Vakansiya</th><th>Shart</th><th>Joylashuv</th><th>Arizalar</th><th>Holat</th><th>Amallar</th></tr></thead>
+            <tbody>{vacancies.map(vacancy => (
+              <tr key={vacancy.id}>
+                <td className="f-w-600 text-primary">#{vacancy.id}</td>
+                <td className="f-w-600">{vacancy.title}</td>
+                <td>{vacancy.contractType || '—'}</td>
+                <td>{vacancy.location || '—'}</td>
+                <td>{vacancy.applicants} ta</td>
+                <td><div className="form-check form-switch"><input type="checkbox" className="form-check-input" checked={vacancy.status === 'Active'} onChange={() => toggle(vacancy)} /></div></td>
+                <td>
+                  <button className="btn btn-light-success icon-btn w-30 h-30 b-r-22 me-1" onClick={() => { setEditing(vacancy); setShowForm(true); }}><i className="ti ti-pencil"></i></button>
+                  <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => destroy(vacancy)}><i className="ti ti-trash"></i></button>
+                </td>
+              </tr>
+            ))}</tbody>
+          </table></div>
+        </div>
+</div>
       <Modal show={showForm} onHide={() => setShowForm(false)} centered size="lg">
         <Form onSubmit={submit}>
-          <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">{editing ? 'Vakansiyani tahrirlash' : "Vakansiya qo'shish"}</Modal.Title></Modal.Header>
+          <Modal.Header closeButton><Modal.Title className="f-s-20 f-w-600">{editing ? 'Vakansiyani tahrirlash' : "Vakansiya qo'shish"}</Modal.Title></Modal.Header>
           <Modal.Body>
-            <div className="row g-3">
+            <div className="row">
               <div className="col-md-8"><Form.Label>Sarlavha</Form.Label><Form.Control name="title" required defaultValue={editing?.title || ''} /></div>
               <div className="col-md-4"><Form.Label>Icon</Form.Label><Form.Select name="icon" defaultValue={editing?.icon || 'briefcase'}><option value="briefcase">Lavozim</option><option value="code">IT</option><option value="palette">Dizayn</option><option value="shop">Savdo</option><option value="megaphone">Marketing</option><option value="people">HR</option><option value="chart">Analitika</option></Form.Select></div>
               <div className="col-md-4"><Form.Label>Shart turi</Form.Label><Form.Control name="contract_type" defaultValue={editing?.contractType || ''} /></div>
@@ -64,41 +67,41 @@ export function Vakansiyalar() {
                 ['ja', 'Yaponcha'],
               ].map(([locale, label]) => (
                 <div className="col-12" key={locale}>
-                  <div className="rounded-4 border bg-light-subtle p-3">
-                    <div className="fw-semibold mb-3">{label} tarjima</div>
-                    <div className="row g-3">
-                      <div className="col-md-6">
-                        <Form.Label>{label} sarlavha</Form.Label>
-                        <Form.Control
-                          name={`translations[${locale}][title]`}
-                          defaultValue={editing?.translations?.[locale]?.title || ''}
-                        />
+                  <div className="card"><div className="card-body bg-light-subtle">
+                      <div className="f-w-600 mb-3">{label} tarjima</div>
+                      <div className="row g-3">
+                        <div className="col-md-6">
+                          <Form.Label>{label} sarlavha</Form.Label>
+                          <Form.Control
+                            name={`translations[${locale}][title]`}
+                            defaultValue={editing?.translations?.[locale]?.title || ''}
+                          />
+                        </div>
+                        <div className="col-md-3">
+                          <Form.Label>{label} shart turi</Form.Label>
+                          <Form.Control
+                            name={`translations[${locale}][contract_type]`}
+                            defaultValue={editing?.translations?.[locale]?.contract_type || ''}
+                          />
+                        </div>
+                        <div className="col-md-3">
+                          <Form.Label>{label} joylashuv</Form.Label>
+                          <Form.Control
+                            name={`translations[${locale}][location]`}
+                            defaultValue={editing?.translations?.[locale]?.location || ''}
+                          />
+                        </div>
+                        <div className="col-12">
+                          <Form.Label>{label} tavsif</Form.Label>
+                          <Form.Control
+                            as="textarea"
+                            rows={4}
+                            name={`translations[${locale}][description]`}
+                            defaultValue={editing?.translations?.[locale]?.description || ''}
+                          />
+                        </div>
                       </div>
-                      <div className="col-md-3">
-                        <Form.Label>{label} shart turi</Form.Label>
-                        <Form.Control
-                          name={`translations[${locale}][contract_type]`}
-                          defaultValue={editing?.translations?.[locale]?.contract_type || ''}
-                        />
-                      </div>
-                      <div className="col-md-3">
-                        <Form.Label>{label} joylashuv</Form.Label>
-                        <Form.Control
-                          name={`translations[${locale}][location]`}
-                          defaultValue={editing?.translations?.[locale]?.location || ''}
-                        />
-                      </div>
-                      <div className="col-12">
-                        <Form.Label>{label} tavsif</Form.Label>
-                        <Form.Control
-                          as="textarea"
-                          rows={4}
-                          name={`translations[${locale}][description]`}
-                          defaultValue={editing?.translations?.[locale]?.description || ''}
-                        />
-                      </div>
-                    </div>
-                  </div>
+                    </div></div>
                 </div>
               ))}
               <div className="col-12">
@@ -147,32 +150,34 @@ export function KaryeraArizalari() {
 
   return (
     <div>
-      <div className="page-head"><div><h1 className="page-title">Karyera arizalari</h1><PageCrumbs /><p className="page-subtitle">Jami {applications.length} ta ariza</p></div></div>
-      <div className="card-panel">
-        <div className="table-responsive"><table className="table table-bottom-border align-middle data-table">
-          <thead><tr><th>ID</th><th>Nomzod</th><th>Vakansiya</th><th>Kontakt</th><th>Sana</th><th>Status</th><th>Amallar</th></tr></thead>
-          <tbody>{applications.map(application => (
-            <tr key={application.id}>
-              <td className="fw-semibold" style={{ color: 'var(--kc-ink)' }}>#{application.id}</td>
-              <td className="fw-semibold">{application.name}</td>
-              <td>{application.vacancy}</td>
-              <td className="text-muted small">{application.email}<br />{application.telegram}</td>
-              <td className="text-muted">{application.date || '—'}</td>
-              <td><span className={`chip ${application.status === 'new' ? 'chip-info' : application.status === 'reviewed' ? 'chip-warning' : 'chip-success'}`} style={{ fontSize: 9 }}>{application.status}</span></td>
-              <td>
-                <button className="btn btn-light-primary icon-btn w-30 h-30 b-r-22 me-1" onClick={() => { setSelected(application); setReplyText(''); setShowDetail(true); }}><i className="bi bi-eye"></i></button>
-                {application.cvUrl ? <a className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22" href={application.cvUrl}><i className="bi bi-download"></i></a> : null}
-              </td>
-            </tr>
-          ))}</tbody>
-        </table></div>
-      </div>
+      <div className="d-flex align-items-end justify-content-between flex-wrap gap-3 mx-1 mb-3"><div><h4 className="main-title mb-0">Karyera arizalari</h4><PageCrumbs /><p className="mb-0 text-secondary">Jami {applications.length} ta ariza</p></div></div>
+      <div className="card">
+<div className="card-body">
+          <div className="table-responsive app-scroll"><table className="table table-bottom-border align-middle">
+            <thead><tr><th>ID</th><th>Nomzod</th><th>Vakansiya</th><th>Kontakt</th><th>Sana</th><th>Status</th><th>Amallar</th></tr></thead>
+            <tbody>{applications.map(application => (
+              <tr key={application.id}>
+                <td className="f-w-600 text-primary">#{application.id}</td>
+                <td className="f-w-600">{application.name}</td>
+                <td>{application.vacancy}</td>
+                <td className="text-muted f-s-13">{application.email}<br />{application.telegram}</td>
+                <td className="text-muted">{application.date || '—'}</td>
+                <td><span className={`badge ${application.status === 'new' ? 'text-light-info' : application.status === 'reviewed' ? 'text-light-warning' : 'text-light-success'} f-s-9`}>{application.status}</span></td>
+                <td>
+                  <button className="btn btn-light-primary icon-btn w-30 h-30 b-r-22 me-1" onClick={() => { setSelected(application); setReplyText(''); setShowDetail(true); }}><i className="ti ti-eye"></i></button>
+                  {application.cvUrl ? <a className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22" href={application.cvUrl}><i className="ti ti-download"></i></a> : null}
+                </td>
+              </tr>
+            ))}</tbody>
+          </table></div>
+        </div>
+</div>
       <Modal show={showDetail} onHide={() => setShowDetail(false)} centered>
-        <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">{selected?.name}</Modal.Title></Modal.Header>
+        <Modal.Header closeButton><Modal.Title className="f-s-20 f-w-600">{selected?.name}</Modal.Title></Modal.Header>
         <Modal.Body>
           <div className="row g-2">
-            <div className="col-6"><small className="text-muted">Vakansiya</small><div className="fw-semibold">{selected?.vacancy}</div></div>
-            <div className="col-6"><small className="text-muted">Status</small><div><span className={`chip ${selected?.status === 'New' ? 'chip-info' : selected?.status === 'Reviewed' ? 'chip-warning' : 'chip-success'}`}>{selected?.status}</span></div></div>
+            <div className="col-6"><small className="text-muted">Vakansiya</small><div className="f-w-600">{selected?.vacancy}</div></div>
+            <div className="col-6"><small className="text-muted">Status</small><div><span className={`badge ${selected?.status === 'New' ? 'text-light-info' : selected?.status === 'Reviewed' ? 'text-light-warning' : 'text-light-success'}`}>{selected?.status}</span></div></div>
             <div className="col-12"><small className="text-muted">Email</small><div>{selected?.email}</div></div>
             <div className="col-12"><small className="text-muted">Telegram</small><div>{selected?.telegram || '—'}</div></div>
             <div className="col-12"><small className="text-muted">Xabar</small><div>{selected?.message || '—'}</div></div>
@@ -185,7 +190,7 @@ export function KaryeraArizalari() {
             </div>
             {selected?.replyUrl ? (
               <div className="col-12 mt-3">
-                <label className="form-label small text-muted fw-semibold">Nomzodga javob yozish</label>
+                <label className="form-label f-s-13 text-muted f-w-600">Nomzodga javob yozish</label>
                 <textarea
                   className="form-control"
                   rows={4}
@@ -200,7 +205,7 @@ export function KaryeraArizalari() {
                     disabled={sendingReply || replyText.trim().length < 5}
                     onClick={sendReply}
                   >
-                    <i className="bi bi-send me-1"></i>{sendingReply ? 'Yuborilmoqda...' : 'Yuborish'}
+                    <i className="ti ti-send me-1"></i>{sendingReply ? 'Yuborilmoqda...' : 'Yuborish'}
                   </button>
                 </div>
               </div>

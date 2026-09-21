@@ -3,6 +3,9 @@ import { PageCrumbs } from '../Layout';
 import { router, usePage } from '@inertiajs/react';
 import PaginationControls from '../components/PaginationControls';
 
+import { StatWidget } from '../components/Axelit';
+import { tiIcon } from '../utils/icons';
+
 const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n || 0);
 
 type SplitSettings = {
@@ -178,11 +181,11 @@ export default function Split() {
   type SplitTab = 'plans' | 'contracts' | 'categories' | 'users' | 'settings';
   const [tab, setTab] = useState<SplitTab>((splitContractFilters.status || 'all') !== 'all' ? 'contracts' : 'plans');
   const tabs: [SplitTab, string, string][] = [
-    ['plans', 'Tariflar', 'bi-calendar-week'],
-    ['contracts', 'Shartnomalar', 'bi-file-earmark-text'],
-    ['categories', 'Kategoriyalar', 'bi-tags'],
-    ['users', 'Foydalanuvchilar', 'bi-people'],
-    ['settings', 'Sozlamalar', 'bi-gear'],
+    ['plans', 'Tariflar', 'ti-calendar-time'],
+    ['contracts', 'Shartnomalar', 'ti-file-text'],
+    ['categories', 'Kategoriyalar', 'ti-tags'],
+    ['users', 'Foydalanuvchilar', 'ti-users'],
+    ['settings', 'Sozlamalar', 'ti-settings'],
   ];
 
   const reload = (page = 1, nextStatus = status, nextSearch = search) => {
@@ -204,108 +207,100 @@ export default function Split() {
 
   return (
     <div>
-      <div className="page-head">
+      <div className="d-flex align-items-end justify-content-between flex-wrap gap-3 mx-1 mb-3">
         <div>
-          <h1 className="page-title">Split nazorati</h1><PageCrumbs />
-          <p className="page-subtitle">Nasiya tariflari, shartnomalar va foydalanuvchi limitlarini boshqarish</p>
+          <h4 className="main-title mb-0">Split nazorati</h4><PageCrumbs />
+          <p className="mb-0 text-secondary">Nasiya tariflari, shartnomalar va foydalanuvchi limitlarini boshqarish</p>
         </div>
         {tab === 'users' ? (
           <div className="d-flex gap-2 flex-wrap">
-            <button className="btn btn-light-secondary" onClick={() => refreshProfiles()}><i className="bi bi-arrow-clockwise me-1"></i>Barchasini qayta hisoblash</button>
+            <button className="btn btn-light-secondary" onClick={() => refreshProfiles()}><i className="ti ti-rotate-clockwise me-1"></i>Barchasini qayta hisoblash</button>
           </div>
         ) : null}
       </div>
 
-      <div className="kc-tabs d-flex gap-2 flex-wrap mb-3">
+      <div className="nav nav-tabs app-tabs-primary flex-wrap mb-3">
         {tabs.map(([key, label, icon]) => (
-          <button
-            key={key}
-            className={`kc-tab ${tab === key ? 'active' : ''}`}
-            onClick={() => setTab(key)}
-          >
-            <i className={`bi ${icon} me-1`}></i>
-            {label}
-            {key === 'contracts' && splitContractStats.overdue > 0 ? (
-              <span className="badge bg-danger ms-1">{splitContractStats.overdue}</span>
-            ) : null}
-          </button>
+          <div key={key} className="nav-item"><button
+              className={`nav-link ${tab === key ? 'active' : ''}`}
+              onClick={() => setTab(key)}>
+              <i className={`${tiIcon(icon)} me-1`}></i>
+              {label}
+              {key === 'contracts' && splitContractStats.overdue > 0 ? (
+                <span className="badge bg-danger ms-1">{splitContractStats.overdue}</span>
+              ) : null}
+            </button></div>
         ))}
       </div>
 
       {tab === 'users' ? (
-      <div className="kpi-strip row g-3 mb-4">
+      <div className="row">
         {[
-          ['Profil yozuvlari', splitSummary.profiles, 'bi-database-check', 'var(--kc-ink)'],
-          ['Mos userlar', splitSummary.eligible, 'bi-patch-check', 'var(--kc-ok)'],
-          ['Kartasi lock bo‘ladiganlar', splitSummary.locked, 'bi-lock', 'var(--kc-danger)'],
-          ['Split bloklanganlar', splitSummary.blocked, 'bi-slash-circle', 'var(--kc-cat-dred)'],
-          ['Bo‘sh limitlar jami', `${fmt(splitSummary.totalAvailableLimit)} so'm`, 'bi-wallet2', 'var(--kc-cat-steel)'],
-        ].map(([label, value, icon, color]) => (
-          <div className="col-xl-3 col-md-6" key={String(label)}>
-            <div className="stat-card">
-              <div className="d-flex gap-3 align-items-center">
-                <div>
-                  <div className="stat-value">{String(value)}</div>
-                  <div className="stat-label">{label}</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
+          ['Profil yozuvlari', splitSummary.profiles, 'ti-database', 'rgba(var(--primary), 1)'],
+          ['Mos userlar', splitSummary.eligible, 'ti-discount-check', 'rgba(var(--success), 1)'],
+          ['Kartasi lock bo‘ladiganlar', splitSummary.locked, 'ti-lock', 'rgba(var(--danger), 1)'],
+          ['Split bloklanganlar', splitSummary.blocked, 'ti-ban', 'rgba(var(--danger-dark), 1)'],
+          ['Bo‘sh limitlar jami', `${fmt(splitSummary.totalAvailableLimit)} so'm`, 'ti-wallet', 'rgba(var(--info-dark), 1)'],
+        ].map(([label, value, icon, color], kpiIndex) => (<div className="col-xl-3 col-md-6" key={String(label)}>
+          <StatWidget index={kpiIndex} label={label} value={String(value)} />
+        </div>))}
       </div>
       ) : null}
 
-      <div className="row g-3">
+      <div className="row">
         {tab === 'settings' ? (
         <div className="col-12">
-          <div className="card-panel">
-            <div className="panel-head">
+          <div className="card">
+<div className="card-header d-flex align-items-center justify-content-between gap-2 flex-wrap">
               <div>
-                <div className="panel-title">Sozlamalar</div>
-                <small className="text-muted">Global xavfsizlik talablari shu yerda. Skor threshold, summa, foiz va muddat faqat «Tariflar» tabida.</small>
+                <h5 className="f-w-600">Sozlamalar</h5>
+                <p className="mb-0 text-secondary">Global xavfsizlik talablari shu yerda. Skor threshold, summa, foiz va muddat faqat «Tariflar» tabida.</p>
               </div>
               <div className="d-flex flex-wrap gap-2">
-                <span className={`chip ${splitSettings.enabled ? 'chip-success' : 'chip-warning'}`}>{splitSettings.enabled ? 'Modul yoqilgan' : "Modul o'chirilgan"}</span>
-                <span className={`chip ${splitSettings.publicEnabled ? 'chip-danger' : 'chip-gray'}`}>{splitSettings.publicEnabled ? 'Ilovada ko‘rinadi' : 'Ilovada yashirin'}</span>
+                <span className={`badge ${splitSettings.enabled ? 'text-light-success' : 'text-light-warning'}`}>{splitSettings.enabled ? 'Modul yoqilgan' : "Modul o'chirilgan"}</span>
+                <span className={`badge ${splitSettings.publicEnabled ? 'text-light-danger' : 'text-light-secondary'}`}>{splitSettings.publicEnabled ? 'Ilovada ko‘rinadi' : 'Ilovada yashirin'}</span>
               </div>
             </div>
-            <form onSubmit={(event) => submitForm(event, splitActions.settingsUpdateUrl)}>
-              <div className="row g-3">
-                <div className="col-lg-4"><Toggle name="split_enabled" label="Split moduli" hint="Umumiy vklyuchatel. O'chiq bo'lsa hech qanday yangi nasiya ochilmaydi — mavjud shartnomalar ishlashda davom etadi." defaultChecked={splitSettings.enabled} /></div>
-                <div className="col-lg-4"><Toggle name="split_public_enabled" label="Ilovada ko'rsatish" hint="Yoqilsa mos userlar checkoutda «Nasiya» tugmasini ko'radi. O'chiq bo'lsa modul faqat admin panelda ishlaydi (test rejimi)." defaultChecked={splitSettings.publicEnabled} /></div>
-                <div className="col-lg-4"><Toggle name="split_card_delete_lock_enabled" label="Qarzdorda karta o'chirish blok" hint="Ochiq nasiyasi bor user ilovadan bog'langan kartalarini o'chira olmaydi — qarzdan «qochib ketish» yo'li yopiladi. Nasiya to'liq yopilgach blok avtomatik ochiladi." defaultChecked={splitSettings.cardDeleteLockEnabled} /></div>
+<div className="card-body">
 
-                <div className="col-12"><div className="fw-semibold small text-muted mt-2">LIMIT ORALIG&apos;I</div></div>
-                <div className="col-md-3"><Field name="split_global_min_limit" label="Min limit" type="number" defaultValue={splitSettings.globalMinLimit}
-                  hint="Tizim hisoblagan shaxsiy limit bundan past chiqsa shu qiymatga ko'tariladi — mos user hech bo'lmaganda shuncha nasiya oladi."
-                  example="min 300 000 bo'lsa, hisob 180 000 chiqqan userga baribir 300 000 limit beriladi." /></div>
-                <div className="col-md-3"><Field name="split_global_max_limit" label="Max limit" type="number" defaultValue={splitSettings.globalMaxLimit}
-                  hint="Eng ishonchli user ham bundan ko'p limit ololmaydi. Kompaniyaning bitta userga maksimal riski."
-                  example="2 000 000 qo'ysangiz, hech kimning limiti undan oshmaydi." /></div>
+              <form onSubmit={(event) => submitForm(event, splitActions.settingsUpdateUrl)}>
+                <div className="row g-3">
+                  <div className="col-lg-4"><Toggle name="split_enabled" label="Split moduli" hint="Umumiy vklyuchatel. O'chiq bo'lsa hech qanday yangi nasiya ochilmaydi — mavjud shartnomalar ishlashda davom etadi." defaultChecked={splitSettings.enabled} /></div>
+                  <div className="col-lg-4"><Toggle name="split_public_enabled" label="Ilovada ko'rsatish" hint="Yoqilsa mos userlar checkoutda «Nasiya» tugmasini ko'radi. O'chiq bo'lsa modul faqat admin panelda ishlaydi (test rejimi)." defaultChecked={splitSettings.publicEnabled} /></div>
+                  <div className="col-lg-4"><Toggle name="split_card_delete_lock_enabled" label="Qarzdorda karta o'chirish blok" hint="Ochiq nasiyasi bor user ilovadan bog'langan kartalarini o'chira olmaydi — qarzdan «qochib ketish» yo'li yopiladi. Nasiya to'liq yopilgach blok avtomatik ochiladi." defaultChecked={splitSettings.cardDeleteLockEnabled} /></div>
 
-                <div className="col-12"><div className="fw-semibold small text-muted mt-2">KIM NASIYA OLADI (eligibility)</div></div>
-                <div className="col-md-3"><Field name="split_min_completed_orders" label="Min yakunlangan buyurtma" type="number" defaultValue={splitSettings.minCompletedOrders}
-                  hint="User nasiya olishdan oldin kamida shuncha pullik buyurtmani muvaffaqiyatli yakunlagan bo'lishi kerak."
-                  example="3 qo'ysangiz, 2 ta buyurtmasi bor user hali nasiya ko'rmaydi." /></div>
-                <div className="col-md-3"><Field name="split_min_account_age_days" label="Min akkaunt yoshi (kun)" type="number" defaultValue={splitSettings.minAccountAgeDays}
-                  hint="Ro'yxatdan o'tganiga kamida shuncha kun bo'lgan userlargagina nasiya. Yangi akkaunt — firibgarlik riski."
-                  example="90 bo'lsa, 2 oylik akkaunt hali mos emas." /></div>
-                <div className="col-md-3"><Field name="split_min_card_age_days" label="Min karta yoshi (kun)" type="number" defaultValue={splitSettings.minCardAgeDays}
-                  min={0}
-                  hint="Tasdiqlangan Paylov kartasi kamida shuncha kun oldin ulangan bo'lishi kerak. 0 qo'ysangiz kutish muddati bo'lmaydi, ammo tasdiqlangan karta baribir talab qilinadi."
-                  example="0 — yangi ulangan karta darhol yaroqli; 45 — kamida 45 kunlik karta kerak." /></div>
+                  <div className="col-12"><div className="f-w-600 f-s-13 text-muted mt-2">LIMIT ORALIG&apos;I</div></div>
+                  <div className="col-md-3"><Field name="split_global_min_limit" label="Min limit" type="number" defaultValue={splitSettings.globalMinLimit}
+                    hint="Tizim hisoblagan shaxsiy limit bundan past chiqsa shu qiymatga ko'tariladi — mos user hech bo'lmaganda shuncha nasiya oladi."
+                    example="min 300 000 bo'lsa, hisob 180 000 chiqqan userga baribir 300 000 limit beriladi." /></div>
+                  <div className="col-md-3"><Field name="split_global_max_limit" label="Max limit" type="number" defaultValue={splitSettings.globalMaxLimit}
+                    hint="Eng ishonchli user ham bundan ko'p limit ololmaydi. Kompaniyaning bitta userga maksimal riski."
+                    example="2 000 000 qo'ysangiz, hech kimning limiti undan oshmaydi." /></div>
 
-                <div className="col-12"><div className="fw-semibold small text-muted mt-2">TEXNIK (Paylov refund)</div></div>
-                <div className="col-md-3"><Field name="paylov_refund_sender_card_id" label="Refund sender cardId" defaultValue={splitSettings.refundSenderCardId}
-                  hint="Pul qaytarish kerak bo'lganda mablag' shu Paylov kartadan (Account2Card) jo'natiladi. Paylov kabinetidan olinadi." /></div>
-                <div className="col-md-3"><Field name="paylov_refund_service_id" label="Refund serviceId" defaultValue={splitSettings.refundServiceId}
-                  hint="Paylov refund xizmatining ID'si. Bo'sh qoldirsangiz standart qiymat ishlatiladi." /></div>
-              </div>
-              <div className="text-end mt-3">
-                <button className="btn btn-primary"><i className="bi bi-check2 me-1"></i>Saqlash</button>
-              </div>
-            </form>
-          </div>
+                  <div className="col-12"><div className="f-w-600 f-s-13 text-muted mt-2">KIM NASIYA OLADI (eligibility)</div></div>
+                  <div className="col-md-3"><Field name="split_min_completed_orders" label="Min yakunlangan buyurtma" type="number" defaultValue={splitSettings.minCompletedOrders}
+                    hint="User nasiya olishdan oldin kamida shuncha pullik buyurtmani muvaffaqiyatli yakunlagan bo'lishi kerak."
+                    example="3 qo'ysangiz, 2 ta buyurtmasi bor user hali nasiya ko'rmaydi." /></div>
+                  <div className="col-md-3"><Field name="split_min_account_age_days" label="Min akkaunt yoshi (kun)" type="number" defaultValue={splitSettings.minAccountAgeDays}
+                    hint="Ro'yxatdan o'tganiga kamida shuncha kun bo'lgan userlargagina nasiya. Yangi akkaunt — firibgarlik riski."
+                    example="90 bo'lsa, 2 oylik akkaunt hali mos emas." /></div>
+                  <div className="col-md-3"><Field name="split_min_card_age_days" label="Min karta yoshi (kun)" type="number" defaultValue={splitSettings.minCardAgeDays}
+                    min={0}
+                    hint="Tasdiqlangan Paylov kartasi kamida shuncha kun oldin ulangan bo'lishi kerak. 0 qo'ysangiz kutish muddati bo'lmaydi, ammo tasdiqlangan karta baribir talab qilinadi."
+                    example="0 — yangi ulangan karta darhol yaroqli; 45 — kamida 45 kunlik karta kerak." /></div>
+
+                  <div className="col-12"><div className="f-w-600 f-s-13 text-muted mt-2">TEXNIK (Paylov refund)</div></div>
+                  <div className="col-md-3"><Field name="paylov_refund_sender_card_id" label="Refund sender cardId" defaultValue={splitSettings.refundSenderCardId}
+                    hint="Pul qaytarish kerak bo'lganda mablag' shu Paylov kartadan (Account2Card) jo'natiladi. Paylov kabinetidan olinadi." /></div>
+                  <div className="col-md-3"><Field name="paylov_refund_service_id" label="Refund serviceId" defaultValue={splitSettings.refundServiceId}
+                    hint="Paylov refund xizmatining ID'si. Bo'sh qoldirsangiz standart qiymat ishlatiladi." /></div>
+                </div>
+                <div className="text-end mt-3">
+                  <button className="btn btn-primary"><i className="ti ti-check me-1"></i>Saqlash</button>
+                </div>
+              </form>
+            </div>
+</div>
         </div>
         ) : null}
 
@@ -341,124 +336,127 @@ export default function Split() {
 
         {tab === 'users' ? (
         <div className="col-12">
-          <div className="card-panel">
-            <div className="panel-head">
+          <div className="card">
+            <div className="card-header d-flex align-items-center justify-content-between gap-2 flex-wrap">
               <div>
-                <div className="panel-title">Foydalanuvchi split profillari</div>
-                <small className="text-muted">{splitPagination.total} ta foydalanuvchi ko‘rinmoqda · o‘rtacha ishonch {splitSummary.avgConfidence}</small>
+                <h5 className="f-w-600">Foydalanuvchi split profillari</h5>
+                <p className="mb-0 text-secondary">{splitPagination.total} ta foydalanuvchi ko‘rinmoqda · o‘rtacha ishonch {splitSummary.avgConfidence}</p>
               </div>
               <form className="d-flex gap-2 flex-wrap" onSubmit={(event) => { event.preventDefault(); reload(); }}>
-                <select className="form-select form-select-sm" style={{ width: 180 }} value={status} onChange={(event) => { const value = event.target.value; setStatus(value); reload(1, value, search); }}>
+                <select className="form-select form-select-sm w-180" value={status} onChange={(event) => { const value = event.target.value; setStatus(value); reload(1, value, search); }}>
                   <option value="all">Barchasi</option>
                   <option value="eligible">Moslar</option>
                   <option value="ineligible">Mos emaslar</option>
                   <option value="locked">Exposure borlar</option>
                   <option value="blocked">Admin bloklaganlar</option>
                 </select>
-                <input className="form-control form-control-sm" style={{ width: 260 }} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="ID, ism, telefon, email" />
-                <button className="btn btn-sm btn-outline-secondary"><i className="bi bi-search"></i></button>
+                <input className="form-control form-control-sm w-260" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="ID, ism, telefon, email" />
+                <button className="btn btn-sm btn-outline-secondary"><i className="ti ti-search"></i></button>
               </form>
             </div>
-            <div className="table-responsive">
-              <table className="table table-bottom-border align-middle data-table">
-                <thead>
-                  <tr>
-                    <th>User</th>
-                    <th>
-                      Moslik
-                      <InfoHint
-                        text="Nasiya olish shartlarini bajargan-bajarmagani. «Mos emas» bo'lsa sababi qatorda ko'rinadi."
-                        example="Karta yoshi yetmasa — global mos emas; skor yetmasa faqat shu skor talab qilingan tarif ochilmaydi."
-                      />
-                    </th>
-                    <th>
-                      Skor
-                      <InfoHint
-                        text="Ishonch balli (0–100) — buyurtma tarixi, GMV, karta yoshi, qurilma barqarorligi va nasiya to'lov intizomidan avtomatik hisoblanadi."
-                        example="Har toza yopilgan nasiya ballni oshiradi, kechikish tushiradi."
-                      />
-                    </th>
-                    <th>
-                      Limit
-                      <InfoHint
-                        text="Tizim hisoblagan shaxsiy nasiya limiti. «Bo'sh» — hozir ishlatilishi mumkin bo'lgan qismi (limit minus ochiq qarz)."
-                      />
-                    </th>
-                    <th>
-                      Exposure
-                      <InfoHint
-                        text="Userning hozirgi ochiq nasiya qarzi (hali to'lanmagan bo'laklar yig'indisi)."
-                      />
-                    </th>
-                    <th>Karta</th>
-                    <th>Orderlar</th>
-                    <th>Risk</th>
-                    <th>Yangilangan</th>
-                    <th>Amal</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {splitUsers.map((user) => (
-                    <tr key={user.id}>
-                      <td>
-                        <div className="fw-semibold">#{user.id} {user.name}</div>
-                        <small className="text-muted">{user.phone || 'Telefon yo‘q'}</small>
-                      </td>
-                      <td>
-                        <div className="d-flex flex-wrap gap-2">
-                          <span className={`chip ${user.eligible ? 'chip-success' : 'chip-warning'}`}>{user.eligible ? 'Mos' : 'Mos emas'}</span>
-                          {user.manuallyBlocked ? <span className="chip chip-danger">Admin blok</span> : null}
-                          {user.verified ? <span className="chip chip-info">Verified</span> : null}
-                        </div>
-                        {user.reasons.length > 0 ? <small className="text-muted d-block mt-1">{user.reasons[0]}</small> : null}
-                        {user.manuallyBlocked && user.manualBlockedAt ? <small className="text-danger d-block mt-1">Bloklangan: {user.manualBlockedAt}</small> : null}
-                      </td>
-                      <td>
-                        <strong>{user.confidenceScore}</strong>
-                        <div className="text-muted small">Rep: {user.reputationScore}</div>
-                      </td>
-                      <td>
-                        <strong>{fmt(user.computedLimit)} so'm</strong>
-                        <div className="text-muted small">Bo‘sh: {fmt(user.availableLimit)} so'm</div>
-                      </td>
-                      <td>
-                        <strong>{fmt(user.activeExposure)} so'm</strong>
-                        <div className="text-muted small">COD strike: {user.codReturnStrikes}</div>
-                      </td>
-                      <td>
-                        <strong>{user.verifiedCardsCount} ta</strong>
-                        <div className="text-muted small">{fmt(user.verifiedCardAgeDays)} kun</div>
-                      </td>
-                      <td>
-                        <strong>{user.completedOrders}</strong>
-                        <div className="text-muted small">Saved-card: {user.successfulCardPayments180d}</div>
-                      </td>
-                      <td>
-                        {user.reasons.length === 0 ? <span className="chip chip-success">Toza</span> : <span className="chip chip-warning">{user.reasons.length} ta signal</span>}
-                      </td>
-                      <td>{user.lastRefreshedAt || '—'}</td>
-                      <td>
-                        <div className="d-flex gap-2">
-                          <a className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22" href={user.profileUrl}><i className="bi bi-person-lines-fill"></i></a>
-                          <button className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22" onClick={() => refreshProfiles(user.id)}><i className="bi bi-arrow-clockwise"></i></button>
-                          {user.manuallyBlocked ? (
-                            <button className="btn btn-light-success icon-btn w-30 h-30 b-r-22" onClick={() => router.post(user.unblockUrl, {}, { preserveScroll: true })}><i className="bi bi-unlock"></i></button>
-                          ) : (
-                            <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => {
-                              const reason = window.prompt('Splitni bloklash sababi');
-                              if (!reason) return;
-                              router.post(user.blockUrl, { reason }, { preserveScroll: true });
-                            }}><i className="bi bi-slash-circle"></i></button>
-                          )}
-                        </div>
-                      </td>
+            <div className="card-body">
+
+              <div className="table-responsive app-scroll">
+                <table className="table table-bottom-border align-middle">
+                  <thead>
+                    <tr>
+                      <th>User</th>
+                      <th>
+                        Moslik
+                        <InfoHint
+                          text="Nasiya olish shartlarini bajargan-bajarmagani. «Mos emas» bo'lsa sababi qatorda ko'rinadi."
+                          example="Karta yoshi yetmasa — global mos emas; skor yetmasa faqat shu skor talab qilingan tarif ochilmaydi."
+                        />
+                      </th>
+                      <th>
+                        Skor
+                        <InfoHint
+                          text="Ishonch balli (0–100) — buyurtma tarixi, GMV, karta yoshi, qurilma barqarorligi va nasiya to'lov intizomidan avtomatik hisoblanadi."
+                          example="Har toza yopilgan nasiya ballni oshiradi, kechikish tushiradi."
+                        />
+                      </th>
+                      <th>
+                        Limit
+                        <InfoHint
+                          text="Tizim hisoblagan shaxsiy nasiya limiti. «Bo'sh» — hozir ishlatilishi mumkin bo'lgan qismi (limit minus ochiq qarz)."
+                        />
+                      </th>
+                      <th>
+                        Exposure
+                        <InfoHint
+                          text="Userning hozirgi ochiq nasiya qarzi (hali to'lanmagan bo'laklar yig'indisi)."
+                        />
+                      </th>
+                      <th>Karta</th>
+                      <th>Orderlar</th>
+                      <th>Risk</th>
+                      <th>Yangilangan</th>
+                      <th>Amal</th>
                     </tr>
-                  ))}
-                  {splitUsers.length === 0 ? <tr><td colSpan={10} className="text-center text-muted py-5">Split profili topilmadi</td></tr> : null}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {splitUsers.map((user) => (
+                      <tr key={user.id}>
+                        <td>
+                          <div className="f-w-600">#{user.id} {user.name}</div>
+                          <p className="mb-0 text-secondary">{user.phone || 'Telefon yo‘q'}</p>
+                        </td>
+                        <td>
+                          <div className="d-flex flex-wrap gap-2">
+                            <span className={`badge ${user.eligible ? 'text-light-success' : 'text-light-warning'}`}>{user.eligible ? 'Mos' : 'Mos emas'}</span>
+                            {user.manuallyBlocked ? <span className="badge text-light-danger">Admin blok</span> : null}
+                            {user.verified ? <span className="badge text-light-info">Verified</span> : null}
+                          </div>
+                          {user.reasons.length > 0 ? <small className="text-muted d-block mt-1">{user.reasons[0]}</small> : null}
+                          {user.manuallyBlocked && user.manualBlockedAt ? <small className="text-danger d-block mt-1">Bloklangan: {user.manualBlockedAt}</small> : null}
+                        </td>
+                        <td>
+                          <strong>{user.confidenceScore}</strong>
+                          <div className="text-muted f-s-13">Rep: {user.reputationScore}</div>
+                        </td>
+                        <td>
+                          <strong>{fmt(user.computedLimit)} so'm</strong>
+                          <div className="text-muted f-s-13">Bo‘sh: {fmt(user.availableLimit)} so'm</div>
+                        </td>
+                        <td>
+                          <strong>{fmt(user.activeExposure)} so'm</strong>
+                          <div className="text-muted f-s-13">COD strike: {user.codReturnStrikes}</div>
+                        </td>
+                        <td>
+                          <strong>{user.verifiedCardsCount} ta</strong>
+                          <div className="text-muted f-s-13">{fmt(user.verifiedCardAgeDays)} kun</div>
+                        </td>
+                        <td>
+                          <strong>{user.completedOrders}</strong>
+                          <div className="text-muted f-s-13">Saved-card: {user.successfulCardPayments180d}</div>
+                        </td>
+                        <td>
+                          {user.reasons.length === 0 ? <span className="badge text-light-success">Toza</span> : <span className="badge text-light-warning">{user.reasons.length} ta signal</span>}
+                        </td>
+                        <td>{user.lastRefreshedAt || '—'}</td>
+                        <td>
+                          <div className="d-flex gap-2">
+                            <a className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22" href={user.profileUrl}><i className="ti ti-address-book"></i></a>
+                            <button className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22" onClick={() => refreshProfiles(user.id)}><i className="ti ti-rotate-clockwise"></i></button>
+                            {user.manuallyBlocked ? (
+                              <button className="btn btn-light-success icon-btn w-30 h-30 b-r-22" onClick={() => router.post(user.unblockUrl, {}, { preserveScroll: true })}><i className="ti ti-lock-open"></i></button>
+                            ) : (
+                              <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => {
+                                const reason = window.prompt('Splitni bloklash sababi');
+                                if (!reason) return;
+                                router.post(user.blockUrl, { reason }, { preserveScroll: true });
+                              }}><i className="ti ti-ban"></i></button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {splitUsers.length === 0 ? <tr><td colSpan={10} className="text-center py-5 text-secondary"><i className="iconoir-archive d-flex justify-content-center mb-2 f-s-30 text-primary"></i>Split profili topilmadi</td></tr> : null}
+                  </tbody>
+                </table>
+              </div>
+              <PaginationControls {...splitPagination} onPageChange={(page) => reload(page)} />
             </div>
-            <PaginationControls {...splitPagination} onPageChange={(page) => reload(page)} />
           </div>
         </div>
         ) : null}
@@ -474,20 +472,20 @@ function submitForm(event: FormEvent<HTMLFormElement>, url: string) {
 }
 
 const contractStatusChip: Record<string, [string, string]> = {
-  pending: ['chip-info', 'Kutilmoqda (hold)'],
-  active: ['chip-success', 'Faol'],
-  overdue: ['chip-danger', 'Muddati o‘tgan'],
-  completed: ['chip-gray', 'Yopilgan'],
-  cancelled: ['chip-gray', 'Bekor'],
-  defaulted: ['chip-danger', 'Default'],
+  pending: ['text-light-info', 'Kutilmoqda (hold)'],
+  active: ['text-light-success', 'Faol'],
+  overdue: ['text-light-danger', 'Muddati o‘tgan'],
+  completed: ['text-light-secondary', 'Yopilgan'],
+  cancelled: ['text-light-secondary', 'Bekor'],
+  defaulted: ['text-light-danger', 'Default'],
 };
 
 const installmentStatusChip: Record<string, [string, string]> = {
-  pending: ['chip-info', 'Kutilmoqda'],
-  paid: ['chip-success', 'To‘langan'],
-  overdue: ['chip-danger', 'Kechikkan'],
-  waived: ['chip-gray', 'Kechirilgan'],
-  cancelled: ['chip-gray', 'Bekor'],
+  pending: ['text-light-info', 'Kutilmoqda'],
+  paid: ['text-light-success', 'To‘langan'],
+  overdue: ['text-light-danger', 'Kechikkan'],
+  waived: ['text-light-secondary', 'Kechirilgan'],
+  cancelled: ['text-light-secondary', 'Bekor'],
 };
 
 function PlanSection({ plans, storeUrl, previewUrl }: { plans: SplitPlanRow[]; storeUrl: string; previewUrl: string }) {
@@ -513,112 +511,113 @@ function PlanSection({ plans, storeUrl, previewUrl }: { plans: SplitPlanRow[]; s
   };
 
   return (
-    <div className="card-panel">
-      <div className="panel-head">
+    <div className="card">
+      <div className="card-header d-flex align-items-center justify-content-between gap-2 flex-wrap">
         <div>
-          <div className="panel-title">
+          <h5 className="f-w-600">
             Split tariflari
             <InfoHint
               text="Istagancha tarif qo'shing — har biri o'z muddati, foizi va to'lov chastotasi bilan. 1-to'lov xariddayoq olinadi, qolganlari sotib olish sanasidan hisoblangan aniq kunlarda avto yechiladi. Yetkazish/qadoqlash splitga kirmaydi — foizsiz 1-to'lovga qo'shiladi."
               example="«2 oy · 0% · har 2 haftada» va «6 oy · oyiga 3% · har oyda» — ikkalasi parallel ishlaydi."
             />
-          </div>
-          <small className="text-muted">Pastdagi bo&apos;sh qatordan yangi tarif qo&apos;shasiz. Har bir qiymat nima ekani ustun sarlavhasidagi <i className="bi bi-info-circle"></i> da.</small>
+          </h5>
+          <p className="mb-0 text-secondary">Pastdagi bo&apos;sh qatordan yangi tarif qo&apos;shasiz. Har bir qiymat nima ekani ustun sarlavhasidagi <i className="ti ti-info-circle"></i> da.</p>
         </div>
         <div className="d-flex align-items-center gap-2 flex-wrap">
-          <span className="text-muted small">Preview — mahsulot:</span>
+          <span className="text-muted f-s-13">Preview — mahsulot:</span>
           <input
-            className="form-control form-control-sm"
-            style={{ width: 130 }}
-            type="number"
-            min={1000}
-            value={previewAmount}
-            onChange={(event) => setPreviewAmount(Number(event.target.value) || 0)}
-          />
-          <span className="text-muted small">yetkazish:</span>
+      className="form-control form-control-sm w-130"
+      type="number"
+      min={1000}
+      value={previewAmount}
+      onChange={(event) => setPreviewAmount(Number(event.target.value) || 0)}
+     />
+          <span className="text-muted f-s-13">yetkazish:</span>
           <input
-            className="form-control form-control-sm"
-            style={{ width: 110 }}
-            type="number"
-            min={0}
-            value={previewDelivery}
-            onChange={(event) => setPreviewDelivery(Number(event.target.value) || 0)}
-          />
+      className="form-control form-control-sm w-110"
+      type="number"
+      min={0}
+      value={previewDelivery}
+      onChange={(event) => setPreviewDelivery(Number(event.target.value) || 0)}
+     />
         </div>
       </div>
-      <div className="table-responsive">
-        <table className="table table-bottom-border align-middle data-table">
-          <thead>
-            <tr>
-              <th>Nomi</th>
-              <th>
-                Muddat (oy)
-                <InfoHint text="Nasiya jami necha oyga bo'linadi." example="2, 4 yoki 6 oy." />
-              </th>
-              <th>
-                Chastota
-                <InfoHint
-                  text="To'lov qanchalik tez-tez yechiladi. Muddat o'zgarmaydi, faqat bo'laklar soni o'zgaradi."
-                  example="2 oylik tarif «har 2 haftada» bo'lsa 4 ta to'lovga bo'linadi, «har oyda» bo'lsa 2 ta."
-                />
-              </th>
-              <th>
-                Oylik %
-                <InfoHint
-                  text="Umumiy ustama = oylik % × oy soni. 0 kiritsangiz tarif foizsiz bo'ladi."
-                  example="4 oy, oyiga 2.5% → jami 10%. 1 mln buyurtmada 100 000 so'm ustama."
-                />
-              </th>
-              <th>Umumiy ustama</th>
-              <th>To&apos;lovlar</th>
-              <th>
-                Min/Max summa
-                <InfoHint
-                  text="Bu tarif qaysi buyurtma summalarida ko'rinadi. Min qiymat 0 yoki bo'sh bo'lsa — minimum yo'q (shaxsiy limit baribir yuqoridan chegaralaydi)."
-                  example="6 oylik tarifga min 500 000 qo'ysangiz, arzon buyurtmalarda 6 oy varianti chiqmaydi."
-                />
-              </th>
-              <th>
-                Min skor
-                <InfoHint
-                  text="Ishonch balli (0–100, tizim hisoblaydi). Faqat balli shundan yuqori userlar bu tarifni ko'radi. Bo'sh = barcha mos userlarga ochiq."
-                  example="Uzoq 6 oylik tarifga 70 qo'yib, uni faqat eng ishonchli mijozlarga bering."
-                />
-              </th>
-              <th>Holat</th>
-              <th>Amal</th>
-            </tr>
-          </thead>
-          <tbody>
-            {plans.map((plan) => (
-              <PlanRow key={plan.id} plan={plan} storeUrl={storeUrl} onPreview={() => loadPreview(plan.id)} previewLoading={loadingPlanId === plan.id} />
-            ))}
-            <PlanRow plan={null} storeUrl={storeUrl} />
-            {plans.length === 0 ? (
-              <tr><td colSpan={10} className="text-center text-muted py-3">Hali tarif yo&apos;q — yuqoridagi qatordan birinchi tarifni qo&apos;shing (masalan: 2 oy, 0%, har 2 hafta).</td></tr>
-            ) : null}
-          </tbody>
-        </table>
-      </div>
-      {preview ? (
-        <div className="p-3 border-top">
-          <div className="d-flex justify-content-between align-items-center mb-2">
-            <strong>
-              Jadval preview — mahsulot {fmt(preview.data.principal)} so&apos;m, ustama {fmt(preview.data.interest)} so&apos;m ({preview.data.total_interest_percent}%)
-              {preview.data.upfront_extra > 0 ? <> + yetkazish {fmt(preview.data.upfront_extra)} so&apos;m (1-to&apos;lovda, foizsiz)</> : null},
-              jami {fmt(preview.data.total)} so&apos;m
-            </strong>
-            <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => setPreview(null)}><i className="bi bi-x"></i></button>
-          </div>
-          <div className="d-flex flex-wrap gap-2">
-            {preview.data.installments.map((row) => (
-              <span key={row.sequence} className={`chip ${row.is_upfront ? 'chip-success' : 'chip-info'}`}>
-                #{row.sequence}: {fmt(row.amount)} so&apos;m · {row.is_upfront ? 'hozir' : row.due_at.slice(0, 10)}
-              </span>
-            ))}
-          </div>
+      <div className="card-body">
+
+        <div className="table-responsive app-scroll">
+          <table className="table table-bottom-border align-middle">
+            <thead>
+              <tr>
+                <th>Nomi</th>
+                <th>
+                  Muddat (oy)
+                  <InfoHint text="Nasiya jami necha oyga bo'linadi." example="2, 4 yoki 6 oy." />
+                </th>
+                <th>
+                  Chastota
+                  <InfoHint
+                    text="To'lov qanchalik tez-tez yechiladi. Muddat o'zgarmaydi, faqat bo'laklar soni o'zgaradi."
+                    example="2 oylik tarif «har 2 haftada» bo'lsa 4 ta to'lovga bo'linadi, «har oyda» bo'lsa 2 ta."
+                  />
+                </th>
+                <th>
+                  Oylik %
+                  <InfoHint
+                    text="Umumiy ustama = oylik % × oy soni. 0 kiritsangiz tarif foizsiz bo'ladi."
+                    example="4 oy, oyiga 2.5% → jami 10%. 1 mln buyurtmada 100 000 so'm ustama."
+                  />
+                </th>
+                <th>Umumiy ustama</th>
+                <th>To&apos;lovlar</th>
+                <th>
+                  Min/Max summa
+                  <InfoHint
+                    text="Bu tarif qaysi buyurtma summalarida ko'rinadi. Min qiymat 0 yoki bo'sh bo'lsa — minimum yo'q (shaxsiy limit baribir yuqoridan chegaralaydi)."
+                    example="6 oylik tarifga min 500 000 qo'ysangiz, arzon buyurtmalarda 6 oy varianti chiqmaydi."
+                  />
+                </th>
+                <th>
+                  Min skor
+                  <InfoHint
+                    text="Ishonch balli (0–100, tizim hisoblaydi). Faqat balli shundan yuqori userlar bu tarifni ko'radi. Bo'sh = barcha mos userlarga ochiq."
+                    example="Uzoq 6 oylik tarifga 70 qo'yib, uni faqat eng ishonchli mijozlarga bering."
+                  />
+                </th>
+                <th>Holat</th>
+                <th>Amal</th>
+              </tr>
+            </thead>
+            <tbody>
+              {plans.map((plan) => (
+                <PlanRow key={plan.id} plan={plan} storeUrl={storeUrl} onPreview={() => loadPreview(plan.id)} previewLoading={loadingPlanId === plan.id} />
+              ))}
+              <PlanRow plan={null} storeUrl={storeUrl} />
+              {plans.length === 0 ? (
+                <tr><td colSpan={10} className="text-center py-5 text-secondary"><i className="iconoir-archive d-flex justify-content-center mb-2 f-s-30 text-primary"></i>Hali tarif yo'q — yuqoridagi qatordan birinchi tarifni qo'shing (masalan: 2 oy, 0%, har 2 hafta).</td></tr>
+              ) : null}
+            </tbody>
+          </table>
         </div>
-      ) : null}
+        {preview ? (
+          <div className="p-3 b-t-1-light">
+            <div className="d-flex justify-content-between align-items-center mb-2">
+              <strong>
+                Jadval preview — mahsulot {fmt(preview.data.principal)} so&apos;m, ustama {fmt(preview.data.interest)} so&apos;m ({preview.data.total_interest_percent}%)
+                {preview.data.upfront_extra > 0 ? <> + yetkazish {fmt(preview.data.upfront_extra)} so&apos;m (1-to&apos;lovda, foizsiz)</> : null},
+                jami {fmt(preview.data.total)} so&apos;m
+              </strong>
+              <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => setPreview(null)}><i className="ti ti-x"></i></button>
+            </div>
+            <div className="d-flex flex-wrap gap-2">
+              {preview.data.installments.map((row) => (
+                <span key={row.sequence} className={`badge ${row.is_upfront ? 'text-light-success' : 'text-light-info'}`}>
+                  #{row.sequence}: {fmt(row.amount)} so&apos;m · {row.is_upfront ? 'hozir' : row.due_at.slice(0, 10)}
+                </span>
+              ))}
+            </div>
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -632,32 +631,32 @@ function PlanRow({ plan, storeUrl, onPreview, previewLoading }: { plan: SplitPla
         {plan ? <input form={formId} type="hidden" name="id" value={plan.id} /> : null}
         <input form={formId} className="form-control form-control-sm" name="name" placeholder="Masalan: 2 oy foizsiz" defaultValue={plan?.name ?? ''} required />
       </td>
-      <td><input form={formId} className="form-control form-control-sm" style={{ width: 70 }} name="months" type="number" min={1} max={36} defaultValue={plan?.months ?? 2} /></td>
+      <td><input form={formId} className="form-control form-control-sm w-70" name="months" type="number" min={1} max={36} defaultValue={plan?.months ?? 2} /></td>
       <td>
         <div className="d-flex gap-1 align-items-center">
-          <span className="text-muted small">har</span>
-          <input form={formId} className="form-control form-control-sm" style={{ width: 55 }} name="period_every" type="number" min={1} max={8} defaultValue={plan?.periodEvery ?? 1} />
-          <select form={formId} className="form-select form-select-sm" style={{ width: 90 }} name="period_unit" defaultValue={plan?.periodUnit ?? 'month'}>
+          <span className="text-muted f-s-13">har</span>
+          <input form={formId} className="form-control form-control-sm w-55" name="period_every" type="number" min={1} max={8} defaultValue={plan?.periodEvery ?? 1} />
+          <select form={formId} className="form-select form-select-sm w-90" name="period_unit" defaultValue={plan?.periodUnit ?? 'month'}>
             <option value="month">oyda</option>
             <option value="week">haftada</option>
           </select>
         </div>
       </td>
-      <td><input form={formId} className="form-control form-control-sm" style={{ width: 80 }} name="monthly_interest_percent" type="number" min={0} max={30} step="0.01" defaultValue={plan?.monthlyInterestPercent ?? 0} /></td>
-      <td>{plan ? <span className="chip chip-purple">{plan.totalInterestPercent}%</span> : <span className="text-muted small">—</span>}</td>
-      <td>{plan ? <span className="chip chip-info">{plan.installmentsCount} ta · {plan.frequencyLabel}</span> : <span className="text-muted small">—</span>}</td>
+      <td><input form={formId} className="form-control form-control-sm w-80" name="monthly_interest_percent" type="number" min={0} max={30} step="0.01" defaultValue={plan?.monthlyInterestPercent ?? 0} /></td>
+      <td>{plan ? <span className="badge text-light-primary">{plan.totalInterestPercent}%</span> : <span className="text-muted f-s-13">—</span>}</td>
+      <td>{plan ? <span className="badge text-light-info">{plan.installmentsCount} ta · {plan.frequencyLabel}</span> : <span className="text-muted f-s-13">—</span>}</td>
       <td>
         <div className="d-flex gap-1">
-          <input form={formId} className="form-control form-control-sm" style={{ width: 100 }} name="min_order_sum" type="number" min={0} placeholder="min (0 = yo'q)" title="0 yoki bo'sh qiymat minimal buyurtma cheklovini o'chiradi" defaultValue={plan?.minOrderSum ?? ''} />
-          <input form={formId} className="form-control form-control-sm" style={{ width: 100 }} name="max_order_sum" type="number" min={1000} placeholder="max" defaultValue={plan?.maxOrderSum ?? ''} />
+          <input form={formId} className="form-control form-control-sm w-100" name="min_order_sum" type="number" min={0} placeholder="min (0 = yo'q)" title="0 yoki bo'sh qiymat minimal buyurtma cheklovini o'chiradi" defaultValue={plan?.minOrderSum ?? ''} />
+          <input form={formId} className="form-control form-control-sm w-100" name="max_order_sum" type="number" min={1000} placeholder="max" defaultValue={plan?.maxOrderSum ?? ''} />
         </div>
       </td>
-      <td><input form={formId} className="form-control form-control-sm" style={{ width: 70 }} name="min_confidence_score" type="number" min={0} max={100} step="0.01" placeholder="—" defaultValue={plan?.minConfidenceScore ?? ''} /></td>
+      <td><input form={formId} className="form-control form-control-sm w-70" name="min_confidence_score" type="number" min={0} max={100} step="0.01" placeholder="—" defaultValue={plan?.minConfidenceScore ?? ''} /></td>
       <td>
         <label className="d-flex align-items-center gap-2 mb-0">
           <input form={formId} type="hidden" name="enabled" value="0" />
           <input form={formId} type="checkbox" className="form-check-input" name="enabled" value="1" defaultChecked={plan?.enabled ?? false} />
-          {plan ? <span className={`chip ${plan.enabled ? 'chip-success' : 'chip-gray'}`}>{plan.enabled ? 'Faol' : 'O‘chiq'}</span> : <span className="text-muted small">yoqish</span>}
+          {plan ? <span className={`badge ${plan.enabled ? 'text-light-success' : 'text-light-secondary'}`}>{plan.enabled ? 'Faol' : 'O‘chiq'}</span> : <span className="text-muted f-s-13">yoqish</span>}
         </label>
       </td>
       <td>
@@ -670,12 +669,12 @@ function PlanRow({ plan, storeUrl, onPreview, previewLoading }: { plan: SplitPla
           }}
         >
           <button className="btn btn-sm btn-light-secondary me-1" title={plan ? 'Saqlash' : "Qo'shish"}>
-            <i className={`bi ${plan ? 'bi-check2' : 'bi-plus-lg'}`}></i>
+            <i className={`ti ${plan ? 'ti-check' : 'ti-plus'}`}></i>
           </button>
         </form>
         {plan && onPreview ? (
           <button className="btn btn-sm btn-light-secondary me-1" title="Jadval preview" onClick={onPreview} disabled={previewLoading}>
-            <i className={`bi ${previewLoading ? 'bi-hourglass-split' : 'bi-calendar-week'}`}></i>
+            <i className={`ti ${previewLoading ? 'ti-hourglass' : 'ti-calendar-time'}`}></i>
           </button>
         ) : null}
         {plan ? (
@@ -690,7 +689,7 @@ function PlanRow({ plan, storeUrl, onPreview, previewLoading }: { plan: SplitPla
               if (confirm('Tarif o‘chirilsinmi?')) router.delete(plan.destroyUrl, { preserveScroll: true });
             }}
           >
-            <i className="bi bi-trash"></i>
+            <i className="ti ti-trash"></i>
           </button>
         ) : null}
       </td>
@@ -725,19 +724,19 @@ function ContractSection({
   };
 
   return (
-    <div className="card-panel">
-      <div className="panel-head">
+    <div className="card">
+      <div className="card-header d-flex align-items-center justify-content-between gap-2 flex-wrap">
         <div>
-          <div className="panel-title">
+          <h5 className="f-w-600">
             Split shartnomalari
             <InfoHint
               text="Holatlar: «Kutilmoqda» — 1-to'lov hold qilingan, buyurtma hali topshirilmagan. «Faol» — jadval bo'yicha to'lanmoqda. «Muddati o'tgan» — avto yechish 4 urinishda ham o'tmagan. «Yopilgan» — to'liq to'langan."
               example="Kutilmoqda holatidagi shartnoma buyurtma orqali boshqariladi: buyurtma topshirilsa avtomatik faollashadi, buyurtma bekor qilinsa hold qaytadi. Bu yerdan alohida bekor qilinmaydi."
             />
-          </div>
-          <small className="text-muted">
+          </h5>
+          <p className="mb-0 text-secondary">
             Ochiq: {stats.active} · Muddati o‘tgan: {stats.overdue} · Exposure: {fmt(stats.exposure)} so&apos;m · Oxirgi 30 kunda undirildi: {fmt(stats.collected30d)} so&apos;m
-          </small>
+          </p>
         </div>
         <form
           className="d-flex gap-2 flex-wrap align-items-center"
@@ -746,176 +745,177 @@ function ContractSection({
             router.post(contractStoreUrl, Object.fromEntries(new FormData(event.currentTarget).entries()), { preserveScroll: true });
           }}
         >
-          <input className="form-control form-control-sm" style={{ width: 110 }} name="user_id" type="number" min={1} placeholder="User ID" required />
-          <input className="form-control form-control-sm" style={{ width: 110 }} name="order_id" type="number" min={1} placeholder="Order ID" required />
-          <select className="form-select form-select-sm" style={{ width: 200 }} name="plan_id" required defaultValue="">
+          <input className="form-control form-control-sm w-110" name="user_id" type="number" min={1} placeholder="User ID" required />
+          <input className="form-control form-control-sm w-110" name="order_id" type="number" min={1} placeholder="Order ID" required />
+          <select className="form-select form-select-sm w-200" name="plan_id" required defaultValue="">
             <option value="" disabled>Tarif tanlang</option>
             {enabledPlans.map((plan) => (
               <option key={plan.id} value={plan.id}>{plan.name} ({plan.months} oy, {plan.totalInterestPercent}%)</option>
             ))}
           </select>
           <button className="btn btn-sm btn-primary" disabled={enabledPlans.length === 0}>
-            <i className="bi bi-plus-lg me-1"></i>Split ochish
+            <i className="ti ti-plus me-1"></i>Split ochish
           </button>
         </form>
       </div>
-      <div className="d-flex gap-2 flex-wrap px-3 pt-2 pb-1">
-        {filterOptions.map(([value, label]) => (
-          <button
-            key={value}
-            className={`kc-tab ${filter === value ? 'active' : ''}`}
-            onClick={() => applyFilter(value)}
-          >
-            {value === 'overdue' ? <i className="bi bi-exclamation-triangle me-1"></i> : null}
-            {label}
-            {value === 'overdue' && stats.overdue > 0 ? <span className="badge bg-danger ms-1">{stats.overdue}</span> : null}
-          </button>
-        ))}
-      </div>
-      <div className="table-responsive">
-        <table className="table table-bottom-border align-middle data-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>User / Order</th>
-              <th>Tarif</th>
-              <th>Holat</th>
-              <th>Jami / To‘langan</th>
-              <th>Progress</th>
-              <th>Keyingi to‘lov</th>
-              <th>Amal</th>
-            </tr>
-          </thead>
-          <tbody>
-            {contracts.map((contract) => {
-              const [chipClass, chipLabel] = contractStatusChip[contract.status] ?? ['chip-gray', contract.status];
-              const expanded = expandedId === contract.id;
+      <div className="card-body">
 
-              return (
-                <Fragment key={contract.id}>
-                  <tr>
-                    <td>
-                      <button className="btn btn-sm btn-light-secondary" onClick={() => setExpandedId(expanded ? null : contract.id)}>
-                        <i className={`bi ${expanded ? 'bi-chevron-up' : 'bi-chevron-down'}`}></i>
-                      </button>{' '}
-                      <span className="fw-semibold">#{contract.id}</span>
-                    </td>
-                    <td>
-                      <div className="fw-semibold">{contract.userName}</div>
-                      <small className="text-muted">User #{contract.userId} · Order #{contract.orderId ?? '—'}</small>
-                    </td>
-                    <td>
-                      <div>{contract.planName}</div>
-                      <small className="text-muted">{contract.startsAt}{contract.debitDay ? ` · har oyning ${contract.debitDay}-kuni` : ''}</small>
-                    </td>
-                    <td>
-                      <span className={`chip ${chipClass}`}>{chipLabel}</span>
-                      {contract.overdueDays > 0 ? (
-                        <div className="mt-1">
-                          <span className="chip chip-danger">{contract.overdueDays} kun kechikkan</span>
-                          <small className="text-danger d-block">
-                            {fmt(contract.overdueAmount)} so&apos;m muddati o&apos;tgan{contract.overdueSince ? ` · ${contract.overdueSince} dan beri` : ''}
-                          </small>
-                        </div>
-                      ) : contract.overdueSince ? <small className="text-danger d-block">{contract.overdueSince} dan beri</small> : null}
-                    </td>
-                    <td>
-                      <strong>{fmt(contract.total)} so&apos;m</strong>
-                      <div className="text-muted small">To‘langan: {fmt(contract.paid)} · Qoldiq: {fmt(contract.remaining)}</div>
-                    </td>
-                    <td>
-                      <span className="chip chip-info">{contract.installmentsPaid}/{contract.installmentsCount}</span>
-                    </td>
-                    <td>
-                      {contract.nextDueAt ? (
-                        <>
-                          <strong>{fmt(contract.nextAmount ?? 0)} so&apos;m</strong>
-                          <div className="text-muted small">{contract.nextDueAt}</div>
-                        </>
-                      ) : <span className="text-muted">—</span>}
-                    </td>
-                    <td>
-                      <div className="d-flex gap-1 flex-wrap">
-                        <a className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22" href={contract.contractPdfUrl} target="_blank" rel="noreferrer" title="Shartnoma PDF (mijoz tilida)">
-                          <i className="bi bi-file-earmark-pdf text-danger"></i>
-                        </a>
-                        {contract.overdueDays > 0 || contract.status === 'overdue' ? (
-                          <a className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22" href={contract.demandLetterUrl} target="_blank" rel="noreferrer" title="Undirish xati (talabnoma/pretenziya)">
-                            <i className="bi bi-envelope-exclamation text-danger"></i>
-                          </a>
-                        ) : null}
-                        {contract.status === 'pending' ? (
-                          <span
-                            className="text-muted small"
-                            title="Buyurtma topshirilganda shartnoma avtomatik faollashadi; buyurtma bekor qilinsa hold avtomatik qaytadi. Boshqaruv Buyurtmalar sahifasidan."
-                          >
-                            <i className="bi bi-link-45deg me-1"></i>
-                            Order #{contract.orderId} orqali boshqariladi
-                          </span>
-                        ) : null}
-                        {contract.status === 'active' || contract.status === 'overdue' ? (
-                          <>
-                            <button className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22" title="Erta yopish (qolgan ustama kechiriladi)" onClick={() => { if (confirm('Shartnoma muddatidan oldin to‘liq yopilsinmi?')) router.post(contract.settleUrl, {}, { preserveScroll: true }); }}>
-                              <i className="bi bi-flag-fill text-primary"></i>
-                            </button>
-                            <button
-                              className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22"
-                              title="Bekor qilingan mahsulot krediti (keyingi to'lovlardan ayiriladi)"
-                              onClick={() => {
-                                const product = prompt('Bekor qilingan mahsulot narxi (so‘m):');
-                                if (product === null) return;
-                                const delivery = prompt('Yetkazish krediti bo‘lsa (so‘m, bo‘lmasa 0):', '0');
-                                if (delivery === null) return;
-                                router.post(contract.creditUrl, {
-                                  product_amount: Number(product) || 0,
-                                  delivery_credit: Number(delivery) || 0,
-                                }, { preserveScroll: true });
-                              }}
-                            >
-                              <i className="bi bi-arrow-counterclockwise text-warning"></i>
-                            </button>
-                          </>
-                        ) : null}
-                        {contract.refundDue > 0 ? (
-                          <span className="chip chip-danger" title="Ochiq to'lovlar kreditni qoplamadi — naqd refund kerak">Refund: {fmt(contract.refundDue)}</span>
-                        ) : null}
-                      </div>
-                    </td>
-                  </tr>
-                  {expanded ? (
+        <div className="nav nav-tabs app-tabs-primary flex-wrap px-3 pt-2 pb-1">
+          {filterOptions.map(([value, label]) => (
+            <div key={value} className="nav-item"><button
+                className={`nav-link ${filter === value ? 'active' : ''}`}
+                onClick={() => applyFilter(value)}>
+                {value === 'overdue' ? <i className="ti ti-alert-triangle me-1"></i> : null}
+                {label}
+                {value === 'overdue' && stats.overdue > 0 ? <span className="badge bg-danger ms-1">{stats.overdue}</span> : null}
+              </button></div>
+          ))}
+        </div>
+        <div className="table-responsive app-scroll">
+          <table className="table table-bottom-border align-middle">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>User / Order</th>
+                <th>Tarif</th>
+                <th>Holat</th>
+                <th>Jami / To‘langan</th>
+                <th>Progress</th>
+                <th>Keyingi to‘lov</th>
+                <th>Amal</th>
+              </tr>
+            </thead>
+            <tbody>
+              {contracts.map((contract) => {
+                const [chipClass, chipLabel] = contractStatusChip[contract.status] ?? ['text-light-secondary', contract.status];
+                const expanded = expandedId === contract.id;
+
+                return (
+                  <Fragment key={contract.id}>
                     <tr>
-                      <td colSpan={8} className="bg-light">
-                        <div className="d-flex flex-wrap gap-2 p-2">
-                          {contract.installments.map((installment) => {
-                            const [instChip, instLabel] = installmentStatusChip[installment.status] ?? ['chip-gray', installment.status];
-                            const chargeable = (installment.status === 'pending' || installment.status === 'overdue') && !installment.isUpfront && (contract.status === 'active' || contract.status === 'overdue');
-
-                            return (
-                              <div key={installment.id} className="border rounded p-2 bg-white">
-                                <div className="fw-semibold">#{installment.sequence} · {fmt(installment.amount)} so&apos;m</div>
-                                <div className="small text-muted">{installment.isUpfront ? 'Upfront (hozir)' : installment.dueAt}</div>
-                                <div className="d-flex align-items-center gap-2 mt-1">
-                                  <span className={`chip ${instChip}`}>{instLabel}</span>
-                                  {installment.attempts > 0 ? <small className="text-muted">{installment.attempts} urinish</small> : null}
-                                  {chargeable ? (
-                                    <button className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22" title="Hozir yechish" onClick={() => { if (confirm('Bu installment hozir yechilsinmi?')) router.post(installment.chargeUrl, {}, { preserveScroll: true }); }}>
-                                      <i className="bi bi-lightning-charge text-warning"></i>
-                                    </button>
-                                  ) : null}
-                                </div>
-                              </div>
-                            );
-                          })}
+                      <td>
+                        <button className="btn btn-sm btn-light-secondary" onClick={() => setExpandedId(expanded ? null : contract.id)}>
+                          <i className={`ti ${expanded ? 'ti-chevron-up' : 'ti-chevron-down'}`}></i>
+                        </button>{' '}
+                        <span className="f-w-600">#{contract.id}</span>
+                      </td>
+                      <td>
+                        <div className="f-w-600">{contract.userName}</div>
+                        <p className="mb-0 text-secondary">User #{contract.userId} · Order #{contract.orderId ?? '—'}</p>
+                      </td>
+                      <td>
+                        <div>{contract.planName}</div>
+                        <p className="mb-0 text-secondary">{contract.startsAt}{contract.debitDay ? ` · har oyning ${contract.debitDay}-kuni` : ''}</p>
+                      </td>
+                      <td>
+                        <span className={`badge ${chipClass}`}>{chipLabel}</span>
+                        {contract.overdueDays > 0 ? (
+                          <div className="mt-1">
+                            <span className="badge text-light-danger">{contract.overdueDays} kun kechikkan</span>
+                            <small className="text-danger d-block">
+                              {fmt(contract.overdueAmount)} so&apos;m muddati o&apos;tgan{contract.overdueSince ? ` · ${contract.overdueSince} dan beri` : ''}
+                            </small>
+                          </div>
+                        ) : contract.overdueSince ? <small className="text-danger d-block">{contract.overdueSince} dan beri</small> : null}
+                      </td>
+                      <td>
+                        <strong>{fmt(contract.total)} so&apos;m</strong>
+                        <div className="text-muted f-s-13">To‘langan: {fmt(contract.paid)} · Qoldiq: {fmt(contract.remaining)}</div>
+                      </td>
+                      <td>
+                        <span className="badge text-light-info">{contract.installmentsPaid}/{contract.installmentsCount}</span>
+                      </td>
+                      <td>
+                        {contract.nextDueAt ? (
+                          <>
+                            <strong>{fmt(contract.nextAmount ?? 0)} so&apos;m</strong>
+                            <div className="text-muted f-s-13">{contract.nextDueAt}</div>
+                          </>
+                        ) : <span className="text-muted">—</span>}
+                      </td>
+                      <td>
+                        <div className="d-flex gap-1 flex-wrap">
+                          <a className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22" href={contract.contractPdfUrl} target="_blank" rel="noreferrer" title="Shartnoma PDF (mijoz tilida)">
+                            <i className="ti ti-file-download text-danger"></i>
+                          </a>
+                          {contract.overdueDays > 0 || contract.status === 'overdue' ? (
+                            <a className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22" href={contract.demandLetterUrl} target="_blank" rel="noreferrer" title="Undirish xati (talabnoma/pretenziya)">
+                              <i className="ti ti-mail-off text-danger"></i>
+                            </a>
+                          ) : null}
+                          {contract.status === 'pending' ? (
+                            <span
+                              className="text-muted f-s-13"
+                              title="Buyurtma topshirilganda shartnoma avtomatik faollashadi; buyurtma bekor qilinsa hold avtomatik qaytadi. Boshqaruv Buyurtmalar sahifasidan."
+                            >
+                              <i className="ti ti-link me-1"></i>
+                              Order #{contract.orderId} orqali boshqariladi
+                            </span>
+                          ) : null}
+                          {contract.status === 'active' || contract.status === 'overdue' ? (
+                            <>
+                              <button className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22" title="Erta yopish (qolgan ustama kechiriladi)" onClick={() => { if (confirm('Shartnoma muddatidan oldin to‘liq yopilsinmi?')) router.post(contract.settleUrl, {}, { preserveScroll: true }); }}>
+                                <i className="ti ti-flag-filled text-primary"></i>
+                              </button>
+                              <button
+                                className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22"
+                                title="Bekor qilingan mahsulot krediti (keyingi to'lovlardan ayiriladi)"
+                                onClick={() => {
+                                  const product = prompt('Bekor qilingan mahsulot narxi (so‘m):');
+                                  if (product === null) return;
+                                  const delivery = prompt('Yetkazish krediti bo‘lsa (so‘m, bo‘lmasa 0):', '0');
+                                  if (delivery === null) return;
+                                  router.post(contract.creditUrl, {
+                                    product_amount: Number(product) || 0,
+                                    delivery_credit: Number(delivery) || 0,
+                                  }, { preserveScroll: true });
+                                }}
+                              >
+                                <i className="ti ti-rotate text-warning"></i>
+                              </button>
+                            </>
+                          ) : null}
+                          {contract.refundDue > 0 ? (
+                            <span className="badge text-light-danger" title="Ochiq to'lovlar kreditni qoplamadi — naqd refund kerak">Refund: {fmt(contract.refundDue)}</span>
+                          ) : null}
                         </div>
                       </td>
                     </tr>
-                  ) : null}
-                </Fragment>
-              );
-            })}
-            {contracts.length === 0 ? <tr><td colSpan={8} className="text-center text-muted py-5">{filter === 'all' ? "Hali shartnoma yo'q" : "Bu filtrga mos shartnoma yo'q"}</td></tr> : null}
-          </tbody>
-        </table>
+                    {expanded ? (
+                      <tr>
+                        <td colSpan={8} className="bg-light-secondary">
+                          <div className="d-flex flex-wrap gap-2 p-2">
+                            {contract.installments.map((installment) => {
+                              const [instChip, instLabel] = installmentStatusChip[installment.status] ?? ['text-light-secondary', installment.status];
+                              const chargeable = (installment.status === 'pending' || installment.status === 'overdue') && !installment.isUpfront && (contract.status === 'active' || contract.status === 'overdue');
+
+                              return (
+                                <div key={installment.id} className="b-1-light b-r-8 p-2 bg-white">
+                                  <div className="f-w-600">#{installment.sequence} · {fmt(installment.amount)} so&apos;m</div>
+                                  <div className="f-s-13 text-muted">{installment.isUpfront ? 'Upfront (hozir)' : installment.dueAt}</div>
+                                  <div className="d-flex align-items-center gap-2 mt-1">
+                                    <span className={`badge ${instChip}`}>{instLabel}</span>
+                                    {installment.attempts > 0 ? <small className="text-muted">{installment.attempts} urinish</small> : null}
+                                    {chargeable ? (
+                                      <button className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22" title="Hozir yechish" onClick={() => { if (confirm('Bu installment hozir yechilsinmi?')) router.post(installment.chargeUrl, {}, { preserveScroll: true }); }}>
+                                        <i className="ti ti-bolt text-warning"></i>
+                                      </button>
+                                    ) : null}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </td>
+                      </tr>
+                    ) : null}
+                  </Fragment>
+                );
+              })}
+              {contracts.length === 0 ? <tr><td colSpan={8} className="text-center py-5 text-secondary"><i className="iconoir-archive d-flex justify-content-center mb-2 f-s-30 text-primary"></i>{filter === 'all' ? "Hali shartnoma yo'q" : "Bu filtrga mos shartnoma yo'q"}</td></tr> : null}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
@@ -923,55 +923,58 @@ function ContractSection({
 
 function RuleSection({ title, rows, actionUrl }: { title: string; rows: SplitRuleRow[]; actionUrl: string }) {
   return (
-    <div className="card-panel">
-      <div className="panel-head">
+    <div className="card">
+      <div className="card-header d-flex align-items-center justify-content-between gap-2 flex-wrap">
         <div>
-          <div className="panel-title">
+          <h5 className="f-w-600">
             {title}
             <InfoHint
               text="Kategoriya darajasida faqat ruxsat/taqiq boshqariladi (summa va foiz tariflarda). Agar HECH BITTA kategoriya yoqilmagan bo'lsa — cheklov yo'q, hammasi nasiyada sotiladi. Kamida bittasi yoqilsa — faqat yoqilgan kategoriyalar nasiyaga chiqadi."
               example="Faqat «Badiiy adabiyot»ni yoqsangiz, boshqa kategoriyali mahsulot bor savatga nasiya ochilmaydi."
             />
-          </div>
-          <small className="text-muted">Yoqilgan: {rows.filter((row) => row.enabled).length} / {rows.length}</small>
+          </h5>
+          <p className="mb-0 text-secondary">Yoqilgan: {rows.filter((row) => row.enabled).length} / {rows.length}</p>
         </div>
       </div>
-      <div className="table-responsive">
-        <table className="table table-bottom-border align-middle data-table">
-          <thead>
-            <tr>
-              <th>Kategoriya</th>
-              <th>Nasiyaga ruxsat</th>
-              <th>Amal</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={`${row.categoryType}-${row.id}`}>
-                <td>
-                  <div className="fw-semibold">{row.name}</div>
-                  <small className="text-muted">{row.active ? 'Katalogda faol' : 'Kategoriya nofaol'}</small>
-                </td>
-                <td>
-                  <label className="d-flex align-items-center gap-2 mb-0">
-                    <input form={`split-rule-${row.categoryType}-${row.id}`} type="hidden" name="enabled" value="0" />
-                    <input form={`split-rule-${row.categoryType}-${row.id}`} type="checkbox" className="form-check-input" name="enabled" value="1" defaultChecked={row.enabled} />
-                    <span className={`chip ${row.enabled ? 'chip-success' : 'chip-gray'}`}>{row.enabled ? 'Ruxsat' : 'Taqiq'}</span>
-                  </label>
-                </td>
-                <td>
-                  <form id={`split-rule-${row.categoryType}-${row.id}`} onSubmit={(event) => submitRule(event, actionUrl)} className="d-inline">
-                    <input type="hidden" name="category_type" value={row.categoryType} />
-                    <input type="hidden" name="category_id" value={row.id} />
-                    <button className="btn btn-light-success icon-btn w-30 h-30 b-r-22 me-2" title="Saqlash"><i className="bi bi-check2"></i></button>
-                  </form>
-                  {row.destroyUrl ? <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" title="Qoidani o'chirish" onClick={() => resetRule(row.destroyUrl)}><i className="bi bi-trash"></i></button> : null}
-                </td>
+      <div className="card-body">
+
+        <div className="table-responsive app-scroll">
+          <table className="table table-bottom-border align-middle">
+            <thead>
+              <tr>
+                <th>Kategoriya</th>
+                <th>Nasiyaga ruxsat</th>
+                <th>Amal</th>
               </tr>
-            ))}
-            {rows.length === 0 ? <tr><td colSpan={3} className="text-center text-muted py-5">Kategoriya topilmadi</td></tr> : null}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={`${row.categoryType}-${row.id}`}>
+                  <td>
+                    <div className="f-w-600">{row.name}</div>
+                    <p className="mb-0 text-secondary">{row.active ? 'Katalogda faol' : 'Kategoriya nofaol'}</p>
+                  </td>
+                  <td>
+                    <label className="d-flex align-items-center gap-2 mb-0">
+                      <input form={`split-rule-${row.categoryType}-${row.id}`} type="hidden" name="enabled" value="0" />
+                      <input form={`split-rule-${row.categoryType}-${row.id}`} type="checkbox" className="form-check-input" name="enabled" value="1" defaultChecked={row.enabled} />
+                      <span className={`badge ${row.enabled ? 'text-light-success' : 'text-light-secondary'}`}>{row.enabled ? 'Ruxsat' : 'Taqiq'}</span>
+                    </label>
+                  </td>
+                  <td>
+                    <form id={`split-rule-${row.categoryType}-${row.id}`} onSubmit={(event) => submitRule(event, actionUrl)} className="d-inline">
+                      <input type="hidden" name="category_type" value={row.categoryType} />
+                      <input type="hidden" name="category_id" value={row.id} />
+                      <button className="btn btn-light-success icon-btn w-30 h-30 b-r-22 me-2" title="Saqlash"><i className="ti ti-check"></i></button>
+                    </form>
+                    {row.destroyUrl ? <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" title="Qoidani o'chirish" onClick={() => resetRule(row.destroyUrl)}><i className="ti ti-trash"></i></button> : null}
+                  </td>
+                </tr>
+              ))}
+              {rows.length === 0 ? <tr><td colSpan={3} className="text-center py-5 text-secondary"><i className="iconoir-archive d-flex justify-content-center mb-2 f-s-30 text-primary"></i>Kategoriya topilmadi</td></tr> : null}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
@@ -995,46 +998,26 @@ function InfoHint({ text, example }: { text: string; example?: string }) {
   return (
     <span className="position-relative d-inline-block" style={{ verticalAlign: 'middle' }}>
       <i
-        className="bi bi-info-circle ms-1"
-        style={{ color: 'var(--kc-text-muted)', fontSize: 12, cursor: 'pointer' }}
-        onClick={(event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          setOpen((value) => !value);
-        }}
-      ></i>
+    className="ti ti-info-circle ms-1 text-secondary f-s-12 cursor-pointer"
+    onClick={(event) => {
+     event.preventDefault();
+     event.stopPropagation();
+     setOpen((value) => !value);
+    }}
+   ></i>
       {open ? (
-        <span
+        <span className="position-absolute w-270 text-white b-r-15 f-s-12 f-w-400 cursor-pointer"
           onClick={(event) => {
             event.preventDefault();
             event.stopPropagation();
             setOpen(false);
           }}
-          style={{
-            position: 'absolute',
-            zIndex: 60,
-            top: 20,
-            left: -120,
-            width: 270,
-            background: 'var(--kc-ink)',
-            color: 'var(--kc-on-ink)',
-            borderRadius: 'var(--kc-radius)',
-            padding: '10px 12px',
-            fontSize: 12,
-            fontWeight: 400,
-            lineHeight: 1.5,
-            textAlign: 'left',
-            whiteSpace: 'normal',
-            textTransform: 'none',
-            letterSpacing: 'normal',
-            boxShadow: 'var(--kc-shadow-overlay)',
-            cursor: 'pointer',
-          }}
+          style={{ zIndex: 60, top: 20, left: -120, background: 'rgba(var(--primary), 1)', padding: '10px 12px', lineHeight: 1.5, textAlign: 'left', whiteSpace: 'normal', textTransform: 'none', letterSpacing: 'normal', boxShadow: 'var(--box-shadow)' }}
         >
           {text}
           {example ? (
-            <span style={{ display: 'block', marginTop: 6, color: 'var(--kc-on-ink)', opacity: .72 }}>
-              <i className="bi bi-lightbulb me-1"></i>Misol: {example}
+            <span className="d-block text-white" style={{ marginTop: 6, opacity: .72 }}>
+              <i className="ti ti-bulb me-1"></i>Misol: {example}
             </span>
           ) : null}
         </span>
@@ -1045,8 +1028,8 @@ function InfoHint({ text, example }: { text: string; example?: string }) {
 
 function Toggle({ name, label, defaultChecked, hint, example }: { name: string; label: string; defaultChecked?: boolean; hint?: string; example?: string }) {
   return (
-    <label className="d-flex align-items-center justify-content-between gap-3 p-3 rounded border h-100">
-      <span className="fw-semibold">
+    <label className="d-flex align-items-center justify-content-between gap-3 p-3 b-r-8 b-1-light h-100">
+      <span className="f-w-600">
         {label}
         {hint ? <InfoHint text={hint} example={example} /> : null}
       </span>
@@ -1061,7 +1044,7 @@ function Toggle({ name, label, defaultChecked, hint, example }: { name: string; 
 function Field({ name, label, defaultValue, type = 'text', step, min, max, hint, example }: { name: string; label: string; defaultValue: string | number; type?: string; step?: string; min?: number; max?: number; hint?: string; example?: string }) {
   return (
     <div>
-      <label className="form-label small text-muted fw-semibold">
+      <label className="form-label f-s-13 text-muted f-w-600">
         {label}
         {hint ? <InfoHint text={hint} example={example} /> : null}
       </label>

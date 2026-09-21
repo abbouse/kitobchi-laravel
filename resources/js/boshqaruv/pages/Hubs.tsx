@@ -1,8 +1,12 @@
 import { FormEvent, InputHTMLAttributes, useMemo, useState } from 'react';
 import { PageCrumbs } from '../Layout';
 import { router, usePage } from '@inertiajs/react';
-import { Modal, Button } from 'react-bootstrap';
+import { Button } from 'react-bootstrap';
+import Modal from '../components/AppModal';
 import { LeafletMapPicker, LeafletMapView } from '../components/LeafletMap';
+
+import { StatWidget } from '../components/Axelit';
+import { tiIcon } from '../utils/icons';
 
 interface HubPipeline {
   inbound: number;
@@ -111,16 +115,16 @@ const STAGE_ORDER = ['inbound', 'qc', 'packing', 'dispatch', 'delivery'] as cons
 
 // Hub kartasidagi kichik pipeline chizig'i
 function PipelineBar({ pipeline, stages }: { pipeline?: HubPipeline; stages: FulfillmentStage[] }) {
-  const stageList = stages.length ? stages : STAGE_ORDER.map((k) => ({ key: k, label: k, icon: 'bi-dot', color: 'var(--kc-ink)' }));
+  const stageList = stages.length ? stages : STAGE_ORDER.map((k) => ({ key: k, label: k, icon: 'ti-point-filled', color: 'rgba(var(--primary), 1)' }));
   const total = STAGE_ORDER.reduce((sum, key) => sum + (pipeline?.[key] || 0), 0);
 
   if (!pipeline || total === 0) {
-    return <div className="small text-muted"><i className="bi bi-check2-circle me-1 text-success"></i>Ochiq fulfillment yo'q</div>;
+    return <div className="f-s-13 text-muted"><i className="ti ti-circle-check me-1 text-success"></i>Ochiq fulfillment yo'q</div>;
   }
 
   return (
     <div>
-      <div className="d-flex rounded-pill overflow-hidden mb-2" style={{ height: 5, background: 'var(--kc-bg-sunken)' }}>
+      <div className="d-flex b-r-50 overflow-hidden mb-2 h-5" style={{ background: 'rgba(var(--light), .3)' }}>
         {stageList.map((stage) => {
           const value = pipeline[stage.key as keyof HubPipeline] || 0;
           if (!value) return null;
@@ -132,14 +136,14 @@ function PipelineBar({ pipeline, stages }: { pipeline?: HubPipeline; stages: Ful
           const value = pipeline[stage.key as keyof HubPipeline] || 0;
           if (!value) return null;
           return (
-            <span key={stage.key} className="badge rounded-pill" style={{ background: `color-mix(in srgb, ${stage.color} 14%, transparent)`, color: stage.color, fontWeight: 600 }}>
-              <i className={`bi ${stage.icon} me-1`}></i>{value}
+            <span key={stage.key} className="badge" style={{ background: `color-mix(in srgb, ${stage.color} 14%, transparent)`, color: stage.color, fontWeight: 600 }}>
+              <i className={`${tiIcon(stage.icon)} me-1`}></i>{value}
             </span>
           );
         })}
         {pipeline.exceptions > 0 ? (
-          <span className="badge rounded-pill" style={{ background: 'var(--kc-danger-bg)', color: 'var(--kc-danger)', fontWeight: 500 }}>
-            <i className="bi bi-exclamation-triangle me-1"></i>{pipeline.exceptions}
+          <span className="badge text-danger f-w-500" style={{ background: 'rgba(var(--danger), .3)' }}>
+            <i className="ti ti-alert-triangle me-1"></i>{pipeline.exceptions}
           </span>
         ) : null}
       </div>
@@ -174,7 +178,7 @@ function TextInput({ name, label, defaultValue, type = 'text', required = false,
 }) {
   return (
     <div>
-      <label className="form-label small text-muted fw-semibold">{label}</label>
+      <label className="form-label f-s-13 text-muted f-w-600">{label}</label>
       <input className="form-control" name={name} type={type} min={min} max={max} step={step} required={required} defaultValue={defaultValue ?? ''} placeholder={placeholder} inputMode={inputMode} />
     </div>
   );
@@ -182,8 +186,8 @@ function TextInput({ name, label, defaultValue, type = 'text', required = false,
 
 function Toggle({ name, label, defaultChecked = false }: { name: string; label: string; defaultChecked?: boolean }) {
   return (
-    <label className="d-flex align-items-center justify-content-between gap-3 p-3 rounded border h-100">
-      <span className="fw-semibold">{label}</span>
+    <label className="d-flex align-items-center justify-content-between gap-3 p-3 b-r-8 b-1-light h-100">
+      <span className="f-w-600">{label}</span>
       <span>
         <input type="hidden" name={name} value="0" />
         <input className="form-check-input" type="checkbox" name={name} value="1" defaultChecked={defaultChecked} />
@@ -210,7 +214,7 @@ function HubForm({ hub, action, onDone }: { hub?: Hub | null; action?: string; o
         <div className="col-12"><TextInput name="address" label="Manzil" defaultValue={hub?.address} /></div>
 
         <div className="col-12">
-          <label className="form-label small text-muted fw-semibold">Joylashuv (xaritadan tanlang)</label>
+          <label className="form-label f-s-13 text-muted f-w-600">Joylashuv (xaritadan tanlang)</label>
           <LeafletMapPicker
             lat={coords.lat}
             lon={coords.lon}
@@ -220,10 +224,10 @@ function HubForm({ hub, action, onDone }: { hub?: Hub | null; action?: string; o
             }}
             height={300}
           />
-          {autoAddress ? <div className="small text-muted mt-1"><i className="bi bi-pin-map me-1"></i>{autoAddress}</div> : null}
+          {autoAddress ? <div className="f-s-13 text-muted mt-1"><i className="ti ti-map-pin me-1"></i>{autoAddress}</div> : null}
         </div>
         <div className="col-md-4">
-          <label className="form-label small text-muted fw-semibold">Latitude</label>
+          <label className="form-label f-s-13 text-muted f-w-600">Latitude</label>
           <input
             className="form-control"
             name="lat"
@@ -234,7 +238,7 @@ function HubForm({ hub, action, onDone }: { hub?: Hub | null; action?: string; o
           />
         </div>
         <div className="col-md-4">
-          <label className="form-label small text-muted fw-semibold">Longitude</label>
+          <label className="form-label f-s-13 text-muted f-w-600">Longitude</label>
           <input
             className="form-control"
             name="lon"
@@ -251,12 +255,12 @@ function HubForm({ hub, action, onDone }: { hub?: Hub | null; action?: string; o
         <div className="col-md-4"><Toggle name="supports_last_mile" label="Last mile" defaultChecked={hub?.supportsLastMile ?? true} /></div>
         <div className="col-md-4"><Toggle name="supports_postal_dispatch" label="Pochta dispatch" defaultChecked={hub?.supportsPostal ?? false} /></div>
         <div className="col-12">
-          <label className="form-label small text-muted fw-semibold">Izoh</label>
+          <label className="form-label f-s-13 text-muted f-w-600">Izoh</label>
           <textarea className="form-control" name="meta" rows={3} defaultValue={hub?.notes ?? ''} />
         </div>
       </div>
       <div className="text-end mt-4">
-        <button className="btn btn-primary"><i className="bi bi-check2 me-1"></i>{hub ? 'Saqlash' : "Qo'shish"}</button>
+        <button className="btn btn-primary"><i className="ti ti-check me-1"></i>{hub ? 'Saqlash' : "Qo'shish"}</button>
       </div>
     </form>
   );
@@ -271,13 +275,13 @@ function StaffForm({ staff, hubs, roles, permissions, action, onDone }: {
     <form onSubmit={(event) => submitForm(event, staff ? 'put' : 'post', action, onDone)}>
       <div className="row g-3">
         <div className="col-md-6">
-          <label className="form-label small text-muted fw-semibold">Hub</label>
+          <label className="form-label f-s-13 text-muted f-w-600">Hub</label>
           <select className="form-select" name="hub_id" required defaultValue={staff?.hubId ?? hubs[0]?.id ?? ''}>
             {hubs.map((hub) => <option value={hub.id} key={hub.id}>{hub.name} {hub.code ? `(${hub.code})` : ''}</option>)}
           </select>
         </div>
         <div className="col-md-6">
-          <label className="form-label small text-muted fw-semibold">Rol</label>
+          <label className="form-label f-s-13 text-muted f-w-600">Rol</label>
           <select className="form-select" name="role" required defaultValue={staff?.role ?? roles[0]?.value ?? 'operator'}>
             {roles.map((role) => <option value={role.value} key={role.value}>{role.label}</option>)}
           </select>
@@ -290,11 +294,11 @@ function StaffForm({ staff, hubs, roles, permissions, action, onDone }: {
           <>
             <div className="col-md-6"><Toggle name="is_active" label="Faol" defaultChecked={staff.active ?? true} /></div>
             <div className="col-12">
-              <div className="fw-bold mb-2">Qo'shimcha ruxsatlar</div>
+              <div className="f-w-600 mb-2">Qo'shimcha ruxsatlar</div>
               <div className="row g-2">
                 {permissions.map((permission) => (
                   <div className="col-md-6 col-xl-4" key={permission.key}>
-                    <label className="d-flex gap-2 p-2 rounded border h-100 small">
+                    <label className="d-flex gap-2 p-2 b-r-8 b-1-light h-100 f-s-13">
                       <input className="form-check-input mt-1" type="checkbox" name="permissions[]" value={permission.key} defaultChecked={selectedPermissions.has(permission.key)} />
                       <span><strong>{permission.label}</strong><br /><span className="text-muted">{permission.description || permission.key}</span></span>
                     </label>
@@ -306,7 +310,7 @@ function StaffForm({ staff, hubs, roles, permissions, action, onDone }: {
         ) : null}
       </div>
       <div className="text-end mt-4">
-        <button className="btn btn-primary"><i className="bi bi-check2 me-1"></i>{staff ? 'Saqlash' : "Xodim qo'shish"}</button>
+        <button className="btn btn-primary"><i className="ti ti-check me-1"></i>{staff ? 'Saqlash' : "Xodim qo'shish"}</button>
       </div>
     </form>
   );
@@ -333,7 +337,7 @@ export default function Hubs() {
           lat: hub.lat ?? null,
           lon: hub.lon ?? null,
           label: `<strong>${hub.name}</strong><br>${hub.code || ''}`,
-          color: hub.active ? 'var(--kc-ok)' : 'var(--kc-text-muted)',
+          color: hub.active ? 'rgba(var(--success), 1)' : 'rgba(var(--secondary), 1)',
         })),
     [hubs],
   );
@@ -347,279 +351,290 @@ export default function Hubs() {
 
   return (
     <div>
-      <div className="page-head">
+      <div className="d-flex align-items-end justify-content-between flex-wrap gap-3 mx-1 mb-3">
         <div>
-          <h1 className="page-title">Hub Fulfillment</h1><PageCrumbs />
-          <p className="page-subtitle">Fulfillment markazlari, xodimlar, rollar va kuryer vazifalari</p>
+          <h4 className="main-title mb-0">Hub Fulfillment</h4><PageCrumbs />
+          <p className="mb-0 text-secondary">Fulfillment markazlari, xodimlar, rollar va kuryer vazifalari</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setEditingHub(null)}><i className="bi bi-plus-circle me-1"></i>Hub qo'shish</button>
+        <button className="btn btn-primary" onClick={() => setEditingHub(null)}><i className="ti ti-circle-plus me-1"></i>Hub qo'shish</button>
       </div>
 
-      <div className="kpi-strip row g-3 mb-4">
+      <div className="row">
         {[
-          { label: 'Jami hub', value: hubStats.total ?? hubs.length, icon: 'bi-building', color: 'var(--kc-ink)' },
-          { label: 'Faol hub', value: hubStats.active ?? hubs.filter((hub) => hub.active).length, icon: 'bi-check-circle', color: 'var(--kc-ok)' },
-          { label: 'Xodimlar', value: hubStats.staff ?? hubStaff.length, icon: 'bi-people', color: 'var(--kc-cat-violet)' },
-          { label: 'Fulfillment', value: fmt(totalFulfillments), icon: 'bi-box-seam', color: 'var(--kc-warn)' },
-        ].map((item) => (
-          <div className="col-xl-3 col-md-6" key={item.label}>
-            <div className="stat-card">
-              <div className="d-flex align-items-center gap-3">
-                <div>
-                  <div className="stat-value">{item.value}</div>
-                  <div className="stat-label">{item.label}</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
+          { label: 'Jami hub', value: hubStats.total ?? hubs.length, icon: 'ti-building', color: 'rgba(var(--primary), 1)' },
+          { label: 'Faol hub', value: hubStats.active ?? hubs.filter((hub) => hub.active).length, icon: 'ti-circle-check', color: 'rgba(var(--success), 1)' },
+          { label: 'Xodimlar', value: hubStats.staff ?? hubStaff.length, icon: 'ti-users', color: 'rgba(var(--primary), 1)' },
+          { label: 'Fulfillment', value: fmt(totalFulfillments), icon: 'ti-package', color: 'rgba(var(--warning-dark), 1)' },
+        ].map((item, kpiIndex) => (<div className="col-xl-3 col-md-6" key={item.label}>
+          <StatWidget index={kpiIndex} label={item.label} value={item.value} />
+        </div>))}
       </div>
 
       {/* Fulfillment quvuri — global kesim */}
-      <div className="card-panel mb-4">
-        <div className="panel-head">
+      <div className="card">
+        <div className="card-header d-flex align-items-center justify-content-between gap-2 flex-wrap">
           <div>
-            <div className="panel-title">Fulfillment quvuri</div>
-            <small className="text-muted">Barcha hublardagi ochiq orderlarning bosqichlari</small>
+            <h5 className="f-w-600">Fulfillment quvuri</h5>
+            <p className="mb-0 text-secondary">Barcha hublardagi ochiq orderlarning bosqichlari</p>
           </div>
-          <span className="chip chip-info">{fmt(openTotal)} ta ochiq</span>
+          <span className="badge text-light-info">{fmt(openTotal)} ta ochiq</span>
         </div>
-        <div className="row g-2">
-          {/* Quvur bosqichlari: raqam har doim asosiy matn rangida (qorong'i rejimda
-              ham o'qiladi), bosqich ulushi esa ostidagi ingichka chiziqda ko'rinadi */}
-          {(stages.length ? stages : STAGE_ORDER.map((k) => ({ key: k, label: k, icon: 'bi-dot', color: '' }))).map((stage, index) => {
-            const value = totals[stage.key] || 0;
-            const share = openTotal > 0 ? Math.round((value / openTotal) * 100) : 0;
-            return (
-              <div className="col-6 col-xl" key={stage.key}>
-                <div className="stage-cell h-100">
-                  <div className="kpi-label">{index + 1} · {stage.label}</div>
-                  <div className="kpi-value">{fmt(value)}</div>
-                  <div className="stage-bar"><i style={{ width: `${value ? Math.max(share, 5) : 0}%` }}></i></div>
+        <div className="card-body">
+
+          <div className="row g-2">
+            {/* Quvur bosqichlari: raqam har doim asosiy matn rangida (qorong'i rejimda
+                ham o'qiladi), bosqich ulushi esa ostidagi ingichka chiziqda ko'rinadi */}
+            {(stages.length ? stages : STAGE_ORDER.map((k) => ({ key: k, label: k, icon: 'ti-point-filled', color: '' }))).map((stage, index) => {
+              const value = totals[stage.key] || 0;
+              const share = openTotal > 0 ? Math.round((value / openTotal) * 100) : 0;
+              return (
+                <div className="col-6 col-xl" key={stage.key}>
+                  <div className="bg-light-primary b-r-15 p-3 h-100">
+                    <p className="text-primary-dark f-w-600 mb-1 f-s-13">{index + 1} · {stage.label}</p>
+                    <h4 className="text-primary-dark mb-0">{fmt(value)}</h4>
+                    <div className="custom-progress-container mt-2 mb-0"><div className="progress-bar productive" style={{ width: `${value ? Math.max(share, 5) : 0}%` }}></div></div>
+                  </div>
                 </div>
+              );
+            })}
+            <div className="col-6 col-xl">
+              <div className={`b-r-15 p-3 h-100 ${(totals.exceptions || 0) > 0 ? 'bg-light-danger' : 'bg-light-secondary'}`}>
+                <p className="f-w-600 mb-1 f-s-13">Exception</p>
+                <h4 className="mb-0">{fmt(totals.exceptions || 0)}</h4>
+                <div className="custom-progress-container mt-2 mb-0"><div className={`progress-bar ${(totals.exceptions || 0) > 0 ? 'bg-danger' : 'idle'}`} style={{ width: (totals.exceptions || 0) > 0 ? '100%' : '0%' }}></div></div>
               </div>
-            );
-          })}
-          <div className="col-6 col-xl">
-            <div className={`stage-cell h-100${(totals.exceptions || 0) > 0 ? ' is-alert' : ''}`}>
-              <div className="kpi-label">Exception</div>
-              <div className="kpi-value">{fmt(totals.exceptions || 0)}</div>
-              <div className="stage-bar"><i style={{ width: (totals.exceptions || 0) > 0 ? '100%' : '0%' }}></i></div>
             </div>
           </div>
+          {(totals.delivered || totals.returned) ? (
+            <div className="d-flex gap-3 mt-3 f-s-13 text-muted">
+              <span><i className="ti ti-circle-check text-success me-1"></i>Yetkazilgan: <strong>{fmt(totals.delivered || 0)}</strong></span>
+              <span><i className="ti ti-rotate text-danger me-1"></i>Qaytgan/bekor: <strong>{fmt(totals.returned || 0)}</strong></span>
+            </div>
+          ) : null}
         </div>
-        {(totals.delivered || totals.returned) ? (
-          <div className="d-flex gap-3 mt-3 small text-muted">
-            <span><i className="bi bi-check-circle text-success me-1"></i>Yetkazilgan: <strong>{fmt(totals.delivered || 0)}</strong></span>
-            <span><i className="bi bi-arrow-counterclockwise text-danger me-1"></i>Qaytgan/bekor: <strong>{fmt(totals.returned || 0)}</strong></span>
-          </div>
-        ) : null}
       </div>
 
-      <div className="row g-3 mb-4">
+      <div className="row">
         <div className="col-xl-7">
-          <div className="card-panel h-100">
-            <div className="panel-head">
-              <div><div className="panel-title">Hublar xaritasi</div><small className="text-muted">Fulfillment markazlarining joylashuvi</small></div>
+          <div className="card h-100">
+<div className="card-header d-flex align-items-center justify-content-between gap-2 flex-wrap">
+              <div><h5 className="f-w-600">Hublar xaritasi</h5><small className="text-muted">Fulfillment markazlarining joylashuvi</small></div>
             </div>
-            <LeafletMapView markers={hubMarkers} height={280} />
-          </div>
+<div className="card-body">
+
+              <LeafletMapView markers={hubMarkers} height={280} />
+            </div>
+</div>
         </div>
         <div className="col-xl-5">
-          <div className="card-panel h-100">
-            <div className="panel-head">
-              <div><div className="panel-title">So'nggi harakatlar</div><small className="text-muted">Oxirgi fulfillment yangilanishlari</small></div>
+          <div className="card h-100">
+<div className="card-header d-flex align-items-center justify-content-between gap-2 flex-wrap">
+              <div><h5 className="f-w-600">So'nggi harakatlar</h5><small className="text-muted">Oxirgi fulfillment yangilanishlari</small></div>
             </div>
-            <div className="d-flex flex-column gap-2" style={{ maxHeight: 280, overflowY: 'auto' }}>
-              {recent.length === 0 ? <div className="text-muted small text-center py-4">Harakatlar yo'q</div> : null}
-              {recent.map((item) => (
-                <div key={item.id} className="d-flex align-items-center justify-content-between gap-2 p-2 rounded border">
-                  <div style={{ minWidth: 0 }}>
-                    <div className="fw-semibold small text-truncate">
-                      {item.orderId ? `#${item.orderId}` : `Fulfillment #${item.id}`} · {item.hub}
+<div className="card-body">
+
+              <div className="d-flex flex-column gap-2 overflow-y-auto" style={{ maxHeight: 280 }}>
+                {recent.length === 0 ? <div className="text-muted f-s-13 text-center py-4">Harakatlar yo'q</div> : null}
+                {recent.map((item) => (
+                  <div key={item.id} className="d-flex align-items-center justify-content-between gap-2 p-2 b-r-8 b-1-light">
+                    <div className="min-w-0">
+                      <div className="f-w-600 f-s-13 text-truncate">
+                        {item.orderId ? `#${item.orderId}` : `Fulfillment #${item.id}`} · {item.hub}
+                      </div>
+                      <div className="text-muted f-s-12">{item.updatedAt || ''}</div>
                     </div>
-                    <div className="text-muted" style={{ fontSize: 12 }}>{item.updatedAt || ''}</div>
+                    <div className="text-end">
+                      {item.hasException ? <span className="badge text-danger" style={{ background: 'rgba(var(--danger), .3)' }}>Exception</span> : <span className="badge text-light-secondary">{item.stageLabel}</span>}
+                    </div>
                   </div>
-                  <div className="text-end">
-                    {item.hasException ? <span className="chip" style={{ background: 'var(--kc-danger-bg)', color: 'var(--kc-danger)' }}>Exception</span> : <span className="chip chip-gray">{item.stageLabel}</span>}
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+</div>
         </div>
       </div>
 
-      <div className="row g-3 mb-4">
+      <div className="row">
         {hubs.map((hub) => (
           <div className="col-xl-4 col-md-6" key={hub.id}>
-            <div className="card-panel h-100 d-flex flex-column">
-              <div className="d-flex justify-content-between align-items-start mb-3 gap-2">
-                <div className="d-flex align-items-center gap-3" style={{ minWidth: 0 }}>
-                  <div className="resource-avatar"><i className="bi bi-building"></i></div>
-                  <div style={{ minWidth: 0 }}>
-                    <div className="fw-bold text-truncate">{hub.name}</div>
-                    <div className="text-muted small text-truncate">{hub.code || hub.city || hub.region || 'Hub'}</div>
+            <div className="card h-100">
+              <div className="card-body d-flex flex-column">
+                <div className="d-flex justify-content-between align-items-start mb-3 gap-2">
+                  <div className="d-flex align-items-center gap-3 min-w-0">
+                    <div className="h-55 w-55 d-flex-center b-r-50 bg-light-primary f-w-600 f-s-18 overflow-hidden flex-shrink-0"><i className="ti ti-building"></i></div>
+                    <div className="min-w-0">
+                      <div className="f-w-600 text-truncate">{hub.name}</div>
+                      <div className="text-muted f-s-13 text-truncate">{hub.code || hub.city || hub.region || 'Hub'}</div>
+                    </div>
                   </div>
+                  <span className={`badge ${hub.active ? 'text-light-success' : 'text-light-secondary'}`}>{hub.active ? 'Faol' : 'Nofaol'}</span>
                 </div>
-                <span className={`chip ${hub.active ? 'chip-success' : 'chip-gray'}`}>{hub.active ? 'Faol' : 'Nofaol'}</span>
-              </div>
 
-              <div className="row g-2 text-center mb-3">
-                <div className="col-4"><div className="fw-bold">{hub.staff || 0}</div><small className="text-muted">Xodim</small></div>
-                <div className="col-4"><div className="fw-bold">{hub.fulfillments || 0}</div><small className="text-muted">Order</small></div>
-                <div className="col-4"><div className="fw-bold">{hub.courierTasks || 0}</div><small className="text-muted">Kuryer</small></div>
-              </div>
+                <div className="row g-2 text-center mb-3">
+                  <div className="col-4"><div className="f-w-600">{hub.staff || 0}</div><small className="text-muted">Xodim</small></div>
+                  <div className="col-4"><div className="f-w-600">{hub.fulfillments || 0}</div><small className="text-muted">Order</small></div>
+                  <div className="col-4"><div className="f-w-600">{hub.courierTasks || 0}</div><small className="text-muted">Kuryer</small></div>
+                </div>
 
-              <div className="mb-3">
-                <div className="small text-muted fw-semibold mb-2">Fulfillment quvuri</div>
-                <PipelineBar pipeline={hub.pipeline} stages={stages} />
-              </div>
+                <div className="mb-3">
+                  <div className="f-s-13 text-muted f-w-600 mb-2">Fulfillment quvuri</div>
+                  <PipelineBar pipeline={hub.pipeline} stages={stages} />
+                </div>
 
-              <div className="p-2 rounded mb-3 small bg-light">
-                <div className="d-flex justify-content-between gap-3"><span>Manzil</span><strong className="text-end">{hub.city || hub.region || '—'}</strong></div>
-                <div className="d-flex justify-content-between"><span>Priority</span><strong>{hub.priority ?? '—'}</strong></div>
-                <div className="d-flex justify-content-between"><span>Asosiy hub</span><strong>{hub.primary ? 'Ha' : "Yo'q"}</strong></div>
-              </div>
+                <div className="p-2 b-r-8 mb-3 f-s-13 bg-light-secondary">
+                  <div className="d-flex justify-content-between gap-3"><span>Manzil</span><strong className="text-end">{hub.city || hub.region || '—'}</strong></div>
+                  <div className="d-flex justify-content-between"><span>Priority</span><strong>{hub.priority ?? '—'}</strong></div>
+                  <div className="d-flex justify-content-between"><span>Asosiy hub</span><strong>{hub.primary ? 'Ha' : "Yo'q"}</strong></div>
+                </div>
 
-              <div className="d-flex gap-2 flex-wrap mb-3">
-                {hub.supportsFirstMile ? <span className="chip chip-info">First mile</span> : null}
-                {hub.supportsLastMile ? <span className="chip chip-purple">Last mile</span> : null}
-                {hub.supportsPostal ? <span className="chip chip-warning">Pochta</span> : null}
-              </div>
+                <div className="d-flex gap-2 flex-wrap mb-3">
+                  {hub.supportsFirstMile ? <span className="badge text-light-info">First mile</span> : null}
+                  {hub.supportsLastMile ? <span className="badge text-light-primary">Last mile</span> : null}
+                  {hub.supportsPostal ? <span className="badge text-light-warning">Pochta</span> : null}
+                </div>
 
-              <div className="d-flex gap-2 mt-auto">
-                <button className="btn btn-sm btn-light-secondary flex-fill" onClick={() => setSelectedHub(hub)}><i className="bi bi-eye"></i> Batafsil</button>
-                <button className="btn btn-light-success icon-btn w-30 h-30 b-r-22" onClick={() => setEditingHub(hub)}><i className="bi bi-pencil"></i></button>
-                <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => destroy(hub.destroyUrl, `${hub.name} hub o'chirilsinmi?`)}><i className="bi bi-trash"></i></button>
+                <div className="d-flex gap-2 mt-auto">
+                  <button className="btn btn-sm btn-light-secondary flex-fill" onClick={() => setSelectedHub(hub)}><i className="ti ti-eye"></i> Batafsil</button>
+                  <button className="btn btn-light-success icon-btn w-30 h-30 b-r-22" onClick={() => setEditingHub(hub)}><i className="ti ti-pencil"></i></button>
+                  <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => destroy(hub.destroyUrl, `${hub.name} hub o'chirilsinmi?`)}><i className="ti ti-trash"></i></button>
+                </div>
               </div>
             </div>
           </div>
         ))}
       </div>
 
-      <div className="row g-3">
+      <div className="row">
         <div className="col-xl-7">
-          <div className="card-panel">
-            <div className="panel-head">
+          <div className="card">
+<div className="card-header d-flex align-items-center justify-content-between gap-2 flex-wrap">
               <div>
-                <div className="panel-title">Hub xodimlari</div>
-                <small className="text-muted">A122 dagi rollar va permission katalogi asosida</small>
+                <h5 className="f-w-600">Hub xodimlari</h5>
+                <p className="mb-0 text-secondary">A122 dagi rollar va permission katalogi asosida</p>
               </div>
-              <button className="btn btn-sm btn-primary" onClick={() => setEditingStaff(null)}><i className="bi bi-person-plus me-1"></i>Xodim</button>
+              <button className="btn btn-sm btn-primary" onClick={() => setEditingStaff(null)}><i className="ti ti-user-plus me-1"></i>Xodim</button>
             </div>
-            <div className="table-responsive">
-              <table className="table table-bottom-border align-middle data-table">
-                <thead><tr><th>Xodim</th><th>Hub</th><th>Rol</th><th>Ruxsat</th><th>Oxirgi aktivlik</th><th>Holat</th><th></th></tr></thead>
-                <tbody>
-                  {hubStaff.map((staff) => (
-                    <tr key={staff.id}>
-                      <td><div className="fw-semibold">{staff.name}</div><small className="text-muted">{staff.username} · {staff.phone || 'telefon yoq'}</small></td>
-                      <td>{staff.hub || '—'}<div className="small text-muted">{staff.hubCode}</div></td>
-                      <td><span className="chip chip-purple">{hubRoles.find((role) => role.value === staff.role)?.label || staff.role}</span></td>
-                      <td>{(staff.effectivePermissions?.length || staff.permissions?.length || 0)} ta</td>
-                      <td className="text-muted">{staff.lastSeenAt || '—'}</td>
-                      <td><span className={`chip ${staff.active ? 'chip-success' : 'chip-gray'}`}>{staff.active ? 'Faol' : 'Nofaol'}</span></td>
-                      <td className="text-end">
-                        <button className="btn btn-light-success icon-btn w-30 h-30 b-r-22 me-1" onClick={() => setEditingStaff(staff)}><i className="bi bi-pencil"></i></button>
-                        <button className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22 me-1" onClick={() => toggle(staff.toggleUrl)}><i className="bi bi-power"></i></button>
-                        <button className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22" onClick={() => resetPassword(staff)}><i className="bi bi-key"></i></button>
-                      </td>
-                    </tr>
-                  ))}
-                  {hubStaff.length === 0 ? <tr><td colSpan={7} className="text-center text-muted py-4">Hub xodimlari yo'q</td></tr> : null}
-                </tbody>
-              </table>
+<div className="card-body">
+
+              <div className="table-responsive app-scroll">
+                <table className="table table-bottom-border align-middle">
+                  <thead><tr><th>Xodim</th><th>Hub</th><th>Rol</th><th>Ruxsat</th><th>Oxirgi aktivlik</th><th>Holat</th><th></th></tr></thead>
+                  <tbody>
+                    {hubStaff.map((staff) => (
+                      <tr key={staff.id}>
+                        <td><div className="f-w-600">{staff.name}</div><small className="text-muted">{staff.username} · {staff.phone || 'telefon yoq'}</small></td>
+                        <td>{staff.hub || '—'}<div className="f-s-13 text-muted">{staff.hubCode}</div></td>
+                        <td><span className="badge text-light-primary">{hubRoles.find((role) => role.value === staff.role)?.label || staff.role}</span></td>
+                        <td>{(staff.effectivePermissions?.length || staff.permissions?.length || 0)} ta</td>
+                        <td className="text-muted">{staff.lastSeenAt || '—'}</td>
+                        <td><span className={`badge ${staff.active ? 'text-light-success' : 'text-light-secondary'}`}>{staff.active ? 'Faol' : 'Nofaol'}</span></td>
+                        <td className="text-end">
+                          <button className="btn btn-light-success icon-btn w-30 h-30 b-r-22 me-1" onClick={() => setEditingStaff(staff)}><i className="ti ti-pencil"></i></button>
+                          <button className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22 me-1" onClick={() => toggle(staff.toggleUrl)}><i className="ti ti-power"></i></button>
+                          <button className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22" onClick={() => resetPassword(staff)}><i className="ti ti-key"></i></button>
+                        </td>
+                      </tr>
+                    ))}
+                    {hubStaff.length === 0 ? <tr><td colSpan={7} className="text-center py-5 text-secondary"><i className="iconoir-archive d-flex justify-content-center mb-2 f-s-30 text-primary"></i>Hub xodimlari yo'q</td></tr> : null}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
+</div>
         </div>
         <div className="col-xl-5">
-          <div className="card-panel">
-            <div className="panel-head">
+          <div className="card">
+<div className="card-header d-flex align-items-center justify-content-between gap-2 flex-wrap">
               <div>
-                <div className="panel-title">Rollar va vakolatlar</div>
-                <small className="text-muted">Hub operatsion rollari uchun default ruxsatlar</small>
+                <h5 className="f-w-600">Rollar va vakolatlar</h5>
+                <p className="mb-0 text-secondary">Hub operatsion rollari uchun default ruxsatlar</p>
               </div>
-              <span className="chip chip-info">{hubPermissions.length} permission</span>
+              <span className="badge text-light-info">{hubPermissions.length} permission</span>
             </div>
-            <div className="d-flex flex-column gap-2">
-              {hubRoles.map((role) => (
-                <div className="p-3 rounded border" key={role.value}>
-                  <div className="d-flex justify-content-between gap-3 mb-1">
-                    <strong>{role.label}</strong>
-                    <span className="money">{role.permissions?.length || 0}</span>
+<div className="card-body">
+
+              <div className="d-flex flex-column gap-2">
+                {hubRoles.map((role) => (
+                  <div className="p-3 b-r-8 b-1-light" key={role.value}>
+                    <div className="d-flex justify-content-between gap-3 mb-1">
+                      <strong>{role.label}</strong>
+                      <span className="f-w-600 text-nowrap">{role.permissions?.length || 0}</span>
+                    </div>
+                    <div className="f-s-13 text-muted mb-2">{role.description || role.value}</div>
+                    <div className="d-flex flex-wrap gap-1">
+                      {(role.permissions || []).slice(0, 6).map((permission) => <span className="badge text-light-info" key={permission}>{permission}</span>)}
+                      {(role.permissions?.length || 0) > 6 ? <span className="badge text-light-secondary">+{(role.permissions?.length || 0) - 6}</span> : null}
+                    </div>
                   </div>
-                  <div className="small text-muted mb-2">{role.description || role.value}</div>
-                  <div className="d-flex flex-wrap gap-1">
-                    {(role.permissions || []).slice(0, 6).map((permission) => <span className="chip chip-info" key={permission}>{permission}</span>)}
-                    {(role.permissions?.length || 0) > 6 ? <span className="chip chip-gray">+{(role.permissions?.length || 0) - 6}</span> : null}
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+</div>
         </div>
       </div>
 
-      <div className="card-panel mt-3">
-        <div className="panel-head">
+      <div className="card mt-3">
+<div className="card-header d-flex align-items-center justify-content-between gap-2 flex-wrap">
           <div>
-            <div className="panel-title">Fulfillment nazorati</div>
-            <small className="text-muted">Hub orderlari va kuryer vazifalarining operatsion kesimi</small>
+            <h5 className="f-w-600">Fulfillment nazorati</h5>
+            <p className="mb-0 text-secondary">Hub orderlari va kuryer vazifalarining operatsion kesimi</p>
           </div>
-          <span className="chip chip-info">{totalCourierTasks} ta kuryer vazifasi</span>
+          <span className="badge text-light-info">{totalCourierTasks} ta kuryer vazifasi</span>
         </div>
-        <div className="table-responsive">
-          <table className="table table-bottom-border align-middle data-table">
-            <thead><tr><th>Hub</th><th>Kod</th><th>Hudud</th><th className="num">Xodim</th><th className="num">Fulfillment</th><th className="num">Kuryer task</th><th>Qo'llab-quvvatlaydi</th><th>Amallar</th></tr></thead>
-            <tbody>
-              {hubs.map((hub) => (
-                <tr key={hub.id}>
-                  <td className="fw-semibold">{hub.name}</td>
-                  <td>{hub.code || '—'}</td>
-                  <td>{[hub.city, hub.region].filter(Boolean).join(', ') || '—'}</td>
-                  <td className="num">{hub.staff || 0}</td>
-                  <td className="num">{hub.fulfillments || 0}</td>
-                  <td className="num">{hub.courierTasks || 0}</td>
-                  <td>
-                    <span className="chip chip-gray">
-                      {[hub.supportsFirstMile ? 'First' : null, hub.supportsLastMile ? 'Last' : null, hub.supportsPostal ? 'Postal' : null].filter(Boolean).join(' / ') || '—'}
-                    </span>
-                  </td>
-                  <td>
-                    <button className="btn btn-light-primary icon-btn w-30 h-30 b-r-22 me-1" onClick={() => setSelectedHub(hub)}><i className="bi bi-eye"></i></button>
-                    <button className="btn btn-light-success icon-btn w-30 h-30 b-r-22" onClick={() => setEditingHub(hub)}><i className="bi bi-pencil"></i></button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+<div className="card-body">
+
+          <div className="table-responsive app-scroll">
+            <table className="table table-bottom-border align-middle">
+              <thead><tr><th>Hub</th><th>Kod</th><th>Hudud</th><th className="text-end text-nowrap">Xodim</th><th className="text-end text-nowrap">Fulfillment</th><th className="text-end text-nowrap">Kuryer task</th><th>Qo'llab-quvvatlaydi</th><th>Amallar</th></tr></thead>
+              <tbody>
+                {hubs.map((hub) => (
+                  <tr key={hub.id}>
+                    <td className="f-w-600">{hub.name}</td>
+                    <td>{hub.code || '—'}</td>
+                    <td>{[hub.city, hub.region].filter(Boolean).join(', ') || '—'}</td>
+                    <td className="text-end text-nowrap">{hub.staff || 0}</td>
+                    <td className="text-end text-nowrap">{hub.fulfillments || 0}</td>
+                    <td className="text-end text-nowrap">{hub.courierTasks || 0}</td>
+                    <td>
+                      <span className="badge text-light-secondary">
+                        {[hub.supportsFirstMile ? 'First' : null, hub.supportsLastMile ? 'Last' : null, hub.supportsPostal ? 'Postal' : null].filter(Boolean).join(' / ') || '—'}
+                      </span>
+                    </td>
+                    <td>
+                      <button className="btn btn-light-primary icon-btn w-30 h-30 b-r-22 me-1" onClick={() => setSelectedHub(hub)}><i className="ti ti-eye"></i></button>
+                      <button className="btn btn-light-success icon-btn w-30 h-30 b-r-22" onClick={() => setEditingHub(hub)}><i className="ti ti-pencil"></i></button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+</div>
 
       <Modal show={!!selectedHub} onHide={() => setSelectedHub(null)} centered size="lg">
-        <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">{selectedHub?.name}</Modal.Title></Modal.Header>
+        <Modal.Header closeButton><Modal.Title className="f-s-20 f-w-600">{selectedHub?.name}</Modal.Title></Modal.Header>
         <Modal.Body>
           <div className="row g-3">
-            <div className="col-md-3"><small className="text-muted">Kod</small><div className="fw-semibold">{selectedHub?.code || '—'}</div></div>
-            <div className="col-md-3"><small className="text-muted">Status</small><div><span className={`chip ${selectedHub?.active ? 'chip-success' : 'chip-gray'}`}>{selectedHub?.active ? 'Faol' : 'Faol emas'}</span></div></div>
-            <div className="col-md-3"><small className="text-muted">Priority</small><div className="fw-semibold">{selectedHub?.priority ?? '—'}</div></div>
+            <div className="col-md-3"><small className="text-muted">Kod</small><div className="f-w-600">{selectedHub?.code || '—'}</div></div>
+            <div className="col-md-3"><small className="text-muted">Status</small><div><span className={`badge ${selectedHub?.active ? 'text-light-success' : 'text-light-secondary'}`}>{selectedHub?.active ? 'Faol' : 'Faol emas'}</span></div></div>
+            <div className="col-md-3"><small className="text-muted">Priority</small><div className="f-w-600">{selectedHub?.priority ?? '—'}</div></div>
             <div className="col-md-3"><small className="text-muted">Koordinata</small><div>{[selectedHub?.lat, selectedHub?.lon].filter(Boolean).join(', ') || '—'}</div></div>
             <div className="col-12"><small className="text-muted">Manzil</small><div>{selectedHub?.address || '—'}</div></div>
             {selectedHub?.lat && selectedHub?.lon ? (
               <div className="col-12">
-                <LeafletMapView markers={[{ lat: selectedHub.lat, lon: selectedHub.lon, label: selectedHub.name, color: selectedHub.active ? 'var(--kc-ok)' : 'var(--kc-text-muted)' }]} height={220} />
+                <LeafletMapView markers={[{ lat: selectedHub.lat, lon: selectedHub.lon, label: selectedHub.name, color: selectedHub.active ? 'rgba(var(--success), 1)' : 'rgba(var(--secondary), 1)' }]} height={220} />
               </div>
             ) : null}
             {selectedHub?.pipeline ? (
               <div className="col-12">
-                <small className="text-muted">Fulfillment quvuri</small>
+                <p className="mb-0 text-secondary">Fulfillment quvuri</p>
                 <div className="mt-1"><PipelineBar pipeline={selectedHub.pipeline} stages={hubFulfillment.stages ?? []} /></div>
               </div>
             ) : null}
-            <div className="col-md-4"><small className="text-muted">Xodim</small><div className="fw-bold">{selectedHub?.staff || 0}</div></div>
-            <div className="col-md-4"><small className="text-muted">Fulfillment</small><div className="fw-bold">{selectedHub?.fulfillments || 0}</div></div>
-            <div className="col-md-4"><small className="text-muted">Kuryer</small><div className="fw-bold">{selectedHub?.courierTasks || 0}</div></div>
+            <div className="col-md-4"><small className="text-muted">Xodim</small><div className="f-w-600">{selectedHub?.staff || 0}</div></div>
+            <div className="col-md-4"><small className="text-muted">Fulfillment</small><div className="f-w-600">{selectedHub?.fulfillments || 0}</div></div>
+            <div className="col-md-4"><small className="text-muted">Kuryer</small><div className="f-w-600">{selectedHub?.courierTasks || 0}</div></div>
             <div className="col-12"><small className="text-muted">Izoh</small><div>{selectedHub?.notes || '—'}</div></div>
           </div>
         </Modal.Body>
@@ -630,14 +645,14 @@ export default function Hubs() {
       </Modal>
 
       <Modal show={editingHub !== undefined} onHide={() => setEditingHub(undefined)} centered size="lg">
-        <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">{editingHub ? 'Hub tahrirlash' : "Yangi hub"}</Modal.Title></Modal.Header>
+        <Modal.Header closeButton><Modal.Title className="f-s-20 f-w-600">{editingHub ? 'Hub tahrirlash' : "Yangi hub"}</Modal.Title></Modal.Header>
         <Modal.Body>
           <HubForm hub={editingHub} action={editingHub?.updateUrl || hubActions.storeUrl} onDone={() => setEditingHub(undefined)} />
         </Modal.Body>
       </Modal>
 
       <Modal show={editingStaff !== undefined} onHide={() => setEditingStaff(undefined)} centered size="lg">
-        <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">{editingStaff ? 'Xodim tahrirlash' : "Yangi hub xodimi"}</Modal.Title></Modal.Header>
+        <Modal.Header closeButton><Modal.Title className="f-s-20 f-w-600">{editingStaff ? 'Xodim tahrirlash' : "Yangi hub xodimi"}</Modal.Title></Modal.Header>
         <Modal.Body>
           <StaffForm staff={editingStaff} hubs={hubs} roles={hubRoles} permissions={hubPermissions} action={editingStaff?.updateUrl || hubActions.staffStoreUrl} onDone={() => setEditingStaff(undefined)} />
         </Modal.Body>

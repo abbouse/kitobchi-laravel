@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { router } from '@inertiajs/react';
 import { applyTheme } from '../Layout';
+import { tiIcon } from '../utils/icons';
 
 /**
  * Kirish sahifasi — Axelit "sign_in" sahifasining tuzilmasi:
@@ -23,9 +24,9 @@ export default function Login() {
   };
 
   const points = [
-    { icon: 'bi-shield-check', tone: 'primary', title: 'Audit', text: 'Har bir kirish qayd etiladi' },
-    { icon: 'bi-person-lock', tone: 'success', title: 'Ruxsat', text: 'Faqat tasdiqlangan adminlar' },
-    { icon: 'bi-clock-history', tone: 'danger', title: 'Sessiya', text: 'Faollik muntazam tekshiriladi' },
+    { icon: 'ti-shield-check', tone: 'primary', title: 'Audit', text: 'Har bir kirish qayd etiladi' },
+    { icon: 'ti-lock-access', tone: 'success', title: 'Ruxsat', text: 'Faqat tasdiqlangan adminlar' },
+    { icon: 'ti-history', tone: 'danger', title: 'Sessiya', text: 'Faollik muntazam tekshiriladi' },
   ];
 
   return (
@@ -35,20 +36,20 @@ export default function Login() {
           <div className="container">
             <div className="row sign-in-content-bg">
               <div className="col-lg-6 image-contentbox d-none d-lg-block">
-                <div className="form-container">
+                <div className="form-container h-100 d-flex flex-column justify-content-between p-4">
                   <div className="signup-content mt-4">
-                    <div className="kc-login-brand">
-                      <img src="/favicon.svg" alt="" width={52} height={52} />
-                      <strong>Kitobchi</strong>
+                    <div className="d-flex align-items-center justify-content-center gap-3">
+                      <img className="h-50 w-50 b-r-15" src="/favicon.svg" alt="" />
+                      <span className="f-s-28 f-w-700 text-dark">Kitobchi</span>
                     </div>
                   </div>
-                  <div className="kc-login-points">
+                  <div className="d-grid gap-3 py-5 px-lg-4">
                     {points.map((p) => (
-                      <div className="kc-login-point" key={p.title}>
-                        <span className={`h-45 w-45 d-flex-center b-r-50 text-light-${p.tone} flex-shrink-0 f-s-20`}><i className={`bi ${p.icon}`}></i></span>
+                      <div className="card card-body mb-0 d-flex flex-row align-items-center gap-3" key={p.title}>
+                        <span className={`h-45 w-45 d-flex-center b-r-50 text-light-${p.tone} flex-shrink-0 f-s-20`}><i className={`${tiIcon(p.icon)}`}></i></span>
                         <div>
-                          <h6>{p.title}</h6>
-                          <p>{p.text}</p>
+                          <h6 className="mb-0">{p.title}</h6>
+                          <p className="mb-0 text-secondary f-s-13">{p.text}</p>
                         </div>
                       </div>
                     ))}
@@ -57,10 +58,10 @@ export default function Login() {
                 </div>
               </div>
 
-              <div className="col-lg-6 form-contentbox">
+              <div className="col-lg-6 form-contentbox position-relative">
                 <button
                   type="button"
-                  className="btn btn-light-secondary icon-btn w-35 h-35 b-r-22 kc-login-theme"
+                  className="btn btn-light-secondary icon-btn w-35 h-35 b-r-22 position-absolute top-0 end-0 m-3"
                   onClick={() => setDarkMode((value) => !value)}
                   aria-label={darkMode ? "Yorug' rejim" : "Qorong'i rejim"}
                   title={darkMode ? "Yorug' rejim" : "Qorong'i rejim"}
@@ -72,9 +73,9 @@ export default function Login() {
                     <div className="row">
                       <div className="col-12">
                         <div className="mb-5 text-center text-lg-start">
-                          <div className="kc-login-brand justify-content-center justify-content-lg-start d-lg-none mb-4">
-                            <img src="/favicon.svg" alt="" width={44} height={44} />
-                            <strong>Kitobchi</strong>
+                          <div className="d-flex align-items-center gap-3 justify-content-center justify-content-lg-start d-lg-none mb-4">
+                            <img className="h-45 w-45 b-r-10" src="/favicon.svg" alt="" />
+                            <span className="f-s-24 f-w-700 text-dark">Kitobchi</span>
                           </div>
                           <h2 className="text-primary f-w-600">Boshqaruvga xush kelibsiz!</h2>
                           <p>Ruxsatli xodimlar uchun kirish. Hisob ma'lumotlaringizni kiriting.</p>

@@ -1,9 +1,11 @@
-import { toneOf } from '../utils/tone';
+import { toneOf, toneBadge } from '../utils/tone';
 import { PageCrumbs } from '../Layout';
 import { useState } from 'react';
-import { Modal } from 'react-bootstrap';
+import Modal from '../components/AppModal';
 import { router, usePage } from '@inertiajs/react';
 import PaginationControls from '../components/PaginationControls';
+
+import { StatWidget } from '../components/Axelit';
 
 const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(Math.round(n || 0));
 
@@ -23,10 +25,10 @@ interface AuditLog {
 }
 
 const methodChip = (method: string) => {
-  if (method === 'POST') return 'chip-info';
-  if (method === 'PUT' || method === 'PATCH') return 'chip-warning';
-  if (method === 'DELETE') return 'chip-danger';
-  return 'chip-gray';
+  if (method === 'POST') return 'text-light-info';
+  if (method === 'PUT' || method === 'PATCH') return 'text-light-warning';
+  if (method === 'DELETE') return 'text-light-danger';
+  return 'text-light-secondary';
 };
 
 export default function AuditLogs() {
@@ -43,65 +45,66 @@ export default function AuditLogs() {
 
   return (
     <div>
-      <div className="page-head">
+      <div className="d-flex align-items-end justify-content-between flex-wrap gap-3 mx-1 mb-3">
         <div>
-          <h1 className="page-title">Audit log</h1><PageCrumbs />
-          <p className="page-subtitle">Adminlar bajargan POST, PUT, PATCH va DELETE amallari.</p>
+          <h4 className="main-title mb-0">Audit log</h4><PageCrumbs />
+          <p className="mb-0 text-secondary">Adminlar bajargan POST, PUT, PATCH va DELETE amallari.</p>
         </div>
       </div>
 
-      <div className="kpi-strip row g-3 mb-3">
+      <div className="row">
         {[
-          ['Jami', auditLogTotals.all || 0, 'bi-clipboard-data', 'var(--kc-ink)'],
-          ['Bugun', auditLogTotals.today || 0, 'bi-calendar2-day', 'var(--kc-ok)'],
-          ['Xatolik', auditLogTotals.failed || 0, 'bi-exclamation-triangle', 'var(--kc-danger)'],
-        ].map(([label, value, icon, color]) => (
-          <div className="col-md-4" key={String(label)}>
-            <div className="stat-card"><div className="d-flex align-items-center gap-3"><div><div className="stat-value">{fmt(Number(value))}</div><div className="stat-label">{label}</div></div></div></div>
-          </div>
-        ))}
+          ['Jami', auditLogTotals.all || 0, 'ti-clipboard-data', 'rgba(var(--primary), 1)'],
+          ['Bugun', auditLogTotals.today || 0, 'ti-calendar-event', 'rgba(var(--success), 1)'],
+          ['Xatolik', auditLogTotals.failed || 0, 'ti-alert-triangle', 'rgba(var(--danger), 1)'],
+        ].map(([label, value, icon, color], kpiIndex) => (<div className="col-md-4" key={String(label)}>
+          <StatWidget index={kpiIndex} label={label} value={fmt(Number(value))} />
+        </div>))}
       </div>
 
-      <div className="card-panel">
-        <div className="panel-head">
-          <div><div className="panel-title">Oxirgi admin amallari</div><small className="text-muted">Parol va fayl maydonlari saqlanmaydi.</small></div>
-          <span className="chip chip-gray">{auditLogPagination.total} ta</span>
+      <div className="card">
+        <div className="card-header d-flex align-items-center justify-content-between gap-2 flex-wrap">
+          <div><h5 className="f-w-600">Oxirgi admin amallari</h5><small className="text-muted">Parol va fayl maydonlari saqlanmaydi.</small></div>
+          <span className="badge text-light-secondary">{auditLogPagination.total} ta</span>
         </div>
-        <div className="table-responsive">
-          <table className="table table-bottom-border align-middle data-table">
-            <thead><tr><th>ID</th><th>Admin</th><th>Method</th><th>Action</th><th>Target</th><th>Path</th><th>Status</th><th>Sana</th><th></th></tr></thead>
-            <tbody>
-              {auditLogs.map((log) => (
-                <tr key={log.id}>
-                  <td className="cell-id">#{log.id}</td>
-                  <td>{log.admin}<small className="d-block text-muted">{log.ip || '—'}</small></td>
-                  <td><span className={`st ${toneOf(methodChip(log.method))}`}><i></i>{log.method}</span></td>
-                  <td><strong>{log.action || log.route || '—'}</strong><small className="d-block text-muted">{log.route || '—'}</small></td>
-                  <td>{log.targetType ? <span className="chip chip-gray">{log.targetType} #{log.targetId || '—'}</span> : '—'}</td>
-                  <td className="text-muted small">{log.path}</td>
-                  <td><span className={`chip ${(log.statusCode || 0) >= 400 ? 'chip-danger' : 'chip-success'}`}>{log.statusCode || '—'}</span></td>
-                  <td className="text-muted small">{log.date || '—'}</td>
-                  <td><button className="btn btn-light-primary icon-btn w-30 h-30 b-r-22" onClick={() => setSelected(log)}><i className="bi bi-eye"></i></button></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="card-body">
+
+          <div className="table-responsive app-scroll">
+            <table className="table table-bottom-border align-middle">
+              <thead><tr><th>ID</th><th>Admin</th><th>Method</th><th>Action</th><th>Target</th><th>Path</th><th>Status</th><th>Sana</th><th></th></tr></thead>
+              <tbody>
+                {auditLogs.map((log) => (
+                  <tr key={log.id}>
+                    <td className="f-w-600 text-nowrap">#{log.id}</td>
+                    <td>{log.admin}<small className="d-block text-muted">{log.ip || '—'}</small></td>
+                    <td><span className={`badge text-uppercase ${toneBadge(toneOf(methodChip(log.method)))}`}>{log.method}</span></td>
+                    <td><strong>{log.action || log.route || '—'}</strong><small className="d-block text-muted">{log.route || '—'}</small></td>
+                    <td>{log.targetType ? <span className="badge text-light-secondary">{log.targetType} #{log.targetId || '—'}</span> : '—'}</td>
+                    <td className="text-muted f-s-13">{log.path}</td>
+                    <td><span className={`badge ${(log.statusCode || 0) >= 400 ? 'text-light-danger' : 'text-light-success'}`}>{log.statusCode || '—'}</span></td>
+                    <td className="text-muted f-s-13">{log.date || '—'}</td>
+                    <td><button className="btn btn-light-primary icon-btn w-30 h-30 b-r-22" onClick={() => setSelected(log)}><i className="ti ti-eye"></i></button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <PaginationControls {...auditLogPagination} onPageChange={(page) => router.get('/boshqaruv/audit-logs', { audit_page: page }, { preserveState: true, preserveScroll: true, replace: true })} />
         </div>
-        <PaginationControls {...auditLogPagination} onPageChange={(page) => router.get('/boshqaruv/audit-logs', { audit_page: page }, { preserveState: true, preserveScroll: true, replace: true })} />
       </div>
 
       <Modal show={!!selected} onHide={() => setSelected(null)} centered size="lg">
-        <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">Audit #{selected?.id}</Modal.Title></Modal.Header>
+        <Modal.Header closeButton><Modal.Title className="f-s-20 f-w-600">Audit #{selected?.id}</Modal.Title></Modal.Header>
         <Modal.Body>
           <div className="row g-3">
-            <div className="col-md-6"><small className="text-muted">Admin</small><div className="fw-semibold">{selected?.admin}</div></div>
+            <div className="col-md-6"><small className="text-muted">Admin</small><div className="f-w-600">{selected?.admin}</div></div>
             <div className="col-md-6"><small className="text-muted">IP</small><div>{selected?.ip || '—'}</div></div>
             <div className="col-md-6"><small className="text-muted">Route</small><div>{selected?.route || '—'}</div></div>
             <div className="col-md-6"><small className="text-muted">Target</small><div>{selected?.targetType || '—'} #{selected?.targetId || '—'}</div></div>
             <div className="col-12"><small className="text-muted">Path</small><div>{selected?.path}</div></div>
             <div className="col-12">
-              <small className="text-muted">Request data</small>
-              <pre className="mt-2 p-3 rounded" style={{ background: 'var(--bs-body-bg)', border: '1px solid var(--bs-border-color)', fontSize: 12, whiteSpace: 'pre-wrap' }}>{JSON.stringify(selected?.requestData || {}, null, 2)}</pre>
+              <p className="mb-0 text-secondary">Request data</p>
+              <pre className="mt-2 p-3 b-r-8 f-s-12" style={{ background: 'var(--bs-body-bg)', border: '1px solid var(--bs-border-color)', whiteSpace: 'pre-wrap' }}>{JSON.stringify(selected?.requestData || {}, null, 2)}</pre>
             </div>
           </div>
         </Modal.Body>

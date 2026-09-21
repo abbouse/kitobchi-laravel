@@ -1,7 +1,8 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { PageCrumbs } from '../Layout';
 import { router, usePage } from '@inertiajs/react';
-import { Modal, Button, Form } from 'react-bootstrap';
+import { Button, Form } from 'react-bootstrap';
+import Modal from '../components/AppModal';
 import PaginationControls from '../components/PaginationControls';
 
 type TranslateLocale = 'ru' | 'en' | 'ja';
@@ -17,43 +18,26 @@ function BannerImageHint() {
   return (
     <span className="position-relative d-inline-block" style={{ verticalAlign: 'middle' }}>
       <button
-        type="button"
-        className="btn btn-link p-0 ms-1 text-muted"
-        style={{ lineHeight: 1 }}
-        aria-label="Banner rasmi bo'yicha tavsiya"
-        onClick={(event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          setOpen((value) => !value);
-        }}
-      >
-        <i className="bi bi-question-circle"></i>
+    type="button"
+    className="btn btn-link p-0 ms-1 text-muted lh-1"
+    aria-label="Banner rasmi bo'yicha tavsiya"
+    onClick={(event) => {
+     event.preventDefault();
+     event.stopPropagation();
+     setOpen((value) => !value);
+    }}
+   >
+        <i className="ti ti-help"></i>
       </button>
       {open ? (
         <span
-          className="shadow"
+          className="shadow position-absolute w-310 text-white b-r-15 f-s-12 f-w-400 cursor-pointer"
           onClick={(event) => {
             event.preventDefault();
             event.stopPropagation();
             setOpen(false);
           }}
-          style={{
-            position: 'absolute',
-            zIndex: 80,
-            top: 24,
-            left: -96,
-            width: 310,
-            background: 'var(--kc-ink)',
-            color: 'var(--kc-on-ink)',
-            borderRadius: 'var(--kc-radius)',
-            padding: '12px 14px',
-            fontSize: 12,
-            fontWeight: 400,
-            lineHeight: 1.55,
-            textAlign: 'left',
-            whiteSpace: 'normal',
-            cursor: 'pointer',
-          }}
+          style={{ zIndex: 80, top: 24, left: -96, background: 'rgba(var(--primary), 1)', padding: '12px 14px', lineHeight: 1.55, textAlign: 'left', whiteSpace: 'normal' }}
         >
           <strong className="d-block mb-1">Banner rasmi uchun tavsiya</strong>
           O'lcham: <strong>1440 × 320 px</strong> (nisbat <strong>4.5:1</strong>). Aynan shu nisbatdagi rasm barcha qurilmada <strong>qirqilmasdan</strong> joylashadi.
@@ -63,7 +47,7 @@ function BannerImageHint() {
             <span className="d-block">• yuqori va pastdan <strong>≥ 30 px</strong></span>
             (markazdagi ~1200 × 260 px maydonda).
           </span>
-          <span className="d-block mt-2" style={{ color: 'var(--kc-on-ink)', opacity: .72 }}>
+          <span className="d-block mt-2 text-white" style={{ opacity: .72 }}>
             Fonni to'liq chetgacha to'ldiring. Format WebP/JPG/PNG, 300–600 KB.
           </span>
         </span>
@@ -103,34 +87,36 @@ export function Reels() {
 
   return (
     <div>
-      <div className="page-head">
-        <div><h1 className="page-title">Reels / Shorts</h1><PageCrumbs /><p className="page-subtitle">Jami {reels.length} ta reel</p></div>
-        <button className="btn btn-primary" onClick={() => { setEditing(null); setShowForm(true); }}><i className="bi bi-plus-lg me-1"></i>Reel qo'shish</button>
+      <div className="d-flex align-items-end justify-content-between flex-wrap gap-3 mx-1 mb-3">
+        <div><h4 className="main-title mb-0">Reels / Shorts</h4><PageCrumbs /><p className="mb-0 text-secondary">Jami {reels.length} ta reel</p></div>
+        <button className="btn btn-primary" onClick={() => { setEditing(null); setShowForm(true); }}><i className="ti ti-plus me-1"></i>Reel qo'shish</button>
       </div>
-      <div className="row g-3">
+      <div className="row">
         {reels.map(reel => (
           <div className="col-xl-4 col-md-6" key={reel.id}>
-            <div className="card-panel">
-              <div className="d-flex justify-content-between mb-2">
-                <div className="fw-bold">{reel.title}</div>
-                <span className={`chip ${reel.status === 'Active' ? 'chip-success' : 'chip-gray'}`} style={{ fontSize: 9 }}>{reel.status}</span>
-              </div>
-              <div className="d-flex gap-3 small mb-2">
-                <span>{reel.order || 0} tartib</span>
-                <span>{reel.items} ta mahsulot</span>
-              </div>
-              <p className="text-muted small">{reel.description || '—'}</p>
-              <div className="d-flex gap-2">
-                <button className="btn btn-sm btn-light-secondary flex-fill" onClick={() => setSelected(reel)}><i className="bi bi-eye"></i></button>
-                <button className="btn btn-light-success icon-btn w-30 h-30 b-r-22" onClick={() => { setEditing(reel); setShowForm(true); }}><i className="bi bi-pencil"></i></button>
-                <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => destroy(reel)}><i className="bi bi-trash"></i></button>
+            <div className="card">
+              <div className="card-body">
+                <div className="d-flex justify-content-between mb-2">
+                  <div className="f-w-600">{reel.title}</div>
+                  <span className={`badge ${reel.status === 'Active' ? 'text-light-success' : 'text-light-secondary'} f-s-9`}>{reel.status}</span>
+                </div>
+                <div className="d-flex gap-3 f-s-13 mb-2">
+                  <span>{reel.order || 0} tartib</span>
+                  <span>{reel.items} ta mahsulot</span>
+                </div>
+                <p className="text-muted f-s-13">{reel.description || '—'}</p>
+                <div className="d-flex gap-2">
+                  <button className="btn btn-sm btn-light-secondary flex-fill" onClick={() => setSelected(reel)}><i className="ti ti-eye"></i></button>
+                  <button className="btn btn-light-success icon-btn w-30 h-30 b-r-22" onClick={() => { setEditing(reel); setShowForm(true); }}><i className="ti ti-pencil"></i></button>
+                  <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => destroy(reel)}><i className="ti ti-trash"></i></button>
+                </div>
               </div>
             </div>
           </div>
         ))}
       </div>
       <Modal show={!!selected} onHide={() => setSelected(null)} centered>
-        <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">{selected?.title}</Modal.Title></Modal.Header>
+        <Modal.Header closeButton><Modal.Title className="f-s-20 f-w-600">{selected?.title}</Modal.Title></Modal.Header>
         <Modal.Body>
           <div className="row g-3">
             <div className="col-6"><small className="text-muted">Tartib</small><div>{selected?.order || 0}</div></div>
@@ -144,7 +130,7 @@ export function Reels() {
       </Modal>
       <Modal show={showForm} onHide={() => setShowForm(false)} centered>
         <Form onSubmit={submit}>
-          <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">{editing ? 'Reelni tahrirlash' : "Reel qo'shish"}</Modal.Title></Modal.Header>
+          <Modal.Header closeButton><Modal.Title className="f-s-20 f-w-600">{editing ? 'Reelni tahrirlash' : "Reel qo'shish"}</Modal.Title></Modal.Header>
           <Modal.Body>
             <Form.Label>Sarlavha</Form.Label><Form.Control name="title" required defaultValue={editing?.title || ''} className="mb-3" />
             <Form.Label>Tartib</Form.Label><Form.Control name="order" type="number" min={0} required defaultValue={editing?.order ?? (reels.length + 1)} className="mb-3" />
@@ -373,32 +359,34 @@ export function MarketNews() {
 
   return (
     <div>
-      <div className="page-head"><div><h1 className="page-title">Market yangiliklari</h1><PageCrumbs /><p className="page-subtitle">Jami {news.length} ta yangilik</p></div>
-        <button className="btn btn-primary" onClick={() => { setEditing(null); setShowForm(true); }}><i className="bi bi-plus-lg me-1"></i>Qo'shish</button>
+      <div className="d-flex align-items-end justify-content-between flex-wrap gap-3 mx-1 mb-3"><div><h4 className="main-title mb-0">Market yangiliklari</h4><PageCrumbs /><p className="mb-0 text-secondary">Jami {news.length} ta yangilik</p></div>
+        <button className="btn btn-primary" onClick={() => { setEditing(null); setShowForm(true); }}><i className="ti ti-plus me-1"></i>Qo'shish</button>
         </div>
-      <div className="card-panel">
-        <div className="table-responsive"><table className="table table-bottom-border align-middle data-table">
-          <thead><tr><th>ID</th><th>Sarlavha</th><th>Action</th><th>Sana</th><th>Holat</th><th>Amallar</th></tr></thead>
-          <tbody>{news.map(item => (
-            <tr key={item.id}>
-              <td className="fw-semibold" style={{ color: 'var(--kc-ink)' }}>#{item.id}</td>
-              <td className="fw-semibold">{item.title}</td>
-              <td><span className="chip chip-gray">{item.action || 'Yangilik'}</span></td>
-              <td className="text-muted">{item.date || '—'}</td>
-              <td><div className="form-check form-switch"><input type="checkbox" className="form-check-input" checked={item.status === 'Active'} onChange={() => toggle(item)} /></div></td>
-              <td>
-                <button className="btn btn-light-primary icon-btn w-30 h-30 b-r-22 me-1" onClick={() => setSelected(item)}><i className="bi bi-eye"></i></button>
-                <button className="btn btn-light-success icon-btn w-30 h-30 b-r-22 me-1" onClick={() => { setEditing(item); setShowForm(true); }}><i className="bi bi-pencil"></i></button>
-                <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => destroy(item)}><i className="bi bi-trash"></i></button>
-              </td>
-            </tr>
-          ))}</tbody>
-        </table></div>
-      </div>
+      <div className="card">
+<div className="card-body">
+          <div className="table-responsive app-scroll"><table className="table table-bottom-border align-middle">
+            <thead><tr><th>ID</th><th>Sarlavha</th><th>Action</th><th>Sana</th><th>Holat</th><th>Amallar</th></tr></thead>
+            <tbody>{news.map(item => (
+              <tr key={item.id}>
+                <td className="f-w-600 text-primary">#{item.id}</td>
+                <td className="f-w-600">{item.title}</td>
+                <td><span className="badge text-light-secondary">{item.action || 'Yangilik'}</span></td>
+                <td className="text-muted">{item.date || '—'}</td>
+                <td><div className="form-check form-switch"><input type="checkbox" className="form-check-input" checked={item.status === 'Active'} onChange={() => toggle(item)} /></div></td>
+                <td>
+                  <button className="btn btn-light-primary icon-btn w-30 h-30 b-r-22 me-1" onClick={() => setSelected(item)}><i className="ti ti-eye"></i></button>
+                  <button className="btn btn-light-success icon-btn w-30 h-30 b-r-22 me-1" onClick={() => { setEditing(item); setShowForm(true); }}><i className="ti ti-pencil"></i></button>
+                  <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => destroy(item)}><i className="ti ti-trash"></i></button>
+                </td>
+              </tr>
+            ))}</tbody>
+          </table></div>
+        </div>
+</div>
       <Modal show={!!selected} onHide={() => setSelected(null)} centered>
-        <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">{selected?.title}</Modal.Title></Modal.Header>
+        <Modal.Header closeButton><Modal.Title className="f-s-20 f-w-600">{selected?.title}</Modal.Title></Modal.Header>
         <Modal.Body>
-          {selected?.image ? <img className="media-preview rounded mb-3" src={selected.image} alt={selected.title} /> : null}
+          {selected?.image ? <img className="w-100 b-r-22 mb-3 object-fit-cover" style={{ maxHeight: 220 }} src={selected.image} alt={selected.title} /> : null}
           <p className="text-muted">{selected?.description || '—'}</p>
         </Modal.Body>
         <Modal.Footer>
@@ -407,11 +395,11 @@ export function MarketNews() {
       </Modal>
       <Modal show={showForm} onHide={() => setShowForm(false)} centered size="lg">
         <Form onSubmit={submit}>
-          <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">{editing ? 'Yangilikni tahrirlash' : "Yangilik qo'shish"}</Modal.Title></Modal.Header>
+          <Modal.Header closeButton><Modal.Title className="f-s-20 f-w-600">{editing ? 'Yangilikni tahrirlash' : "Yangilik qo'shish"}</Modal.Title></Modal.Header>
           <Modal.Body>
             {Object.keys(errors).length > 0 ? (
-              <div className="alert alert-danger">
-                <div className="fw-semibold mb-1">Saqlashda xatolik bor.</div>
+              <div className="alert alert-light-danger">
+                <div className="f-w-600 mb-1">Saqlashda xatolik bor.</div>
                 <ul className="mb-0 ps-3">
                   {Object.entries(errors).map(([key, value]) => (
                     <li key={key}>{value}</li>
@@ -421,10 +409,10 @@ export function MarketNews() {
             ) : null}
             <div className="row g-3">
               <div className="col-12">
-                <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 rounded-4 border px-3 py-2">
+                <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 b-r-15 b-1-light px-3 py-2">
                   <div>
-                    <div className="fw-semibold">UZ matndan AI tarjima</div>
-                    <div className="small text-muted">Sarlavha va tavsif RU, EN, JA maydonlariga to'ldiriladi.</div>
+                    <div className="f-w-600">UZ matndan AI tarjima</div>
+                    <div className="f-s-13 text-muted">Sarlavha va tavsif RU, EN, JA maydonlariga to'ldiriladi.</div>
                   </div>
                   <div className="d-flex flex-wrap gap-2">
                     {(['ru', 'en', 'ja'] as TranslateLocale[]).map((locale) => (
@@ -543,121 +531,123 @@ export function ChatKuzatuv() {
 
   return (
     <div>
-      <div className="page-head"><div><h1 className="page-title">Chat kuzatuv</h1><PageCrumbs /><p className="page-subtitle">Foydalanuvchi va seller suhbatlarini real vaqt kontekstida tekshirish</p></div></div>
-      <div className="card-panel">
-        <div className="panel-head"><div className="d-flex flex-wrap gap-2">{[['all', 'Barchasi'], ['user', 'User chat'], ['seller', 'Seller chat']].map(([key, label]) => <button className={`kc-tab ${tab === key ? 'active' : ''}`} key={key} onClick={() => { setTab(key); loadConversations(1, key); }}>{label}<span className="badge rounded-pill bg-light text-dark ms-2">{conversationCounts[key] || 0}</span></button>)}</div><form className="d-flex gap-2" onSubmit={(event) => { event.preventDefault(); loadConversations(); }}><input className="form-control form-control-sm" style={{ maxWidth: 280 }} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="User, telefon yoki seller" /><button className="btn btn-sm btn-outline-secondary"><i className="bi bi-search"></i></button></form></div>
-        <div className="table-responsive"><table className="table table-bottom-border align-middle data-table">
-          <thead><tr><th>ID</th><th>Foydalanuvchi</th><th>Qabul qiluvchi</th><th>Turi</th><th>Xabarlar</th><th>Oxirgi</th><th>Amallar</th></tr></thead>
-          <tbody>{conversations.map(c => (
-            <tr key={c.id}>
-              <td className="fw-semibold" style={{ color: 'var(--kc-ink)' }}>#{c.id}</td>
-              <td><div className="fw-semibold">{c.user}</div><small className="text-muted">{c.phone || '—'}</small></td>
-              <td>{c.agent}</td>
-              <td><span className={`chip ${c.kind === 'seller' ? 'chip-purple' : 'chip-info'}`}>{chatKindLabel(c.kind)}</span></td>
-              <td>{c.messages}</td>
-              <td className="text-muted">{c.lastMsg}<br /><small>{c.date || '—'}</small></td>
-              <td><button className="btn btn-light-primary icon-btn w-30 h-30 b-r-22" onClick={() => open(c)}><i className="bi bi-eye"></i></button></td>
-            </tr>
-          ))}{conversationPagination.total === 0 ? <tr><td colSpan={7} className="text-center text-muted py-5">Suhbat topilmadi</td></tr> : null}</tbody>
-        </table></div><PaginationControls {...conversationPagination} onPageChange={(page) => loadConversations(page)} />
+      <div className="d-flex align-items-end justify-content-between flex-wrap gap-3 mx-1 mb-3"><div><h4 className="main-title mb-0">Chat kuzatuv</h4><PageCrumbs /><p className="mb-0 text-secondary">Foydalanuvchi va seller suhbatlarini real vaqt kontekstida tekshirish</p></div></div>
+      <div className="card">
+        <div className="card-header d-flex align-items-center justify-content-between gap-2 flex-wrap"><div className="nav nav-tabs app-tabs-primary flex-wrap">{[['all', 'Barchasi'], ['user', 'User chat'], ['seller', 'Seller chat']].map(([key, label]) => <div key={key} className="nav-item"><button
+            className={`nav-link ${tab === key ? 'active' : ''}`}
+            onClick={() => { setTab(key); loadConversations(1, key); }}>{label}<span className="badge text-light-secondary ms-2">{conversationCounts[key] || 0}</span></button></div>)}</div><form className="d-flex gap-2" onSubmit={(event) => { event.preventDefault(); loadConversations(); }}><input className="form-control form-control-sm" style={{ maxWidth: 280 }} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="User, telefon yoki seller" /><button className="btn btn-sm btn-outline-secondary"><i className="ti ti-search"></i></button></form></div>
+        <div className="card-body">
+
+          <div className="table-responsive app-scroll"><table className="table table-bottom-border align-middle">
+            <thead><tr><th>ID</th><th>Foydalanuvchi</th><th>Qabul qiluvchi</th><th>Turi</th><th>Xabarlar</th><th>Oxirgi</th><th>Amallar</th></tr></thead>
+            <tbody>{conversations.map(c => (
+              <tr key={c.id}>
+                <td className="f-w-600 text-primary">#{c.id}</td>
+                <td><div className="f-w-600">{c.user}</div><small className="text-muted">{c.phone || '—'}</small></td>
+                <td>{c.agent}</td>
+                <td><span className={`badge ${c.kind === 'seller' ? 'text-light-primary' : 'text-light-info'}`}>{chatKindLabel(c.kind)}</span></td>
+                <td>{c.messages}</td>
+                <td className="text-muted">{c.lastMsg}<br /><small>{c.date || '—'}</small></td>
+                <td><button className="btn btn-light-primary icon-btn w-30 h-30 b-r-22" onClick={() => open(c)}><i className="ti ti-eye"></i></button></td>
+              </tr>
+            ))}{conversationPagination.total === 0 ? <tr><td colSpan={7} className="text-center py-5 text-secondary"><i className="iconoir-archive d-flex justify-content-center mb-2 f-s-30 text-primary"></i>Suhbat topilmadi</td></tr> : null}</tbody>
+          </table></div><PaginationControls {...conversationPagination} onPageChange={(page) => loadConversations(page)} />
+        </div>
       </div>
       <Modal show={show} onHide={() => setShow(false)} centered size="xl">
-        <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">Suhbat #{selected?.id}</Modal.Title></Modal.Header>
+        <Modal.Header closeButton><Modal.Title className="f-s-20 f-w-600">Suhbat #{selected?.id}</Modal.Title></Modal.Header>
         <Modal.Body>
           {loading ? <div className="text-muted text-center py-5">Yuklanmoqda...</div> : !detail ? <div className="text-muted text-center py-5">Xabarlar yuklanmadi</div> : (
-            <div className="row g-3">
+            <div className="row">
               <div className="col-xl-8">
-                <div className="detail-panel mb-3">
-                  <div className="d-flex flex-wrap align-items-start justify-content-between gap-3">
-                    <div>
-                      <div className="fw-bold fs-5">{String(detail.profile.user || 'Foydalanuvchi')} — {String(detail.profile.agent || 'Suhbatdosh')}</div>
-                      <div className="text-muted small mt-1">{String(detail.profile.kindLabel || chatKindLabel(String(detail.profile.kind || '')))} · {String(detail.profile.type || 'chat')}</div>
-                    </div>
-                    <div className="d-flex flex-wrap gap-2">
-                      <span className="chip chip-info">{String(detail.profile.messagesCount || detail.messages.length)} ta xabar</span>
-                      {detail.profile.orderId ? <span className="chip chip-gray">Buyurtma #{String(detail.profile.orderId)}</span> : null}
-                      <span className="chip chip-gray">Oxirgi: {String(detail.profile.lastMessageAt || '—')}</span>
-                    </div>
-                  </div>
-                  <div className="row g-3 mt-1">
-                    <div className="col-md-6">
-                      <small className="text-muted d-block">Mijoz</small>
-                      <div className="fw-semibold">{String(detail.profile.user || '—')}</div>
-                      <div className="text-muted small">{String(detail.profile.phone || 'Telefon yo‘q')}</div>
-                    </div>
-                    <div className="col-md-6">
-                      <small className="text-muted d-block">Suhbatdosh</small>
-                      <div className="fw-semibold">{String(detail.profile.agent || '—')}</div>
-                      <div className="text-muted small">Ochilgan: {String(detail.profile.createdAt || '—')}</div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="detail-panel">
-                  <div className="d-flex align-items-center justify-content-between mb-3">
-                    <h6 className="fw-bold mb-0">Xabarlar oqimi</h6>
-                    <span className="text-muted small">Eng ko‘pi bilan 200 ta so‘nggi xabar</span>
-                  </div>
-                  <div className="d-grid gap-2">
-                    {detail.messages.map((message) => (
-                      <div className={`d-flex ${message.senderType === 'user' ? '' : 'justify-content-end'}`} key={String(message.id)}>
-                        <div className={`rounded-4 border p-3 ${message.senderType === 'user' ? 'bg-white' : 'bg-light-subtle'}`} style={{ maxWidth: '86%' }}>
-                          <div className="d-flex flex-wrap align-items-center gap-2 mb-2">
-                            <span className="fw-semibold">{String(message.senderLabel || message.senderType || 'Xabar')}</span>
-                            <span className="text-muted small">{String(message.date || '—')}</span>
-                            {message.edited ? <span className="chip chip-gray">Tahrirlangan</span> : null}
-                            {message.read ? <span className="chip chip-success">O‘qilgan</span> : null}
-                            {message.reported ? <span className="chip chip-danger">Shikoyat bor</span> : null}
-                          </div>
-                          <div style={{ whiteSpace: 'pre-line' }}>{String(message.message || '—')}</div>
-                        </div>
+                <div className="card"><div className="card-body">
+                    <div className="d-flex flex-wrap align-items-start justify-content-between gap-3">
+                      <div>
+                        <div className="f-w-600 f-s-20">{String(detail.profile.user || 'Foydalanuvchi')} — {String(detail.profile.agent || 'Suhbatdosh')}</div>
+                        <div className="text-muted f-s-13 mt-1">{String(detail.profile.kindLabel || chatKindLabel(String(detail.profile.kind || '')))} · {String(detail.profile.type || 'chat')}</div>
                       </div>
-                    ))}
-                    {detail.messages.length === 0 ? <div className="text-muted">Xabar topilmadi</div> : null}
-                  </div>
-                </div>
+                      <div className="d-flex flex-wrap gap-2">
+                        <span className="badge text-light-info">{String(detail.profile.messagesCount || detail.messages.length)} ta xabar</span>
+                        {detail.profile.orderId ? <span className="badge text-light-secondary">Buyurtma #{String(detail.profile.orderId)}</span> : null}
+                        <span className="badge text-light-secondary">Oxirgi: {String(detail.profile.lastMessageAt || '—')}</span>
+                      </div>
+                    </div>
+                    <div className="row g-3 mt-1">
+                      <div className="col-md-6">
+                        <small className="text-muted d-block">Mijoz</small>
+                        <div className="f-w-600">{String(detail.profile.user || '—')}</div>
+                        <div className="text-muted f-s-13">{String(detail.profile.phone || 'Telefon yo‘q')}</div>
+                      </div>
+                      <div className="col-md-6">
+                        <small className="text-muted d-block">Suhbatdosh</small>
+                        <div className="f-w-600">{String(detail.profile.agent || '—')}</div>
+                        <div className="text-muted f-s-13">Ochilgan: {String(detail.profile.createdAt || '—')}</div>
+                      </div>
+                    </div>
+                  </div></div>
+
+                <div className="card"><div className="card-header d-flex align-items-center justify-content-between">
+                    <h5 className="mb-0">Xabarlar oqimi</h5>
+                    <span className="text-muted f-s-13">Eng ko‘pi bilan 200 ta so‘nggi xabar</span>
+                  </div><div className="card-body">
+                    <div className="d-grid gap-2">
+                      {detail.messages.map((message) => (
+                        <div className={`d-flex ${message.senderType === 'user' ? '' : 'justify-content-end'}`} key={String(message.id)}>
+                          <div className={`b-r-15 b-1-light p-3 ${message.senderType === 'user' ? 'bg-white' : 'bg-light-subtle'}`} style={{ maxWidth: '86%' }}>
+                            <div className="d-flex flex-wrap align-items-center gap-2 mb-2">
+                              <span className="f-w-600">{String(message.senderLabel || message.senderType || 'Xabar')}</span>
+                              <span className="text-muted f-s-13">{String(message.date || '—')}</span>
+                              {message.edited ? <span className="badge text-light-secondary">Tahrirlangan</span> : null}
+                              {message.read ? <span className="badge text-light-success">O‘qilgan</span> : null}
+                              {message.reported ? <span className="badge text-light-danger">Shikoyat bor</span> : null}
+                            </div>
+                            <div style={{ whiteSpace: 'pre-line' }}>{String(message.message || '—')}</div>
+                          </div>
+                        </div>
+                      ))}
+                      {detail.messages.length === 0 ? <div className="text-muted">Xabar topilmadi</div> : null}
+                    </div>
+                  </div></div>
               </div>
 
               <div className="col-xl-4">
-                <div className="detail-panel">
-                  <div className="d-flex align-items-center justify-content-between mb-3">
-                    <h6 className="fw-bold mb-0">Userning boshqa yozishmalari</h6>
-                    <span className="chip chip-gray">{detail.otherConversations?.length || 0} ta</span>
-                  </div>
-                  {(detail.otherConversations || []).slice(0, otherLimit).map((conversation) => (
-                    <button
-                      key={conversation.id}
-                      type="button"
-                      className="w-100 text-start border rounded-4 p-3 bg-white mb-2"
-                      style={{ cursor: 'pointer' }}
-                      onClick={() => open({
-                        id: conversation.id,
-                        kind: conversation.kind,
-                        type: conversation.type,
-                        user: String(detail.profile.user || 'Foydalanuvchi'),
-                        phone: String(detail.profile.phone || ''),
-                        agent: conversation.agent,
-                        messages: conversation.messages,
-                        lastMsg: conversation.lastMsg,
-                        date: conversation.date,
-                        dataUrl: conversation.dataUrl,
-                      })}
-                    >
-                      <div className="d-flex justify-content-between gap-2">
-                        <div className="fw-semibold">{conversation.agent}</div>
-                        <span className={`chip ${conversation.kind === 'seller' ? 'chip-purple' : 'chip-info'}`}>{chatKindLabel(conversation.kind)}</span>
-                      </div>
-                      <div className="text-muted small mt-1">{conversation.lastMsg}</div>
-                      <div className="text-muted small mt-2">{conversation.messages} ta xabar · {conversation.date || '—'}</div>
-                    </button>
-                  ))}
-                  {(detail.otherConversations || []).length === 0 ? <div className="text-muted">Bu foydalanuvchining boshqa yozishmasi topilmadi.</div> : null}
-                  {(detail.otherConversations || []).length > otherLimit ? (
-                    <button className="btn btn-sm btn-light-secondary w-100 mt-2" onClick={() => setOtherLimit((limit) => limit + 4)}>
-                      Yana ko‘rsatish
-                    </button>
-                  ) : null}
-                </div>
+                <div className="card"><div className="card-header d-flex align-items-center justify-content-between">
+                    <h5 className="mb-0">Userning boshqa yozishmalari</h5>
+                    <span className="badge text-light-secondary">{detail.otherConversations?.length || 0} ta</span>
+                  </div><div className="card-body">
+                    {(detail.otherConversations || []).slice(0, otherLimit).map((conversation) => (
+                      <button
+             key={conversation.id}
+             type="button"
+             className="w-100 text-start b-1-light b-r-15 p-3 bg-white mb-2 cursor-pointer"
+             onClick={() => open({
+              id: conversation.id,
+              kind: conversation.kind,
+              type: conversation.type,
+              user: String(detail.profile.user || 'Foydalanuvchi'),
+              phone: String(detail.profile.phone || ''),
+              agent: conversation.agent,
+              messages: conversation.messages,
+              lastMsg: conversation.lastMsg,
+              date: conversation.date,
+              dataUrl: conversation.dataUrl,
+             })}
+            >
+                        <div className="d-flex justify-content-between gap-2">
+                          <div className="f-w-600">{conversation.agent}</div>
+                          <span className={`badge ${conversation.kind === 'seller' ? 'text-light-primary' : 'text-light-info'}`}>{chatKindLabel(conversation.kind)}</span>
+                        </div>
+                        <div className="text-muted f-s-13 mt-1">{conversation.lastMsg}</div>
+                        <div className="text-muted f-s-13 mt-2">{conversation.messages} ta xabar · {conversation.date || '—'}</div>
+                      </button>
+                    ))}
+                    {(detail.otherConversations || []).length === 0 ? <div className="text-muted">Bu foydalanuvchining boshqa yozishmasi topilmadi.</div> : null}
+                    {(detail.otherConversations || []).length > otherLimit ? (
+                      <button className="btn btn-sm btn-light-secondary w-100 mt-2" onClick={() => setOtherLimit((limit) => limit + 4)}>
+                        Yana ko‘rsatish
+                      </button>
+                    ) : null}
+                  </div></div>
               </div>
             </div>
           )}
@@ -782,84 +772,84 @@ export function PushNotifications() {
 
   return (
     <div>
-      <div className="page-head">
-        <div><h1 className="page-title">Push bildirishnomalar</h1><PageCrumbs /><p className="page-subtitle">Jami {notifications.length} ta yuborilgan</p></div>
-        <button className="btn btn-primary" onClick={() => { resetForm(); setShowForm(true); }}><i className="bi bi-send me-1"></i>Push yaratish</button>
+      <div className="d-flex align-items-end justify-content-between flex-wrap gap-3 mx-1 mb-3">
+        <div><h4 className="main-title mb-0">Push bildirishnomalar</h4><PageCrumbs /><p className="mb-0 text-secondary">Jami {notifications.length} ta yuborilgan</p></div>
+        <button className="btn btn-primary" onClick={() => { resetForm(); setShowForm(true); }}><i className="ti ti-send me-1"></i>Push yaratish</button>
       </div>
-      <div className="card-panel">
-        <div className="table-responsive"><table className="table table-bottom-border align-middle data-table">
-          <thead><tr><th>ID</th><th>Sarlavha</th><th>Matn</th><th>Target</th><th>Status</th><th>Sana</th><th>Amallar</th></tr></thead>
-          <tbody>{notifications.map(notification => (
-            <tr key={notification.id}>
-              <td className="fw-semibold" style={{ color: 'var(--kc-ink)' }}>#{notification.id}</td>
-              <td>
-                <div className="fw-semibold">{notification.title}</div>
-                <div className="d-flex flex-wrap gap-1 mt-1">
-                  {pushLocales.map((locale) => {
-                    const filled = locale === 'uz' || Boolean(notification.localized?.[locale]?.title || notification.localized?.[locale]?.body);
-                    return (
-                      <span key={locale} className={`chip ${filled ? 'chip-success' : 'chip-gray'}`} style={{ fontSize: 9 }}>
-                        {locale.toUpperCase()}
-                      </span>
-                    );
-                  })}
-                </div>
-              </td>
-              <td className="text-muted">{notification.body || '—'}</td>
-              <td>
-                <span className={`chip ${notification.targetMode === 'individual' ? 'chip-success' : 'chip-gray'}`}>
-                  {notification.targetLabel || notification.who || 'all'}
-                </span>
-              </td>
-              <td>
-                <span className={`chip ${notification.status === 'Xatolik' ? 'chip-danger' : notification.status === 'Yuborildi' ? 'chip-success' : 'chip-gray'}`} style={{ fontSize: 9 }}>
-                  {notification.status}
-                </span>
-                {notification.status === 'Yuborildi' ? <div className="text-muted mt-1" style={{ fontSize: 10 }}>{notification.sentCount || 0} qurilma</div> : null}
-              </td>
-              <td className="text-muted">{notification.date}</td>
-              <td>
-                <div className="d-flex gap-1">
-                  <button className="btn btn-light-primary icon-btn w-30 h-30 b-r-22" onClick={() => resend(notification)} title="Dublikat qilib qayta yuborish">
-                    <i className="bi bi-arrow-repeat"></i>
-                  </button>
-                  <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => destroy(notification)} title="O'chirish">
-                    <i className="bi bi-trash"></i>
-                  </button>
-                </div>
-              </td>
-            </tr>
-          ))}</tbody>
-        </table></div>
-      </div>
+      <div className="card">
+<div className="card-body">
+          <div className="table-responsive app-scroll"><table className="table table-bottom-border align-middle">
+            <thead><tr><th>ID</th><th>Sarlavha</th><th>Matn</th><th>Target</th><th>Status</th><th>Sana</th><th>Amallar</th></tr></thead>
+            <tbody>{notifications.map(notification => (
+              <tr key={notification.id}>
+                <td className="f-w-600 text-primary">#{notification.id}</td>
+                <td>
+                  <div className="f-w-600">{notification.title}</div>
+                  <div className="d-flex flex-wrap gap-1 mt-1">
+                    {pushLocales.map((locale) => {
+                      const filled = locale === 'uz' || Boolean(notification.localized?.[locale]?.title || notification.localized?.[locale]?.body);
+                      return (
+                        <span key={locale} className={`badge ${filled ? 'text-light-success' : 'text-light-secondary'} f-s-9`}>
+                          {locale.toUpperCase()}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </td>
+                <td className="text-muted">{notification.body || '—'}</td>
+                <td>
+                  <span className={`badge ${notification.targetMode === 'individual' ? 'text-light-success' : 'text-light-secondary'}`}>
+                    {notification.targetLabel || notification.who || 'all'}
+                  </span>
+                </td>
+                <td>
+                  <span className={`badge ${notification.status === 'Xatolik' ? 'text-light-danger' : notification.status === 'Yuborildi' ? 'text-light-success' : 'text-light-secondary'} f-s-9`}>
+                    {notification.status}
+                  </span>
+                  {notification.status === 'Yuborildi' ? <div className="text-muted mt-1 f-s-10">{notification.sentCount || 0} qurilma</div> : null}
+                </td>
+                <td className="text-muted">{notification.date}</td>
+                <td>
+                  <div className="d-flex gap-1">
+                    <button className="btn btn-light-primary icon-btn w-30 h-30 b-r-22" onClick={() => resend(notification)} title="Dublikat qilib qayta yuborish">
+                      <i className="ti ti-repeat"></i>
+                    </button>
+                    <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => destroy(notification)} title="O'chirish">
+                      <i className="ti ti-trash"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}</tbody>
+          </table></div>
+        </div>
+</div>
       <Modal show={showForm} onHide={() => setShowForm(false)} centered size="lg">
         <Form onSubmit={submit}>
-          <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">Push bildirishnoma</Modal.Title></Modal.Header>
+          <Modal.Header closeButton><Modal.Title className="f-s-20 f-w-600">Push bildirishnoma</Modal.Title></Modal.Header>
           <Modal.Body>
             <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-              <div className="btn-group bg-light rounded-3 p-1">
+              <div className="nav nav-tabs app-tabs-primary flex-wrap p-1">
                 {pushLocales.map((locale) => (
-                  <button
-                    key={locale}
-                    type="button"
-                    className={`kc-tab ${activeLocale === locale ? 'active' : ''}`}
-                    onClick={() => setActiveLocale(locale)}
-                  >
-                    {pushLocaleLabels[locale]}
-                  </button>
+                  <div key={locale} className="nav-item"><button
+                      type="button"
+                      className={`nav-link ${activeLocale === locale ? 'active' : ''}`}
+                      onClick={() => setActiveLocale(locale)}>
+                      {pushLocaleLabels[locale]}
+                    </button></div>
                 ))}
               </div>
               <Button
                 type="button"
                 variant="light-secondary"
-                className="border"
+                className="b-1-light"
                 disabled={translating}
                 onClick={translatePush}
               >
-                <i className="bi bi-stars me-1"></i>{translating ? 'Tarjima qilinyapti...' : 'AI tarjima'}
+                <i className="ti ti-sparkles me-1"></i>{translating ? 'Tarjima qilinyapti...' : 'AI tarjima'}
               </Button>
             </div>
-            <div className="alert alert-light border small mb-3">
+            <div className="alert alert-border-secondary f-s-13 mb-3">
               Avval o'zbekcha matnni yozing, AI tarjima ru/en/ja maydonlarini to'ldiradi. Xohlasangiz har bir tilni alohida qo'lda tahrirlashingiz mumkin.
             </div>
             <Form.Label>Sarlavha ({pushLocaleLabels[activeLocale]})</Form.Label>
@@ -897,7 +887,7 @@ export function PushNotifications() {
                 className="flex-fill"
                 onClick={() => setTargetMode('individual')}
               >
-                <i className="bi bi-person me-1"></i>Bitta qabul qiluvchi
+                <i className="ti ti-user me-1"></i>Bitta qabul qiluvchi
               </Button>
               <Button
                 type="button"
@@ -905,7 +895,7 @@ export function PushNotifications() {
                 className="flex-fill"
                 onClick={() => setTargetMode('audience')}
               >
-                <i className="bi bi-people me-1"></i>Butun auditoriya
+                <i className="ti ti-users me-1"></i>Butun auditoriya
               </Button>
             </div>
             <input type="hidden" name="target_mode" value={targetMode} />
@@ -921,7 +911,7 @@ export function PushNotifications() {
                 <Form.Text className="text-muted">Push faqat topilgan akkauntning faol qurilmalariga yuboriladi.</Form.Text>
               </>
             ) : (
-              <div className="alert alert-warning mb-0 py-2 small">
+              <div className="alert alert-light-warning mb-0 py-2 f-s-13">
                 Bu xabar tanlangan ilovaning barcha faol qurilmalariga yuboriladi.
               </div>
             )}

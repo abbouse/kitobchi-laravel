@@ -1,8 +1,11 @@
 import { useMemo, useState } from 'react';
 import { PageCrumbs } from '../Layout';
 import { router, usePage } from '@inertiajs/react';
-import { Modal, Button } from 'react-bootstrap';
+import { Button } from 'react-bootstrap';
+import Modal from '../components/AppModal';
 import PaginationControls, { useClientPagination } from '../components/PaginationControls';
+
+import { StatWidget } from '../components/Axelit';
 
 const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n || 0);
 
@@ -55,88 +58,84 @@ export default function Products() {
 
   return (
     <div>
-      <div className="page-head">
+      <div className="d-flex align-items-end justify-content-between flex-wrap gap-3 mx-1 mb-3">
         <div>
-          <h1 className="page-title">Barcha mahsulotlar</h1><PageCrumbs />
-          <p className="page-subtitle">Kitob, kanselyariya va sovg'alar umumiy katalogi</p>
+          <h4 className="main-title mb-0">Barcha mahsulotlar</h4><PageCrumbs />
+          <p className="mb-0 text-secondary">Kitob, kanselyariya va sovg'alar umumiy katalogi</p>
         </div>
         <div className="d-flex gap-2">
           <a className="btn btn-outline-secondary" href="/boshqaruv/books">Kitoblar</a>
-          <a className="btn btn-primary" href="/boshqaruv/stationeries"><i className="bi bi-plus-lg me-1"></i>Kanselyariya</a>
+          <a className="btn btn-primary" href="/boshqaruv/stationeries"><i className="ti ti-plus me-1"></i>Kanselyariya</a>
         </div>
       </div>
 
-      <div className="kpi-strip row g-3 mb-4">
+      <div className="row">
         {[
-          { label: 'Jami mahsulot', value: products.length, icon: 'bi-box-seam', color: 'var(--kc-ink)' },
-          { label: 'Ombor jami', value: fmt(totalStock), icon: 'bi-stack', color: 'var(--kc-ok)' },
-          { label: 'Kam qolgan', value: lowStock, icon: 'bi-exclamation-triangle', color: 'var(--kc-warn)' },
-          { label: 'Moderatsiyada', value: products.filter((product) => !product.approved).length, icon: 'bi-shield-check', color: 'var(--kc-cat-violet)' },
-        ].map((item) => (
-          <div className="col-xl-3 col-md-6" key={item.label}>
-            <div className="stat-card">
-              <div className="d-flex align-items-center gap-3">
-                <div><div className="stat-value">{item.value}</div><div className="stat-label">{item.label}</div></div>
-              </div>
-            </div>
-          </div>
-        ))}
+          { label: 'Jami mahsulot', value: products.length, icon: 'ti-package', color: 'rgba(var(--primary), 1)' },
+          { label: 'Ombor jami', value: fmt(totalStock), icon: 'ti-stack', color: 'rgba(var(--success), 1)' },
+          { label: 'Kam qolgan', value: lowStock, icon: 'ti-alert-triangle', color: 'rgba(var(--warning-dark), 1)' },
+          { label: 'Moderatsiyada', value: products.filter((product) => !product.approved).length, icon: 'ti-shield-check', color: 'rgba(var(--primary), 1)' },
+        ].map((item, kpiIndex) => (<div className="col-xl-3 col-md-6" key={item.label}>
+          <StatWidget index={kpiIndex} label={item.label} value={item.value} />
+        </div>))}
       </div>
 
-      <div className="card-panel">
-        <div className="d-flex flex-wrap gap-2 mb-3">
-          <div className="input-group" style={{ maxWidth: 320 }}>
-            <span className="input-group-text bg-white"><i className="bi bi-search text-muted"></i></span>
-            <input className="form-control" placeholder="Mahsulot, kategoriya, seller..." value={search} onChange={e => setSearch(e.target.value)} />
+      <div className="card">
+        <div className="card-body">
+          <div className="d-flex flex-wrap gap-2 mb-3">
+            <div className="input-group" style={{ maxWidth: 320 }}>
+              <span className="input-group-text bg-white"><i className="ti ti-search text-muted"></i></span>
+              <input className="form-control" placeholder="Mahsulot, kategoriya, seller..." value={search} onChange={e => setSearch(e.target.value)} />
+            </div>
+            <select className="form-select" style={{ width: 'auto' }} value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
+              {types.map((type) => <option key={type} value={type}>{type}</option>)}
+            </select>
+            <select className="form-select" style={{ width: 'auto' }} value={stockFilter} onChange={e => setStockFilter(e.target.value)}>
+              <option value="Barchasi">Barcha holatlar</option>
+              <option value="Omborda">Omborda</option>
+              <option value="Kam qolgan">Kam qolgan</option>
+              <option value="Tugagan">Tugagan</option>
+            </select>
           </div>
-          <select className="form-select" style={{ width: 'auto' }} value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
-            {types.map((type) => <option key={type} value={type}>{type}</option>)}
-          </select>
-          <select className="form-select" style={{ width: 'auto' }} value={stockFilter} onChange={e => setStockFilter(e.target.value)}>
-            <option value="Barchasi">Barcha holatlar</option>
-            <option value="Omborda">Omborda</option>
-            <option value="Kam qolgan">Kam qolgan</option>
-            <option value="Tugagan">Tugagan</option>
-          </select>
-        </div>
 
-        <div className="table-responsive">
-          <table className="table table-bottom-border align-middle data-table">
-            <thead><tr><th></th><th>Mahsulot</th><th>Turi</th><th>Seller</th><th>Narx</th><th>Ombor</th><th>Sotilgan</th><th>Status</th><th>Amallar</th></tr></thead>
-            <tbody>
-              {pagination.paginated.map((product) => (
-                <tr key={product.id}>
-                  <td>
-                    <div className="thumb d-grid place-items-center" style={{ fontSize: 20 }}>
-                      {product.image ? <img src={product.image} alt={product.title} /> : <i className="bi bi-box"></i>}
-                    </div>
-                  </td>
-                  <td><div className="fw-semibold">{product.title}</div><small className="text-muted">#{product.rawId} · {product.category || '—'}</small></td>
-                  <td><span className={`chip ${product.type === 'Kitob' ? 'chip-purple' : product.type === 'Kanselyariya' ? 'chip-info' : 'chip-warning'}`}>{product.type}</span></td>
-                  <td>{product.seller || '—'}</td>
-                  <td className="fw-semibold">{fmt(product.price)} so'm</td>
-                  <td><span className={`chip ${product.stock < 1 ? 'chip-danger' : product.stock < 15 ? 'chip-warning' : 'chip-success'}`}>{product.stock} dona</span></td>
-                  <td>{product.sold}</td>
-                  <td><span className={`chip ${product.approved ? 'chip-success' : 'chip-warning'}`}>{product.approved ? product.status : 'Moderatsiya'}</span></td>
-                  <td>
-                    <button className="btn btn-light-primary icon-btn w-30 h-30 b-r-22 me-1" onClick={() => setSelected(product)}><i className="bi bi-eye"></i></button>
-                    {product.moderateUrl ? <button className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22" onClick={() => moderate(product, !product.approved)}><i className="bi bi-shield-check"></i></button> : null}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="table-responsive app-scroll">
+            <table className="table table-bottom-border align-middle">
+              <thead><tr><th></th><th>Mahsulot</th><th>Turi</th><th>Seller</th><th>Narx</th><th>Ombor</th><th>Sotilgan</th><th>Status</th><th>Amallar</th></tr></thead>
+              <tbody>
+                {pagination.paginated.map((product) => (
+                  <tr key={product.id}>
+                    <td>
+                      <div className="w-40 h-55 b-r-10 overflow-hidden d-flex-center bg-light-primary flex-shrink-0 f-s-20">
+                        {product.image ? <img className="w-100 h-100 object-fit-cover" src={product.image} alt={product.title} /> : <i className="ti ti-box"></i>}
+                      </div>
+                    </td>
+                    <td><div className="f-w-600">{product.title}</div><small className="text-muted">#{product.rawId} · {product.category || '—'}</small></td>
+                    <td><span className={`badge ${product.type === 'Kitob' ? 'text-light-primary' : product.type === 'Kanselyariya' ? 'text-light-info' : 'text-light-warning'}`}>{product.type}</span></td>
+                    <td>{product.seller || '—'}</td>
+                    <td className="f-w-600">{fmt(product.price)} so'm</td>
+                    <td><span className={`badge ${product.stock < 1 ? 'text-light-danger' : product.stock < 15 ? 'text-light-warning' : 'text-light-success'}`}>{product.stock} dona</span></td>
+                    <td>{product.sold}</td>
+                    <td><span className={`badge ${product.approved ? 'text-light-success' : 'text-light-warning'}`}>{product.approved ? product.status : 'Moderatsiya'}</span></td>
+                    <td>
+                      <button className="btn btn-light-primary icon-btn w-30 h-30 b-r-22 me-1" onClick={() => setSelected(product)}><i className="ti ti-eye"></i></button>
+                      {product.moderateUrl ? <button className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22" onClick={() => moderate(product, !product.approved)}><i className="ti ti-shield-check"></i></button> : null}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <PaginationControls {...pagination} onPageChange={pagination.setPage} />
         </div>
-        <PaginationControls {...pagination} onPageChange={pagination.setPage} />
       </div>
 
       <Modal show={!!selected} onHide={() => setSelected(null)} centered>
-        <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">{selected?.title}</Modal.Title></Modal.Header>
+        <Modal.Header closeButton><Modal.Title className="f-s-20 f-w-600">{selected?.title}</Modal.Title></Modal.Header>
         <Modal.Body>
           <div className="row g-3">
-            <div className="col-6"><small className="text-muted">Turi</small><div className="fw-semibold">{selected?.type}</div></div>
+            <div className="col-6"><small className="text-muted">Turi</small><div className="f-w-600">{selected?.type}</div></div>
             <div className="col-6"><small className="text-muted">Kategoriya</small><div>{selected?.category || '—'}</div></div>
-            <div className="col-6"><small className="text-muted">Narx</small><div className="fw-bold text-primary">{fmt(selected?.price || 0)} so'm</div></div>
+            <div className="col-6"><small className="text-muted">Narx</small><div className="f-w-600 text-primary">{fmt(selected?.price || 0)} so'm</div></div>
             <div className="col-6"><small className="text-muted">Daromad</small><div>{fmt(selected?.revenue || 0)} so'm</div></div>
             <div className="col-6"><small className="text-muted">Ombor</small><div>{selected?.stock || 0} dona</div></div>
             <div className="col-6"><small className="text-muted">Sotilgan</small><div>{selected?.sold || 0} dona</div></div>

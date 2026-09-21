@@ -1,5 +1,6 @@
 import { ReactNode, useState } from 'react';
-import { Modal, Button } from 'react-bootstrap';
+import { Button } from 'react-bootstrap';
+import Modal from './AppModal';
 
 // ── Sellerlar bo'limi uchun umumiy tip va yordamchilar ───────────────────
 // SellerOrders (ro'yxat), SellerDetail (profil) va SellerEdit (tahrirlash)
@@ -133,18 +134,18 @@ export const localDateTimeInput = (value?: string | Date | null) => {
 };
 
 export const badgeClass = (badge?: string) => {
-  if (badge === 'badge-success') return 'chip-success';
-  if (badge === 'badge-danger') return 'chip-danger';
-  if (badge === 'badge-warning') return 'chip-warning';
-  if (badge === 'badge-info') return 'chip-info';
-  return 'chip-gray';
+  if (badge === 'badge-success') return 'text-light-success';
+  if (badge === 'badge-danger') return 'text-light-danger';
+  if (badge === 'badge-warning') return 'text-light-warning';
+  if (badge === 'badge-info') return 'text-light-info';
+  return 'text-light-secondary';
 };
 
 export const sellerChip = (status?: string) => {
-  if (status === 'approved') return 'chip-success';
-  if (status === 'pending') return 'chip-warning';
-  if (status === 'rejected' || status === 'blocked') return 'chip-danger';
-  return 'chip-gray';
+  if (status === 'approved') return 'text-light-success';
+  if (status === 'pending') return 'text-light-warning';
+  if (status === 'rejected' || status === 'blocked') return 'text-light-danger';
+  return 'text-light-secondary';
 };
 
 export const sellerLabel = (status?: string) => ({
@@ -155,11 +156,11 @@ export const sellerLabel = (status?: string) => ({
 }[String(status || '')] || status || '—');
 
 export const karmaChip = (code?: string) => {
-  if (code === 'elite') return 'chip-success';
-  if (code === 'strong') return 'chip-info';
-  if (code === 'stable') return 'chip-warning';
-  if (code === 'growing') return 'chip-gray';
-  return 'chip-danger';
+  if (code === 'elite') return 'text-light-success';
+  if (code === 'strong') return 'text-light-info';
+  if (code === 'stable') return 'text-light-warning';
+  if (code === 'growing') return 'text-light-secondary';
+  return 'text-light-danger';
 };
 
 export const sellerActivityOptions = [
@@ -175,12 +176,11 @@ export function initialsOf(name?: string): string {
 export function Info({ title, rows }: { title: string; rows: Array<[string, string]> }) {
   return (
     <div className="col-xl-6">
-      <div className="detail-panel h-100">
-        <h6 className="fw-bold mb-3">{title}</h6>
-        <div className="address-list">
-          {rows.map(([label, val]) => <div key={label}><span>{label}</span><strong>{val}</strong></div>)}
-        </div>
-      </div>
+      <div className="card h-100"><div className="card-header"><h5 className="mb-0">{title}</h5></div><div className="card-body">
+          <ul className="list-group list-group-flush">
+            {rows.map(([label, val]) => <li className="list-group-item d-flex justify-content-between gap-3 px-0" key={label}><span className="text-secondary">{label}</span><span className="f-w-600 text-dark text-end">{val}</span></li>)}
+          </ul>
+        </div></div>
     </div>
   );
 }
@@ -188,27 +188,26 @@ export function Info({ title, rows }: { title: string; rows: Array<[string, stri
 export function ListBlock<T>({ title, empty, items, render, action }: { title: string; empty: string; items: T[]; render: (item: T) => ReactNode; action?: ReactNode }) {
   return (
     <div className="col-xl-6">
-      <div className="detail-panel h-100">
-        <div className="d-flex align-items-center justify-content-between mb-3">
-          <h6 className="fw-bold mb-0">{title}</h6>
+      <div className="card h-100"><div className="card-header d-flex align-items-center justify-content-between">
+          <h5 className="mb-0">{title}</h5>
           {action}
-        </div>
-        <div className="d-grid gap-2">
-          {items.map((item, index) => <div className="mini-stat" key={index}>{render(item)}</div>)}
-          {items.length === 0 ? <div className="text-muted">{empty}</div> : null}
-        </div>
-      </div>
+        </div><div className="card-body">
+          <div className="d-grid gap-2">
+            {items.map((item, index) => <div className="b-1-light b-r-15 p-3" key={index}>{render(item)}</div>)}
+            {items.length === 0 ? <div className="text-muted">{empty}</div> : null}
+          </div>
+        </div></div>
     </div>
   );
 }
 
 export function MapButtons({ mapLinks }: { mapLinks?: Record<string, string> }) {
-  if (!mapLinks?.google && !mapLinks?.yandex) return <span className="text-muted small">Xarita linki yo'q</span>;
+  if (!mapLinks?.google && !mapLinks?.yandex) return <span className="text-muted f-s-13">Xarita linki yo'q</span>;
 
   return (
     <div className="d-flex gap-2 flex-wrap mt-2">
-      {mapLinks.google ? <a className="btn btn-sm btn-light-secondary" href={mapLinks.google} target="_blank" rel="noreferrer"><i className="bi bi-geo-alt me-1"></i>Google Map</a> : null}
-      {mapLinks.yandex ? <a className="btn btn-sm btn-light-secondary" href={mapLinks.yandex} target="_blank" rel="noreferrer"><i className="bi bi-map me-1"></i>Yandex Map</a> : null}
+      {mapLinks.google ? <a className="btn btn-sm btn-light-secondary" href={mapLinks.google} target="_blank" rel="noreferrer"><i className="ti ti-map-pin me-1"></i>Google Map</a> : null}
+      {mapLinks.yandex ? <a className="btn btn-sm btn-light-secondary" href={mapLinks.yandex} target="_blank" rel="noreferrer"><i className="ti ti-map me-1"></i>Yandex Map</a> : null}
     </div>
   );
 }
@@ -228,8 +227,8 @@ export function FormInput({ name, label, defaultValue, required, type = 'text', 
 export function SectionTitle({ title, hint }: { title: string; hint?: string }) {
   return (
     <div className="col-12 mt-4">
-      <h6 className="fw-bold mb-0">{title}</h6>
-      {hint ? <div className="text-muted small">{hint}</div> : null}
+      <h6 className="f-w-600 mb-0">{title}</h6>
+      {hint ? <div className="text-muted f-s-13">{hint}</div> : null}
     </div>
   );
 }
@@ -275,7 +274,7 @@ export function ReassignSellerModal({ order, sellers, onHide, onSubmit }: {
 
   return (
     <Modal show={!!order} onHide={onHide} centered onExited={reset}>
-      <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">Do'konni almashtirish</Modal.Title></Modal.Header>
+      <Modal.Header closeButton><Modal.Title className="f-s-20 f-w-600">Do'konni almashtirish</Modal.Title></Modal.Header>
       <Modal.Body>
         {!order ? null : (
           <div>
@@ -287,13 +286,13 @@ export function ReassignSellerModal({ order, sellers, onHide, onSubmit }: {
               kuryer topshirig'i va uning narxi O'ZGARTIRILMAYDI (kuryerni xabardor qilish operator zimmasida), faqat
               buyurtma egaligi (kim to'lov oladi) almashtiriladi.
             </p>
-            <label className="form-label fw-semibold">Yangi do'kon</label>
+            <label className="form-label f-w-600">Yangi do'kon</label>
             {selected ? (
-              <div className="d-flex align-items-center justify-content-between border rounded-3 px-3 py-2">
-                <span className="fw-semibold">
+              <div className="d-flex align-items-center justify-content-between b-1-light b-r-10 px-3 py-2">
+                <span className="f-w-600">
                   {selected.name}
                   {selected.isActive === false && (
-                    <span className="badge bg-warning-subtle text-warning-emphasis ms-2">aktiv emas</span>
+                    <span className="badge bg-light-warning text-warning-dark ms-2">aktiv emas</span>
                   )}
                 </span>
                 <button type="button" className="btn btn-sm btn-link text-decoration-none p-0" onClick={() => setSelected(null)}>
@@ -311,20 +310,20 @@ export function ReassignSellerModal({ order, sellers, onHide, onSubmit }: {
                   autoFocus
                 />
                 {query.trim() !== '' && (
-                  <div className="border rounded-3 mt-1" style={{ maxHeight: 220, overflowY: 'auto' }}>
+                  <div className="b-1-light b-r-10 mt-1 overflow-y-auto" style={{ maxHeight: 220 }}>
                     {matches.length === 0 ? (
-                      <div className="px-3 py-2 text-muted small">Shu nomdagi do'kon topilmadi</div>
+                      <div className="px-3 py-2 text-muted f-s-13">Shu nomdagi do'kon topilmadi</div>
                     ) : (
                       matches.map((s) => (
                         <button
                           type="button"
                           key={s.id}
-                          className="d-block w-100 text-start btn btn-light-secondary border-0 rounded-0 px-3 py-2"
+                          className="d-block w-100 text-start btn btn-light-secondary border-0 b-r-0 px-3 py-2"
                           onClick={() => { setSelected(s); setQuery(''); }}
                         >
                           {s.name}
                           {s.isActive === false && (
-                            <span className="badge bg-warning-subtle text-warning-emphasis ms-2">aktiv emas</span>
+                            <span className="badge bg-light-warning text-warning-dark ms-2">aktiv emas</span>
                           )}
                         </button>
                       ))

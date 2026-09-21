@@ -199,7 +199,7 @@ export function LeafletMapPicker({
 
   if (!ready) {
     return (
-      <div className="d-flex align-items-center justify-content-center text-muted small border rounded-3" style={{ height }}>
+      <div className="d-flex align-items-center justify-content-center text-muted f-s-13 b-1-light b-r-10" style={{ height }}>
         <span><span className="spinner-border spinner-border-sm me-2"></span>Xarita yuklanmoqda…</span>
       </div>
     );
@@ -209,7 +209,7 @@ export function LeafletMapPicker({
     <div>
       {search ? (
         <div className="position-relative mb-2">
-          <i className="bi bi-geo-alt position-absolute" style={{ left: 12, top: 10, color: 'var(--kc-text-muted)' }}></i>
+          <i className="ti ti-map-pin position-absolute text-secondary" style={{ left: 12, top: 10 }}></i>
           <input
             className="form-control"
             style={{ paddingLeft: 34 }}
@@ -219,25 +219,24 @@ export function LeafletMapPicker({
           />
           {searching ? <span className="spinner-border spinner-border-sm position-absolute" style={{ right: 12, top: 11 }}></span> : null}
           {results.length > 0 ? (
-            <div className="position-absolute w-100 bg-white border rounded-3 shadow-sm mt-1" style={{ zIndex: 1200, maxHeight: 200, overflowY: 'auto' }}>
+            <div className="position-absolute w-100 bg-white b-1-light b-r-10 mt-1 overflow-y-auto" style={{ zIndex: 1200, maxHeight: 200 }}>
               {results.map((row, index) => (
                 <button
-                  key={index}
-                  type="button"
-                  className="btn btn-light-secondary w-100 text-start small border-0"
-                  style={{ borderRadius: 0 }}
-                  onClick={() => pick(row)}
-                >
-                  <i className="bi bi-geo-alt-fill text-danger me-1"></i>{row.label}
+         key={index}
+         type="button"
+         className="btn btn-light-secondary w-100 text-start f-s-13 border-0 b-r-0"
+         onClick={() => pick(row)}
+        >
+                  <i className="ti ti-map-pin-filled text-danger me-1"></i>{row.label}
                 </button>
               ))}
             </div>
           ) : null}
         </div>
       ) : null}
-      <div ref={mapEl} style={{ height, borderRadius: 'var(--kc-radius-lg)', overflow: 'hidden', zIndex: 1 }} />
-      <div className="small text-muted mt-1">
-        <i className="bi bi-info-circle me-1"></i>Xaritaga bosing yoki markerni sudrab joyni belgilang.
+      <div className="b-r-18 overflow-hidden" ref={mapEl} style={{ height, zIndex: 1 }} />
+      <div className="f-s-13 text-muted mt-1">
+        <i className="ti ti-info-circle me-1"></i>Xaritaga bosing yoki markerni sudrab joyni belgilang.
       </div>
     </div>
   );
@@ -326,14 +325,14 @@ export function LeafletZonesMap({
   }, []);
 
   if (!ready) {
-    return <div className="d-flex align-items-center justify-content-center text-muted small border rounded-3" style={{ height }}>Xarita yuklanmoqda…</div>;
+    return <div className="d-flex align-items-center justify-content-center text-muted f-s-13 b-1-light b-r-10" style={{ height }}>Xarita yuklanmoqda…</div>;
   }
 
   if (points.length === 0) {
-    return <div className="d-flex align-items-center justify-content-center text-muted small border rounded-3" style={{ height }}><span><i className="bi bi-geo me-1"></i>Radiusli zona hali qo'shilmagan</span></div>;
+    return <div className="d-flex align-items-center justify-content-center text-muted f-s-13 b-1-light b-r-10" style={{ height }}><span><i className="ti ti-map-pin me-1"></i>Radiusli zona hali qo'shilmagan</span></div>;
   }
 
-  return <div ref={mapEl} style={{ height, borderRadius: 'var(--kc-radius-lg)', overflow: 'hidden', zIndex: 1 }} />;
+  return <div className="b-r-18 overflow-hidden" ref={mapEl} style={{ height, zIndex: 1 }} />;
 }
 
 /**
@@ -405,7 +404,7 @@ export function LeafletMapView({
 
   if (!ready) {
     return (
-      <div className="d-flex align-items-center justify-content-center text-muted small border rounded-3" style={{ height }}>
+      <div className="d-flex align-items-center justify-content-center text-muted f-s-13 b-1-light b-r-10" style={{ height }}>
         Xarita yuklanmoqda…
       </div>
     );
@@ -413,11 +412,11 @@ export function LeafletMapView({
 
   if (points.length === 0) {
     return (
-      <div className="d-flex align-items-center justify-content-center text-muted small border rounded-3" style={{ height }}>
-        <span><i className="bi bi-geo me-1"></i>Koordinata belgilanmagan</span>
+      <div className="d-flex align-items-center justify-content-center text-muted f-s-13 b-1-light b-r-10" style={{ height }}>
+        <span><i className="ti ti-map-pin me-1"></i>Koordinata belgilanmagan</span>
       </div>
     );
   }
 
-  return <div ref={mapEl} style={{ height, borderRadius: 'var(--kc-radius-lg)', overflow: 'hidden', zIndex: 1 }} />;
+  return <div className="b-r-18 overflow-hidden" ref={mapEl} style={{ height, zIndex: 1 }} />;
 }
