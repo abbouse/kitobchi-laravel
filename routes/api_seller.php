@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\Seller\BanLogController;
+use App\Http\Controllers\Api\Seller\CatalogController;
 use App\Http\Controllers\Api\Seller\ConversationController;
 use App\Http\Controllers\Api\Seller\GiftController;
 use App\Http\Controllers\Api\Seller\HisobotController;
@@ -55,6 +56,13 @@ Route::middleware('auth:seller')->group(function () {
     Route::get('products/authors/suggestions', [ProductController::class, 'getAuthorSuggestions']);
     Route::get('products/publishers/suggestions', [ProductController::class, 'getPublisherSuggestions']);
     Route::get('products/by-isbn/{isbn}', [ProductController::class, 'lookupByIsbn']);
+    // GLOBAL KATALOG: ISBN skan → karta → narx/qoldiq; topilmasa old+orqa muqova bilan ariza
+    Route::get('catalog/lookup', [CatalogController::class, 'lookup']);
+    Route::get('catalog/search', [CatalogController::class, 'search']);
+    Route::get('catalog/editions/{id}', [CatalogController::class, 'show'])->whereNumber('id');
+    Route::post('catalog/offers', [CatalogController::class, 'storeOffer']);
+    Route::get('catalog/submissions', [CatalogController::class, 'submissions']);
+    Route::post('catalog/submissions', [CatalogController::class, 'storeSubmission'])->middleware('throttle:30,60');
     Route::get('products/stationery/by-barcode/{barcode}', [ProductController::class, 'lookupStationeryByBarcode']);
     Route::post('products/stock/by-code', [ProductController::class, 'updateStockByCode']);
     Route::get('products/categories', [ProductController::class, 'getCategories']);

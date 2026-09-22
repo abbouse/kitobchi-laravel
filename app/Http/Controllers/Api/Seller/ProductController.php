@@ -48,7 +48,7 @@ class ProductController extends Controller
     /**
      * ✅ OWNER DO'KON ID QAYTARADI
      */
-    private function getStoreSellerId($seller)
+    protected function getStoreSellerId($seller)
     {
         return $seller->parent_id ?: $seller->id;
     }
@@ -56,7 +56,7 @@ class ProductController extends Controller
     /**
      * ✅ PRODUCT ACCESS: OWNER, ADMIN (1), PRODUCT MANAGER (2)
      */
-    private function hasProductAccess($seller)
+    protected function hasProductAccess($seller)
     {
         // parent_id = NULL → OWNER → FULL ACCESS
         // parent_id mavjud + role=1 yoki 2 → ACCESS
@@ -66,7 +66,7 @@ class ProductController extends Controller
     /**
      * ✅ LOG YOZISH (FAQAT AMAL UCHUN)
      */
-    private function writeLog($staff, $action, $details = '')
+    protected function writeLog($staff, $action, $details = '')
     {
         $storeSellerId = $this->getStoreSellerId($staff);
         
@@ -77,7 +77,15 @@ class ProductController extends Controller
         ]);
     }
 
-    private function assignGeneratedArtikul($product, string $type): void
+    /** Kitob ma'lumoti katalogdan olinadimi (do'kon faqat narx/qoldiqni boshqaradi). */
+    protected function isCatalogLocked(\App\Models\BookEdition $edition, int $storeSellerId): bool
+    {
+        return $edition->verified_at !== null
+            || $edition->status === \App\Models\BookEdition::STATUS_PENDING && $edition->source === 'seller' && (int) $edition->created_by_id !== $storeSellerId
+            || Books::query()->where('edition_id', $edition->id)->where('seller_id', '!=', $storeSellerId)->exists();
+    }
+
+    protected function assignGeneratedArtikul($product, string $type): void
     {
         if ($product->artikul) {
             return;
@@ -849,6 +857,8 @@ public function updateProductStatus(Request $request)
             'category_id' => 'required|integer|exists:book_categories,id',
             'tag_ids' => 'nullable|array',
             'tag_ids.*' => 'integer|exists:book_tags,id',
+            'year' => 'nullable|integer|min:1800|max:' . (now()->year + 1),
+            'discountExpiresAt' => 'nullable|date',
         ]);
 
         if ($validator->fails()) {
@@ -895,9 +905,10 @@ public function updateProductStatus(Request $request)
             'coverType' => $request->input('coverType'),
             'price' => $request->input('price'),
             'discountPrice' => $request->input('discountPrice', 0),
+            'discountExpiresAt' => $request->filled('discountExpiresAt') ? $request->input('discountExpiresAt') : null,
             'description' => $request->input('description'),
             'images' => $imagePaths,
-            'year' => 2025,
+            'year' => (int) ($request->input('year') ?: now()->year),
             'category_id' => $request->input('category_id'),
             'status' => true,
             'is_hidden' => false,
@@ -981,6 +992,34 @@ public function updateProductStatus(Request $request)
         return response()->json(['success' => false, 'message' => 'Mahsulot topilmadi'], 404);
     }
 
+    // GLOBAL KATALOG: tasdiqlangan yoki boshqa do'konlar bilan umumiy kartaga ulangan
+    // taklifda kitob ma'lumoti (nom, muallif, rasm, tavsif) katalogdan olinadi —
+    // do'kon faqat narx, chegirma va qoldiqni o'zgartiradi. Umumiy rasm fayllari
+    // o'chirilmaydi.
+    $edition = $product->edition_id ? \App\Models\BookEdition::find($product->edition_id) : null;
+    if ($edition && $this->isCatalogLocked($edition, (int) $storeSellerId)) {
+        $product->update([
+            'artikul' => $product->artikul ?: ProductArtikul::generate('book', (int) $product->id),
+            'price' => $request->price,
+            'discountPrice' => $request->discountPrice ?? 0,
+            'discountExpiresAt' => $request->filled('discountExpiresAt') ? $request->discountExpiresAt : null,
+        ]);
+        app(\App\Services\BranchStockService::class)->setTotalFromLegacy(
+            'book', (int) $product->id, 0, (int) $storeSellerId,
+            (int) $request->count,
+            $seller->seller_location_id ? (int) $seller->seller_location_id : null,
+            ['actor_type' => 'seller', 'actor_id' => $seller->id, 'note' => 'Mahsulot tahriri']
+        );
+        $this->writeLog($seller, 'Katalog kitobining narx/qoldig\'ini yangiladi', $product->name);
+
+        return response()->json([
+            'success' => true,
+            'message' => "Narx va qoldiq yangilandi. Kitob ma'lumotlari umumiy katalogdan olinadi.",
+            'catalog_locked' => true,
+            'data' => $product->fresh()->load(['category', 'tags']),
+        ], 200);
+    }
+
     // existingImages va deletedImages ni to'g'ri olish
     $existingImages = $request->filled('existingImages')
         ? json_decode($request->existingImages, true)
@@ -1062,7 +1101,7 @@ public function updateProductStatus(Request $request)
         'author' => $author?->name ?: $request->author,
         'author_id' => $author?->id,
         'translator' => $request->translator,
-        'publisher_id' => $publisher?->id,
+        'publisher_id' => $publisher?->id ?? ($request->filled('publisher') ? null : $product->publisher_id), // tez tahrir nashriyotni o'chirib yubormasin
         'isbn' => $canonicalIsbn,
         'pages' => $request->pages,
         'lang' => $request->language,
@@ -1089,6 +1128,31 @@ public function updateProductStatus(Request $request)
     );
 
     $product->tags()->sync($request->input('tag_ids', []));
+
+    // Karta faqat shu do'konniki va tasdiqlanmagan — karta ham taklifga ergashadi
+    if ($edition) {
+        $fresh = $product->fresh();
+        $edition->update([
+            'title' => $fresh->name,
+            'author' => $fresh->getAttributes()['author'] ?? $fresh->author,
+            'author_id' => $fresh->author_id,
+            'translator' => $fresh->translator,
+            'publisher_id' => $fresh->publisher_id,
+            'isbn13' => \App\Support\Isbn::toIsbn13($fresh->isbn),
+            'isbn10' => \App\Support\Isbn::toIsbn10(\App\Support\Isbn::toIsbn13($fresh->isbn)),
+            'category_id' => $fresh->category_id,
+            'lang' => $fresh->lang,
+            'langType' => $fresh->langType,
+            'coverType' => $fresh->coverType,
+            'pages' => $fresh->pages,
+            'description' => $fresh->description,
+            'images' => $finalImages,
+            'front_image' => $finalImages[0] ?? null,
+            'tag_ids' => array_values(array_map('intval', (array) $request->input('tag_ids', []))),
+            'match_key' => \App\Services\Catalog\CatalogService::offerMatchKey($fresh),
+        ]);
+    }
+
     $this->writeLog($seller, 'Mahsulot ma\'lumotlarini yangiladi', $product->name);
     return response()->json([
         'success' => true,
@@ -1273,6 +1337,22 @@ public function productStatistics(Request $request, $id)
             ], 422);
         }
 
+        // GLOBAL KATALOG: avval katalog kartalari (javob shakli o'zgarmaydi, qo'shimcha
+        // `edition_id` va `images` maydonlari eski ilovaga zarar qilmaydi)
+        $editions = app(\App\Services\Catalog\CatalogService::class)->findByIsbn($canonical);
+        if ($editions->isNotEmpty()) {
+            $rows = $editions->map(fn ($edition) => $this->legacyIsbnPayload($edition, $canonical))->values();
+
+            return $rows->count() > 1
+                ? response()->json([
+                    'success' => true,
+                    'multiple_matches' => true,
+                    'message' => "Bu ISBN bo'yicha bir nechta variant topildi. Kerakli kitobni tanlang.",
+                    'candidates' => $rows,
+                ])
+                : response()->json(['success' => true, 'data' => $rows->first()]);
+        }
+
         $books = Books::query()
             ->whereIsbn($canonical)
             ->where('is_approved', 1)
@@ -1333,6 +1413,30 @@ public function productStatistics(Request $request, $id)
                 'year'          => (int) ($book->year ?? 0),
             ],
         ]);
+    }
+
+    private function legacyIsbnPayload(\App\Models\BookEdition $edition, string $canonical): array
+    {
+        $edition->loadMissing('publisher:id,name');
+        $urls = \App\Support\ProductImageUrls::build(array_values(array_filter((array) ($edition->images ?? []), 'is_string')));
+
+        return [
+            'isbn'          => $canonical,
+            'name'          => $edition->title,
+            'author'        => $edition->author,
+            'translator'    => $edition->translator,
+            'pages'         => (int) ($edition->pages ?? 0),
+            'language'      => $this->normalizeLanguageOut($edition->lang),
+            'languageWrite' => $this->normalizeLangTypeOut($edition->langType),
+            'coverType'     => $this->normalizeCoverTypeOut($edition->coverType),
+            'category_id'   => $edition->category_id,
+            'publisher_id'  => $edition->publisher_id,
+            'publisher_name'=> $edition->publisher?->name,
+            'tag_ids'       => array_values((array) ($edition->tag_ids ?? [])),
+            'year'          => (int) ($edition->year ?? 0),
+            'edition_id'    => (int) $edition->id,
+            'images'        => $urls['original'],
+        ];
     }
 
     public function lookupStationeryByBarcode(Request $request, string $barcode)
@@ -1482,7 +1586,7 @@ public function productStatistics(Request $request, $id)
      * DB'da turli xil yozilgan til qiymatlarini Flutter forma kutadigan
      * uch belgili kodga moslashtiramiz.
      */
-    private function normalizeLanguageOut(?string $raw): ?string
+    protected function normalizeLanguageOut(?string $raw): ?string
     {
         $v = mb_strtolower(trim((string) $raw));
         if ($v === '') return null;
@@ -1497,7 +1601,7 @@ public function productStatistics(Request $request, $id)
     /**
      * "Lotin"/"Kirill" varianti — DB'da turli yozilgan bo'lishi mumkin.
      */
-    private function normalizeLangTypeOut(?string $raw): ?string
+    protected function normalizeLangTypeOut(?string $raw): ?string
     {
         $v = mb_strtolower(trim((string) $raw));
         if ($v === '') return null;
@@ -1509,7 +1613,7 @@ public function productStatistics(Request $request, $id)
     /**
      * "Yumshoq"/"Qattiq" → "soft"/"hard".
      */
-    private function normalizeCoverTypeOut(?string $raw): ?string
+    protected function normalizeCoverTypeOut(?string $raw): ?string
     {
         $v = mb_strtolower(trim((string) $raw));
         if ($v === '') return null;
