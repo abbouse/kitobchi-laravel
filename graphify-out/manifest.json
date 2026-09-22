@@ -4560,386 +4560,386 @@
     "semantic_hash": "78f909acc19aea4717eddca5a87c1ba3"
   },
   "resources/js/boshqaruv/Layout.tsx": {
-    "mtime": 1789375905.4281821,
-    "seen": 1789811502.002013,
-    "ast_hash": "6409e09f4f68cb71d7a7732ab2bb4838",
+    "mtime": 1790014301.4778938,
+    "seen": 1790015911.8084931,
+    "ast_hash": "f9add084e9d03986237a92f8d4a37ad7",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/components/ImageGalleryEditor.tsx": {
-    "mtime": 1789715494.2701836,
-    "seen": 1789811502.002014,
-    "ast_hash": "e2ee2d44f3b9a50df859ba6af7d2b541",
+    "mtime": 1790014301.4644728,
+    "seen": 1790015911.8084962,
+    "ast_hash": "16432d6e647c32f98581debc80251eed",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/components/InfoHint.tsx": {
-    "mtime": 1780257679.8377175,
-    "seen": 1787659299.020532,
-    "ast_hash": "ecd32650d001b24a6aea84887603e4b0",
-    "semantic_hash": "ecd32650d001b24a6aea84887603e4b0"
+    "mtime": 1790014301.4701877,
+    "seen": 1790015911.8084962,
+    "ast_hash": "0157be242c0826fa2caecf2d6653f287",
+    "semantic_hash": ""
   },
   "resources/js/boshqaruv/components/LeafletMap.tsx": {
-    "mtime": 1789715305.5767524,
-    "seen": 1789811502.002016,
-    "ast_hash": "6cfd6131c9ccc592cd2dc59318ee0aa9",
+    "mtime": 1790014301.4762044,
+    "seen": 1790015911.808497,
+    "ast_hash": "2d1dced9fd222176076b9b7c6480dc83",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/components/ModerationRejectModal.tsx": {
-    "mtime": 1787221686.4435012,
-    "seen": 1787659299.020533,
-    "ast_hash": "37ae0256dd2b8078b306948d8c6ae4a8",
-    "semantic_hash": "37ae0256dd2b8078b306948d8c6ae4a8"
+    "mtime": 1790014301.4749215,
+    "seen": 1790015911.808497,
+    "ast_hash": "5bf785ad53587a504e31ae1418ea72dc",
+    "semantic_hash": ""
   },
   "resources/js/boshqaruv/components/PaginationControls.tsx": {
-    "mtime": 1780168566.3952792,
-    "seen": 1787659299.020533,
-    "ast_hash": "d56fc3b9c911b2a355568b9d3baf6cc1",
-    "semantic_hash": "d56fc3b9c911b2a355568b9d3baf6cc1"
+    "mtime": 1790014301.468179,
+    "seen": 1790015911.808498,
+    "ast_hash": "d81a7d5085f01c32a7034cc80c5e0279",
+    "semantic_hash": ""
   },
   "resources/js/boshqaruv/components/SellerCommon.tsx": {
-    "mtime": 1789320150.4151118,
-    "seen": 1789811502.002017,
-    "ast_hash": "191da118cd57f18c3348fea93e2631ff",
+    "mtime": 1790014301.4719286,
+    "seen": 1790015911.808498,
+    "ast_hash": "4861771b62776053a59f3747721cd3ea",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/components/YandexMap.tsx": {
-    "mtime": 1789715305.5781322,
-    "seen": 1789811502.002018,
-    "ast_hash": "bb227ee99315b7813cfb3061829a3401",
+    "mtime": 1790014301.4739,
+    "seen": 1790015911.8084989,
+    "ast_hash": "6fdb680b453e811520e2914f977bbd29",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/data.ts": {
-    "mtime": 1789715500.0699725,
-    "seen": 1789811502.0020192,
-    "ast_hash": "cdc44c24fc2b652dc02190e852d589cc",
+    "mtime": 1790014301.4794216,
+    "seen": 1790015911.8084989,
+    "ast_hash": "5e21717b1f313a48b12b1ff0e809847c",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/main.tsx": {
-    "mtime": 1789715305.5739381,
-    "seen": 1789811502.0020192,
-    "ast_hash": "08422443c35e57e68b4974bbec113fad",
+    "mtime": 1790014301.4769285,
+    "seen": 1790015911.8085,
+    "ast_hash": "84460d1e6cd350695c7df9fbefa90f14",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/Adminlar.tsx": {
-    "mtime": 1780158723.2105374,
-    "seen": 1787659299.020536,
+    "mtime": 1790014301.5294168,
+    "seen": 1790015911.8085,
     "ast_hash": "ee8d398ef5ef716122911d3582025330",
     "semantic_hash": "ee8d398ef5ef716122911d3582025330"
   },
   "resources/js/boshqaruv/pages/ApiClients.tsx": {
-    "mtime": 1780158723.253357,
-    "seen": 1787659299.020536,
+    "mtime": 1790014301.5528936,
+    "seen": 1790015911.808501,
     "ast_hash": "24d810744532bf8dfaa2caa8a8de8445",
     "semantic_hash": "24d810744532bf8dfaa2caa8a8de8445"
   },
   "resources/js/boshqaruv/pages/AuditLogs.tsx": {
-    "mtime": 1789715494.3338544,
-    "seen": 1789811502.002021,
-    "ast_hash": "3b3086e83375f4202863aabbdd50a124",
+    "mtime": 1790014301.4960952,
+    "seen": 1790015911.808501,
+    "ast_hash": "29c595ca966b01e139c496671f46ac02",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/Authors.tsx": {
-    "mtime": 1789376958.719479,
-    "seen": 1789811502.0020218,
-    "ast_hash": "40dbbe16ffcc12f2af408543c537768a",
+    "mtime": 1790014301.54011,
+    "seen": 1790015911.808502,
+    "ast_hash": "9b10f5a30d1449f0e41e7cb8cfe23b9a",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/Blogerlar.tsx": {
-    "mtime": 1780225826.9145823,
-    "seen": 1787659299.020538,
-    "ast_hash": "089a7565be9b40c9ccdafff74bbedd65",
-    "semantic_hash": "089a7565be9b40c9ccdafff74bbedd65"
+    "mtime": 1790014301.526297,
+    "seen": 1790015911.808502,
+    "ast_hash": "ecaf6df1d2d54c73c76da066f77787f6",
+    "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/BookCategories.tsx": {
-    "mtime": 1789800858.847853,
-    "seen": 1789811502.002023,
-    "ast_hash": "1d5298988d2a1befa417f520007fdbf6",
+    "mtime": 1790014301.5329113,
+    "seen": 1790015911.8085032,
+    "ast_hash": "2466255ddf0e392776a312f83073026d",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/BookClub.tsx": {
-    "mtime": 1789405923.1881206,
-    "seen": 1789811502.002024,
-    "ast_hash": "69df63825855252c5b7797a2369abfbd",
+    "mtime": 1790014301.5017142,
+    "seen": 1790015911.808504,
+    "ast_hash": "5dff08680f0d3b184eec109420c814c0",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/Books.tsx": {
-    "mtime": 1789801414.3563945,
-    "seen": 1789811502.002024,
-    "ast_hash": "3bd6140ae5ad56c93eed55bb2439ca37",
+    "mtime": 1790014301.5525105,
+    "seen": 1790015911.808504,
+    "ast_hash": "b610ec136a44612ab54367c1d050c812",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/ChatKuzatuv.tsx": {
-    "mtime": 1780158723.128749,
-    "seen": 1787659299.0205388,
+    "mtime": 1790014301.5517597,
+    "seen": 1790015911.808505,
     "ast_hash": "324ef40e49ecf10dcb9c7df327509144",
     "semantic_hash": "324ef40e49ecf10dcb9c7df327509144"
   },
   "resources/js/boshqaruv/pages/CollectionsPage.tsx": {
-    "mtime": 1789715494.2906725,
-    "seen": 1789811502.002025,
-    "ast_hash": "2abb62104fbddfdc5fc59fc40069f658",
+    "mtime": 1790014680.15133,
+    "seen": 1790015911.808505,
+    "ast_hash": "4d0a95f277c779306bb00921cde80569",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/CommissionAudit.tsx": {
-    "mtime": 1789715494.276464,
-    "seen": 1789811502.002026,
-    "ast_hash": "d573044e9e7e0683e84e3a9693c8adbd",
+    "mtime": 1790014680.1577933,
+    "seen": 1790015911.808506,
+    "ast_hash": "c30f560de1070e914a9706e5c97916f5",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/CourierOrders.tsx": {
-    "mtime": 1789715494.320419,
-    "seen": 1789811502.002026,
-    "ast_hash": "9db2086c46a53116ceca6d7aecb5f549",
+    "mtime": 1790014301.4856622,
+    "seen": 1790015911.808507,
+    "ast_hash": "e1e3a336642c870f93e766f1c13ae0a5",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/Dashboard.tsx": {
-    "mtime": 1789747746.0318947,
-    "seen": 1789811502.002027,
-    "ast_hash": "e5cd6ded3c73b6cc27d8fb87b79892e3",
+    "mtime": 1790014795.3818536,
+    "seen": 1790015911.808507,
+    "ast_hash": "5d66119fc0404d8cdf5f833032c955de",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/Expenses.tsx": {
-    "mtime": 1789376681.9024339,
-    "seen": 1789811502.002027,
-    "ast_hash": "d6ff2d833114d14444c421c5d1e02001",
+    "mtime": 1790014301.503992,
+    "seen": 1790015911.808508,
+    "ast_hash": "a9eb7efa8c40afbee48d993ada294c66",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/Fiscalization.tsx": {
-    "mtime": 1789405923.1919687,
-    "seen": 1789811502.002028,
-    "ast_hash": "b319b77806d89f7f44d8957c8152e0c5",
+    "mtime": 1790014301.5412922,
+    "seen": 1790015911.808508,
+    "ast_hash": "2500bbf39939bdf3133f00a92241248a",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/GiftSertifikatlar.tsx": {
-    "mtime": 1780158723.005779,
-    "seen": 1787659299.020542,
+    "mtime": 1790014301.500791,
+    "seen": 1790015911.8085089,
     "ast_hash": "54b67e335a7d773a4071bc359ec35dc2",
     "semantic_hash": "54b67e335a7d773a4071bc359ec35dc2"
   },
   "resources/js/boshqaruv/pages/HubApplications.tsx": {
-    "mtime": 1789715494.3378935,
-    "seen": 1789811502.002029,
-    "ast_hash": "b3217ec0813ffd62521a1dd4327f3dcb",
+    "mtime": 1790014301.55364,
+    "seen": 1790015911.8085089,
+    "ast_hash": "c959651756d841460e1c31af0b3ee204",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/Hubs.tsx": {
-    "mtime": 1789800873.3228495,
-    "seen": 1789811502.0020301,
-    "ast_hash": "fc859a00060cd7fe2546c144b6451fe4",
+    "mtime": 1790014301.5490675,
+    "seen": 1790015911.80851,
+    "ast_hash": "26b5f36a220a2fd4ab8ac8fcc866bbc3",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/KaryeraArizalari.tsx": {
-    "mtime": 1780158722.8849926,
-    "seen": 1787659299.0205429,
+    "mtime": 1790014301.4878502,
+    "seen": 1790015911.80851,
     "ast_hash": "8889f6ec699201a8937130e2b85a54ae",
     "semantic_hash": "8889f6ec699201a8937130e2b85a54ae"
   },
   "resources/js/boshqaruv/pages/LiveDashboard.tsx": {
-    "mtime": 1789747738.3598387,
-    "seen": 1789811502.002031,
-    "ast_hash": "358cec3264f5975e9df5cae4f8187091",
+    "mtime": 1790014795.3832912,
+    "seen": 1790015911.808511,
+    "ast_hash": "fdcfc8b1e8f0dc40a70f63e92e5c2aaf",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/Login.tsx": {
-    "mtime": 1789715494.2791777,
-    "seen": 1789811502.002031,
-    "ast_hash": "85fa8ad287b25c8966c28aa9f1b645fe",
+    "mtime": 1790014301.5050762,
+    "seen": 1790015911.808511,
+    "ast_hash": "8ef29371db7c7b0e87f5089cd05ec506",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/LogistikaPage.tsx": {
-    "mtime": 1780158723.3745704,
-    "seen": 1787659299.020545,
+    "mtime": 1790014301.4866772,
+    "seen": 1790015911.808512,
     "ast_hash": "a7c5c78c6c4ee69702bd7bffc0d831ee",
     "semantic_hash": "a7c5c78c6c4ee69702bd7bffc0d831ee"
   },
   "resources/js/boshqaruv/pages/MarketNewsPage.tsx": {
-    "mtime": 1780158723.0850754,
-    "seen": 1787659299.020545,
+    "mtime": 1790014301.4874325,
+    "seen": 1790015911.808512,
     "ast_hash": "d880a4d8388686bdcd8ca91bbb92bfb6",
     "semantic_hash": "d880a4d8388686bdcd8ca91bbb92bfb6"
   },
   "resources/js/boshqaruv/pages/MysteryBoxPage.tsx": {
-    "mtime": 1780158723.2938712,
-    "seen": 1787659299.020546,
+    "mtime": 1790014301.5495517,
+    "seen": 1790015911.808513,
     "ast_hash": "3158722839141e6391d442d5d1c75558",
     "semantic_hash": "3158722839141e6391d442d5d1c75558"
   },
   "resources/js/boshqaruv/pages/Orders.tsx": {
-    "mtime": 1789715494.3301215,
-    "seen": 1789811502.002033,
-    "ast_hash": "f78d357943f9a8efd3ea851ebed370e9",
+    "mtime": 1790014301.4909978,
+    "seen": 1790015911.808513,
+    "ast_hash": "304a393505a1f4d8c2ed307209f25ec1",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/Products.tsx": {
-    "mtime": 1789715494.3319159,
-    "seen": 1789811502.002034,
-    "ast_hash": "df091956a23c7a135277ad06160e482a",
+    "mtime": 1790014301.5473025,
+    "seen": 1790015911.808514,
+    "ast_hash": "4cdeba20730e01b8e32ad18f09ce19de",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/Promokodlar.tsx": {
-    "mtime": 1789715494.296554,
-    "seen": 1789811502.002034,
-    "ast_hash": "7bc8c593b35a36c72a71a32fb194d5fc",
+    "mtime": 1790014301.5501585,
+    "seen": 1790015911.808514,
+    "ast_hash": "76bbdb979af2f1c8848040a1bd876934",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/Publishers.tsx": {
-    "mtime": 1789376958.720331,
-    "seen": 1789811502.002035,
-    "ast_hash": "d72d55664c80bbf351fa33ebd4945de6",
+    "mtime": 1790014301.4918666,
+    "seen": 1790015911.808515,
+    "ast_hash": "7a781cb55a38097348e902ba52a8af2d",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/PushNotifications.tsx": {
-    "mtime": 1780158723.1703901,
-    "seen": 1787659299.020548,
+    "mtime": 1790014301.5044987,
+    "seen": 1790015911.808515,
     "ast_hash": "d7fca5ecdd8cf9ba2ead2f0387fc7b36",
     "semantic_hash": "d7fca5ecdd8cf9ba2ead2f0387fc7b36"
   },
   "resources/js/boshqaruv/pages/ReelsPage.tsx": {
-    "mtime": 1780158723.0451765,
-    "seen": 1787659299.020548,
+    "mtime": 1790014301.4953604,
+    "seen": 1790015911.808516,
     "ast_hash": "320557adadabd0854b13b810d78ac1f2",
     "semantic_hash": "320557adadabd0854b13b810d78ac1f2"
   },
   "resources/js/boshqaruv/pages/Reklamalar.tsx": {
-    "mtime": 1789715494.3393354,
-    "seen": 1789811502.002037,
-    "ast_hash": "fee17e1aeced7d0d3526e725822a2472",
+    "mtime": 1790014301.5085719,
+    "seen": 1790015911.8085172,
+    "ast_hash": "4660d86209e209f3fbc535e6a98a7e97",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/SearchHistory.tsx": {
-    "mtime": 1780435986.8509285,
-    "seen": 1787659299.020549,
-    "ast_hash": "13c15dfeaf008676e17e80c07a9914a7",
-    "semantic_hash": "13c15dfeaf008676e17e80c07a9914a7"
+    "mtime": 1790014301.4972196,
+    "seen": 1790015911.8085172,
+    "ast_hash": "ee0c486cdbbc569e80cba934c239df4a",
+    "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/SellerAiActions.tsx": {
-    "mtime": 1789715494.3020043,
-    "seen": 1789811502.002038,
-    "ast_hash": "435768925d7935f8c68087abe6a6bfab",
+    "mtime": 1790014301.5358102,
+    "seen": 1790015911.808518,
+    "ast_hash": "39bf0d4a3d407f466983a22e9fcab8b7",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/SellerDetail.tsx": {
-    "mtime": 1789405923.2004974,
-    "seen": 1789811502.002038,
-    "ast_hash": "e37010a772e4ae2c6bdae07fcf99d9c3",
+    "mtime": 1790014680.148676,
+    "seen": 1790015911.808518,
+    "ast_hash": "3eb1dd9c0d6f562985267f0b32723b4d",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/SellerEdit.tsx": {
-    "mtime": 1786224792.3670344,
-    "seen": 1787659299.0205498,
-    "ast_hash": "a849240535a17ece2d9b72373a81dd66",
-    "semantic_hash": "a849240535a17ece2d9b72373a81dd66"
+    "mtime": 1790014680.1523716,
+    "seen": 1790015911.808519,
+    "ast_hash": "2b2e2b1b00a0f82c433ae59b864b592f",
+    "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/SellerOrders.tsx": {
-    "mtime": 1789715494.2981062,
-    "seen": 1789811502.0020401,
-    "ast_hash": "196f79fbebaf31ac978f3fda6372fbd1",
+    "mtime": 1790014301.530307,
+    "seen": 1790015911.808519,
+    "ast_hash": "3751d75a383bccb2a8a0bc4bd1ed1c2a",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/Settings.tsx": {
-    "mtime": 1789236929.8758123,
-    "seen": 1789811502.0020401,
-    "ast_hash": "beb722c200f8e42e13a97dc124eb437b",
+    "mtime": 1790014680.1550283,
+    "seen": 1790015911.8085198,
+    "ast_hash": "713ebcffd91244ab8635f328ab254477",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/Shikoyatlar.tsx": {
-    "mtime": 1780158722.9665303,
-    "seen": 1787659299.020552,
+    "mtime": 1790014301.550591,
+    "seen": 1790015911.808521,
     "ast_hash": "8869a706f832f617132c4d446bffc43b",
     "semantic_hash": "8869a706f832f617132c4d446bffc43b"
   },
   "resources/js/boshqaruv/pages/Siyosatlar.tsx": {
-    "mtime": 1789405855.0523288,
-    "seen": 1789811502.002042,
-    "ast_hash": "83de38edb35473151aff5c30bc3c3cf0",
+    "mtime": 1790014680.1538756,
+    "seen": 1790015911.808521,
+    "ast_hash": "39f25f18ec844c01e9ebf7550bdcc1c4",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/Sovgalar.tsx": {
-    "mtime": 1780158723.3343945,
-    "seen": 1787659299.020552,
+    "mtime": 1790014301.4933577,
+    "seen": 1790015911.808522,
     "ast_hash": "90e5d15111fc6688f9d60c3990a24570",
     "semantic_hash": "90e5d15111fc6688f9d60c3990a24570"
   },
   "resources/js/boshqaruv/pages/Split.tsx": {
-    "mtime": 1789715494.324762,
-    "seen": 1789811502.0020428,
-    "ast_hash": "aefe4af01a2338589899dcaaf193cb55",
+    "mtime": 1790014680.1453772,
+    "seen": 1790015911.808522,
+    "ast_hash": "0f96d6a1fd01ddef9d2de77a011ccb06",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/Stationeries.tsx": {
-    "mtime": 1789400386.188403,
-    "seen": 1789811502.0020428,
-    "ast_hash": "2af277196b3766b3fbdd3f02134697b6",
+    "mtime": 1790014301.5282292,
+    "seen": 1790015911.808523,
+    "ast_hash": "552b28a245af1d561c2f4a94de892278",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/Tickets.tsx": {
-    "mtime": 1789715494.2949095,
-    "seen": 1789811502.002044,
-    "ast_hash": "14f94c302eb35c25f23eae2538cdbc21",
+    "mtime": 1790014301.5289938,
+    "seen": 1790015911.808523,
+    "ast_hash": "afdf92b4c4e75cde9a0dfcf54e41a1a2",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/Transaksiyalar.tsx": {
-    "mtime": 1789715494.3089926,
-    "seen": 1789811502.002044,
-    "ast_hash": "5c70e865d40470bf6cac6fef098bae2b",
+    "mtime": 1790014680.162496,
+    "seen": 1790015911.8085241,
+    "ast_hash": "a0aea8e6b5faad0923d1e418260d1186",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/Users.tsx": {
-    "mtime": 1789715494.3114758,
-    "seen": 1789811502.002045,
-    "ast_hash": "627d1ec4555999d103945e8bcd5cb44c",
+    "mtime": 1790014301.5069523,
+    "seen": 1790015911.8085241,
+    "ast_hash": "4bc468cc0d1d15dd7842dfa857436575",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/Vakansiyalar.tsx": {
-    "mtime": 1780158722.843281,
-    "seen": 1787659299.020555,
+    "mtime": 1790014301.532343,
+    "seen": 1790015911.808525,
     "ast_hash": "0bdbf59ec83121648d96a8112e60e613",
     "semantic_hash": "0bdbf59ec83121648d96a8112e60e613"
   },
   "resources/js/boshqaruv/pages/misc-admin.tsx": {
-    "mtime": 1789715494.3259768,
-    "seen": 1789811502.0020459,
-    "ast_hash": "b97c109c6a51545ce70439e197e307bd",
+    "mtime": 1790014301.547943,
+    "seen": 1790015911.808525,
+    "ast_hash": "4dfcfa87dbe8362e0c85a218e032727f",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/misc-admin2.tsx": {
-    "mtime": 1789715494.3158784,
-    "seen": 1789811502.002047,
-    "ast_hash": "01d34a5f9c1631c34bd9636dd13b9ab7",
+    "mtime": 1790014301.492832,
+    "seen": 1790015911.808526,
+    "ast_hash": "06aa1c0fc727260f10982443db923d53",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/misc-admin3.tsx": {
-    "mtime": 1789715494.3185134,
-    "seen": 1789811502.002047,
-    "ast_hash": "4266e52f5fde9975ee7eb6fa2d5d39a8",
+    "mtime": 1790014680.1565666,
+    "seen": 1790015911.808526,
+    "ast_hash": "93a584cb20773d2d26d8457aba4070ab",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/misc-admin4.tsx": {
-    "mtime": 1789715494.3039908,
-    "seen": 1789811502.002048,
-    "ast_hash": "2102c49d9e824ab48067478ec1b52bdb",
+    "mtime": 1790014301.5422332,
+    "seen": 1790015911.808527,
+    "ast_hash": "954f117f921bd1208369c4ac9cbfcb7e",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/misc-admin5.tsx": {
-    "mtime": 1789747738.358428,
-    "seen": 1789811502.002048,
-    "ast_hash": "baebf8936a1891dcc75f4692d27d8920",
+    "mtime": 1790014680.1605208,
+    "seen": 1790015911.808527,
+    "ast_hash": "a1756657b1b19a9f331bbdbe23445366",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/policyPresets.ts": {
-    "mtime": 1783242833.3084965,
-    "seen": 1787659299.020558,
+    "mtime": 1790014301.551391,
+    "seen": 1790015911.808528,
     "ast_hash": "51c06e5134f360b1ec49ad9b589f5e40",
     "semantic_hash": "51c06e5134f360b1ec49ad9b589f5e40"
   },
   "resources/js/boshqaruv/pages/stationery-categories.tsx": {
-    "mtime": 1789800858.8487604,
-    "seen": 1789811502.002049,
-    "ast_hash": "54d5d43bed975c7173cab41b68c76b78",
+    "mtime": 1790014301.4993892,
+    "seen": 1790015911.808528,
+    "ast_hash": "0bd600905eb56cba7358a2b85519a21c",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/utils/cn.ts": {
-    "mtime": 1780158400.5529847,
-    "seen": 1787659299.020558,
+    "mtime": 1790014301.4815924,
+    "seen": 1790015911.808529,
     "ast_hash": "d9837f38cc05303254571985e3164050",
     "semantic_hash": "d9837f38cc05303254571985e3164050"
   },
@@ -5004,9 +5004,9 @@
     "semantic_hash": "2633c9a76fea3d9db51639c4cac0eebd"
   },
   "resources/views/boshqaruv/app.blade.php": {
-    "mtime": 1789375912.0797288,
-    "seen": 1789811502.002063,
-    "ast_hash": "3d2bc2b7b6cf4c2a87c40a3b5a7673dd",
+    "mtime": 1789983883.778614,
+    "seen": 1790015911.808537,
+    "ast_hash": "da0bd7ae0e909b56153f7dda5b57402d",
     "semantic_hash": ""
   },
   "resources/views/boshqaruv/orders/print/label.blade.php": {
@@ -6684,27 +6684,57 @@
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/components/CategoryImageField.tsx": {
-    "mtime": 1789713738.875462,
-    "seen": 1789811502.002014,
-    "ast_hash": "9282efb995cee60326307e8acb004eee",
+    "mtime": 1790014301.4664392,
+    "seen": 1790015911.808495,
+    "ast_hash": "0751df08c484d33f03ec8f733ca7e61b",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/utils/palette.ts": {
-    "mtime": 1789715411.2678123,
-    "seen": 1789811502.002051,
-    "ast_hash": "c0281c6b8d3d889d6b18959730855d91",
+    "mtime": 1790014301.4801118,
+    "seen": 1790015911.8085299,
+    "ast_hash": "d3b7c0f6904257fc5d8ec7919cfdb104",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/utils/tone.ts": {
-    "mtime": 1789405855.0301213,
-    "seen": 1789811502.002051,
-    "ast_hash": "321d58f2a829c4c86b3c4098bb890b66",
+    "mtime": 1790014301.4809623,
+    "seen": 1790015911.808531,
+    "ast_hash": "a46c74983450de4c3850c90278dd8060",
     "semantic_hash": ""
   },
   "web/pages/legal/index.vue": {
     "mtime": 1789929359.6240716,
     "seen": 1789929417.258949,
     "ast_hash": "15ebe352e288e727b9954a5087821ba2",
+    "semantic_hash": ""
+  },
+  "resources/css/axelit/tools/icons.py": {
+    "mtime": 1790001715.6282415,
+    "seen": 1790015911.8084888,
+    "ast_hash": "80d70df49c8aad342963f93563921925",
+    "semantic_hash": ""
+  },
+  "resources/css/axelit/tools/prune.js": {
+    "mtime": 1789983961.569815,
+    "seen": 1790015911.80849,
+    "ast_hash": "764a00c57074c169918fd1aa13ae2c28",
+    "semantic_hash": ""
+  },
+  "resources/js/boshqaruv/components/AppModal.tsx": {
+    "mtime": 1790014301.4726474,
+    "seen": 1790015911.808494,
+    "ast_hash": "2199b9b04b67fbc00fdea5fd4577f4cc",
+    "semantic_hash": ""
+  },
+  "resources/js/boshqaruv/components/Axelit.tsx": {
+    "mtime": 1790014301.4690976,
+    "seen": 1790015911.808495,
+    "ast_hash": "dded65a2573dbd1cb96881197d59ec9e",
+    "semantic_hash": ""
+  },
+  "resources/js/boshqaruv/utils/icons.ts": {
+    "mtime": 1790014301.482212,
+    "seen": 1790015911.808529,
+    "ast_hash": "026cf96dd7b672d953f650096877e556",
     "semantic_hash": ""
   }
 }
