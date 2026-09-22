@@ -52,12 +52,26 @@ class CatalogBackfill extends Command
         $this->info("Katalogga ulanmagan takliflar: {$total} (dry-run)");
         $bar = $this->output->createProgressBar($total);
 
-        Books::query()
+        // MUHIM: chunkById() bu yerda ishlatib bo'lmaydi — u "id > oxirgi id"
+        // sharti qo'shadi, tartib esa is_approved/totalSales bo'yicha bo'lgani
+        // uchun qatorlarning katta qismi o'tkazib yuborilardi. Shuning uchun
+        // avval id'lar to'liq ro'yxati (yengil), keyin bo'lak-bo'lak yuklanadi.
+        $orderedIds = Books::query()
             ->whereNull('edition_id')
             ->orderByDesc('is_approved')
             ->orderByDesc('totalSales')
             ->orderBy('id')
-            ->chunkById((int) $this->option('chunk'), function ($books) use ($catalog, &$stats, &$conflicts, &$plannedIsbn, &$plannedKeys, $bar) {
+            ->pluck('id');
+
+        $orderedIds->chunk((int) $this->option('chunk'))
+            ->each(function ($chunkIds) use ($catalog, &$stats, &$conflicts, &$plannedIsbn, &$plannedKeys, $bar) {
+                $position = array_flip($chunkIds->values()->all());
+                $books = Books::query()
+                    ->whereIn('id', $chunkIds->all())
+                    ->get()
+                    ->sortBy(fn ($book) => $position[$book->id] ?? PHP_INT_MAX)
+                    ->values();
+
                 foreach ($books as $book) {
                     $stats['offers']++;
                     $bar->advance();

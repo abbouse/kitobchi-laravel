@@ -158,4 +158,27 @@ class CatalogCoreTest extends TestCase
         $this->assertTrue((bool) $other->fresh()->catalog_featured);
         $this->assertSame(1, Books::query()->catalogFeatured()->count());
     }
+
+    public function test_dry_run_counts_every_unlinked_offer(): void
+    {
+        config(['catalog.auto_link' => false]);
+        $cat = $this->makeCategory();
+        // 5 ta taklif: 3 tasi bir xil ISBN (bitta kartaga), 2 tasi alohida
+        foreach ([0, 1, 2] as $i) {
+            $this->makeBook($this->makeSeller(), $cat, ['price' => 40000 + $i]);
+        }
+        $this->makeBook($this->makeSeller(), $cat, ['isbn' => null, 'name' => 'Alohida bir']);
+        $this->makeBook($this->makeSeller(), $cat, ['isbn' => null, 'name' => 'Alohida ikki']);
+        $this->assertSame(5, Books::query()->whereNull('edition_id')->count());
+
+        // Bir nechta bo'lakka bo'linsin (chunkById xatosi shu yerda ushlanadi)
+        $this->artisan('catalog:backfill --dry-run --chunk=2')
+            ->expectsOutputToContain('5')
+            ->assertSuccessful();
+        $this->assertSame(0, BookEdition::count(), 'dry-run bazaga yozmasligi kerak');
+
+        $this->artisan('catalog:backfill --chunk=2')->assertSuccessful();
+        $this->assertSame(0, Books::query()->whereNull('edition_id')->count(), 'barcha takliflar ulanishi kerak');
+        $this->assertSame(3, BookEdition::count());
+    }
 }
