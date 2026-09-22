@@ -104,15 +104,71 @@ export default function Tickets() {
         </div>
       </div>
 
-      <div className="row">
-          {[
-          { label: 'Yangi', val: (ticketCounts.open || 0) + (ticketCounts.queue || 0), icon: 'ti-mail-off', color: 'rgba(var(--warning-dark), 1)' },
-          { label: 'Javob berildi', val: ticketCounts.answered || 0, icon: 'ti-arrow-back-up', color: 'rgba(var(--info), 1)' },
-          { label: 'Yopilgan', val: ticketCounts.closed || 0, icon: 'ti-circle-check', color: 'rgba(var(--success), 1)' },
-          { label: 'Jami', val: ticketCounts.all || 0, icon: 'ti-headset', color: 'rgba(var(--primary), 1)' },
-        ].map((s, kpiIndex) => (<div className="col-xl-3 col-md-6" key={s.label}>
-            <StatWidget index={kpiIndex} label={s.label} value={s.val} />
-          </div>))}
+      <div className="row ticket-app">
+        <div className="col-lg-6">
+          <div className="row">
+            {[
+              { label: 'Yangi murojaatlar', val: (ticketCounts.open || 0) + (ticketCounts.queue || 0), icon: 'ti-mail-opened', tone: 'primary', statuses: ['open', 'queue'] },
+              { label: 'Javob kutilmoqda', val: (ticketCounts.waiting || 0) + (ticketCounts.active || 0), icon: 'ti-clock-hour-4', tone: 'info', statuses: ['waiting', 'active'] },
+              { label: 'Javob berilgan', val: ticketCounts.answered || 0, icon: 'ti-checks', tone: 'success', statuses: ['answered'] },
+              { label: 'Yopilgan', val: ticketCounts.closed || 0, icon: 'ti-archive', tone: 'warning', statuses: ['closed', 'rated'] },
+            ].map((card) => {
+              const people = Array.from(new Set(tickets.filter((ticket) => card.statuses.includes(String(ticket.status))).map((ticket) => String(ticket.user || '')).filter(Boolean)));
+              return (
+                <div className="col-sm-6" key={card.label}>
+                  <div className={`card ticket-card bg-light-${card.tone}`} role="button" onClick={() => { setActiveTab(card.statuses[0]); loadTickets(1, card.statuses[0]); }}>
+                    <div className="card-body">
+                      <i className="ph-bold ph-circle circle-bg-img"></i>
+                      <div className="h-50 w-50 d-flex-center b-r-15 bg-white mb-3"><i className={`ti ${card.icon} f-s-25 text-${card.tone}`}></i></div>
+                      <p className="f-s-16 mb-2">{card.label}</p>
+                      <div className="d-flex justify-content-between align-items-center">
+                        <h3 className={`text-${card.tone}-dark mb-0`}>{card.val}</h3>
+                        {people.length ? (
+                          <ul className="avatar-group list-unstyled mb-0">
+                            {people.slice(0, 3).map((name) => <li key={name} className="b-r-50" title={name}><PAvatar name={name} size="xs" className="b-2-light" /></li>)}
+                            {people.length > 3 ? <li className="bg-white text-dark h-30 w-30 d-flex-center b-r-50 f-s-12 f-w-600">{people.length - 3}+</li> : null}
+                          </ul>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        <div className="col-lg-6">
+          <div className="card create-ticket-card">
+            <div className="card-body">
+              <div className="row align-items-center">
+                <div className="col-sm-7">
+                  <div className="ticket-create">
+                    <h5 className="mb-2">Support markazi</h5>
+                    <p className="mb-4 mt-3 text-secondary">Mijozlar va sellerlarning barcha murojaatlari bir joyda: yangi murojaatlarga tez javob bering, yopilganlarini baholang va manba bo'yicha filtrlang.</p>
+                    <div className="d-flex flex-wrap gap-2">
+                      <button type="button" className="btn btn-light-primary" onClick={() => { setActiveSource('user'); loadTickets(1, activeTab, search, 'user'); }}><i className="ti ti-user me-1"></i>Mijozlar</button>
+                      <button type="button" className="btn btn-light-info" onClick={() => { setActiveSource('seller'); loadTickets(1, activeTab, search, 'seller'); }}><i className="ti ti-building-store me-1"></i>Sellerlar</button>
+                    </div>
+                  </div>
+                </div>
+                <div className="col-sm-5 d-none d-sm-block">
+                  <span className="h-120 w-120 d-flex-center b-r-50 bg-light-primary mx-auto"><i className="ti ti-headset f-s-50 text-primary"></i></span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <h5 className="ms-2 mb-2">Holatlar bo'yicha</h5>
+          <ul className="ticket-slider list-unstyled row g-0 mb-0">
+            {(['open', 'answered', 'waiting', 'closed'] as const).map((key) => (
+              <li className="col-6" key={key}>
+                <div className="ticket-catagory p-3 gap-2" role="button" onClick={() => { setActiveTab(key); loadTickets(1, key); }}>
+                  <h6 className="mb-0 f-s-14 txt-ellipsis-1">{statusLabel(key)}</h6>
+                  <span className={`badge ${activeTab === key ? 'text-light-primary' : 'text-light-success'}`}>{ticketCounts[key] || 0}</span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
 
       <div className="card">

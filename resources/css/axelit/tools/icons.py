@@ -8,8 +8,8 @@ import re, sys, os, subprocess
 from fontTools import subset
 from fontTools.ttLib import TTFont
 
-AX = os.environ.get('AXELIT_VENDOR', 'vendor')  # Axelit'ning assets/vendor/ionio-icon/css/iconoir.css joylashgan papka
-NM = os.environ.get('ICONS_NODE_MODULES', 'node_modules')  # @tabler/icons-webfont@2.4.0 va @phosphor-icons/web@2.0.3
+AX = '/home/claude/axelit/vendor'
+NM = '/home/claude/axref/node_modules'
 classes = set(open(sys.argv[1]).read().split())
 out = sys.argv[2]
 os.makedirs(os.path.join(out, 'fonts'), exist_ok=True)
@@ -45,6 +45,19 @@ def mk_subset(src, dst, cps):
     for t in ('GSUB', 'GPOS', 'GDEF'):
         if t in f: del f[t]
     s = subset.Subsetter(opts); s.populate(unicodes=sorted(cps)); s.subset(f)
+    # Tabler/Phosphor shriftlarida hmtx lsb glif xMin bilan mos emas (lsb=0, xMin>0).
+    # Linux'da sezilmaydi, lekin macOS/iOS (CoreText) glifni lsb-xMin ga suradi —
+    # ikonka aylana/kvadrat ichida chapga siljiydi. lsb ni haqiqiy xMin ga tenglaymiz.
+    if 'glyf' in f:
+        glyf, hmtx = f['glyf'], f['hmtx']
+        for gname in f.getGlyphOrder():
+            gl = glyf[gname]
+            if gl.numberOfContours == 0:
+                continue
+            gl.recalcBounds(glyf)
+            # Advance o'zgarmaydi (Tabler: 1411 — Axelit .ti{letter-spacing:-.43em} shunga moslangan).
+            adv, _ = hmtx[gname]
+            hmtx[gname] = (adv, gl.xMin)
     f.flavor = 'woff2'; f.save(dst)
     return os.path.getsize(dst)
 sz = mk_subset(f'{NM}/@tabler/icons-webfont/fonts/tabler-icons.ttf', f'{out}/fonts/tabler-icons.woff2', ti_cps)

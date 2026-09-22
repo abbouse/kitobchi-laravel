@@ -178,3 +178,10 @@ body.dark .kc-segment .nav-link { color: rgba(235, 235, 245, .75); }
 body.dark .kc-segment .nav-link.active { background-color: #636366 !important; color: #fff !important; box-shadow: 0 3px 8px rgba(0, 0, 0, .3); }
 body.dark .kc-segment .nav-link .badge { background-color: rgba(0, 0, 0, .25) !important; color: rgba(235, 235, 245, .8) !important; }
 body.dark .kc-segment .nav-link.active .badge { background-color: rgba(255, 255, 255, .18) !important; color: #fff !important; }
+
+/* ── Ko'rish sahifalaridagi amal qatorlari (components/FormAction · ActionRow) ── */
+.kc-action-row:last-child { border-bottom: 0 !important; }
+/* Axelit sarlavhalarni "capitalize" qiladi — o'zbekcha ("Siyosatlar Va Qoidalar") noto'g'ri chiqadi */
+.main-title { text-transform: none; }
+.kc-action-row .kc-action-text { flex-basis: 160px; }
+.kc-segment.kc-segment-wrap { flex-wrap: wrap; overflow: visible; }

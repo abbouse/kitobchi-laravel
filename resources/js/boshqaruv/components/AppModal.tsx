@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { Children, Fragment, createContext, isValidElement, useContext, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Modal as BsModal } from 'react-bootstrap';
 import { Link, usePage } from '@inertiajs/react';
@@ -90,7 +90,8 @@ function AppModal({ show, onHide, size, onExited, page, className, children, scr
   if (asPage) return <ShowPage show={show} onHide={onHide} onExited={onExited}>{children}</ShowPage>;
   return (
     <BsModal show={show} onHide={onHide} size={size} centered scrollable={scrollable} onExited={onExited} className={`app-modal ${className || ''}`}>
-      {children}
+      {/* Show-sahifa ichidan ochilgan oddiy modal sahifa sarlavhasini meros olmasin */}
+      <PageCtx.Provider value={null}>{children}</PageCtx.Provider>
     </BsModal>
   );
 }
@@ -181,9 +182,31 @@ function PageBody({ children, className }: { children?: ReactNode; className?: s
   );
 }
 
+// Sahifa rejimida pastdagi "Yopish"/"Bekor qilish" tugmalari kerak emas — sarlavhada "Orqaga" va "Yopish" bor
+const CLOSE_LABELS = new Set(['Yopish', 'Bekor qilish', 'Bekor', 'Close']);
+function textOf(node: ReactNode): string {
+  if (typeof node === 'string' || typeof node === 'number') return String(node);
+  if (Array.isArray(node)) return node.map(textOf).join('');
+  if (isValidElement(node)) return textOf((node.props as { children?: ReactNode }).children);
+  return '';
+}
+function withoutCloseButtons(children: ReactNode): ReactNode[] {
+  return Children.toArray(children).flatMap((child) => {
+    if (isValidElement(child) && child.type === Fragment) return withoutCloseButtons((child.props as { children?: ReactNode }).children);
+    if (isValidElement(child)) {
+      const props = child.props as { type?: string; children?: ReactNode };
+      if (props.type !== 'submit' && CLOSE_LABELS.has(textOf(props.children).trim())) return [];
+    }
+    return [child];
+  });
+}
+
 function Footer({ children, className }: { children?: ReactNode; className?: string }) {
   const ctx = useContext(PageCtx);
   if (!ctx) return <BsModal.Footer className={className}>{children}</BsModal.Footer>;
+  const kept = withoutCloseButtons(children);
+  if (!kept.length) return null;
+  children = kept;
   return (
     <div className="card position-sticky bottom-0 z-2">
       <div className={`card-body d-flex flex-wrap align-items-center justify-content-end gap-2 py-3 ${className || ''}`}>{children}</div>

@@ -11,6 +11,7 @@ import { tiIcon } from '../utils/icons';
 import { PageCrumbs } from '../Layout';
 import { MiniStat } from '../components/Axelit';
 import { ProfileCard } from '../components/Profile';
+import FormAction, { ActionRow } from '../components/FormAction';
 
 type DetailProps = Seller & {
   isStaffView: boolean;
@@ -302,12 +303,15 @@ function ContractTab({ seller, pagination, onPage }: { seller: DetailProps; pagi
         ['Izoh', String(seller.contract?.notes || '—')],
       ]} />
       <div className="col-xl-6">
-        <div className="card h-100"><div className="card-header"><h5 className="mb-0">Tez uzaytirish</h5></div><div className="card-body">
-            <form onSubmit={(event) => { event.preventDefault(); if (seller.actions?.extendContractUrl) router.patch(seller.actions.extendContractUrl, Object.fromEntries(new FormData(event.currentTarget)) as Record<string, string>, { preserveScroll: true }); }} className="row g-2">
-              <div className="col-4"><select name="months" className="form-select form-select-sm" defaultValue="12"><option value="3">3 oy</option><option value="6">6 oy</option><option value="12">12 oy</option><option value="24">24 oy</option></select></div>
-              <div className="col-8"><input name="notes" className="form-control form-control-sm" placeholder="Izoh" /></div>
-              <div className="col-12"><button type="submit" className="btn btn-sm btn-primary border-0">Uzaytirish</button></div>
-            </form>
+        <div className="card h-100"><div className="card-header"><h5 className="mb-0">Shartnomani uzaytirish</h5></div><div className="card-body pt-0">
+            <ActionRow icon="ti ti-calendar-plus" tone="success" title="Tez uzaytirish" value={seller.contract?.expiresAt ? `Tugash: ${String(seller.contract.expiresAt)}` : 'Muddat kiritilmagan'} meta={seller.contract?.daysRemaining !== undefined && seller.contract?.daysRemaining !== null ? `${String(seller.contract.daysRemaining)} kun qoldi` : undefined} action={
+              <FormAction label="Uzaytirish" icon="ti ti-calendar-plus" title="Shartnomani uzaytirish" submitLabel="Uzaytirish" disabled={!seller.actions?.extendContractUrl} onSubmit={(event) => { event.preventDefault(); if (seller.actions?.extendContractUrl) router.patch(seller.actions.extendContractUrl, Object.fromEntries(new FormData(event.currentTarget)) as Record<string, string>, { preserveScroll: true }); }}>
+                <div className="row g-3">
+              <div className="col-12"><select name="months" className="form-select" defaultValue="12"><option value="3">3 oy</option><option value="6">6 oy</option><option value="12">12 oy</option><option value="24">24 oy</option></select></div>
+              <div className="col-12"><input name="notes" className="form-control" placeholder="Izoh" /></div>
+</div>
+              </FormAction>
+            } />
           </div></div>
       </div>
       <div className="col-12">
@@ -354,10 +358,12 @@ function LegalTab({ seller }: { seller: DetailProps }) {
 
 function DocumentsTab({ seller, pagination, onPage, onUpload }: { seller: DetailProps; pagination: PaginationMeta; onPage: (p: number) => void; onUpload: (e: FormEvent<HTMLFormElement>) => void }) {
   return (
-    <div className="b-1-light b-r-15 p-3">
-      <form onSubmit={onUpload} className="row g-2 mb-4">
-        <div className="col-md-3">
-          <select name="type" className="form-select form-select-sm" required>
+    <div className="card">
+      <div className="card-header d-flex align-items-center justify-content-between gap-2">
+        <h5 className="mb-0">Hujjatlar</h5>
+        <FormAction label="Hujjat yuklash" icon="ti ti-upload" title="Hujjat yuklash" submitLabel="Yuklash" onSubmit={onUpload}>
+          <label className="form-label">Hujjat turi</label>
+          <select name="type" className="form-select mb-3" required>
             <option value="passport">Pasport</option>
             <option value="contract">Shartnoma</option>
             <option value="inn_certificate">STIR guvohnomasi</option>
@@ -366,16 +372,19 @@ function DocumentsTab({ seller, pagination, onPage, onUpload }: { seller: Detail
             <option value="addendum">Qo'shimcha kelishuv</option>
             <option value="other">Boshqa</option>
           </select>
-        </div>
-        <div className="col-md-4"><input type="file" name="file" className="form-control form-control-sm" accept=".pdf,image/*" required /></div>
-        <div className="col-md-3"><input name="description" className="form-control form-control-sm" placeholder="Izoh" /></div>
-        <div className="col-md-2"><button type="submit" className="btn btn-sm btn-primary border-0 w-100">Yuklash</button></div>
-      </form>
+          <label className="form-label">Fayl</label>
+          <input type="file" name="file" className="form-control mb-3" accept=".pdf,image/*" required />
+          <label className="form-label">Izoh</label>
+          <input name="description" className="form-control" placeholder="Izoh" />
+        </FormAction>
+      </div>
+      <div className="card-body">
       <div className="d-grid gap-2">
         {(seller.documents || []).map((item) => (
-          <div className="d-flex justify-content-between align-items-center b-1-light b-r-10 p-3 gap-2" key={String(item.id)}>
-            <div>
-              <strong>{String(item.typeLabel || item.type || 'Hujjat')}</strong>
+          <div className="d-flex justify-content-between align-items-center b-b-1-light py-3 gap-2 kc-action-row" key={String(item.id)}>
+            <span className="h-40 w-40 d-flex-center b-r-10 f-s-20 flex-shrink-0 text-light-info"><i className="ti ti-file-text"></i></span>
+            <div className="flex-grow-1 min-w-0">
+              <h6 className="mb-0 f-w-600 f-s-14">{String(item.typeLabel || item.type || 'Hujjat')}</h6>
               <div className="f-s-13 text-muted">{String(item.name || '—')} · {String(item.size || 0)} KB · {String(item.date || '—')}</div>
               {item.uploadedBy ? <div className="f-s-13 text-muted">Yukladi: {String(item.uploadedBy)}</div> : null}
               {item.description ? <div className="f-s-13 text-muted">{String(item.description)}</div> : null}
@@ -389,6 +398,7 @@ function DocumentsTab({ seller, pagination, onPage, onUpload }: { seller: Detail
         {(seller.documents || []).length === 0 ? <div className="text-muted f-s-13">Hujjat topilmadi</div> : null}
       </div>
       <PaginationControls {...pagination} onPageChange={onPage} />
+      </div>
     </div>
   );
 }
@@ -449,8 +459,8 @@ function StaffTab({ seller }: { seller: DetailProps }) {
   };
 
   return (
-    <div className="b-1-light b-r-15 p-3">
-      {loading && !data ? <div className="text-center text-muted py-4">Yuklanmoqda...</div> : null}
+    <div className="card"><div className="card-header"><h5 className="mb-0">Hodimlar</h5></div><div className="card-body">
+      {loading && !data ? <div className="text-center py-4"><span className="spinner-border text-primary"></span></div> : null}
       {data ? (
         <>
           {data.staff.length ? (
@@ -488,23 +498,21 @@ function StaffTab({ seller }: { seller: DetailProps }) {
             </div>
           ) : <p className="text-muted">Bu do&apos;konda hali hodim yo&apos;q.</p>}
 
-          {showAdd ? (
-            <form onSubmit={submitAdd} className="b-1-light b-r-15 p-3">
-              <h6 className="f-w-600 mb-3">Yangi hodim qo&apos;shish</h6>
-              <div className="row g-2">
-                <div className="col-md-6"><label className="form-label">Ism</label><input name="firstname" required maxLength={50} className="form-control form-control-sm" /></div>
-                <div className="col-md-6"><label className="form-label">Familiya</label><input name="lastname" required maxLength={50} className="form-control form-control-sm" /></div>
-                <div className="col-md-6"><label className="form-label">Telefon</label><input name="phone_number" required maxLength={20} placeholder="+998901234567" className="form-control form-control-sm" /></div>
-                <div className="col-md-6"><label className="form-label">Parol <span className="text-muted">(bo&apos;sh qoldirilsa avtomatik yaratiladi)</span></label><input name="password" minLength={6} maxLength={64} className="form-control form-control-sm" /></div>
+          <FormAction label="Hodim qo'shish" icon="ti ti-user-plus" variant="primary" title="Yangi hodim qo'shish" description="Parol bo'sh qoldirilsa avtomatik yaratiladi va SMS bilan yuboriladi." submitLabel="Qo'shish" disabled={data.locations.length === 0} onSubmit={submitAdd}>
+              <div className="row g-3">
+                <div className="col-md-6"><label className="form-label">Ism</label><input name="firstname" required maxLength={50} className="form-control" /></div>
+                <div className="col-md-6"><label className="form-label">Familiya</label><input name="lastname" required maxLength={50} className="form-control" /></div>
+                <div className="col-md-6"><label className="form-label">Telefon</label><input name="phone_number" required maxLength={20} placeholder="+998901234567" className="form-control" /></div>
+                <div className="col-md-6"><label className="form-label">Parol <span className="text-muted">(bo&apos;sh qoldirilsa avtomatik yaratiladi)</span></label><input name="password" minLength={6} maxLength={64} className="form-control" /></div>
                 <div className="col-md-6">
                   <label className="form-label">Rol</label>
-                  <select name="role" className="form-select form-select-sm" value={role} onChange={(e) => setRole(Number(e.target.value))}>
+                  <select name="role" className="form-select" value={role} onChange={(e) => setRole(Number(e.target.value))}>
                     {data.roles.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
                   </select>
                 </div>
                 <div className="col-md-6">
                   <label className="form-label">Filial</label>
-                  <select name="seller_location_id" required className="form-select form-select-sm" defaultValue={data.locations[0]?.id ?? ''}>
+                  <select name="seller_location_id" required className="form-select" defaultValue={data.locations[0]?.id ?? ''}>
                     {data.locations.map((location) => <option key={location.id} value={location.id}>{location.fullAddress}{location.isMain ? ' (asosiy)' : ''}</option>)}
                   </select>
                 </div>
@@ -515,20 +523,11 @@ function StaffTab({ seller }: { seller: DetailProps }) {
                   </div>
                 ) : null}
               </div>
-              <div className="d-flex gap-2 mt-3">
-                <button className="btn btn-sm btn-primary border-0" type="submit">Qo&apos;shish (parol SMS bilan boradi)</button>
-                <button className="btn btn-sm btn-light-secondary" type="button" onClick={() => setShowAdd(false)}>Bekor</button>
-              </div>
-            </form>
-          ) : (
-            <button className="btn btn-sm btn-primary border-0" type="button" onClick={() => setShowAdd(true)} disabled={data.locations.length === 0}>
-              <i className="ti ti-user-plus me-1"></i>Hodim qo&apos;shish
-            </button>
-          )}
+          </FormAction>
           {data.locations.length === 0 ? <small className="text-danger d-block mt-2">Do&apos;konda faol filial yo&apos;q — avval filial kerak.</small> : null}
         </>
       ) : null}
-    </div>
+    </div></div>
   );
 }
 
@@ -542,7 +541,7 @@ function OrdersTab({ orders, pagination, statuses, onPage, onPatch }: {
   const [expanded, setExpanded] = useState<number | null>(null);
 
   return (
-    <div className="b-1-light b-r-15 p-3">
+    <div className="card"><div className="card-body">
       <div className="table-responsive app-scroll">
         <table className="table table-bottom-border align-middle">
           <thead><tr><th></th><th>ID</th><th>Mijoz</th><th>Summa</th><th>Mahsulot</th><th>Holat</th><th>Sana</th></tr></thead>
@@ -595,13 +594,13 @@ function OrdersTab({ orders, pagination, statuses, onPage, onPatch }: {
         </table>
       </div>
       <PaginationControls {...pagination} onPageChange={onPage} />
-    </div>
+    </div></div>
   );
 }
 
 function TransactionsTab({ transactions, pagination, onPage }: { transactions: Array<Record<string, unknown>>; pagination: PaginationMeta; onPage: (p: number) => void }) {
   return (
-    <div className="b-1-light b-r-15 p-3">
+    <div className="card"><div className="card-body">
       <div className="table-responsive app-scroll">
         <table className="table table-bottom-border align-middle">
           <thead><tr><th>Sana</th><th>Tur</th><th>Summa</th><th>Komissiya</th><th>Net</th><th>Holat</th></tr></thead>
@@ -621,13 +620,13 @@ function TransactionsTab({ transactions, pagination, onPage }: { transactions: A
         </table>
       </div>
       <PaginationControls {...pagination} onPageChange={onPage} />
-    </div>
+    </div></div>
   );
 }
 
 function BanLogsTab({ banLogs, pagination, onPage, warningCount }: { banLogs: Array<Record<string, unknown>>; pagination: PaginationMeta; onPage: (p: number) => void; warningCount?: number }) {
   return (
-    <div className="b-1-light b-r-15 p-3">
+    <div className="card"><div className="card-body">
       <div className="mb-3"><span className={`badge ${(warningCount || 0) >= 3 ? 'text-light-danger' : (warningCount || 0) > 0 ? 'text-light-warning' : 'text-light-secondary'}`}>Faol ogohlantirishlar: {warningCount || 0}/3</span></div>
       <div className="d-grid gap-2">
         {banLogs.map((item) => (
@@ -645,6 +644,6 @@ function BanLogsTab({ banLogs, pagination, onPage, warningCount }: { banLogs: Ar
         {banLogs.length === 0 ? <div className="text-muted f-s-13">Ogohlantirish topilmadi</div> : null}
       </div>
       <PaginationControls {...pagination} onPageChange={onPage} />
-    </div>
+    </div></div>
   );
 }

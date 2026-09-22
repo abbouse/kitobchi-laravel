@@ -11,6 +11,8 @@ import { ReassignSellerModal, ReassignSellerOption } from '../components/SellerC
 import { MiniStat, StatWidget } from '../components/Axelit';
 import { tiIcon } from '../utils/icons';
 import { ProfileCard, Avatar as PAvatar } from '../components/Profile';
+import { ActionRow } from '../components/FormAction';
+import FormAction from '../components/FormAction';
 
 const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n || 0);
 
@@ -942,6 +944,149 @@ export default function Orders() {
                   ))}
                 </div>
 
+                <div className="card">
+                  <div className="card-header d-flex align-items-center justify-content-between gap-2">
+                    <h5 className="mb-0">Boshqaruv amallari</h5>
+                    <span className={`badge text-uppercase ${toneBadge(toneOf(statusChip(selectedOrd.status)))}`}>{statusLabel(selectedOrd.status)}</span>
+                  </div>
+                  <div className="card-body pt-0">
+                    <ActionRow
+                      icon="ti ti-status-change"
+                      title="Buyurtma statusi"
+                      value={statusLabel(selectedOrd.status)}
+                      meta="Mijoz va seller ilovasida shu holat ko'rinadi"
+                      action={
+                        <FormAction label="O'zgartirish" icon="ti ti-edit" title="Statusni o'zgartirish" disabled={!selectedOrd.statusUrl} onSubmit={(event) => { event.preventDefault(); const value = String(new FormData(event.currentTarget).get('status') || ''); if (value && normalizeStatus(value) !== normalizeStatus(selectedOrd.status)) handleUpdateStatus(value); }}>
+                          <div className="d-grid gap-2">
+                            {statusOptions.map((status) => (
+                              <label key={status.code} className="d-flex align-items-center gap-2 b-1-light b-r-10 px-3 py-2 m-0" role="button">
+                                <input className="form-check-input m-0" type="radio" name="status" value={status.code} defaultChecked={normalizeStatus(selectedOrd.status) === status.code} />
+                                <span className="f-w-500">{status.label}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </FormAction>
+                      }
+                    />
+                    {selectedOrd.deliveryType === 'postal' && selectedOrd.postalInfo ? (
+                      <ActionRow
+                        icon="ti ti-mail-fast"
+                        tone="info"
+                        title="Pochta ma'lumotlari"
+                        value={[selectedOrd.postalInfo.providers.find((provider) => provider.code === selectedOrd.postalInfo?.provider)?.name || selectedOrd.postalInfo.provider, selectedOrd.postalInfo.tracking].filter(Boolean).join(' · ') || 'Kiritilmagan'}
+                        meta={selectedOrd.postalInfo.currentStatus?.title ? `${selectedOrd.postalInfo.currentStatus.providerName || 'Pochta'}: ${selectedOrd.postalInfo.currentStatus.title}${selectedOrd.postalInfo.currentStatus.location ? ` • ${selectedOrd.postalInfo.currentStatus.location}` : ''}` : (selectedOrd.postalInfo.address || "Trek va manzil «yetib keldi» SMS'ida mijozga boradi")}
+                        action={
+                          <FormAction label="Tahrirlash" icon="ti ti-edit" title="Pochta ma'lumotlari" description="Trek va manzil «yetib keldi» SMS'ida mijozga boradi." onSubmit={(event) => submitForm(event, selectedOrd.postalInfo!.saveUrl, 'patch')}>
+                            <label className="form-label">Pochta xizmati</label>
+                            <select name="postal_provider" className="form-select mb-3" defaultValue={selectedOrd.postalInfo.provider || 'uzpost'}>
+                              {selectedOrd.postalInfo.providers.map((provider) => <option key={provider.code} value={provider.code}>{provider.name}</option>)}
+                            </select>
+                            <label className="form-label">Trek raqami</label>
+                            <input name="tracking" className="form-control mb-3" maxLength={64} defaultValue={selectedOrd.postalInfo.tracking} placeholder="MM196558286UZ" />
+                            <label className="form-label">Pochta bo'limi manzili</label>
+                            <input name="postal_office_address" className="form-control" maxLength={255} defaultValue={selectedOrd.postalInfo.address} placeholder="Toshkent sh., Chilonzor t., 5-pochta bo'limi" />
+                          </FormAction>
+                        }
+                      />
+                    ) : null}
+                    <ActionRow
+                      icon="ti ti-route"
+                      tone="success"
+                      title="Yetkazish oqimi"
+                      value={fulfillmentModeLabel(selectedOrd.fulfillment?.mode)}
+                      meta={formatAudit(selectedOrd.fulfillment?.lastModeSwitch) !== '—' ? `Oxirgi: ${formatAudit(selectedOrd.fulfillment?.lastModeSwitch)}` : 'Buyurtma qaysi yo‘l bilan bajarilishi'}
+                      action={
+                        <FormAction label="Almashtirish" icon="ti ti-arrows-exchange" title="Yetkazish oqimini almashtirish" disabled={!selectedOrd.switchModeUrl} onSubmit={(event) => submitForm(event, selectedOrd.switchModeUrl)}>
+                          <label className="form-label">Yangi oqim</label>
+                          <select name="target_mode" className="form-select mb-3" defaultValue={selectedOrd.fulfillment?.mode || selectedOrd.fulfillmentModes?.[0]?.value || ''} required>
+                            {(selectedOrd.fulfillmentModes || []).map((mode) => <option value={mode.value} key={mode.value}>{mode.label}</option>)}
+                          </select>
+                          <label className="form-label">Qaysi hubga biriktirilsin</label>
+                          <select name="hub_id" className="form-select mb-3" defaultValue="">
+                            <option value="">Auto tanlash</option>
+                            {(selectedOrd.activeHubs || []).map((hub) => <option value={hub.id} key={hub.id}>{hub.label}</option>)}
+                          </select>
+                          <label className="form-label">Sabab</label>
+                          <textarea name="override_note" className="form-control" rows={2} placeholder="Nega logistika yo'li o'zgaryapti?" />
+                        </FormAction>
+                      }
+                    />
+                    <ActionRow
+                      icon="ti ti-building-warehouse"
+                      tone="warning"
+                      title="Mas'ul hub"
+                      value={selectedOrd.fulfillment?.hub || 'Biriktirilmagan'}
+                      meta={formatAudit(selectedOrd.fulfillment?.lastHubReroute) !== '—' ? `Oxirgi: ${formatAudit(selectedOrd.fulfillment?.lastHubReroute)}` : undefined}
+                      action={
+                        <FormAction label="Almashtirish" icon="ti ti-arrows-exchange" title="Mas'ul hubni almashtirish" disabled={!selectedOrd.rerouteHubUrl} onSubmit={(event) => submitForm(event, selectedOrd.rerouteHubUrl)}>
+                          <label className="form-label">Yangi hub</label>
+                          <select name="hub_id" className="form-select mb-3" defaultValue="" required>
+                            <option value="" disabled>Hub tanlang</option>
+                            {(selectedOrd.activeHubs || []).map((hub) => <option value={hub.id} key={hub.id}>{hub.label}</option>)}
+                          </select>
+                          <label className="form-label">Almashtirish sababi</label>
+                          <textarea name="reroute_note" className="form-control" rows={2} placeholder="Masalan: mijozga yaqinroq hub tanlandi" />
+                        </FormAction>
+                      }
+                    />
+                    <ActionRow
+                      icon="ti ti-truck-return"
+                      tone="secondary"
+                      title="Pochta qaytimi va jarima"
+                      value={`${fmt(selectedOrd.postalReturnFee || 0)} so'm · ${postalReturnLabel(selectedOrd.postalReturnStatus)}`}
+                      meta="Qaytgan deb belgilaydi, jarima yozadi va to'langach qayta yuborishni ochadi"
+                      action={
+                        <FormAction label="Belgilash" icon="ti ti-edit" title="Pochta qaytimi / jarima / qayta yuborish" description="Bu amal buyurtmani qaytgan deb belgilaydi, jarima summasini yozadi va mijoz to'lagach qayta yuborish oqimini ochadi." disabled={!selectedOrd.postalReturnUrl} submitLabel="Qaytgan deb belgilash" onSubmit={(event) => submitForm(event, selectedOrd.postalReturnUrl, 'patch')}>
+                          <label className="form-label">Qaytim xarajati (so'm)</label>
+                          <input name="postal_return_fee" type="number" min={0} max={1000000} className="form-control mb-3" defaultValue={selectedOrd.postalReturnFee || 0} required />
+                          <label className="form-label">Izoh</label>
+                          <textarea name="postal_return_note" className="form-control" rows={2} defaultValue={selectedOrd.postalReturnNote || ''} />
+                        </FormAction>
+                      }
+                    />
+                    {selectedOrd.canPayPendingCard ? (
+                      <ActionRow
+                        icon="ti ti-credit-card"
+                        tone="info"
+                        title="Kartadan to'lovga urinish"
+                        value={`${(selectedOrd.customerCards || []).length} ta saqlangan karta`}
+                        meta="Kartada summa bron qilinadi (hold), yakuniy yechish odatdagidek"
+                        action={
+                          <FormAction label="Urinish" icon="ti ti-credit-card" title="Kartadan to'lovga urinish" description="Mijozning saqlangan kartasidan to'lovga urinish — summa bron qilinadi (hold), yakuniy yechib olish buyurtma seller/kuryerga topshirilganda avtomatik amalga oshadi." submitLabel="To'lovga urinish" disabled={(selectedOrd.customerCards || []).length === 0} onSubmit={(event) => submitForm(event, selectedOrd.payPendingCardUrl)}>
+                            <label className="form-label">Karta</label>
+                            <select name="card_id" className="form-select" required>
+                              {(selectedOrd.customerCards || []).map((card) => (
+                                <option value={card.id} key={card.id}>{[card.maskedNumber, card.vendor].filter(Boolean).join(' / ')}{card.isDefault ? ' (asosiy)' : ''}</option>
+                              ))}
+                            </select>
+                          </FormAction>
+                        }
+                      />
+                    ) : null}
+                    {(selectedOrd.cancelUrl && canCancelOrder(selectedOrd.status)) || (selectedOrd.canRefundPayment && selectedOrd.refundConfirmationPhrase) ? (
+                      <ActionRow
+                        icon="ti ti-alert-octagon"
+                        tone="danger"
+                        title="Riskli amallar"
+                        meta="Bekor qilish va to'lovni qaytarish"
+                        action={<>
+                          {selectedOrd.cancelUrl && canCancelOrder(selectedOrd.status) ? <button type="button" className="btn btn-sm btn-light-danger" onClick={() => confirm('Buyurtma bekor qilinsinmi?') && postPrompt(selectedOrd.cancelUrl, {})}><i className="ti ti-x me-1"></i>Bekor qilish</button> : null}
+                          {selectedOrd.canRefundPayment && selectedOrd.refundConfirmationPhrase ? (
+                            <FormAction label="Refund + bekor" icon="ti ti-receipt-refund" variant="danger" title="Refund + bekor qilish" submitLabel="Refund + bekor qilish" submitVariant="danger" onSubmit={(event) => submitForm(event, selectedOrd.refundCancelUrl)}>
+                              <div className="alert alert-light-danger f-s-13">Tasdiqlash uchun quyidagi matnni kiriting: <strong>{selectedOrd.refundConfirmationPhrase}</strong></div>
+                              <label className="form-label">Tasdiqlash matni</label>
+                              <input name="confirmation_phrase" className="form-control mb-3" placeholder={selectedOrd.refundConfirmationPhrase} required />
+                              <label className="form-label">Refund sababi</label>
+                              <input name="reason" className="form-control" placeholder="Refund sababi" />
+                            </FormAction>
+                          ) : null}
+                        </>}
+                      />
+                    ) : null}
+                    {selectedOrd.activeHubs?.length ? <div className="text-muted f-s-12 pt-3">Faol hub ID: {selectedOrd.activeHubs.map((hub) => `${hub.id}: ${hub.label}`).join(' · ')}</div> : null}
+                  </div>
+                </div>
+
                 <div className="card"><div className="card-header"><h5 className="mb-0">Mahsulotlar</h5></div><div className="card-body">
                     <div className="table-responsive app-scroll">
                       <table className="table table-bottom-border align-middle">
@@ -986,19 +1131,29 @@ export default function Orders() {
                                 )}
                               </td>
                               {showItemRefundColumn ? (
-                                <td style={{ minWidth: 260 }}>
+                                <td>
                                   {item.canRefund && item.refundUrl ? (
-                                    <form onSubmit={(event) => submitForm(event, item.refundUrl)} className="d-flex flex-column gap-2">
-                                      <select name="reason_code" className="form-select form-select-sm" defaultValue={(selectedOrd.refundReasonCatalog?.item || [])[0]?.code || 'product_out_of_stock'} required>
+                                    <FormAction
+                                      label="Refund"
+                                      icon="ti ti-receipt-refund"
+                                      variant="light-danger"
+                                      title={`Refund: ${item.name}`}
+                                      description="Faqat shu mahsulot refund qilinadi."
+                                      submitLabel="Refund qilish"
+                                      submitVariant="danger"
+                                      onSubmit={(event) => submitForm(event, item.refundUrl)}
+                                    >
+                                      <label className="form-label">Sabab</label>
+                                      <select name="reason_code" className="form-select mb-3" defaultValue={(selectedOrd.refundReasonCatalog?.item || [])[0]?.code || 'product_out_of_stock'} required>
                                         {(selectedOrd.refundReasonCatalog?.item || []).map((reason) => (
                                           <option value={reason.code} key={reason.code}>
                                             {reason.notes?.uz}{reason.auto_zero_stock ? ' · stock 0' : ''}
                                           </option>
                                         ))}
                                       </select>
-                                      <input name="custom_note" className="form-control form-control-sm" placeholder="Custom izoh kerak bo‘lsa" />
-                                      <button className="btn btn-sm btn-outline-danger">Faqat shu mahsulotni refund qilish</button>
-                                    </form>
+                                      <label className="form-label">Izoh (ixtiyoriy)</label>
+                                      <textarea name="custom_note" className="form-control" rows={2} placeholder="Custom izoh kerak bo‘lsa" />
+                                    </FormAction>
                                   ) : (
                                     <div className="text-muted f-s-13">
                                       {item.isCancelled ? "Bu mahsulot allaqachon bekor qilingan." : 'Refund mumkin emas.'}
@@ -1109,54 +1264,6 @@ export default function Orders() {
                   </div>
                 </div>
 
-                {selectedOrd.deliveryType === 'postal' && selectedOrd.postalInfo ? (
-                  <div className="card"><div className="card-header"><h5 className="mb-0">Pochta ma'lumotlari <span className="text-muted f-s-13 f-w-400">(trek va manzil «yetib keldi» SMS'ida mijozga boradi)</span></h5></div><div className="card-body">
-                      <form
-                        key={[
-                          selectedOrd.id,
-                          selectedOrd.postalInfo.provider,
-                          selectedOrd.postalInfo.tracking,
-                          selectedOrd.postalInfo.address,
-                        ].join(':')}
-                        className="row g-2 align-items-end"
-                        onSubmit={(event) => submitForm(event, selectedOrd.postalInfo!.saveUrl, 'patch')}
-                      >
-                        <div className="col-md-3">
-                          <label className="form-label f-s-13">Pochta xizmati</label>
-                          <select
-                            name="postal_provider"
-                            className="form-select form-select-sm"
-                            defaultValue={selectedOrd.postalInfo.provider || 'uzpost'}
-                          >
-                            {selectedOrd.postalInfo.providers.map((provider) => (
-                              <option key={provider.code} value={provider.code}>{provider.name}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="col-md-3">
-                          <label className="form-label f-s-13">Trek raqami</label>
-                          <input name="tracking" className="form-control form-control-sm" maxLength={64} defaultValue={selectedOrd.postalInfo.tracking} placeholder="MM196558286UZ" />
-                        </div>
-                        <div className="col-md-4">
-                          <label className="form-label f-s-13">Pochta bo'limi manzili</label>
-                          <input name="postal_office_address" className="form-control form-control-sm" maxLength={255} defaultValue={selectedOrd.postalInfo.address} placeholder="Toshkent sh., Chilonzor t., 5-pochta bo'limi" />
-                        </div>
-                        <div className="col-md-2">
-                          <button className="btn btn-sm btn-primary w-100" type="submit">Saqlash</button>
-                        </div>
-                      </form>
-                      {selectedOrd.postalInfo.currentStatus?.title ? (
-                        <div className="f-s-13 text-muted mt-2">
-                          <span className="f-w-600 text-dark">
-                            {selectedOrd.postalInfo.currentStatus.providerName || 'Pochta'}:
-                          </span>{' '}
-                          {selectedOrd.postalInfo.currentStatus.title}
-                          {selectedOrd.postalInfo.currentStatus.location ? ` • ${selectedOrd.postalInfo.currentStatus.location}` : ''}
-                        </div>
-                      ) : null}
-                    </div></div>
-                ) : null}
-
                 <div className="card"><div className="card-header"><h5 className="mb-0">Operatsion timeline</h5></div><div className="card-body">
                     <OrderTimeline rows={selectedOrd.fulfillment?.timeline || []} />
                   </div></div>
@@ -1244,125 +1351,10 @@ export default function Orders() {
                           <Detail label="Kutish rejimi" value="O'chirilgan" />
                         </div>
 
-                        {selectedOrd.canPayPendingCard ? (
-                          <form
-                            className="b-r-10 b-1-light p-3 mt-3"
-                            onSubmit={(event) => submitForm(event, selectedOrd.payPendingCardUrl)}
-                          >
-                            <div className="f-w-600 mb-2">Kartadan to'lovga urinish</div>
-                            <div className="text-muted f-s-13 mb-2">
-                              Bu buyurtma hali karta to'lovini kutmoqda. Mijozning saqlangan kartasidan
-                              to'lovga urinish mumkin — bosilgach, kartada summa bron qilinadi (hold),
-                              yakuniy yechib olish esa buyurtma seller/kuryerga topshirilganda odatdagidek
-                              avtomatik amalga oshadi.
-                            </div>
-                            {(selectedOrd.customerCards || []).length === 0 ? (
-                              <div className="text-muted f-s-13">Mijozning tasdiqlangan saqlangan kartasi topilmadi.</div>
-                            ) : (
-                              <>
-                                <label className="form-label f-s-13 text-muted">Karta</label>
-                                <select name="card_id" className="form-select form-select-sm mb-2" required>
-                                  {(selectedOrd.customerCards || []).map((card) => (
-                                    <option value={card.id} key={card.id}>
-                                      {[card.maskedNumber, card.vendor].filter(Boolean).join(' / ')}
-                                      {card.isDefault ? ' (asosiy)' : ''}
-                                    </option>
-                                  ))}
-                                </select>
-                                <button className="btn btn-sm btn-primary">To'lovga urinish</button>
-                              </>
-                            )}
-                          </form>
-                        ) : null}
                       </div></div>
                   </div>
                 </div>
 
-                <div className="card"><div className="card-header"><h5 className="mb-0">Logistika boshqaruvi</h5></div><div className="card-body">
-                    <div className="row g-3">
-                      <div className="col-xl-6">
-                        <form className="b-r-10 b-1-light p-3 h-100" onSubmit={(event) => submitForm(event, selectedOrd.switchModeUrl)}>
-                          <div className="f-w-600 mb-2">Yetkazish oqimini almashtirish</div>
-                          <label className="form-label f-s-13 text-muted">Yangi oqim</label>
-                          <select name="target_mode" className="form-select form-select-sm mb-2" defaultValue={selectedOrd.fulfillment?.mode || selectedOrd.fulfillmentModes?.[0]?.value || ''} required>
-                            {(selectedOrd.fulfillmentModes || []).map((mode) => <option value={mode.value} key={mode.value}>{mode.label}</option>)}
-                          </select>
-                          <label className="form-label f-s-13 text-muted">Qaysi hubga biriktirilsin</label>
-                          <select name="hub_id" className="form-select form-select-sm mb-2" defaultValue="">
-                            <option value="">Auto tanlash</option>
-                            {(selectedOrd.activeHubs || []).map((hub) => <option value={hub.id} key={hub.id}>{hub.label}</option>)}
-                          </select>
-                          <label className="form-label f-s-13 text-muted">Sabab</label>
-                          <textarea name="override_note" className="form-control form-control-sm mb-3" rows={2} placeholder="Nega logistika yo'li o'zgaryapti?" />
-                          <button className="btn btn-sm btn-primary" disabled={!selectedOrd.switchModeUrl}>Oqimni yangilash</button>
-                        </form>
-                      </div>
-                      <div className="col-xl-6">
-                        <form className="b-r-10 b-1-light p-3 h-100" onSubmit={(event) => submitForm(event, selectedOrd.rerouteHubUrl)}>
-                          <div className="f-w-600 mb-2">Mas'ul hubni almashtirish</div>
-                          <label className="form-label f-s-13 text-muted">Yangi hub</label>
-                          <select name="hub_id" className="form-select form-select-sm mb-2" defaultValue="" required>
-                            <option value="" disabled>Hub tanlang</option>
-                            {(selectedOrd.activeHubs || []).map((hub) => <option value={hub.id} key={hub.id}>{hub.label}</option>)}
-                          </select>
-                          <label className="form-label f-s-13 text-muted">Almashtirish sababi</label>
-                          <textarea name="reroute_note" className="form-control form-control-sm mb-3" rows={2} placeholder="Masalan: mijozga yaqinroq hub tanlandi" />
-                          <button className="btn btn-sm btn-outline-secondary" disabled={!selectedOrd.rerouteHubUrl}>Hubni yangilash</button>
-                        </form>
-                      </div>
-                      <div className="col-xl-6">
-                        <form className="b-r-10 b-1-light p-3 h-100" onSubmit={(event) => submitForm(event, selectedOrd.postalReturnUrl, 'patch')}>
-                          <div className="f-w-600 mb-2">Pochta qaytimi / jarima / qayta yuborish</div>
-                          <div className="text-muted f-s-13 mb-2">
-                            Bu blok buyurtmani qaytgan deb belgilaydi, jarima summasini yozadi va mijoz to'lagach qayta yuborish oqimini ochadi.
-                          </div>
-                          <label className="form-label f-s-13 text-muted">Qaytim xarajati</label>
-                          <input name="postal_return_fee" type="number" min={0} max={1000000} className="form-control form-control-sm mb-2" defaultValue={selectedOrd.postalReturnFee || 0} required />
-                          <label className="form-label f-s-13 text-muted">Izoh</label>
-                          <textarea name="postal_return_note" className="form-control form-control-sm mb-3" rows={2} defaultValue={selectedOrd.postalReturnNote || ''} />
-                          <button className="btn btn-sm btn-outline-secondary" disabled={!selectedOrd.postalReturnUrl}>Jarima qo'yib qaytgan deb belgilash</button>
-                        </form>
-                      </div>
-                      <div className="col-xl-6">
-                        <div className="b-r-10 b-1-light p-3 h-100">
-                          <div className="f-w-600 mb-2">Riskli amallar</div>
-                          <div className="d-flex flex-wrap gap-2 mb-3">
-                            {selectedOrd.cancelUrl && canCancelOrder(selectedOrd.status) ? <button className="btn btn-sm btn-outline-danger" onClick={() => confirm('Buyurtma bekor qilinsinmi?') && postPrompt(selectedOrd.cancelUrl, {})}>Bekor qilish</button> : null}
-                          </div>
-                          {selectedOrd.canRefundPayment && selectedOrd.refundConfirmationPhrase ? (
-                            <form onSubmit={(event) => submitForm(event, selectedOrd.refundCancelUrl)}>
-                              <div className="alert alert-light-danger py-2 f-s-13 mb-2">
-                                Tasdiqlash matni: <strong>{selectedOrd.refundConfirmationPhrase}</strong>
-                              </div>
-                              <input name="confirmation_phrase" className="form-control form-control-sm mb-2" placeholder="Tasdiqlash matni" required />
-                              <input name="reason" className="form-control form-control-sm mb-2" placeholder="Refund sababi" />
-                              <button className="btn btn-sm btn-danger">Refund + bekor qilish</button>
-                            </form>
-                          ) : <div className="text-muted f-s-13">Refund faqat ruxsat bo'lsa va shartlar mos kelsa chiqadi.</div>}
-                        </div>
-                      </div>
-                    </div>
-                    {selectedOrd.activeHubs?.length ? <div className="text-muted f-s-13 mt-3">Faol hub ID: {selectedOrd.activeHubs.map((hub) => `${hub.id}: ${hub.label}`).join(' · ')}</div> : null}
-                  </div></div>
-
-                <div className="card"><div className="card-header"><h5 className="mb-0">Statusni o'zgartirish</h5></div><div className="card-body">
-                    <div className="nav kc-segment" role="tablist" aria-label="Buyurtma statusi">
-                      {statusOptions.map((status) => (
-                        <div className="nav-item" key={status.code}>
-                          <button
-                            type="button"
-                            role="tab"
-                            aria-selected={normalizeStatus(selectedOrd.status) === status.code}
-                            className={`nav-link ${normalizeStatus(selectedOrd.status) === status.code ? 'active' : ''}`}
-                            onClick={() => handleUpdateStatus(status.code)}
-                            disabled={!selectedOrd.statusUrl || normalizeStatus(selectedOrd.status) === status.code}
-                          >
-                            {status.label}
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div></div>
               </div>
             </div>
           ) : null}
@@ -1556,19 +1548,29 @@ function SellerOrdersTable({
                 <div className="text-muted f-s-13">{row.createdAt || ''}</div>
               </td>
               {showRefundColumn ? (
-                <td style={{ minWidth: 280 }}>
+                <td>
                   {row.canRefund && row.refundUrl ? (
-                    <form onSubmit={(event) => onSubmit(event, row.refundUrl)} className="d-flex flex-column gap-2">
-                      <select name="reason_code" className="form-select form-select-sm" defaultValue={reasonOptions[0]?.code || 'all_products_out_of_stock'} required>
+                    <FormAction
+                      label="Refund"
+                      icon="ti ti-receipt-refund"
+                      variant="light-danger"
+                      title={`Seller order #${row.id} refund`}
+                      description="Butun seller order refund qilinadi."
+                      submitLabel="Refund qilish"
+                      submitVariant="danger"
+                      onSubmit={(event) => onSubmit(event, row.refundUrl)}
+                    >
+                      <label className="form-label">Sabab</label>
+                      <select name="reason_code" className="form-select mb-3" defaultValue={reasonOptions[0]?.code || 'all_products_out_of_stock'} required>
                         {reasonOptions.map((reason) => (
                           <option value={reason.code} key={reason.code}>
                             {reason.notes?.uz}{reason.auto_zero_stock ? ' · stock 0' : ''}
                           </option>
                         ))}
                       </select>
-                      <input name="custom_note" className="form-control form-control-sm" placeholder="Custom izoh kerak bo‘lsa" />
-                      <button className="btn btn-sm btn-outline-danger">Shu seller orderni refund qilish</button>
-                    </form>
+                      <label className="form-label">Izoh (ixtiyoriy)</label>
+                      <textarea name="custom_note" className="form-control" rows={2} placeholder="Custom izoh kerak bo‘lsa" />
+                    </FormAction>
                   ) : (
                     <div className="text-muted f-s-13">
                       {row.isCancelled ? (row.cancelNotes?.uz || 'Seller order bekor qilingan.') : 'Refund mumkin emas.'}

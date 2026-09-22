@@ -8,6 +8,10 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
+  ComposedChart,
+  Legend,
+  Line,
+  LineChart,
   Pie,
   PieChart,
   ResponsiveContainer,
@@ -589,6 +593,8 @@ function formatDuration(seconds = 0) {
 type UnitEconomicsMonth = DashboardPayload['unitEconomicsMonthly']['months'][number];
 
 function UnitEconomics({ data, monthly }: { data: DashboardPayload['unitEconomics']; monthly: DashboardPayload['unitEconomicsMonthly'] }) {
+  const [view, setView] = useState<'overview' | 'trend' | 'table'>('overview');
+  const palette = usePalette();
   const ratioTone: Tone = data.ltvCacRatio >= 3 ? 'success' : data.ltvCacRatio >= 1 ? 'warning' : 'danger';
   const refundTone: Tone = data.refundRate > 5 ? 'danger' : data.refundRate > 2 ? 'warning' : 'success';
   const cancelTone: Tone = data.cancelRate > 15 ? 'danger' : data.cancelRate > 8 ? 'warning' : 'success';
@@ -631,34 +637,129 @@ function UnitEconomics({ data, monthly }: { data: DashboardPayload['unitEconomic
     { l: 'Repeat', icon: 'ti-repeat', v: `${data.repeatRate}%`, s: `${fmt(data.repeatBuyers)} qaytgan xaridor`, c: '', help: "Bir martadan ko'p xarid qilgan xaridorlar ulushi (lifetime)." },
   ];
 
+  const tone: Tone = data.hasMarketingData ? ratioTone : 'secondary';
+  const ratioPct = data.hasMarketingData ? Math.max(2, Math.min(100, (data.ltvCacRatio / 5) * 100)) : 0;
+  const byLabel = (label: string) => cards.find((card) => card.l === label)!;
+  const groups: Array<{ title: string; icon: string; items: string[] }> = [
+    { title: 'Xaridor iqtisodiyoti', icon: 'ti ti-users', items: ['CAC', 'LTV (margin)', 'Payback', 'Repeat'] },
+    { title: 'Order iqtisodiyoti', icon: 'ti ti-receipt', items: ['Margin / order', 'Gross margin'] },
+    { title: 'Sifat signallari', icon: 'ti ti-shield-check', items: ['Refund rate', 'Cancel rate'] },
+  ];
+  const trend = months.map((m) => ({ ...m, marginPct: Number(m.marginPct || 0) }));
+
   return (
     <div className="card">
-      <div className="card-header d-flex align-items-center justify-content-between gap-2 flex-wrap">
+      <div className="card-header d-flex align-items-center justify-content-between gap-3 flex-wrap">
         <div>
           <div className="d-flex align-items-center gap-2">
-            <h5 className="f-w-600">Unit economics</h5>
-            <InfoHint text="Investor va operator uchun birlik iqtisodiyoti — Google Sheets namunasidagi tuzilishda (Input Data + Key Indicators, oylar ustunlarda). Yuqoridagi kartalar tanlangan davr/lifetime bo'yicha, pastdagi jadval so'nggi 12 oy dinamikasi." />
+            <h5 className="mb-0">Unit economics</h5>
+            <InfoHint text="Investor va operator uchun birlik iqtisodiyoti. Ko'rsatkichlar tanlangan davr/lifetime bo'yicha, dinamika va jadval — so'nggi 12 oy (Input Data + Key Indicators)." />
           </div>
-          <p className="mb-0 text-secondary">CAC · LTV · margin/order · refund/cancel · repeat</p>
+          <p className="mb-0 text-secondary f-s-13">Xaridor jalb qilish narxi, qiymati va order marjasi</p>
         </div>
-        {data.hasMarketingData ? null : <span className="badge text-light-warning">CAC uchun Chiqimlarga marketing xarajat kiriting</span>}
-      </div>
-      <div className="card-body">
-
-        <div className="row g-3 mb-3 row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xxl-5">
-          {cards.map((card) => (
-            <div className="col" key={card.l}>
-              <MiniStat icon={tiIcon(card.icon)} tone={card.c || 'primary'} valueTone={card.c} label={card.l} help={card.help} value={card.v} meta={card.s} />
+        <div className="nav kc-segment kc-segment-sm" role="tablist" aria-label="Unit economics ko'rinishi">
+          {([['overview', "Ko'rsatkichlar", 'ti ti-layout-grid'], ['trend', 'Dinamika', 'ti ti-chart-bar'], ['table', 'Jadval', 'ti ti-table']] as const).map(([key, label, icon]) => (
+            <div className="nav-item" key={key}>
+              <button type="button" role="tab" aria-selected={view === key} disabled={key !== 'overview' && !months.length} className={`nav-link ${view === key ? 'active' : ''}`} onClick={() => setView(key)}><i className={icon}></i>{label}</button>
             </div>
           ))}
         </div>
+      </div>
+      <div className="card-body">
+        {data.hasMarketingData ? null : (
+          <div className="alert alert-light-warning d-flex align-items-center gap-2 f-s-13">
+            <i className="ti ti-info-circle f-s-18"></i>
+            CAC, LTV : CAC va payback hisoblanishi uchun Chiqimlar bo'limida "Marketing va reklama" xarajatlarini kiriting.
+          </div>
+        )}
 
-        {months.length ? (
+        {view === 'overview' ? (
+          <div className="row g-3">
+            <div className="col-xl-4">
+              <div className={`h-100 b-r-15 p-4 bg-light-${tone}`}>
+                <div className="d-flex justify-content-between align-items-start gap-2">
+                  <div>
+                    <p className="f-s-14 f-w-500 mb-1 d-flex align-items-center gap-1">LTV : CAC <InfoHint text={byLabel('LTV : CAC').help} /></p>
+                    <h2 className={`mb-0 text-${tone}-dark`}>{byLabel('LTV : CAC').v}</h2>
+                  </div>
+                  <span className="h-45 w-45 d-flex-center b-r-15 bg-white flex-shrink-0"><i className={`ti ti-gauge f-s-24 text-${tone}`}></i></span>
+                </div>
+                <span className={`badge bg-white text-${tone}-dark mt-2`}>{data.hasMarketingData ? byLabel('LTV : CAC').s : "Ma'lumot yetarli emas"}</span>
+                <div className="mt-4">
+                  <div className="d-flex justify-content-between f-s-12 mb-1"><span>0×</span><span>Norma ≥ 3×</span><span>5×+</span></div>
+                  <div className="progress w-100 h-10" role="progressbar" aria-valuenow={data.ltvCacRatio} aria-valuemin={0} aria-valuemax={5}>
+                    <div className={`progress-bar bg-${tone}`} style={{ width: `${ratioPct}%` }}></div>
+                  </div>
+                </div>
+                <div className="row g-2 mt-3">
+                  <div className="col-4"><p className="f-s-12 mb-0">LTV</p><h6 className="mb-0 f-w-600 f-s-14 text-break">{byLabel('LTV (margin)').v}</h6></div>
+                  <div className="col-4"><p className="f-s-12 mb-0">CAC</p><h6 className="mb-0 f-w-600 f-s-14 text-break">{byLabel('CAC').v}</h6></div>
+                  <div className="col-4"><p className="f-s-12 mb-0">Payback</p><h6 className="mb-0 f-w-600 f-s-14 text-break">{byLabel('Payback').v}</h6></div>
+                </div>
+              </div>
+            </div>
+            <div className="col-xl-8">
+              {groups.map((group) => (
+                <div key={group.title} className="mb-3">
+                  <h6 className="f-w-600 text-secondary f-s-14 mb-2"><i className={`${group.icon} me-1`}></i>{group.title}</h6>
+                  <div className="row g-3">
+                    {group.items.map((label) => {
+                      const card = byLabel(label);
+                      return (
+                        <div className="col-sm-6" key={label}>
+                          <MiniStat icon={tiIcon(card.icon)} tone={card.c || 'primary'} valueTone={card.c} label={card.l} help={card.help} value={card.v} meta={card.s} />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        {view === 'trend' && months.length ? (
+          <div className="row g-3">
+            <div className="col-xl-7">
+              <h6 className="f-w-600 f-s-14 mb-2">Tushum, contribution va marja</h6>
+              <ResponsiveContainer width="100%" height={300}>
+                <ComposedChart data={trend} margin={{ left: 4, right: 4, top: 8, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={palette.grid} vertical={false} />
+                  <XAxis dataKey="month" stroke={palette.line} tick={{ fill: palette.muted }} fontSize={11} />
+                  <YAxis yAxisId="money" stroke={palette.line} tick={{ fill: palette.muted }} fontSize={11} width={54} tickFormatter={(value) => compact(Number(value))} />
+                  <YAxis yAxisId="pct" orientation="right" stroke={palette.line} tick={{ fill: palette.muted }} fontSize={11} width={40} tickFormatter={(value) => `${value}%`} />
+                  <Tooltip formatter={(value: number, name: string) => (name === 'Marja %' ? `${value}%` : money(value))} />
+                  <Legend />
+                  <Bar yAxisId="money" dataKey="grossRevenue" name="Tushum" fill={palette.violet} radius={[6, 6, 0, 0]} />
+                  <Bar yAxisId="money" dataKey="contribution" name="Contribution" fill={palette.indigo} radius={[6, 6, 0, 0]} />
+                  <Line yAxisId="pct" type="monotone" dataKey="marginPct" name="Marja %" stroke={palette.green} strokeWidth={2} dot={{ r: 3 }} />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="col-xl-5">
+              <h6 className="f-w-600 f-s-14 mb-2">Sifat foizlari</h6>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={trend} margin={{ left: 4, right: 12, top: 8, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={palette.grid} vertical={false} />
+                  <XAxis dataKey="month" stroke={palette.line} tick={{ fill: palette.muted }} fontSize={11} />
+                  <YAxis stroke={palette.line} tick={{ fill: palette.muted }} fontSize={11} width={40} tickFormatter={(value) => `${value}%`} />
+                  <Tooltip formatter={(value: number) => `${value}%`} />
+                  <Legend />
+                  <Line type="monotone" dataKey="repeatRate" name="Repeat" stroke={palette.green} strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="refundRate" name="Refund" stroke={palette.danger} strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="cancelRate" name="Cancel" stroke={palette.amber} strokeWidth={2} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        ) : null}
+
+        {view === 'table' && months.length ? (
           <div className="table-responsive app-scroll">
             <table className="table table-bottom-border align-middle mb-0 text-nowrap">
               <thead>
                 <tr>
-                  <th className="position-sticky start-0 bg-body">Metric</th>
+                  <th className="position-sticky start-0 bg-body">Ko'rsatkich</th>
                   {months.map((m) => <th key={m.month} className="text-end">{m.month}</th>)}
                 </tr>
               </thead>
@@ -689,6 +790,8 @@ function UnitEconomics({ data, monthly }: { data: DashboardPayload['unitEconomic
 type PartnerMonth = DashboardPayload['partnerEconomics']['months'][number];
 
 function PartnerEconomics({ data }: { data: DashboardPayload['partnerEconomics'] }) {
+  const [view, setView] = useState<'overview' | 'trend' | 'table'>('overview');
+  const palette = usePalette();
   const pct = (v: number | null) => (v === null ? '—' : `${v}%`);
   const months = data.months || [];
 
@@ -706,7 +809,11 @@ function PartnerEconomics({ data }: { data: DashboardPayload['partnerEconomics']
         </div>
         <div className="card-body">
 
-          <div className="text-muted f-s-13">Hali faol premium (hamkor) obuna topilmadi. Birinchi sotuvchi premium sotib olgach, shu yerda MRR, churn va LTV avtomatik hisoblanib boradi.</div>
+          <div className="text-center py-4">
+            <span className="h-60 w-60 d-flex-center b-r-50 text-light-warning mx-auto mb-3"><i className="ti ti-crown f-s-30"></i></span>
+            <h6 className="f-w-600 mb-1">Hali faol premium hamkor yo'q</h6>
+            <p className="text-secondary f-s-13 mb-0">Birinchi sotuvchi premium obuna sotib olgach, shu yerda MRR, churn, retention va LTV avtomatik hisoblanib boradi.</p>
+          </div>
         </div>
       </div>
     );
@@ -753,55 +860,167 @@ function PartnerEconomics({ data }: { data: DashboardPayload['partnerEconomics']
     { label: 'LTV : CAC', get: (m) => (m.ltvCacRatio !== null ? `${m.ltvCacRatio}×` : '—') },
   ];
 
+  const byLabel = (label: string) => cards.find((card) => card.l === label)!;
+  const retention = [
+    { label: 'Gross retention', value: s.grossRetention, tone: 'success', max: 100, help: byLabel('Gross Retention').help },
+    { label: 'Net retention', value: s.netRetention, tone: 'info', max: 150, help: byLabel('Net Retention').help },
+    { label: 'Churn · MRR', value: s.churnRateMrr, tone: 'danger', max: 20, help: byLabel('Churn · MRR').help },
+    { label: 'Churn · hamkor', value: s.churnRateCount, tone: 'warning', max: 20, help: byLabel('Churn · hamkor').help },
+  ];
+  const movement = months.map((m) => ({ month: m.month, mrr: m.mrr, newMrr: m.newMrr, churnedMrr: -Math.abs(m.churnedMrr || 0), partners: m.currentPartners }));
+  const secondary = ['ARPC', 'CAC', 'CAC Payback', 'Lifetime', 'LTV : CAC'];
+
   return (
     <div className="card">
-      <div className="card-header d-flex align-items-center justify-content-between gap-2 flex-wrap">
+      <div className="card-header d-flex align-items-center justify-content-between gap-3 flex-wrap">
         <div>
           <div className="d-flex align-items-center gap-2">
-            <h5 className="f-w-600">Hamkorlar MRR (Premium obuna)</h5>
-            <InfoHint text="Premium obuna to'lagan sotuvchilar (hamkorlar) uchun SaaS uslubidagi MRR, churn, retention va LTV hisoboti — Google Sheets namunasidagi tuzilishda (Input Data + Key Indicators, oylar ustunlarda). Xaridor unit economics blokidan alohida hisoblanadi, ikkalasi qo'shilmaydi." />
+            <h5 className="mb-0">Hamkorlar MRR</h5>
+            <span className="badge text-light-warning"><i className="ti ti-crown me-1"></i>Premium obuna</span>
+            <InfoHint text="Premium obuna to'lagan sotuvchilar (hamkorlar) uchun SaaS uslubidagi MRR, churn, retention va LTV hisoboti. Xaridor unit economics blokidan alohida hisoblanadi, ikkalasi qo'shilmaydi." />
           </div>
-          <p className="mb-0 text-secondary">MRR · Churn · Retention · LTV — oylik dinamika</p>
+          <p className="mb-0 text-secondary f-s-13">MRR · Churn · Retention · LTV — oylik dinamika</p>
         </div>
-        {data.hasMarketingData ? null : <span className="badge text-light-warning">CAC uchun Chiqimlarga marketing xarajat kiriting</span>}
-      </div>
-      <div className="card-body">
-
-
-        <div className="row g-3 mb-3 row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xxl-5">
-          {cards.map((card) => (
-            <div className="col" key={card.l}>
-              <MiniStat icon={tiIcon(card.icon)} tone={card.c || 'primary'} valueTone={card.c} label={card.l} help={card.help} value={card.v} meta={card.s} />
+        <div className="nav kc-segment kc-segment-sm" role="tablist" aria-label="MRR ko'rinishi">
+          {([['overview', "Ko'rsatkichlar", 'ti ti-layout-grid'], ['trend', 'Dinamika', 'ti ti-chart-bar'], ['table', 'Jadval', 'ti ti-table']] as const).map(([key, label, icon]) => (
+            <div className="nav-item" key={key}>
+              <button type="button" role="tab" aria-selected={view === key} className={`nav-link ${view === key ? 'active' : ''}`} onClick={() => setView(key)}><i className={icon}></i>{label}</button>
             </div>
           ))}
         </div>
+      </div>
+      <div className="card-body">
+        {data.hasMarketingData ? null : (
+          <div className="alert alert-light-warning d-flex align-items-center gap-2 f-s-13">
+            <i className="ti ti-info-circle f-s-18"></i>
+            CAC va LTV : CAC uchun Chiqimlar bo'limida marketing xarajatlarini kiriting.
+          </div>
+        )}
 
-        <div className="table-responsive app-scroll">
-          <table className="table table-bottom-border align-middle mb-0 text-nowrap">
-            <thead>
-              <tr>
-                <th className="position-sticky start-0 bg-body">Metric</th>
-                {months.map((m) => <th key={m.month} className="text-end">{m.month}</th>)}
-              </tr>
-            </thead>
-            <tbody>
-              <tr><td colSpan={months.length + 1} className="bg-light-primary f-w-600">Input Data</td></tr>
-              {inputRows.map((row) => (
-                <tr key={row.label}>
-                  <td className="position-sticky start-0 bg-body f-w-500 text-secondary">{row.label}</td>
-                  {months.map((m) => <td key={m.month} className="text-end">{row.get(m)}</td>)}
+        {view === 'overview' ? (
+          <div className="row g-3">
+            <div className="col-xl-4">
+              <div className="h-100 b-r-15 p-4 bg-light-primary">
+                <div className="d-flex justify-content-between align-items-start gap-2">
+                  <div>
+                    <p className="f-s-14 f-w-500 mb-1">Joriy MRR</p>
+                    <h3 className="mb-0 text-primary-dark text-break">{money(data.currentMrr)}</h3>
+                  </div>
+                  <span className="h-45 w-45 d-flex-center b-r-15 bg-white flex-shrink-0"><i className="ti ti-repeat f-s-24 text-primary"></i></span>
+                </div>
+                <div className="d-flex flex-wrap gap-2 mt-2">
+                  <span className="badge bg-white text-primary-dark"><i className="ti ti-users me-1"></i>{fmt(data.currentPartners)} faol hamkor</span>
+                  <span className="badge bg-white text-primary-dark">ARPC {money(s.arpc)}</span>
+                </div>
+                <div className="d-flex flex-column gap-3 mt-4">
+                  {retention.map((row) => (
+                    <div key={row.label}>
+                      <div className="d-flex justify-content-between align-items-center f-s-13 mb-1">
+                        <span className="f-w-500 d-flex align-items-center gap-1">{row.label}<InfoHint text={row.help} /></span>
+                        <span className="f-w-600">{row.value === null ? '—' : `${row.value}%`}</span>
+                      </div>
+                      <div className="progress w-100 h-5" role="progressbar" aria-valuenow={row.value || 0} aria-valuemin={0} aria-valuemax={row.max}>
+                        <div className={`progress-bar bg-${row.tone}`} style={{ width: `${row.value ? Math.max(2, Math.min(100, (row.value / row.max) * 100)) : 0}%` }}></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="col-xl-8">
+              <div className="row g-3">
+                {secondary.map((label) => {
+                  const card = byLabel(label);
+                  return (
+                    <div className="col-sm-6 col-xxl-4" key={label}>
+                      <MiniStat icon={tiIcon(card.icon)} tone={card.c || 'primary'} valueTone={card.c} label={card.l} help={card.help} value={card.v} meta={card.s} />
+                    </div>
+                  );
+                })}
+                <div className="col-sm-6 col-xxl-4">
+                  <MiniStat icon="ti ti-diamond" tone="info" label="LTV" value={s.ltv !== null ? money(s.ltv) : '—'} meta="ARPC × lifetime" />
+                </div>
+              </div>
+              <h6 className="f-w-600 f-s-14 mt-4 mb-2">MRR harakati</h6>
+              <ResponsiveContainer width="100%" height={200}>
+                <AreaChart data={movement} margin={{ left: 4, right: 8, top: 8, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="mrrFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={palette.indigo} stopOpacity={0.35} />
+                      <stop offset="100%" stopColor={palette.indigo} stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke={palette.grid} vertical={false} />
+                  <XAxis dataKey="month" stroke={palette.line} tick={{ fill: palette.muted }} fontSize={11} />
+                  <YAxis stroke={palette.line} tick={{ fill: palette.muted }} fontSize={11} width={54} tickFormatter={(value) => compact(Number(value))} />
+                  <Tooltip formatter={(value: number) => money(value)} />
+                  <Area type="monotone" dataKey="mrr" name="MRR" stroke={palette.indigo} fill="url(#mrrFill)" strokeWidth={2} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        ) : null}
+
+        {view === 'trend' ? (
+          <div className="row g-3">
+            <div className="col-xl-8">
+              <h6 className="f-w-600 f-s-14 mb-2">Yangi va yo'qotilgan MRR</h6>
+              <ResponsiveContainer width="100%" height={300}>
+                <ComposedChart data={movement} margin={{ left: 4, right: 4, top: 8, bottom: 0 }} stackOffset="sign">
+                  <CartesianGrid strokeDasharray="3 3" stroke={palette.grid} vertical={false} />
+                  <XAxis dataKey="month" stroke={palette.line} tick={{ fill: palette.muted }} fontSize={11} />
+                  <YAxis stroke={palette.line} tick={{ fill: palette.muted }} fontSize={11} width={54} tickFormatter={(value) => compact(Number(value))} />
+                  <Tooltip formatter={(value: number) => money(Math.abs(value))} />
+                  <Legend />
+                  <Bar dataKey="newMrr" name="Yangi MRR" stackId="move" fill={palette.green} radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="churnedMrr" name="Bekor bo'lgan MRR" stackId="move" fill={palette.danger} radius={[0, 0, 6, 6]} />
+                  <Line type="monotone" dataKey="mrr" name="MRR" stroke={palette.indigo} strokeWidth={2} dot={{ r: 3 }} />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="col-xl-4">
+              <h6 className="f-w-600 f-s-14 mb-2">Faol hamkorlar</h6>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={movement} margin={{ left: 4, right: 4, top: 8, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={palette.grid} vertical={false} />
+                  <XAxis dataKey="month" stroke={palette.line} tick={{ fill: palette.muted }} fontSize={11} />
+                  <YAxis stroke={palette.line} tick={{ fill: palette.muted }} fontSize={11} width={36} allowDecimals={false} />
+                  <Tooltip formatter={(value: number) => fmt(value)} />
+                  <Bar dataKey="partners" name="Hamkorlar" fill={palette.info} radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        ) : null}
+
+        {view === 'table' ? (
+          <div className="table-responsive app-scroll">
+            <table className="table table-bottom-border align-middle mb-0 text-nowrap">
+              <thead>
+                <tr>
+                  <th className="position-sticky start-0 bg-body">Ko'rsatkich</th>
+                  {months.map((m) => <th key={m.month} className="text-end">{m.month}</th>)}
                 </tr>
-              ))}
-              <tr><td colSpan={months.length + 1} className="bg-light-primary f-w-600">Key Indicators</td></tr>
-              {indicatorRows.map((row) => (
-                <tr key={row.label}>
-                  <td className="position-sticky start-0 bg-body f-w-500 text-secondary">{row.label}</td>
-                  {months.map((m) => <td key={m.month} className="text-end">{row.get(m)}</td>)}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                <tr><td colSpan={months.length + 1} className="bg-light-primary f-w-600">Input Data</td></tr>
+                {inputRows.map((row) => (
+                  <tr key={row.label}>
+                    <td className="position-sticky start-0 bg-body f-w-500 text-secondary">{row.label}</td>
+                    {months.map((m) => <td key={m.month} className="text-end">{row.get(m)}</td>)}
+                  </tr>
+                ))}
+                <tr><td colSpan={months.length + 1} className="bg-light-primary f-w-600">Key Indicators</td></tr>
+                {indicatorRows.map((row) => (
+                  <tr key={row.label}>
+                    <td className="position-sticky start-0 bg-body f-w-500 text-secondary">{row.label}</td>
+                    {months.map((m) => <td key={m.month} className="text-end">{row.get(m)}</td>)}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
       </div>
     </div>
   );

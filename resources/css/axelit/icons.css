@@ -39,11 +39,14 @@
 .iconoir-warning-triangle::before{mask-image:url('data:image/svg+xml;charset=utf-8,<svg width="24" height="24" stroke-width="1.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20.0429 21H3.95705C2.41902 21 1.45658 19.3364 2.22324 18.0031L10.2662 4.01533C11.0352 2.67792 12.9648 2.67791 13.7338 4.01532L21.7768 18.0031C22.5434 19.3364 21.581 21 20.0429 21Z" stroke="currentColor" stroke-linecap="round"/><path d="M12 9V13" stroke="currentColor" stroke-linecap="round"/><path d="M12 17.01L12.01 16.9989" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg>');-webkit-mask-image:url('data:image/svg+xml;charset=utf-8,<svg width="24" height="24" stroke-width="1.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20.0429 21H3.95705C2.41902 21 1.45658 19.3364 2.22324 18.0031L10.2662 4.01533C11.0352 2.67792 12.9648 2.67791 13.7338 4.01532L21.7768 18.0031C22.5434 19.3364 21.581 21 20.0429 21Z" stroke="currentColor" stroke-linecap="round"/><path d="M12 9V13" stroke="currentColor" stroke-linecap="round"/><path d="M12 17.01L12.01 16.9989" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg>');}
 .iconoir-xmark::before{mask-image:url('data:image/svg+xml;charset=utf-8,<svg width="24" height="24" stroke-width="1.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6.75827 17.2426L12.0009 12M17.2435 6.75736L12.0009 12M12.0009 12L6.75827 6.75736M12.0009 12L17.2435 17.2426" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg>');-webkit-mask-image:url('data:image/svg+xml;charset=utf-8,<svg width="24" height="24" stroke-width="1.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6.75827 17.2426L12.0009 12M17.2435 6.75736L12.0009 12M12.0009 12L6.75827 6.75736M12.0009 12L17.2435 17.2426" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg>');}
 
-/* tabler-icons 2.4.0 — 186 glif */
+/* tabler-icons 2.4.0 — 210 glif */
 @font-face{font-family:"tabler-icons";font-style:normal;font-weight:400;font-display:block;src:url("./fonts/tabler-icons.woff2") format("woff2")}
 .ti{font-family:"tabler-icons"!important;speak:none;font-style:normal;font-weight:normal;font-variant:normal;text-transform:none;line-height:1;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
 .ti-address-book:before{content:"\f021"}
+.ti-adjustments:before{content:"\ea03"}
+.ti-alert-octagon:before{content:"\ecc6"}
 .ti-alert-triangle:before{content:"\ea06"}
+.ti-archive:before{content:"\ea0b"}
 .ti-arrow-back:before{content:"\ea0c"}
 .ti-arrow-back-up:before{content:"\eb77"}
 .ti-arrow-down:before{content:"\ea16"}
@@ -52,8 +55,10 @@
 .ti-arrow-right:before{content:"\ea1f"}
 .ti-arrow-up:before{content:"\ea25"}
 .ti-arrow-up-right:before{content:"\ea24"}
+.ti-arrows-exchange:before{content:"\f1f4"}
 .ti-arrows-left-right:before{content:"\edb0"}
 .ti-arrows-move:before{content:"\f22f"}
+.ti-at:before{content:"\ea2b"}
 .ti-ban:before{content:"\ea2e"}
 .ti-bell:before{content:"\ea35"}
 .ti-bell-filled:before{content:"\f669"}
@@ -71,15 +76,19 @@
 .ti-building:before{content:"\ea4f"}
 .ti-building-bank:before{content:"\ebe2"}
 .ti-building-store:before{content:"\ea4e"}
+.ti-building-warehouse:before{content:"\ebe3"}
 .ti-bulb:before{content:"\ea51"}
 .ti-calculator:before{content:"\eb80"}
 .ti-calendar:before{content:"\ea53"}
 .ti-calendar-event:before{content:"\ea52"}
+.ti-calendar-plus:before{content:"\ebba"}
 .ti-calendar-stats:before{content:"\ee20"}
 .ti-calendar-time:before{content:"\ee21"}
 .ti-cash:before{content:"\ea55"}
+.ti-chart-bar:before{content:"\ea59"}
 .ti-chart-line:before{content:"\ea5c"}
 .ti-check:before{content:"\ea5e"}
+.ti-checks:before{content:"\ebaa"}
 .ti-chevron-down:before{content:"\ea5f"}
 .ti-chevron-left:before{content:"\ea60"}
 .ti-chevron-right:before{content:"\ea61"}
@@ -95,17 +104,20 @@
 .ti-clipboard-check:before{content:"\ea6c"}
 .ti-clipboard-data:before{content:"\f563"}
 .ti-clock:before{content:"\ea70"}
+.ti-clock-hour-4:before{content:"\f319"}
 .ti-cloud-download:before{content:"\ea71"}
 .ti-code:before{content:"\ea77"}
 .ti-coins:before{content:"\f65d"}
 .ti-copy:before{content:"\ea7a"}
 .ti-credit-card:before{content:"\ea84"}
+.ti-crown:before{content:"\ed12"}
 .ti-database:before{content:"\ea88"}
 .ti-device-mobile:before{content:"\ea8a"}
 .ti-diamond:before{content:"\eb65"}
 .ti-directions:before{content:"\ea8e"}
 .ti-discount-check:before{content:"\f1f8"}
 .ti-discount-check-filled:before{content:"\f746"}
+.ti-dots-circle-horizontal:before{content:"\ea91"}
 .ti-dots-vertical:before{content:"\ea94"}
 .ti-download:before{content:"\ea96"}
 .ti-edit:before{content:"\ea98"}
@@ -121,6 +133,7 @@
 .ti-file-x:before{content:"\eaa3"}
 .ti-files:before{content:"\edef"}
 .ti-filter:before{content:"\eaa5"}
+.ti-fingerprint:before{content:"\ebd1"}
 .ti-flag:before{content:"\eaa6"}
 .ti-flag-filled:before{content:"\f67a"}
 .ti-folder:before{content:"\eaad"}
@@ -142,6 +155,7 @@
 .ti-info-circle:before{content:"\eac5"}
 .ti-key:before{content:"\eac7"}
 .ti-language:before{content:"\ebbe"}
+.ti-layout-dashboard:before{content:"\f02c"}
 .ti-layout-grid:before{content:"\edba"}
 .ti-layout-list:before{content:"\ec14"}
 .ti-link:before{content:"\eade"}
@@ -152,7 +166,9 @@
 .ti-lock-open:before{content:"\eae1"}
 .ti-magnet:before{content:"\eae3"}
 .ti-mail:before{content:"\eae5"}
+.ti-mail-fast:before{content:"\f069"}
 .ti-mail-off:before{content:"\f15a"}
+.ti-mail-opened:before{content:"\eae4"}
 .ti-map:before{content:"\eae9"}
 .ti-map-pin:before{content:"\eae8"}
 .ti-map-pin-filled:before{content:"\f680"}
@@ -188,17 +204,21 @@
 .ti-printer:before{content:"\eb0e"}
 .ti-qrcode:before{content:"\eb11"}
 .ti-receipt:before{content:"\edfd"}
+.ti-receipt-refund:before{content:"\edfc"}
 .ti-repeat:before{content:"\eb72"}
 .ti-robot:before{content:"\f00b"}
 .ti-rotate:before{content:"\eb16"}
 .ti-rotate-clockwise:before{content:"\eb15"}
+.ti-route:before{content:"\eb17"}
 .ti-search:before{content:"\eb1c"}
+.ti-search-off:before{content:"\f19c"}
 .ti-send:before{content:"\eb1e"}
 .ti-settings:before{content:"\eb20"}
 .ti-shield-check:before{content:"\eb22"}
 .ti-shield-lock:before{content:"\ed58"}
 .ti-shield-x:before{content:"\eb23"}
 .ti-shopping-bag:before{content:"\f5f8"}
+.ti-shopping-cart:before{content:"\eb25"}
 .ti-shopping-cart-x:before{content:"\eede"}
 .ti-sparkles:before{content:"\f6d7"}
 .ti-speakerphone:before{content:"\ed61"}
@@ -206,10 +226,12 @@
 .ti-stack-2:before{content:"\eef7"}
 .ti-star:before{content:"\eb2e"}
 .ti-star-filled:before{content:"\f6a6"}
+.ti-status-change:before{content:"\f3b0"}
 .ti-sun:before{content:"\eb30"}
 .ti-table:before{content:"\eba1"}
 .ti-tags:before{content:"\ef86"}
 .ti-target:before{content:"\eb35"}
+.ti-target-arrow:before{content:"\f51a"}
 .ti-ticket:before{content:"\eb3d"}
 .ti-toggle-left:before{content:"\eb3e"}
 .ti-toggle-right:before{content:"\eb3f"}
@@ -218,6 +240,8 @@
 .ti-trending-up:before{content:"\eb43"}
 .ti-truck:before{content:"\ebc4"}
 .ti-truck-delivery:before{content:"\ec4b"}
+.ti-truck-return:before{content:"\ec4c"}
+.ti-upload:before{content:"\eb47"}
 .ti-user:before{content:"\eb4d"}
 .ti-user-circle:before{content:"\ef68"}
 .ti-user-minus:before{content:"\eb4a"}

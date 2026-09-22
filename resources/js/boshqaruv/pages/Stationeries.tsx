@@ -8,6 +8,7 @@ import PaginationControls from '../components/PaginationControls';
 import ImageGalleryEditor from '../components/ImageGalleryEditor';
 import ModerationRejectModal from '../components/ModerationRejectModal';
 import { MediaCard } from '../components/Profile';
+import FormAction from '../components/FormAction';
 
 const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n || 0);
 
@@ -240,7 +241,7 @@ export default function Stationeries() {
                         <strong>{variant.stock} dona</strong>
                       </div>
                     ))}
-                    <div className="text-muted f-s-13 mt-2">Variantlarni qo'shish/o'chirish uchun pastdagi "Admin tahriri" formasidan foydalaning.</div>
+                    <div className="text-muted f-s-13 mt-2">Variantlarni qo'shish/o'chirish uchun pastdagi "Tahrirlash" tugmasidan foydalaning.</div>
                   </div></div>
               </div>
 
@@ -265,32 +266,37 @@ export default function Stationeries() {
               <div className="col-xl-6"><div className="card h-100"><div className="card-header"><h5 className="mb-0">Shu mahsulot buyurtmalari</h5></div><div className="card-body"><MiniOrdersTable rows={selected.recentOrders || []} empty="Bu kanselyariya bo'yicha buyurtma topilmadi" /></div></div></div>
               <div className="col-xl-6"><div className="card h-100"><div className="card-header"><h5 className="mb-0">Seller orderlar</h5></div><div className="card-body"><MiniOrdersTable rows={selected.sellerOrders || []} empty="Seller order topilmadi" /></div></div></div>
 
-              <div className="col-12">
-                <div className="card"><div className="card-header"><h5 className="mb-0">Admin tahriri</h5></div><div className="card-body">
-                    <form className="row g-3" onSubmit={submitEdit}>
-                      <div className="col-md-6"><label className="form-label f-s-13 text-muted">Nomi</label><input name="name" className="form-control" defaultValue={selected.name} required /></div>
-                      <div className="col-md-3"><label className="form-label f-s-13 text-muted">Kategoriya</label><select name="category_id" className="form-select" defaultValue={selected.categoryId || ''} required>{stationeryFormOptions.categories.map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</select></div>
-                      <div className="col-md-3"><label className="form-label f-s-13 text-muted">Seller</label><select name="seller_id" className="form-select" defaultValue={selected.sellerId || ''}><option value="">Ichki katalog</option>{stationeryFormOptions.sellers.map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</select></div>
-                      <div className="col-md-3"><label className="form-label f-s-13 text-muted">Barcode</label><input name="barcode" className="form-control" defaultValue={selected.barcode || ''} /></div>
-                      <div className="col-md-3"><label className="form-label f-s-13 text-muted">Material</label><input name="material" className="form-control" defaultValue={selected.material || ''} /></div>
-                      <div className="col-md-3"><label className="form-label f-s-13 text-muted">Narx</label><input name="price" type="number" min={0} className="form-control" defaultValue={selected.price} required /></div>
-                      <div className="col-md-3"><label className="form-label f-s-13 text-muted">Chegirma narxi</label><input name="discount_price" type="number" min={0} className="form-control" defaultValue={selected.discountPrice || ''} /></div>
-                      <div className="col-md-3"><label className="form-label f-s-13 text-muted">Chegirma muddati</label><input name="discountExpiresAt" type="datetime-local" className="form-control" defaultValue={toInputDate(selected.discountExpiresAt)} /></div>
-                      <div className="col-md-3"><label className="form-label f-s-13 text-muted">Ombor</label><input name="stock" type="number" min={0} className="form-control" defaultValue={selected.stock} required /></div>
-                      <div className="col-md-3"><label className="form-label f-s-13 text-muted">Moderatsiya</label><select name="is_approved" className="form-select" defaultValue={selected.status ?? 0}><option value="0">Moderatsiya</option><option value="1">Tasdiqlangan</option><option value="2">Rad etilgan</option></select></div>
+              </div></div>
+            </div>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          {selected?.editUrl ? (
+            <FormAction label="Tahrirlash" icon="ti ti-edit" variant="light-primary" size="md" modalSize="lg" title={`Tahrirlash: ${selected.name}`} onSubmit={submitEdit}>
+              <div className="row g-3">
+                      <div className="col-md-6"><label className="form-label">Nomi</label><input name="name" className="form-control" defaultValue={selected.name} required /></div>
+                      <div className="col-md-3"><label className="form-label">Kategoriya</label><select name="category_id" className="form-select" defaultValue={selected.categoryId || ''} required>{stationeryFormOptions.categories.map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</select></div>
+                      <div className="col-md-3"><label className="form-label">Seller</label><select name="seller_id" className="form-select" defaultValue={selected.sellerId || ''}><option value="">Ichki katalog</option>{stationeryFormOptions.sellers.map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</select></div>
+                      <div className="col-md-3"><label className="form-label">Barcode</label><input name="barcode" className="form-control" defaultValue={selected.barcode || ''} /></div>
+                      <div className="col-md-3"><label className="form-label">Material</label><input name="material" className="form-control" defaultValue={selected.material || ''} /></div>
+                      <div className="col-md-3"><label className="form-label">Narx</label><input name="price" type="number" min={0} className="form-control" defaultValue={selected.price} required /></div>
+                      <div className="col-md-3"><label className="form-label">Chegirma narxi</label><input name="discount_price" type="number" min={0} className="form-control" defaultValue={selected.discountPrice || ''} /></div>
+                      <div className="col-md-3"><label className="form-label">Chegirma muddati</label><input name="discountExpiresAt" type="datetime-local" className="form-control" defaultValue={toInputDate(selected.discountExpiresAt)} /></div>
+                      <div className="col-md-3"><label className="form-label">Ombor</label><input name="stock" type="number" min={0} className="form-control" defaultValue={selected.stock} required /></div>
+                      <div className="col-md-3"><label className="form-label">Moderatsiya</label><select name="is_approved" className="form-select" defaultValue={selected.status ?? 0}><option value="0">Moderatsiya</option><option value="1">Tasdiqlangan</option><option value="2">Rad etilgan</option></select></div>
                       <div className="col-md-6 d-flex align-items-end gap-3 flex-wrap">
                         <label className="form-check"><input name="status" value="1" className="form-check-input" type="checkbox" defaultChecked={selected.active} /> <span className="form-check-label">Faol</span></label>
                         <label className="form-check"><input name="is_hidden" value="1" className="form-check-input" type="checkbox" defaultChecked={selected.hidden} /> <span className="form-check-label">Yashirish</span></label>
                         <label className="form-check"><input name="recommended" value="1" className="form-check-input" type="checkbox" defaultChecked={selected.recommended} /> <span className="form-check-label">Tavsiya</span></label>
                       </div>
-                      <div className="col-md-3"><label className="form-label f-s-13 text-muted">Tavsiya muddati</label><input name="recommendedExpiresAt" type="datetime-local" className="form-control" defaultValue={toInputDate(selected.recommendedExpiresAt)} /></div>
+                      <div className="col-md-3"><label className="form-label">Tavsiya muddati</label><input name="recommendedExpiresAt" type="datetime-local" className="form-control" defaultValue={toInputDate(selected.recommendedExpiresAt)} /></div>
 
                       <div className="col-12">
-                        <label className="form-label f-s-13 text-muted">Rasmlar</label>
+                        <label className="form-label">Rasmlar</label>
                         <ImageGalleryEditor key={selected.id} images={selected.rawImages || selected.images || []} />
                       </div>
 
-                      <div className="col-12"><label className="form-label f-s-13 text-muted">Tavsif</label><textarea name="description" className="form-control" rows={4} defaultValue={selected.description || ''} /></div>
+                      <div className="col-12"><label className="form-label">Tavsif</label><textarea name="description" className="form-control" rows={4} defaultValue={selected.description || ''} /></div>
 
                       <div className="col-12">
                         <div className="d-flex align-items-center justify-content-between mb-2">
@@ -326,15 +332,9 @@ export default function Stationeries() {
                         <div className="form-text">O'chirilgan variant saqlashda butunlay o'chib ketadi (ombordagi qoldig'i bilan birga).</div>
                       </div>
 
-                      <div className="col-12"><button className="btn btn-primary">Saqlash</button></div>
-                    </form>
-                  </div></div>
               </div>
-              </div></div>
-            </div>
-          )}
-        </Modal.Body>
-        <Modal.Footer>
+            </FormAction>
+          ) : null}
           {selected?.moderateUrl ? (
             <>
               <Button variant="outline-danger" onClick={() => setRejectTarget(selected)}>Rad etish</Button>
