@@ -119,6 +119,12 @@ return Application::configure(basePath: dirname(__DIR__))
             ->withoutOverlapping(5)
             ->runInBackground();
 
+        // GLOBAL KATALOG: buy box xavfsizlik to'ri (chegirma muddati tugashi, o'tkazib yuborilgan hodisalar)
+        $schedule->command('catalog:buybox')
+            ->everyThirtyMinutes()
+            ->withoutOverlapping()
+            ->runInBackground();
+
         $schedule->command('queue:prune-batches --hours=24')
             ->dailyAt('03:00')->timezone($tz);
 

@@ -36,6 +36,24 @@ class ProductModerationObserver
 
     public function creating(Books|Stationery $product): void
     {
+        // GLOBAL KATALOG: tasdiqlangan kartaga ulangan taklif (do'kon faqat narx
+        // va qoldiq kiritadi) — mazmuni allaqachon tekshirilgan, darhol sotuvda.
+        if ($product instanceof Books && $product->edition_id) {
+            $edition = \App\Models\BookEdition::find($product->edition_id);
+            if ($edition && $edition->status === \App\Models\BookEdition::STATUS_ACTIVE) {
+                $product->is_approved = 1;
+                $product->ai_moderation_status = 'approved';
+                $product->ai_moderation_checked_at = now();
+                $product->ai_moderation_note = 'Katalog kartasi orqali qo\'shildi';
+                $product->ai_moderation_meta = [
+                    'source' => 'catalog_offer',
+                    'edition_id' => (int) $edition->id,
+                ];
+
+                return;
+            }
+        }
+
         $this->state->applyPendingAttributes($product, 'product_created');
     }
 

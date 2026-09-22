@@ -93,6 +93,8 @@ return [
                     'price',
                     'lang',
                     'in_stock',
+                    'edition_id',
+                    'catalog_featured',
                 ],
 
                 'sortableAttributes' => [

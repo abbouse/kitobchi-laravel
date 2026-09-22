@@ -239,6 +239,37 @@ class BookUzParserService
         });
     }
 
+    /**
+     * GLOBAL KATALOG: parser yozuvidan do'konsiz katalog kartasi (book_editions)
+     * uchun ma'lumot. Import mantig'i (kategoriya, muallif, til normalizatsiyasi,
+     * rasm yuklash) importItem() bilan bir xil.
+     */
+    public function editionPayload(CatalogParserItem $item, bool $withImages = true): array
+    {
+        $category = $this->resolveImportCategory($item);
+        $authorName = $this->resolveAuthorNameForImport($item);
+        $author = $this->resolveAuthor($authorName);
+        $images = $withImages ? $this->downloadImages($item) : [];
+
+        return [
+            'title' => $item->title ?: 'Nomsiz kitob',
+            'author' => $author?->name ?: $authorName,
+            'author_id' => $author?->id,
+            'translator' => $item->translator,
+            'publisher_id' => $this->resolvePublisherId($item->publisher),
+            'category_id' => $category->id,
+            'lang' => $this->normalizeImportLanguage($item->language),
+            'langType' => $this->normalizeImportScript($item->script),
+            'coverType' => $this->normalizeImportCoverType($item->cover_type),
+            'year' => $this->normalizeImportYear($item->year),
+            'pages' => $this->normalizeImportPages($item->pages),
+            'description' => $this->buildImportDescription($item),
+            'front_image' => $images[0] ?? null,
+            'images' => $images,
+            'tag_ids' => array_values(array_map('intval', (array) ($item->suggested_tag_ids ?? []))),
+        ];
+    }
+
     public function importMany(iterable $items, ?int $categoryId = null): array
     {
         $imported = 0;

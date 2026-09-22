@@ -13,4 +13,12 @@ return [
      * qarab ishlaydi (bu yerga tegishli emas).
      */
     'stock_display_cap' => max(1, (int) env('CATALOG_STOCK_DISPLAY_CAP', 10)),
+
+    // GLOBAL KATALOG: yangi taklif (eski ilova, admin, import) yaratilganda kartaga avtomatik ulash
+    'auto_link' => env('CATALOG_AUTO_LINK', true),
+
+    // Orqa muqovadagi shtrix-kodni server tomonda o'qish:
+    //   zbarimg (apt install zbar-tools) → bo'lmasa OpenAI vision → bo'lmasa "o'qilmadi"
+    'zbarimg_path' => env('CATALOG_ZBARIMG_PATH', 'zbarimg'),
+    'vision_fallback' => env('CATALOG_VISION_ISBN', true),
 ];

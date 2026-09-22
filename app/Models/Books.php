@@ -20,6 +20,8 @@ class Books extends Model
     protected $table = 'books';
 
     protected $fillable = [
+        'edition_id',
+        'condition',
         'name',
         'artikul',
         'author',
@@ -117,6 +119,8 @@ class Books extends Model
         'ai_moderation_meta' => 'array',
         'ai_moderation_attempts' => 'integer',
         'ugc_last_scored_at' => 'datetime',
+        'catalog_featured' => 'boolean',
+        'archived_at' => 'datetime',
     ];
 
     public function category(): BelongsTo
@@ -149,6 +153,22 @@ class Books extends Model
     {
         return $this->belongsTo(Seller::class, 'seller_id')
             ->select('id', 'shop_name', 'lastname', 'firstname', 'phone_number', 'photo', 'isVerified', 'status', 'is_hidden');
+    }
+
+    /** Global katalogdagi kitob (bu qator — do'konning shu kitobga taklifi). */
+    public function edition(): BelongsTo
+    {
+        return $this->belongsTo(BookEdition::class, 'edition_id');
+    }
+
+    /**
+     * Mijoz RO'YXATLARI uchun: har kitobdan faqat bitta taklif (buy box).
+     * Katalogga ulanmagan qatorlarda catalog_featured doim 1.
+     * Kitob sahifasi, do'kon sahifasi, savat va buyurtmalarda ISHLATILMAYDI.
+     */
+    public function scopeCatalogFeatured(Builder $query): Builder
+    {
+        return $query->where($this->getTable() . '.catalog_featured', true);
     }
 
     public function publisher(): BelongsTo
@@ -224,6 +244,8 @@ class Books extends Model
             'totalSalesWeek' => (int) ($this->totalSalesWeek ?? 0),
             'totalSales'     => (int) ($this->totalSales ?? 0),
             'created_at'     => $this->created_at?->timestamp ?? 0,
+            'edition_id'     => (int) ($this->edition_id ?? 0),
+            'catalog_featured' => (bool) ($this->catalog_featured ?? true),
         ];
     }
 

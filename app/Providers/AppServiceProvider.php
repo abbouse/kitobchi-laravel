@@ -59,6 +59,11 @@ class AppServiceProvider extends ServiceProvider
         Books::observe(BookStockObserver::class);
         Books::observe(ReadingInsightObserver::class);
         Books::observe(\App\Observers\BooksObserver::class);
+        // GLOBAL KATALOG: kartaga ulash + buy box (ro'yxatlarda kitob bitta marta)
+        Books::observe(\App\Observers\CatalogOfferObserver::class);
+        \App\Models\BranchStock::saved(fn ($row) => app(\App\Observers\CatalogOfferObserver::class)->stockSaved($row));
+        \App\Models\BranchStock::deleted(fn ($row) => app(\App\Observers\CatalogOfferObserver::class)->stockDeleted($row));
+        \App\Models\Seller::updated(fn ($seller) => app(\App\Observers\CatalogOfferObserver::class)->sellerUpdated($seller));
         Stationery::observe(ProductModerationObserver::class);
         Stationery::observe(ProductObserver::class);
         Stationery::observe(StationeryStockObserver::class);
