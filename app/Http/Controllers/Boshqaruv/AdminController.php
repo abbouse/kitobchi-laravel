@@ -4991,8 +4991,15 @@ PROMPT;
         // "moderatsiyada" ro'yxati emas, balki hozir savdoda turgan
         // kitoblar ko'rinsin (moderatsiya soni baribir kartochkada ko'rinadi).
         $tab = (string) request('books_tab', 'active');
+        // Do'kon bo'yicha filtr: "shu do'konning barcha kitoblari" (do'kon profilidan)
+        $sellerFilter = (int) request('books_seller', 0);
         $books = Books::query()
-            ->with(['authorProfile:id,name', 'category:id,name_uz', 'publisher:id,name', 'seller:id,shop_name,firstname,lastname,phone_number,status,isVerified,is_hidden'])
+            ->when($sellerFilter > 0, fn ($query) => $query->where('seller_id', $sellerFilter))
+            ->with([
+                'authorProfile:id,name', 'category:id,name_uz', 'publisher:id,name',
+                'seller:id,shop_name,firstname,lastname,phone_number,status,isVerified,is_hidden',
+                'edition:id,status,verified_at,offers_count',
+            ])
             ->withAvailableTotal()
             // Arxivlangan ("o'chirilgan") kitoblar faqat o'z bo'limida
             ->when($tab === 'archived', fn ($query) => $query->whereNotNull('archived_at'), fn ($query) => $query->whereNull('archived_at'))
@@ -5063,7 +5070,8 @@ PROMPT;
                         'status' => $book->seller->status,
                         'verified' => (bool) $book->seller->isVerified,
                         'hidden' => (bool) $book->seller->is_hidden,
-                        'url' => route('boshqaruv.sellers'),
+                        'url' => route('boshqaruv.sellers.detail', $book->seller_id),
+                        'booksUrl' => route('boshqaruv.books', ['books_seller' => $book->seller_id, 'books_tab' => 'all']),
                     ] : null,
                     'lang' => $book->lang,
                     'langType' => $book->langType,
@@ -5086,6 +5094,11 @@ PROMPT;
                     'moderateUrl' => route('boshqaruv.books.moderate', $book),
                     'editionId' => $book->edition_id,
                     'catalogUrl' => $book->edition_id ? route('boshqaruv.catalog.show', $book->edition_id) : null,
+                    // Do'kon yangi kitob yuborgan bo'lsa — karta hali tekshiruvda
+                    'editionStatus' => $book->edition?->status,
+                    'editionVerified' => $book->edition?->verified_at !== null,
+                    'editionOffers' => (int) ($book->edition?->offers_count ?? 0),
+                    'submissionsUrl' => route('boshqaruv.catalog.submissions'),
                     'featured' => (bool) $book->catalog_featured,
                     'condition' => $book->condition ?? 'new',
                     'archived' => $book->archived_at !== null,
@@ -5097,19 +5110,28 @@ PROMPT;
                 ->values()
                 ->all(),
             'bookPagination' => $this->paginationMeta($books),
-            'bookCounts' => [
-                'all' => (int) Books::query()->whereNull('archived_at')->count(),
-                'pending' => (int) Books::query()->whereNull('archived_at')->where('is_approved', 0)->count(),
-                'active' => (int) Books::query()->whereNull('archived_at')->where('is_approved', 1)->count(),
-                'rejected' => (int) Books::query()->whereNull('archived_at')->where('is_approved', 2)->count(),
-                'archived' => (int) Books::query()->whereNotNull('archived_at')->count(),
-            ],
+            'bookCounts' => (function () use ($sellerFilter) {
+                $scope = fn () => Books::query()->when($sellerFilter > 0, fn ($q) => $q->where('seller_id', $sellerFilter));
+
+                return [
+                    'all' => (int) $scope()->whereNull('archived_at')->count(),
+                    'pending' => (int) $scope()->whereNull('archived_at')->where('is_approved', 0)->count(),
+                    'active' => (int) $scope()->whereNull('archived_at')->where('is_approved', 1)->count(),
+                    'rejected' => (int) $scope()->whereNull('archived_at')->where('is_approved', 2)->count(),
+                    'archived' => (int) $scope()->whereNotNull('archived_at')->count(),
+                ];
+            })(),
             'bookUrls' => [
                 'store' => route('boshqaruv.books.store'),
                 'catalogSearch' => route('boshqaruv.catalog.search'),
                 'catalog' => route('boshqaruv.catalog'),
             ],
-            'bookFilters' => ['search' => $search, 'tab' => $tab],
+            'bookFilters' => [
+                'search' => $search,
+                'tab' => $tab,
+                'sellerId' => $sellerFilter ?: null,
+                'sellerName' => $sellerFilter ? (Seller::query()->whereKey($sellerFilter)->value('shop_name') ?: ('#' . $sellerFilter)) : null,
+            ],
             'bookFormOptions' => [
                 'categories' => BookCategories::query()->orderBy('name_uz')->get(['id', 'name_uz'])->map(fn ($category) => ['id' => $category->id, 'name' => $category->name_uz])->values()->all(),
                 'publishers' => Publisher::query()->orderBy('name')->get(['id', 'name'])->map(fn ($publisher) => ['id' => $publisher->id, 'name' => $publisher->name])->values()->all(),
@@ -6763,6 +6785,9 @@ PROMPT;
             'banLogs' => $banLogs->map(fn (SellerBanLog $log) => $this->mapSellerBanLogRow($log))->values()->all(),
             'actions' => [
                 'detailUrl' => route('boshqaruv.sellers.detail', $seller),
+                // Do'konning barcha kitoblari (moderatsiyadagilari ham) bitta ro'yxatda
+                'booksUrl' => route('boshqaruv.books', ['books_seller' => $seller->id, 'books_tab' => 'all']),
+                'stationeriesUrl' => route('boshqaruv.stationeries', ['stationery_search' => $seller->shop_name]),
                 'editUrl' => route('boshqaruv.sellers.edit', $seller),
                 'approveUrl' => route('boshqaruv.sellers.approve', $seller),
                 'rejectUrl' => route('boshqaruv.sellers.reject', $seller),

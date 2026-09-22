@@ -134,4 +134,26 @@ class AdminCatalogTest extends TestCase
         $this->assertFalse((bool) $visible->fresh()->is_hidden);
         $this->assertTrue((bool) $hiddenBySeller->fresh()->is_hidden, "do'kon yashirgan kitob arxivdan ham yashirin qaytishi kerak");
     }
+
+    public function test_books_page_can_be_filtered_by_shop(): void
+    {
+        $cat = $this->makeCategory();
+        $a = $this->makeSeller();
+        $b = $this->makeSeller();
+        $mine = $this->makeBook($a, $cat);
+        $this->makeBook($b, $cat, ['isbn' => null, 'name' => 'Boshqa kitob']);
+
+        $this->withoutVite();
+        $this->get("/boshqaruv/books?books_seller={$a->id}&books_tab=all")
+            ->assertOk()
+            ->assertInertia(function (\Inertia\Testing\AssertableInertia $page) use ($mine, $a) {
+                $page->component('Books', false)
+                    ->where('bookFilters.sellerId', $a->id)
+                    ->where('bookCounts.all', 1)
+                    ->has('books', 1)
+                    ->where('books.0.id', $mine->id);
+                $this->assertStringContainsString("books_seller={$a->id}", (string) $page->toArray()['props']['books'][0]['seller']['booksUrl']);
+            });
+    }
+
 }

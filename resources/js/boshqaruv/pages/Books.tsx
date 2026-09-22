@@ -57,12 +57,14 @@ interface Book {
   recommended?: boolean;
   recommendedExpiresAt?: string | null;
   seller?: {
+    id?: number;
     name?: string;
     phone?: string;
     status?: string;
     verified?: boolean;
     hidden?: boolean;
     url?: string;
+    booksUrl?: string;
   } | null;
   lang?: string;
   langType?: string;
@@ -84,6 +86,10 @@ interface Book {
   moderateUrl?: string;
   editionId?: number | null;
   catalogUrl?: string | null;
+  editionStatus?: string | null;
+  editionVerified?: boolean;
+  editionOffers?: number;
+  submissionsUrl?: string;
   featured?: boolean;
   condition?: string;
   archived?: boolean;
@@ -109,7 +115,7 @@ const statusChip = (status?: number): [string, string] =>
   status === 1 ? ['Faol', 'text-light-success'] : status === 2 ? ['Rad etilgan', 'text-light-danger'] : ['Moderatsiya', 'text-light-warning'];
 
 export default function Books() {
-  const { books = [], bookPagination = { page: 1, totalPages: 1, from: 0, to: 0, total: 0 }, bookCounts = {}, bookFilters = {}, bookFormOptions = { categories: [], publishers: [], sellers: [] }, bookUrls } = usePage<{ books?: Book[]; bookPagination?: { page: number; totalPages: number; from: number; to: number; total: number }; bookCounts?: Record<string, number>; bookFilters?: { search?: string; tab?: string }; bookFormOptions?: { categories: OptionItem[]; publishers: OptionItem[]; sellers: OptionItem[] }; bookUrls?: { store: string; catalogSearch: string; catalog: string } }>().props;
+  const { books = [], bookPagination = { page: 1, totalPages: 1, from: 0, to: 0, total: 0 }, bookCounts = {}, bookFilters = {}, bookFormOptions = { categories: [], publishers: [], sellers: [] }, bookUrls } = usePage<{ books?: Book[]; bookPagination?: { page: number; totalPages: number; from: number; to: number; total: number }; bookCounts?: Record<string, number>; bookFilters?: { search?: string; tab?: string; sellerId?: number | null; sellerName?: string | null }; bookFormOptions?: { categories: OptionItem[]; publishers: OptionItem[]; sellers: OptionItem[] }; bookUrls?: { store: string; catalogSearch: string; catalog: string } }>().props;
   const [picked, setPicked] = useState<PickedEdition | null>(null);
   const [showView, setShowView] = useState(false);
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
@@ -130,8 +136,8 @@ export default function Books() {
     }
   }, [bookFilters.search, autoOpenedSearch, books, showView]);
 
-  const loadBooks = (page = 1, tab = activeTab, term = search) => {
-    router.get('/boshqaruv/books', { books_page: page, books_tab: tab, books_search: term }, { preserveState: true, preserveScroll: true, replace: true });
+  const loadBooks = (page = 1, tab = activeTab, term = search, sellerId: number | null = bookFilters.sellerId ?? null) => {
+    router.get('/boshqaruv/books', { books_page: page, books_tab: tab, books_search: term, books_seller: sellerId || undefined }, { preserveState: true, preserveScroll: true, replace: true });
   };
 
   const handleModerate = (book: Book, status: 0 | 1 | 2, note?: string) => {
@@ -182,6 +188,12 @@ export default function Books() {
         <div>
           <h4 className="main-title mb-0">Kitoblar katalogi</h4><PageCrumbs />
           <p className="mb-0 text-secondary">Moderatsiya, faol va rad etilgan kitoblarni boshqarish</p>
+          {bookFilters.sellerId ? (
+            <span className="badge text-light-primary mt-2 d-inline-flex align-items-center gap-2">
+              <i className="ti ti-building-store"></i>Do'kon: {bookFilters.sellerName}
+              <button type="button" className="btn-close f-s-10" aria-label="Filtrni olib tashlash" onClick={() => loadBooks(1, activeTab, search, null)}></button>
+            </span>
+          ) : null}
         </div>
         <div className="d-flex gap-2 flex-wrap">
           <form className="d-flex gap-2" onSubmit={(event) => { event.preventDefault(); loadBooks(1); }}>
@@ -304,7 +316,11 @@ export default function Books() {
                         <small className="d-block text-muted">#{book.id} · {book.category || 'Kitob'}{book.hidden ? ' · yashirilgan' : ''}{book.editionId ? ` · karta #${book.editionId}` : ''}{book.editionId && !book.featured ? ' · boshqa taklif' : ''}</small>
                       </td>
                       <td className="text-muted">{book.author}</td>
-                      <td>{book.seller?.name || 'Ichki katalog'}</td>
+                      <td>
+                        {book.seller?.booksUrl
+                          ? <a href={book.seller.booksUrl} className="text-dark f-w-500" title="Shu do'konning barcha kitoblari">{book.seller?.name}</a>
+                          : (book.seller?.name || 'Ichki katalog')}
+                      </td>
                       <td>
                         <strong>{fmt(book.discountPrice || book.price)} so'm</strong>
                         {book.discountPrice ? <small className="d-block text-muted text-decoration-line-through">{fmt(book.price)}</small> : null}
@@ -312,7 +328,14 @@ export default function Books() {
                       <td>{fmt(book.stock)}</td>
                       <td>{fmt(book.sold)}</td>
                       <td>{fmt(book.views || 0)}</td>
-                      <td><span className={`badge ${chip}`}>{label}</span></td>
+                      <td>
+                        <span className={`badge ${chip}`}>{label}</span>
+                        {book.editionStatus === 'pending' ? (
+                          <a href={book.submissionsUrl} className="badge text-light-warning d-block mt-1" title="Do'kon yuborgan yangi kitob — karta tekshiruvda">
+                            <i className="ti ti-inbox me-1"></i>Ariza
+                          </a>
+                        ) : null}
+                      </td>
                       <td>
                         <div className="d-flex gap-1">
                           <button className="btn btn-light-primary icon-btn w-30 h-30 b-r-22" onClick={() => handleOpenView(book)} title="Ko'rish / tahrirlash">
@@ -378,13 +401,21 @@ export default function Books() {
                     {selectedBook.recommended ? <span className="badge text-light-info">Tavsiya</span> : null}
                     {selectedBook.archived ? <span className="badge text-light-danger">O'chirilgan</span> : null}
                     {selectedBook.editionId && selectedBook.featured ? <span className="badge text-light-success">Ro'yxatda chiqadi</span> : null}
+                    {selectedBook.editionStatus === 'pending' ? <span className="badge text-light-warning">Karta tekshiruvda</span> : null}
                   </>}
                   stats={[{ label: 'Sotilgan', value: fmt(selectedBook.sold) }, { label: 'Ombor', value: fmt(selectedBook.stock) }, { label: "Ko'rish", value: fmt(selectedBook.views || 0) }]}
                 />
 
                 {selectedBook.catalogUrl ? (
                   <div className="card"><div className="card-body">
-                    <PersonRow icon="ti ti-book" name={`Katalog kartasi #${selectedBook.editionId}`} meta="Nom, muallif, muqova va tavsif shu kartadan olinadi" action={<a href={selectedBook.catalogUrl} className="btn btn-light-primary btn-sm">Ochish</a>} />
+                    <PersonRow
+                      icon="ti ti-book"
+                      name={`Katalog kartasi #${selectedBook.editionId}`}
+                      meta={selectedBook.editionStatus === 'pending'
+                        ? "Do'kon yuborgan yangi kitob — Arizalar bo'limida tasdiqlang"
+                        : `${selectedBook.editionOffers || 1} ta do'kon taklifi · ma'lumot shu kartadan olinadi`}
+                      action={<a href={selectedBook.catalogUrl} className="btn btn-light-primary btn-sm">Ochish</a>}
+                    />
                   </div></div>
                 ) : null}
 
