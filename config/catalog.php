@@ -17,6 +17,15 @@ return [
     // GLOBAL KATALOG: yangi taklif (eski ilova, admin, import) yaratilganda kartaga avtomatik ulash
     'auto_link' => env('CATALOG_AUTO_LINK', true),
 
+    /*
+     * "O'chirgich": false bo'lsa mijoz ro'yxatlari avvalgidek ishlaydi — har
+     * do'kon taklifi alohida karta bo'lib chiqadi (katalog, arizalar va
+     * boshqaruv o'z ishini davom ettiraveradi). Deploydan keyin kutilmagan
+     * holat bo'lsa, kodni qaytarmasdan .env orqali darhol orqaga qaytarish
+     * mumkin: CATALOG_DEDUPE=false + php artisan config:cache
+     */
+    'dedupe' => env('CATALOG_DEDUPE', true),
+
     // Orqa muqovadagi shtrix-kodni server tomonda o'qish:
     //   zbarimg (apt install zbar-tools) → bo'lmasa OpenAI vision → bo'lmasa "o'qilmadi"
     'zbarimg_path' => env('CATALOG_ZBARIMG_PATH', 'zbarimg'),

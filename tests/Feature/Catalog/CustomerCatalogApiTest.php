@@ -95,4 +95,19 @@ class CustomerCatalogApiTest extends TestCase
         $this->getJson(self::API . "products/book/{$first->id}/similar")->assertOk()->assertJsonStructure(['data', 'meta' => ['total']]);
         $this->getJson(self::API . 'home')->assertOk();
     }
+
+    public function test_dedupe_kill_switch_restores_previous_behaviour(): void
+    {
+        $cat = $this->makeCategory();
+        $a = $this->makeBook($this->makeSeller(), $cat, ['price' => 60000]);
+        $b = $this->makeBook($this->makeSeller(), $cat, ['price' => 48000]);
+
+        config(['catalog.dedupe' => false]);
+        $ids = collect($this->getJson(self::API . 'products/20')->assertOk()->json('data'))->pluck('id')->all();
+        $this->assertEqualsCanonicalizing([$a->id, $b->id], $ids, "o'chirgich yoqilganda ikkala taklif ham chiqadi");
+
+        config(['catalog.dedupe' => true]);
+        $ids = collect($this->getJson(self::API . 'products/20')->assertOk()->json('data'))->pluck('id')->all();
+        $this->assertSame([$b->id], $ids);
+    }
 }

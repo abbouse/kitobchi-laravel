@@ -170,6 +170,10 @@ class Books extends Model
      */
     public function scopeCatalogFeatured(Builder $query): Builder
     {
+        if (! config('catalog.dedupe', true)) {
+            return $query; // .env o'chirgichi: avvalgi xulq-atvor (har taklif alohida)
+        }
+
         return $query->where($this->getTable() . '.catalog_featured', true);
     }
 
