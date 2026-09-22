@@ -289,6 +289,7 @@ class ProductPersonalizationService
         }
 
         return $this->visibleBooks(['category', 'seller', 'tags'])
+            ->catalogFeatured()
             ->whereNotIn('id', $signals['viewed_book_ids'])
             ->where(function ($query) use ($categoryIds, $authorIds, $authorNames, $sellerIds) {
                 if ($categoryIds !== []) {

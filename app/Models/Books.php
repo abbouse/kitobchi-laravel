@@ -121,6 +121,7 @@ class Books extends Model
         'ugc_last_scored_at' => 'datetime',
         'catalog_featured' => 'boolean',
         'archived_at' => 'datetime',
+        'archived_state' => 'array',
     ];
 
     public function category(): BelongsTo
@@ -130,7 +131,8 @@ class Books extends Model
 
     public function cartItems()
     {
-        return $this->hasMany(MyCart::class, 'book_id');
+        // my_carts'da `book_id` ustuni yo'q — polimorf product_id/product_type
+        return $this->hasMany(MyCart::class, 'product_id')->where('product_type', 'book');
     }
 
     public function getFirstImageAttribute(): ?string

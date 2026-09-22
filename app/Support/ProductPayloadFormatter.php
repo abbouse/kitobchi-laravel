@@ -62,6 +62,20 @@ class ProductPayloadFormatter
             'seller' => self::formatSeller($product),
         ];
 
+        // GLOBAL KATALOG (qo'shimcha maydonlar — eski ilovalar e'tiborsiz qoldiradi)
+        if ($isBook) {
+            $payload['edition_id'] = $product->edition_id ? (int) $product->edition_id : null;
+            $payload['condition'] = $product->condition ?? 'new';
+            if ($product->edition_id && $product->relationLoaded('edition') && $product->edition) {
+                $edition = $product->edition;
+                $payload['offers_count'] = (int) ($edition->in_stock_offers_count ?: $edition->offers_count);
+                $payload['min_price'] = $edition->min_price !== null ? (int) $edition->min_price : null;
+            } else {
+                $payload['offers_count'] = 1;
+                $payload['min_price'] = null;
+            }
+        }
+
         if ($isDetail) {
             $payload['description'] = $product->description ?? null;
             $payload['isbn'] = $isBook ? ($product->isbn ?? null) : null;
@@ -72,6 +86,12 @@ class ProductPayloadFormatter
             $payload['langType'] = $isBook ? ($product->langType ?? '') : null;
             $payload['coverType'] = $isBook ? ($product->coverType ?? 'Yumshoq') : null;
             $payload['year'] = $isBook ? ($product->year ?? now()->year) : null;
+
+            if ($isBook) {
+                $payload['offers'] = $product->edition_id
+                    ? CatalogOffers::forEdition((int) $product->edition_id, (int) $product->id)
+                    : [];
+            }
         }
 
         if (($options['include_variants'] ?? $isDetail) && !$isBook) {
@@ -214,7 +234,7 @@ class ProductPayloadFormatter
      * "{cap}+", aks holda aniq son (string sifatida — front-end qo'shimcha
      * formatlashsiz to'g'ridan-to'g'ri matnga qo'ya oladi).
      */
-    private static function stockDisplayLabel(int $realStock): string
+    public static function stockDisplayLabel(int $realStock): string
     {
         $cap = (int) config('catalog.stock_display_cap', 10);
 

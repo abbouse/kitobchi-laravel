@@ -4993,6 +4993,9 @@ PROMPT;
         $tab = (string) request('books_tab', 'active');
         $books = Books::query()
             ->with(['authorProfile:id,name', 'category:id,name_uz', 'publisher:id,name', 'seller:id,shop_name,firstname,lastname,phone_number,status,isVerified,is_hidden'])
+            ->withAvailableTotal()
+            // Arxivlangan ("o'chirilgan") kitoblar faqat o'z bo'limida
+            ->when($tab === 'archived', fn ($query) => $query->whereNotNull('archived_at'), fn ($query) => $query->whereNull('archived_at'))
             ->when($tab === 'pending', fn ($query) => $query->where('is_approved', 0))
             ->when($tab === 'active', fn ($query) => $query->where('is_approved', 1))
             ->when($tab === 'rejected', fn ($query) => $query->where('is_approved', 2))
@@ -5081,16 +5084,30 @@ PROMPT;
                     'showUrl' => route('boshqaruv.books', ['books_search' => $book->id]),
                     'editUrl' => route('boshqaruv.books.update', $book),
                     'moderateUrl' => route('boshqaruv.books.moderate', $book),
+                    'editionId' => $book->edition_id,
+                    'catalogUrl' => $book->edition_id ? route('boshqaruv.catalog.show', $book->edition_id) : null,
+                    'featured' => (bool) $book->catalog_featured,
+                    'condition' => $book->condition ?? 'new',
+                    'archived' => $book->archived_at !== null,
+                    'archivedAt' => $this->dateTime($book->archived_at),
+                    'archiveUrl' => route('boshqaruv.books.archive', $book),
+                    'restoreUrl' => route('boshqaruv.books.restore', $book),
                 ];
             })
                 ->values()
                 ->all(),
             'bookPagination' => $this->paginationMeta($books),
             'bookCounts' => [
-                'all' => (int) Books::query()->count(),
-                'pending' => (int) Books::query()->where('is_approved', 0)->count(),
-                'active' => (int) Books::query()->where('is_approved', 1)->count(),
-                'rejected' => (int) Books::query()->where('is_approved', 2)->count(),
+                'all' => (int) Books::query()->whereNull('archived_at')->count(),
+                'pending' => (int) Books::query()->whereNull('archived_at')->where('is_approved', 0)->count(),
+                'active' => (int) Books::query()->whereNull('archived_at')->where('is_approved', 1)->count(),
+                'rejected' => (int) Books::query()->whereNull('archived_at')->where('is_approved', 2)->count(),
+                'archived' => (int) Books::query()->whereNotNull('archived_at')->count(),
+            ],
+            'bookUrls' => [
+                'store' => route('boshqaruv.books.store'),
+                'catalogSearch' => route('boshqaruv.catalog.search'),
+                'catalog' => route('boshqaruv.catalog'),
             ],
             'bookFilters' => ['search' => $search, 'tab' => $tab],
             'bookFormOptions' => [
@@ -5999,7 +6016,8 @@ PROMPT;
         $existingImages = $this->parseImagesText($request->input($textField));
         $deletedImages = array_diff($currentImages, $existingImages);
         foreach ($deletedImages as $image) {
-            if (is_string($image) && ! str_starts_with($image, 'http')) {
+            // GLOBAL KATALOG: umumiy muqova (karta / boshqa takliflar) o'chirilmaydi
+            if (is_string($image) && ! str_starts_with($image, 'http') && \App\Support\SharedImageGuard::canDelete($image, $request->route('book')?->id)) {
                 Storage::disk('public')->delete($image);
                 ProductImageVariantGenerator::deleteForPath($image);
             }

@@ -44,7 +44,9 @@ class ProductCatalogController extends Controller
 
         try {
             $similarBooks = $this->visibleBooks()
+                ->catalogFeatured()
                 ->where('id', '!=', $book->id)
+                ->when($book->edition_id, fn ($q) => $q->where(fn ($w) => $w->whereNull('edition_id')->orWhere('edition_id', '!=', $book->edition_id)))
                 ->where(function ($q) use ($book) {
                     if ($book->category_id) {
                         $q->where('category_id', $book->category_id);
@@ -503,6 +505,7 @@ class ProductCatalogController extends Controller
                 if ($search !== '') {
                     $items = $items->merge(
                         $this->visibleBooks()
+                            ->catalogFeatured()
                             ->where(function ($q) use ($search) {
                                 $q->where('name', 'like', "%{$search}%")
                                     ->orWhere('author', 'like', "%{$search}%")
@@ -617,7 +620,7 @@ class ProductCatalogController extends Controller
 
                 $products = $this->applyCatalogSort($productsQuery, $sort)->paginate(24, ['*'], 'page');
             } else {
-                $productsQuery = $this->visibleBooks(['category']);
+                $productsQuery = $this->visibleBooks(['category'])->catalogFeatured();
 
                 if ($search !== '') {
                     $productsQuery->where(function ($q) use ($search) {
@@ -784,6 +787,7 @@ class ProductCatalogController extends Controller
         $xml = \Illuminate\Support\Facades\Cache::remember('seo_sitemap_xml', 86400, function () {
             try {
                 $books = $this->visibleBooks()
+                    ->catalogFeatured()
                     ->select('id', 'name', 'updated_at')
                     ->orderByDesc('updated_at')
                     ->take(10000)
@@ -832,6 +836,7 @@ class ProductCatalogController extends Controller
         $xml = \Illuminate\Support\Facades\Cache::remember('seo_google_merchant_xml', 86400, function () {
             try {
                 $books = $this->visibleBooks(['publisher', 'category'])
+                    ->catalogFeatured()
                     ->take(5000)
                     ->get();
 

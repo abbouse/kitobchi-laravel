@@ -46,7 +46,8 @@ trait HasProductVisibility
     protected function visibleBooks(array $with = []): \Illuminate\Database\Eloquent\Builder
     {
         $q = Books::query();
-        $with = array_values(array_unique(array_merge($with, ['authorProfile'])));
+        // edition: ro'yxat kartasidagi "N ta do'konda, X so'mdan" uchun (bitta whereIn so'rov)
+        $with = array_values(array_unique(array_merge($with, ['authorProfile', 'edition:id,offers_count,in_stock_offers_count,min_price'])));
 
         $q->with($with);
 

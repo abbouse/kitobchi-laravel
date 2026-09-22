@@ -9,9 +9,11 @@ use Illuminate\Support\Facades\DB;
 
 trait CatalogFixtures
 {
+    /** parent::setUp() dan OLDIN chaqiriladi (sqlite'da migratsiya ishlamaydi). */
     protected function requireMysql(): void
     {
-        if (DB::getDriverName() !== 'mysql') {
+        $driver = $_SERVER['DB_CONNECTION'] ?? $_ENV['DB_CONNECTION'] ?? getenv('DB_CONNECTION');
+        if ($driver !== 'mysql') {
             $this->markTestSkipped('Katalog testlari MySQL sxemasini talab qiladi (DB_CONNECTION=mysql).');
         }
     }

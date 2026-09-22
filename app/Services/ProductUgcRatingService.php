@@ -63,12 +63,24 @@ class ProductUgcRatingService
      */
     private function refreshProducts(Collection $products): void
     {
+        $done = [];
         foreach ($products as $row) {
             $productId = (int) $row['product_id'];
             $productType = (string) $row['product_type'];
 
-            if ($productId <= 0) {
+            if ($productId <= 0 || isset($done[$productType . '_' . $productId])) {
                 continue;
+            }
+
+            // GLOBAL KATALOG: kitob reytingi barcha do'kon takliflari bo'yicha bitta
+            $productIds = $productType === 'book'
+                ? \App\Support\CatalogOffers::siblingIds(
+                    ($editionId = Books::query()->whereKey($productId)->value('edition_id')) ? (int) $editionId : null,
+                    $productId
+                )
+                : [$productId];
+            foreach ($productIds as $siblingId) {
+                $done[$productType . '_' . $siblingId] = true;
             }
 
             $posts = DB::table('book_club as p')
@@ -80,14 +92,16 @@ class ProductUgcRatingService
                     $query->where('p.repost', false)->orWhereNull('p.repost');
                 })
                 ->where('p.product_type', $productType)
-                ->where('p.product_id', $productId)
+                ->whereIn('p.product_id', $productIds)
                 ->where('p.ai_post_status', 'scored')
                 ->whereNotNull('p.ai_post_score')
                 ->select('p.id', 'p.ai_post_score', 'p.created_at')
                 ->get();
 
             if ($posts->isEmpty()) {
-                $this->updateProductScore($productType, $productId, 0, 0);
+                foreach ($productIds as $siblingId) {
+                    $this->updateProductScore($productType, $siblingId, 0, 0);
+                }
                 continue;
             }
 
@@ -101,7 +115,7 @@ class ProductUgcRatingService
                     $query->where('p.repost', false)->orWhereNull('p.repost');
                 })
                 ->where('p.product_type', $productType)
-                ->where('p.product_id', $productId)
+                ->whereIn('p.product_id', $productIds)
                 ->where('c.ai_status', 'scored')
                 ->whereNotNull('c.ai_score')
                 ->where(function ($query) {
@@ -133,12 +147,14 @@ class ProductUgcRatingService
             $bayesian = ($weightedScore + (self::PRIOR_MEAN * self::PRIOR_WEIGHT))
                 / max(1.0, $weightedCount + self::PRIOR_WEIGHT);
 
-            $this->updateProductScore(
-                $productType,
-                $productId,
-                round(max(1, min(5, $bayesian)), 1),
-                $posts->count(),
-            );
+            foreach ($productIds as $siblingId) {
+                $this->updateProductScore(
+                    $productType,
+                    $siblingId,
+                    round(max(1, min(5, $bayesian)), 1),
+                    $posts->count(),
+                );
+            }
         }
     }
 

@@ -72,6 +72,22 @@ class BookEdition extends Model
         return $query->whereIn('status', [self::STATUS_ACTIVE, self::STATUS_PENDING]);
     }
 
+    /**
+     * Do'kon ilovasida ko'rinadigan kartalar: tasdiqlanganlar, o'z arizalari va
+     * eski/avtomatik ochilgan kartalar. Boshqa do'konning tekshiruvdagi arizasi
+     * (uning rasmi va tavsifi) begona do'konga ko'rsatilmaydi.
+     */
+    public function scopeSelectableBySeller(Builder $query, int $sellerId): Builder
+    {
+        return $query->where(function (Builder $inner) use ($sellerId) {
+            $inner->where('status', self::STATUS_ACTIVE)
+                ->orWhere(fn (Builder $own) => $own->where('status', self::STATUS_PENDING)
+                    ->where(fn (Builder $mine) => $mine
+                        ->where(fn (Builder $q) => $q->where('created_by_type', 'seller')->where('created_by_id', $sellerId))
+                        ->orWhereIn('source', ['legacy', 'backfill'])));
+        });
+    }
+
     public function isUsable(): bool
     {
         return in_array($this->status, [self::STATUS_ACTIVE, self::STATUS_PENDING], true) && ! $this->trashed();

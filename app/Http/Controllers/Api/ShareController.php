@@ -132,7 +132,10 @@ class ShareController extends Controller
             'category_format' => 'title',
             'extra' => [
                 'ugc_reviews_preview' => $this->buildReviewPreview(
-                    (int) $product->id,
+                    // GLOBAL KATALOG: sharhlar kitobniki — barcha do'kon takliflari bo'yicha
+                    $type === 'book'
+                        ? \App\Support\CatalogOffers::siblingIds($product->edition_id ? (int) $product->edition_id : null, (int) $product->id)
+                        : [(int) $product->id],
                     $type,
                     $user?->id,
                 ),
@@ -140,10 +143,10 @@ class ShareController extends Controller
         ]);
     }
 
-    private function buildReviewPreview(int $productId, string $type, ?int $userId): array
+    private function buildReviewPreview(array $productIds, string $type, ?int $userId): array
     {
         $posts = BookClub::query()
-            ->where('product_id', $productId)
+            ->whereIn('product_id', $productIds)
             ->where('product_type', $type)
             ->where('is_deleted', false)
             ->with([

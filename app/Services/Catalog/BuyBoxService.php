@@ -27,9 +27,22 @@ use Illuminate\Support\Facades\Log;
  */
 class BuyBoxService
 {
+    /** Ommaviy ishlar (backfill) uchun: har taklifda qayta hisoblamaslik. */
+    private bool $paused = false;
+
+    public function pause(): void
+    {
+        $this->paused = true;
+    }
+
+    public function resume(): void
+    {
+        $this->paused = false;
+    }
+
     public function touch(?int $editionId): void
     {
-        if (! $editionId) {
+        if (! $editionId || $this->paused) {
             return;
         }
 
@@ -93,7 +106,10 @@ class BuyBoxService
             ];
         })->values();
 
-        $featuredId = $ranked->first()?->id;
+        // Ko'rinadigan taklif bo'lmasa ham bitta "nomzod" belgilanadi (ro'yxatlar baribir
+        // ko'rinish shartini tekshiradi) — hodisasiz tasdiqlangan yagona taklif darhol chiqadi.
+        $featuredId = $ranked->first()?->id
+            ?? $offers->sortBy(fn (Books $b) => [(int) $b->is_approved === 1 ? 0 : 1, $b->archived_at ? 1 : 0, -(int) $b->id])->first()?->id;
         $inStock = $eligible->filter(fn (Books $b) => $b->totalAvailableStock() > 0);
         $priced = $inStock->isNotEmpty() ? $inStock : $eligible;
 
@@ -106,7 +122,10 @@ class BuyBoxService
         }
 
         if (! empty($changed)) {
-            Books::query()->whereIn('id', $changed)->toBase()->update([
+            // MUHIM: butun karta bitta so'rovda yoziladi — bir vaqtda ketgan ikki
+            // hisob (masalan, buyurtma + narx tahriri) ikkita "tanlangan" taklif
+            // qoldirmasligi uchun (oxirgi yozuv g'olib).
+            Books::query()->where('edition_id', $editionId)->toBase()->update([
                 'catalog_featured' => DB::raw('CASE WHEN id = ' . (int) ($featuredId ?? 0) . ' THEN 1 ELSE 0 END'),
             ]);
             $this->reindex($changed);
@@ -185,6 +204,27 @@ class BuyBoxService
         } catch (\Throwable $e) {
             Log::debug('Catalog reindex skipped: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Moderatsiya qarori model hodisalarisiz (updateQuietly) yozilgan joylardan
+     * chaqiriladi: buy box qayta hisoblanadi, eski/avto karta faollashadi.
+     */
+    public function afterModeration($product): void
+    {
+        if (! $product instanceof Books || ! $product->edition_id) {
+            return;
+        }
+
+        if ((int) $product->is_approved === 1) {
+            BookEdition::query()
+                ->whereKey($product->edition_id)
+                ->where('status', BookEdition::STATUS_PENDING)
+                ->whereIn('source', ['legacy', 'backfill'])
+                ->update(['status' => BookEdition::STATUS_ACTIVE]);
+        }
+
+        $this->touch((int) $product->edition_id);
     }
 
     /** Qoldiq o'zgarganda (BranchStock hodisasi) chaqiriladi. */

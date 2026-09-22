@@ -786,8 +786,15 @@ class BookClubController extends Controller
                 return response()->json(['status' => 'error', 'message' => 'Noto\'g\'ri product type'], 400);
             }
 
+            // GLOBAL KATALOG: kitob sharhlari barcha do'kon takliflari bo'yicha birlashadi
+            $productIds = [(int) $productId];
+            if ($type === 'book') {
+                $editionId = \App\Models\Books::query()->whereKey((int) $productId)->value('edition_id');
+                $productIds = \App\Support\CatalogOffers::siblingIds($editionId ? (int) $editionId : null, (int) $productId);
+            }
+
             $posts = BookClub::with($this->postWith())
-                ->where('product_id', $productId)
+                ->whereIn('product_id', $productIds)
                 ->where('product_type', $typeMap[$type])
                 ->where('is_deleted', false)
                 ->tap(fn ($query) => $this->applyWarningVisibility($query, $user))

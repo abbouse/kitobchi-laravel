@@ -11,6 +11,7 @@ import { MiniStat, StatWidget } from '../components/Axelit';
 import { tiIcon } from '../utils/icons';
 import { MediaCard, PersonRow } from '../components/Profile';
 import FormAction from '../components/FormAction';
+import { CoverInputs, EditionFields, EditionPicker, type PickedEdition } from '../components/CatalogFields';
 
 const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n || 0);
 
@@ -81,6 +82,14 @@ interface Book {
   showUrl?: string;
   editUrl?: string;
   moderateUrl?: string;
+  editionId?: number | null;
+  catalogUrl?: string | null;
+  featured?: boolean;
+  condition?: string;
+  archived?: boolean;
+  archivedAt?: string | null;
+  archiveUrl?: string;
+  restoreUrl?: string;
 }
 
 interface OptionItem { id: number; name: string }
@@ -100,7 +109,8 @@ const statusChip = (status?: number): [string, string] =>
   status === 1 ? ['Faol', 'text-light-success'] : status === 2 ? ['Rad etilgan', 'text-light-danger'] : ['Moderatsiya', 'text-light-warning'];
 
 export default function Books() {
-  const { books = [], bookPagination = { page: 1, totalPages: 1, from: 0, to: 0, total: 0 }, bookCounts = {}, bookFilters = {}, bookFormOptions = { categories: [], publishers: [], sellers: [] } } = usePage<{ books?: Book[]; bookPagination?: { page: number; totalPages: number; from: number; to: number; total: number }; bookCounts?: Record<string, number>; bookFilters?: { search?: string; tab?: string }; bookFormOptions?: { categories: OptionItem[]; publishers: OptionItem[]; sellers: OptionItem[] } }>().props;
+  const { books = [], bookPagination = { page: 1, totalPages: 1, from: 0, to: 0, total: 0 }, bookCounts = {}, bookFilters = {}, bookFormOptions = { categories: [], publishers: [], sellers: [] }, bookUrls } = usePage<{ books?: Book[]; bookPagination?: { page: number; totalPages: number; from: number; to: number; total: number }; bookCounts?: Record<string, number>; bookFilters?: { search?: string; tab?: string }; bookFormOptions?: { categories: OptionItem[]; publishers: OptionItem[]; sellers: OptionItem[] }; bookUrls?: { store: string; catalogSearch: string; catalog: string } }>().props;
+  const [picked, setPicked] = useState<PickedEdition | null>(null);
   const [showView, setShowView] = useState(false);
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [search, setSearch] = useState(bookFilters.search || '');
@@ -134,6 +144,26 @@ export default function Books() {
     setRejectTarget(null);
   };
 
+  const submitCreate = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!bookUrls?.store) return;
+    router.post(bookUrls.store, new FormData(event.currentTarget), {
+      forceFormData: true,
+      preserveScroll: true,
+      onSuccess: () => setPicked(null),
+    });
+  };
+
+  const archiveBook = (book: Book) => {
+    if (!book.archiveUrl) return;
+    if (!window.confirm(`"${book.title}" o'chirilsinmi?\n\nKitob sotuvdan, savatlardan va qidiruvdan olinadi. Buyurtma tarixi va moliyaviy yozuvlar saqlanadi (arxivdan qaytarish mumkin).`)) return;
+    router.delete(book.archiveUrl, { preserveScroll: true, onSuccess: () => setShowView(false) });
+  };
+
+  const restoreBook = (book: Book) => {
+    if (book.restoreUrl) router.patch(book.restoreUrl, {}, { preserveScroll: true, onSuccess: () => setShowView(false) });
+  };
+
   const submitEdit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!selectedBook?.editUrl) return;
@@ -153,10 +183,48 @@ export default function Books() {
           <h4 className="main-title mb-0">Kitoblar katalogi</h4><PageCrumbs />
           <p className="mb-0 text-secondary">Moderatsiya, faol va rad etilgan kitoblarni boshqarish</p>
         </div>
-        <form className="d-flex gap-2" onSubmit={(event) => { event.preventDefault(); loadBooks(1); }}>
-          <input className="form-control form-control-sm" style={{ minWidth: 280 }} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="ID, nom, ISBN, muallif yoki seller" />
-          <button className="btn btn-sm btn-outline-secondary"><i className="ti ti-search"></i></button>
-        </form>
+        <div className="d-flex gap-2 flex-wrap">
+          <form className="d-flex gap-2" onSubmit={(event) => { event.preventDefault(); loadBooks(1); }}>
+            <input className="form-control form-control-sm" style={{ minWidth: 280 }} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="ID, nom, ISBN, muallif yoki seller" />
+            <button className="btn btn-sm btn-outline-secondary"><i className="ti ti-search"></i></button>
+          </form>
+          {bookUrls?.store ? (
+            <FormAction label="Kitob qo'shish" icon="ti ti-plus" variant="primary" modalSize="lg" title="Do'konga kitob qo'shish" description="Avval katalogdan qidiring — topilsa faqat narx va qoldiq kiritiladi. Topilmasa, yangi kitob kartasi ochiladi." submitLabel="Qo'shish" onSubmit={submitCreate}>
+              <div className="row g-3">
+                <div className="col-12">
+                  <label className="form-label">Katalogdagi kitob</label>
+                  <EditionPicker searchUrl={bookUrls.catalogSearch} value={picked} onPick={setPicked} />
+                </div>
+                <div className="col-md-6">
+                  <label className="form-label">Do'kon</label>
+                  <select name="seller_id" className="form-select" required defaultValue="">
+                    <option value="" disabled>Tanlang</option>
+                    {bookFormOptions.sellers.map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}
+                  </select>
+                </div>
+                <div className="col-md-6">
+                  <label className="form-label">Holati</label>
+                  <select name="condition" className="form-select" defaultValue="new">
+                    <option value="new">Yangi</option>
+                    <option value="used_good">Ishlatilgan (yaxshi)</option>
+                    <option value="used_fair">Ishlatilgan</option>
+                  </select>
+                </div>
+                <div className="col-md-4"><label className="form-label">Narx</label><input name="price" type="number" min={1} className="form-control" required /></div>
+                <div className="col-md-4"><label className="form-label">Chegirma narxi</label><input name="discountPrice" type="number" min={0} className="form-control" /></div>
+                <div className="col-md-4"><label className="form-label">Qoldiq</label><input name="count" type="number" min={0} className="form-control" defaultValue={1} required /></div>
+              </div>
+              {!picked ? (
+                <>
+                  <hr />
+                  <h6 className="f-w-600 mb-3">Yangi kitob kartasi</h6>
+                  <EditionFields options={bookFormOptions} />
+                  <div className="mt-3"><CoverInputs requireFront /></div>
+                </>
+              ) : null}
+            </FormAction>
+          ) : null}
+        </div>
       </div>
 
       <div className="row">
@@ -191,6 +259,7 @@ export default function Books() {
               ['active', 'Faol'],
               ['rejected', 'Rad etilgan'],
               ['all', 'Barchasi'],
+              ['archived', "O'chirilgan"],
             ].map(([key, label]) => (
               <div key={key} className="nav-item"><button
                   type="button"
@@ -232,7 +301,7 @@ export default function Books() {
                       </td>
                       <td>
                         <strong className="d-block text-truncate" style={{ maxWidth: 260 }}>{book.title}</strong>
-                        <small className="d-block text-muted">#{book.id} · {book.category || 'Kitob'}{book.hidden ? ' · yashirilgan' : ''}</small>
+                        <small className="d-block text-muted">#{book.id} · {book.category || 'Kitob'}{book.hidden ? ' · yashirilgan' : ''}{book.editionId ? ` · karta #${book.editionId}` : ''}{book.editionId && !book.featured ? ' · boshqa taklif' : ''}</small>
                       </td>
                       <td className="text-muted">{book.author}</td>
                       <td>{book.seller?.name || 'Ichki katalog'}</td>
@@ -254,11 +323,20 @@ export default function Books() {
                               <i className="ti ti-check"></i>
                             </button>
                           ) : null}
-                          {book.moderateUrl && book.status !== 2 ? (
+                          {book.moderateUrl && book.status !== 2 && !book.archived ? (
                             <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => setRejectTarget(book)} title="Rad etish">
                               <i className="ti ti-x"></i>
                             </button>
                           ) : null}
+                          {book.archived ? (
+                            <button className="btn btn-light-success icon-btn w-30 h-30 b-r-22" onClick={() => restoreBook(book)} title="Arxivdan qaytarish">
+                              <i className="ti ti-rotate"></i>
+                            </button>
+                          ) : (
+                            <button className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22" onClick={() => archiveBook(book)} title="O'chirish (arxivlash)">
+                              <i className="ti ti-trash"></i>
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -298,9 +376,17 @@ export default function Books() {
                     {badge(Boolean(selectedBook.status), 'Tasdiqlangan', 'Moderatsiya')}
                     {badge(!selectedBook.hidden, "Ko'rinadi", 'Yashirilgan')}
                     {selectedBook.recommended ? <span className="badge text-light-info">Tavsiya</span> : null}
+                    {selectedBook.archived ? <span className="badge text-light-danger">O'chirilgan</span> : null}
+                    {selectedBook.editionId && selectedBook.featured ? <span className="badge text-light-success">Ro'yxatda chiqadi</span> : null}
                   </>}
                   stats={[{ label: 'Sotilgan', value: fmt(selectedBook.sold) }, { label: 'Ombor', value: fmt(selectedBook.stock) }, { label: "Ko'rish", value: fmt(selectedBook.views || 0) }]}
                 />
+
+                {selectedBook.catalogUrl ? (
+                  <div className="card"><div className="card-body">
+                    <PersonRow icon="ti ti-book" name={`Katalog kartasi #${selectedBook.editionId}`} meta="Nom, muallif, muqova va tavsif shu kartadan olinadi" action={<a href={selectedBook.catalogUrl} className="btn btn-light-primary btn-sm">Ochish</a>} />
+                  </div></div>
+                ) : null}
 
                 <div className="card"><div className="card-header"><h5 className="mb-0">Sotuvchi</h5></div><div className="card-body">
                     {selectedBook.seller ? (
@@ -420,7 +506,12 @@ export default function Books() {
               </div>
             </FormAction>
           ) : null}
-          {selectedBook?.moderateUrl ? (
+          {selectedBook ? (
+            selectedBook.archived
+              ? <Button variant="light-success" onClick={() => restoreBook(selectedBook)}>Arxivdan qaytarish</Button>
+              : <Button variant="light-danger" onClick={() => archiveBook(selectedBook)}>O'chirish</Button>
+          ) : null}
+          {selectedBook?.moderateUrl && !selectedBook.archived ? (
             <>
               <Button variant="outline-danger" onClick={() => setRejectTarget(selectedBook)}>Rad etish</Button>
               <Button variant="outline-secondary" onClick={() => handleModerate(selectedBook, 0)}>Moderatsiyaga</Button>

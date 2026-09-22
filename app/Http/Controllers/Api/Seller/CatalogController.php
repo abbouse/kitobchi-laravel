@@ -54,9 +54,10 @@ class CatalogController extends ProductController
             ], 422);
         }
 
-        $isbn13 = Isbn::toIsbn13($raw);
-        $editions = $catalog->findByIsbn($isbn13);
         $storeSellerId = $this->storeSellerId();
+        $isbn13 = Isbn::toIsbn13($raw);
+        $editions = $catalog->findByIsbn($isbn13, $storeSellerId);
+        $this->warmMyOffers($editions, $storeSellerId);
 
         return response()->json([
             'success' => true,
@@ -79,11 +80,12 @@ class CatalogController extends ProductController
 
         $storeSellerId = $this->storeSellerId();
 
+        $editions = $catalog->search($query, 30, $storeSellerId);
+        $this->warmMyOffers($editions, $storeSellerId);
+
         return response()->json([
             'success' => true,
-            'editions' => $catalog->search($query, 30)
-                ->map(fn (BookEdition $e) => $this->editionPayload($e, $storeSellerId))
-                ->values(),
+            'editions' => $editions->map(fn (BookEdition $e) => $this->editionPayload($e, $storeSellerId))->values(),
         ]);
     }
 
@@ -447,12 +449,40 @@ class CatalogController extends ProductController
 
     private function storeImage(UploadedFile $file, string $role): string
     {
-        $extension = strtolower($file->getClientOriginalExtension() ?: 'jpg');
+        // XAVFSIZLIK: kengaytma mijoz yuborgan nomdan EMAS, fayl mazmunidan
+        // aniqlanadi (aks holda .php nomli "rasm" public diskka tushishi mumkin).
+        $extension = $this->safeImageExtension($file);
         $path = Storage::disk('public')->putFileAs('books', $file, 'cat_' . $role . '_' . time() . '_' . Str::random(8) . '.' . $extension);
         $path = str_replace('public/', '', (string) $path);
         ProductImageVariantGenerator::generateForPath($path);
 
         return $path;
+    }
+
+    private function safeImageExtension(UploadedFile $file): string
+    {
+        $extension = strtolower((string) $file->extension());
+
+        return in_array($extension, ['jpg', 'jpeg', 'png', 'webp'], true) ? $extension : 'jpg';
+    }
+
+    /** @var array<int, array>|null Ro'yxat uchun oldindan yuklangan "mening takliflarim" */
+    private ?array $myOffersByEdition = null;
+
+    /** TEZLIK: ro'yxatdagi har karta uchun alohida so'rov o'rniga bitta so'rov. */
+    private function warmMyOffers(\Illuminate\Support\Collection $editions, int $storeSellerId): void
+    {
+        $editions->loadMissing(['publisher:id,name', 'category:id,name_uz']);
+
+        $this->myOffersByEdition = Books::query()
+            ->where('seller_id', $storeSellerId)
+            ->whereIn('edition_id', $editions->pluck('id')->all())
+            ->whereNull('archived_at')
+            ->withAvailableTotal()
+            ->get()
+            ->groupBy('edition_id')
+            ->map(fn ($group) => $group->map(fn (Books $b) => $this->offerPayload($b))->values()->all())
+            ->all();
     }
 
     private function editionPayload(BookEdition $edition, int $storeSellerId, bool $withDescription = false): array
@@ -464,12 +494,17 @@ class CatalogController extends ProductController
         }
         $urls = ProductImageUrls::build($images);
 
-        $mine = Books::query()
-            ->where('seller_id', $storeSellerId)
-            ->where('edition_id', $edition->id)
-            ->whereNull('archived_at')
-            ->withAvailableTotal()
-            ->get();
+        $mine = $this->myOffersByEdition !== null
+            ? ($this->myOffersByEdition[$edition->id] ?? [])
+            : Books::query()
+                ->where('seller_id', $storeSellerId)
+                ->where('edition_id', $edition->id)
+                ->whereNull('archived_at')
+                ->withAvailableTotal()
+                ->get()
+                ->map(fn (Books $b) => $this->offerPayload($b))
+                ->values()
+                ->all();
 
         $payload = [
             'id' => (int) $edition->id,
@@ -494,7 +529,7 @@ class CatalogController extends ProductController
             'verified' => $edition->status === BookEdition::STATUS_ACTIVE,
             'offers_count' => (int) $edition->offers_count,
             'min_price' => $edition->min_price,
-            'my_offers' => $mine->map(fn (Books $b) => $this->offerPayload($b))->values(),
+            'my_offers' => $mine,
         ];
 
         if ($withDescription) {

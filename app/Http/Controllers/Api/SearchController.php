@@ -340,7 +340,7 @@ class SearchController extends Controller
         return Cache::remember($cacheKey, now()->addMinutes(30), function () use ($sellerId, $categoryId, $minPrice, $maxPrice) {
             return $this->visibleBooks([])
                 ->with('authorProfile:id,name')
-                ->when($sellerId, fn ($q) => $q->where('seller_id', $sellerId))
+                ->when($sellerId, fn ($q) => $q->where('seller_id', $sellerId), fn ($q) => $q->catalogFeatured())
                 ->when($categoryId, fn ($q) => $q->where('category_id', $categoryId))
                 ->when($minPrice !== null, fn ($q) => $q->where('price', '>=', $minPrice))
                 ->when($maxPrice !== null, fn ($q) => $q->where('price', '<=', $maxPrice))
@@ -1002,6 +1002,10 @@ class SearchController extends Controller
     ) {
         $q = $this->visibleBooks(['category', 'seller', 'tags']);
 
+        // GLOBAL KATALOG: umumiy qidiruvda har kitob bitta karta; do'kon ichida — barcha takliflari
+        $wholeMarket = ! $sellerId && empty($multiSellerIds);
+        if ($wholeMarket) $q->catalogFeatured();
+
         if ($sellerId) $q->where('seller_id', $sellerId);
         if ($categoryId) $q->where('category_id', $categoryId);
         if ($minPrice !== null) $q->where('price', '>=', $minPrice);
@@ -1024,13 +1028,28 @@ class SearchController extends Controller
 
         if ($hasText && config('scout.driver') === 'meilisearch') {
             try {
-                $meiliQuery = Books::search($rawQuery);
+                $meiliQuery = Books::search($rawQuery)
+                    // Tezlik: natijalar kartasi uchun bog'liqliklar va qoldiq bitta so'rovda
+                    ->query(fn ($hydrate) => $hydrate
+                        ->with(['category', 'seller', 'tags', 'authorProfile', 'edition:id,offers_count,in_stock_offers_count,min_price'])
+                        ->withAvailableTotal());
 
                 if ($sellerId) $meiliQuery->where('seller_id', $sellerId);
                 if ($categoryId) $meiliQuery->where('category_id', $categoryId);
 
                 $meiliResults = $meiliQuery->paginate($perPage, 'page', $page);
                 if ($meiliResults->isNotEmpty()) {
+                    // GLOBAL KATALOG: indeksda eski hujjatlar ham bo'lishi mumkin, shuning
+                    // uchun filtr emas — natijadagi takrorlar (bir kitobning bir nechta
+                    // do'kon taklifi) shu yerda yig'ib tashlanadi.
+                    if ($wholeMarket) {
+                        $meiliResults->setCollection(
+                            $meiliResults->getCollection()
+                                ->unique(fn ($book) => $book->edition_id ? 'e' . $book->edition_id : 'b' . $book->id)
+                                ->values()
+                        );
+                    }
+
                     return $meiliResults;
                 }
             } catch (\Throwable $e) {
@@ -1068,8 +1087,9 @@ class SearchController extends Controller
                         });
                     }
                 })->selectRaw(
-                    "books.*,
-                     MATCH({$matchColumnsSql}) AGAINST(? IN BOOLEAN MODE) * 10 +
+                    // books ustunlari visibleBooks() → withAvailableTotal() da allaqachon
+                    // tanlangan (og'ir vectorData'siz) — `books.*` takror qo'shilmaydi
+                    "MATCH({$matchColumnsSql}) AGAINST(? IN BOOLEAN MODE) * 10 +
                      LEAST(totalSalesWeek * 3, 300) +
                      LEAST(totalSales, 100) AS relevance_score",
                     [$bool]
@@ -1078,13 +1098,12 @@ class SearchController extends Controller
                 $q->where(function ($w) use ($searchPatterns, $likeMatcher) {
                     $this->orWhereLikeAny($w, $searchPatterns, $likeMatcher);
                 })->selectRaw(
-                    "books.*,
-                     LEAST(totalSalesWeek * 3, 300) +
+                    "LEAST(totalSalesWeek * 3, 300) +
                      LEAST(totalSales, 100) AS relevance_score"
                 );
             }
         } else {
-            $q->selectRaw('books.*, 0 AS relevance_score');
+            $q->selectRaw('0 AS relevance_score');
         }
 
         if ($hasTag) {
@@ -1274,6 +1293,7 @@ class SearchController extends Controller
                 // ── 1. ISBN — aniq moslik ──────────────────────────────
                 if (! empty($product['isbn'])) {
                     $isbnBooks = $this->visibleBooks(['category', 'seller', 'tags'])
+                        ->catalogFeatured()
                         ->whereIsbn($product['isbn'])
                         ->limit(5)
                         ->get()
@@ -1284,7 +1304,7 @@ class SearchController extends Controller
 
                 // ── 2. Aniqlangan nom/muallif — LIKE ───────────────────
                 if (in_array($type, ['book', 'other'], true)) {
-                    $q = $this->visibleBooks(['category', 'seller', 'tags']);
+                    $q = $this->visibleBooks(['category', 'seller', 'tags'])->catalogFeatured();
                     $applied = false;
 
                     $q->where(function ($sub) use ($product, &$applied) {
@@ -1712,6 +1732,7 @@ class SearchController extends Controller
 
             if (in_array($type, ['book', 'all'])) {
                 $books = $this->visibleBooks(['category', 'seller', 'tags'])
+                    ->catalogFeatured()
                     ->where(function ($q) use ($analyzed, $combinedQuery) {
                         if (Books::hasAuthorColumn()) {
                             $q->whereRaw(
@@ -1999,6 +2020,7 @@ class SearchController extends Controller
     private function getPopularBooks(int $limit = 12)
     {
         return $this->visibleBooks(['category', 'seller', 'tags'])
+            ->catalogFeatured()
             ->orderByDesc('totalSalesWeek')
             ->limit($limit)
             ->get();

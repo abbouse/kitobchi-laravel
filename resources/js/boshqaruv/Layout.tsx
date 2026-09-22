@@ -20,6 +20,8 @@ const nav = [
   ]},
   { group: 'Katalog', section: 'Savdo', icon: 'ti-book', ax: 'iconoir-book-stack', items: [
     { to: '/boshqaruv/books', match: '/boshqaruv/books', label: 'Kitoblar', icon: 'ti-book', perm: 'catalog' },
+    { to: '/boshqaruv/catalog', match: '/boshqaruv/catalog', label: 'Global katalog', icon: 'ti-stack-2', perm: 'catalog' },
+    { to: '/boshqaruv/catalog/submissions', match: '/boshqaruv/catalog/submissions', label: 'Kitob arizalari', icon: 'ti-inbox', perm: 'catalog' },
     { to: '/boshqaruv/book-categories', match: '/boshqaruv/book-categories', label: 'Kitob kategoriyalari', icon: 'ti-bookmarks', perm: 'catalog' },
     { to: '/boshqaruv/stationeries', match: '/boshqaruv/stationeries', label: 'Kanselyariya', icon: 'ti-edit', perm: 'catalog' },
     { to: '/boshqaruv/stationery-categories', match: '/boshqaruv/stationery-categories', label: 'Kanstovar kategoriyalari', icon: 'ti-tags', perm: 'catalog' },
@@ -103,6 +105,7 @@ function navMatches(url: string, match: string) {
   if (match === '/boshqaruv') return url === '/boshqaruv' || url === '/boshqaruv/';
   if (match.includes('?')) return url.startsWith(match);
   if (match === '/boshqaruv/tickets' && url.includes('tickets_source=seller')) return false;
+  if (match === '/boshqaruv/catalog' && url.startsWith('/boshqaruv/catalog/submissions')) return false;
   return url.startsWith(match);
 }
 

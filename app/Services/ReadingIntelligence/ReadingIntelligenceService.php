@@ -895,6 +895,7 @@ class ReadingIntelligenceService
 
         return $query
             ->activeForVector()
+            ->when($type === 'book', fn ($q) => $q->catalogFeatured())
             ->where('category_id', $categoryId)
             ->where('id', '!=', $excludeId)
             ->orderByDesc('totalSales')
@@ -911,6 +912,10 @@ class ReadingIntelligenceService
     {
         $query = $type === 'book' ? Books::query() : Stationery::query();
         $query->activeForVector()->where('id', '!=', $product->id);
+        if ($type === 'book') {
+            $query->catalogFeatured()
+                ->when($product->edition_id, fn ($q) => $q->where(fn ($w) => $w->whereNull('edition_id')->orWhere('edition_id', '!=', $product->edition_id)));
+        }
 
         if ($product->category_id) {
             $query->where('category_id', $product->category_id);

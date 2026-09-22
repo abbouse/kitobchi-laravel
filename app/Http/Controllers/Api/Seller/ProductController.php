@@ -82,7 +82,12 @@ class ProductController extends Controller
     {
         return $edition->verified_at !== null
             || $edition->status === \App\Models\BookEdition::STATUS_PENDING && $edition->source === 'seller' && (int) $edition->created_by_id !== $storeSellerId
-            || Books::query()->where('edition_id', $edition->id)->where('seller_id', '!=', $storeSellerId)->exists();
+            || Books::query()
+                ->where('edition_id', $edition->id)
+                ->where('seller_id', '!=', $storeSellerId)
+                ->where('is_approved', '!=', 2)
+                ->whereNull('archived_at')
+                ->exists();
     }
 
     protected function assignGeneratedArtikul($product, string $type): void
@@ -1043,7 +1048,7 @@ public function updateProductStatus(Request $request)
 
     // O'chirilgan rasmlarni diskdan o'chirish
     foreach ($deletedImages as $image) {
-        if (is_string($image) && in_array($image, $currentImages)) {
+        if (is_string($image) && in_array($image, $currentImages) && \App\Support\SharedImageGuard::canDelete($image, (int) $product->id)) {
             try {
                 Storage::disk('public')->delete($image);
                 ProductImageVariantGenerator::deleteForPath($image);
@@ -1329,6 +1334,7 @@ public function productStatistics(Request $request, $id)
             ], 403);
         }
 
+        $storeSellerId = $this->getStoreSellerId($seller);
         $canonical = Books::normalizeIsbn($isbn);
         if ($canonical === null) {
             return response()->json([
@@ -1339,7 +1345,7 @@ public function productStatistics(Request $request, $id)
 
         // GLOBAL KATALOG: avval katalog kartalari (javob shakli o'zgarmaydi, qo'shimcha
         // `edition_id` va `images` maydonlari eski ilovaga zarar qilmaydi)
-        $editions = app(\App\Services\Catalog\CatalogService::class)->findByIsbn($canonical);
+        $editions = app(\App\Services\Catalog\CatalogService::class)->findByIsbn($canonical, (int) $storeSellerId);
         if ($editions->isNotEmpty()) {
             $rows = $editions->map(fn ($edition) => $this->legacyIsbnPayload($edition, $canonical))->values();
 

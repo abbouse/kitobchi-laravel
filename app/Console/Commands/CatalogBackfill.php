@@ -8,14 +8,14 @@ use App\Services\Catalog\BuyBoxService;
 use App\Services\Catalog\CatalogService;
 use App\Support\Isbn;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Mavjud takliflarni (books) global katalog kartalariga ulaydi.
  *
- *   php artisan catalog:backfill --dry-run   # hech narsa yozmaydi, hisobot beradi
+ *   php artisan catalog:backfill --dry-run   # hech narsa yozmaydi, faqat hisobot
  *   php artisan catalog:backfill             # ulaydi + buy box hisoblaydi
- *   php artisan catalog:backfill --sync      # + karta ma'lumotini takliflarga ko'chiradi
+ *   php artisan catalog:backfill --sync      # + karta ma'lumotini takliflarga ko'chirish
  *
  * Tartib: avval moderatsiyadan o'tgan va ko'p sotilgan takliflar — karta
  * shulardan ochiladi (eng sifatli nom/rasm/tavsif), qolganlari ularga ulanadi.
@@ -31,24 +31,107 @@ class CatalogBackfill extends Command
 
     public function handle(CatalogService $catalog, BuyBoxService $buyBox): int
     {
-        $dry = (bool) $this->option('dry-run');
+        return $this->option('dry-run')
+            ? $this->dryRun($catalog)
+            : $this->apply($catalog, $buyBox);
+    }
+
+    /**
+     * HECH NARSA YOZMAYDI. Tranzaksiya ham ochilmaydi (katta jadvalda uzoq
+     * tranzaksiya buyurtma va tahrirlarni bloklab qo'yardi) — rejalashtirilgan
+     * kartalar xotirada hisoblanadi.
+     */
+    private function dryRun(CatalogService $catalog): int
+    {
         $stats = ['offers' => 0, 'linked_existing' => 0, 'editions_created' => 0, 'invalid_isbn' => 0, 'isbn_conflicts' => 0];
         $conflicts = [];
+        $plannedIsbn = [];   // isbn13 => [nom, ...]
+        $plannedKeys = [];   // match_key => true
 
         $total = Books::query()->whereNull('edition_id')->count();
-        $this->info("Katalogga ulanmagan takliflar: {$total}" . ($dry ? ' (dry-run)' : ''));
+        $this->info("Katalogga ulanmagan takliflar: {$total} (dry-run)");
+        $bar = $this->output->createProgressBar($total);
 
-        if ($dry) {
-            DB::beginTransaction();
-        }
+        Books::query()
+            ->whereNull('edition_id')
+            ->orderByDesc('is_approved')
+            ->orderByDesc('totalSales')
+            ->orderBy('id')
+            ->chunkById((int) $this->option('chunk'), function ($books) use ($catalog, &$stats, &$conflicts, &$plannedIsbn, &$plannedKeys, $bar) {
+                foreach ($books as $book) {
+                    $stats['offers']++;
+                    $bar->advance();
+
+                    $isbn13 = Isbn::toIsbn13($book->isbn);
+                    if (filled($book->isbn) && $isbn13 === null) {
+                        $stats['invalid_isbn']++;
+                    }
+
+                    // 1. Bazadagi mavjud karta
+                    if ($catalog->findMatchingEdition($book)) {
+                        $stats['linked_existing']++;
+
+                        continue;
+                    }
+
+                    // 2. Shu yugurishda rejalashtirilgan karta
+                    if ($isbn13 !== null) {
+                        foreach ($plannedIsbn[$isbn13] ?? [] as $title) {
+                            if (CatalogService::titlesSimilar($book->name, $title)) {
+                                $stats['linked_existing']++;
+
+                                continue 2;
+                            }
+                        }
+                        if (isset($plannedIsbn[$isbn13]) || BookEdition::query()->usable()->where('isbn13', $isbn13)->exists()) {
+                            $stats['isbn_conflicts']++;
+                            if (count($conflicts) < 50) {
+                                $conflicts[] = [$book->id, $isbn13, mb_strimwidth((string) $book->name, 0, 50, '…')];
+                            }
+                        }
+                        $plannedIsbn[$isbn13][] = (string) $book->name;
+                    } else {
+                        $key = CatalogService::offerMatchKey($book);
+                        if ($key !== null && isset($plannedKeys[$key])) {
+                            $stats['linked_existing']++;
+
+                            continue;
+                        }
+                        if ($key !== null) {
+                            $plannedKeys[$key] = true;
+                        }
+                    }
+
+                    $stats['editions_created']++;
+                }
+            });
+
+        $bar->finish();
+        $this->newLine(2);
+        $this->report($stats, $conflicts);
+        $this->info('Dry-run: bazaga hech narsa yozilmadi.');
+
+        return self::SUCCESS;
+    }
+
+    private function apply(CatalogService $catalog, BuyBoxService $buyBox): int
+    {
+        $stats = ['offers' => 0, 'linked_existing' => 0, 'editions_created' => 0, 'invalid_isbn' => 0, 'isbn_conflicts' => 0, 'failed' => 0];
+        $conflicts = [];
+        $failedIds = [];
+
+        $total = Books::query()->whereNull('edition_id')->count();
+        $this->info("Katalogga ulanmagan takliflar: {$total}");
+        $bar = $this->output->createProgressBar($total);
+
+        // Har taklifda buy box hisoblanmasin — oxirida hammasi bir marta hisoblanadi
+        $buyBox->pause();
 
         try {
-            $bar = $this->output->createProgressBar($total);
-
             do {
-                // Sifatli takliflar birinchi: tasdiqlangan → ko'p sotilgan → eski
                 $chunk = Books::query()
                     ->whereNull('edition_id')
+                    ->when($failedIds, fn ($q) => $q->whereNotIn('id', $failedIds))
                     ->orderByDesc('is_approved')
                     ->orderByDesc('totalSales')
                     ->orderBy('id')
@@ -57,15 +140,21 @@ class CatalogBackfill extends Command
 
                 foreach ($chunk as $book) {
                     $stats['offers']++;
-                    if (filled($book->isbn) && Isbn::toIsbn13($book->isbn) === null) {
-                        $stats['invalid_isbn']++;
-                    }
+                    $bar->advance();
 
-                    $existing = $catalog->findMatchingEdition($book);
-                    if ($existing) {
-                        $catalog->attachOffer($book, $existing);
-                        $stats['linked_existing']++;
-                    } else {
+                    try {
+                        if (filled($book->isbn) && Isbn::toIsbn13($book->isbn) === null) {
+                            $stats['invalid_isbn']++;
+                        }
+
+                        $existing = $catalog->findMatchingEdition($book);
+                        if ($existing) {
+                            $catalog->attachOffer($book, $existing);
+                            $stats['linked_existing']++;
+
+                            continue;
+                        }
+
                         $isbn13 = Isbn::toIsbn13($book->isbn);
                         if ($isbn13 && BookEdition::query()->usable()->where('isbn13', $isbn13)->exists()) {
                             $stats['isbn_conflicts']++;
@@ -73,34 +162,27 @@ class CatalogBackfill extends Command
                                 $conflicts[] = [$book->id, $isbn13, mb_strimwidth((string) $book->name, 0, 50, '…')];
                             }
                         }
-                        $edition = $catalog->createEditionFromOffer($book, 'backfill');
-                        $catalog->attachOffer($book, $edition);
+
+                        $catalog->attachOffer($book, $catalog->createEditionFromOffer($book, 'backfill'));
                         $stats['editions_created']++;
+                    } catch (\Throwable $e) {
+                        // Bitta yomon qator butun backfillni to'xtatmasin
+                        $stats['failed']++;
+                        $failedIds[] = (int) $book->id;
+                        Log::warning('catalog:backfill row failed', ['book_id' => $book->id, 'error' => $e->getMessage()]);
                     }
-                    $bar->advance();
                 }
-                // Himoya: biror qator ulanmay qolsa cheksiz aylanmasin
-            } while ($chunk->isNotEmpty() && $stats['offers'] < $total);
-
-            $bar->finish();
-            $this->newLine(2);
+            } while ($chunk->isNotEmpty() && $stats['offers'] < $total + count($failedIds));
         } finally {
-            if ($dry) {
-                DB::rollBack();
-            }
+            $buyBox->resume();
         }
 
-        $this->table(['Ko\'rsatkich', 'Soni'], collect($stats)->map(fn ($v, $k) => [$k, $v])->values()->all());
+        $bar->finish();
+        $this->newLine(2);
+        $this->report($stats, $conflicts);
 
-        if (! empty($conflicts)) {
-            $this->warn("Bir xil ISBN, lekin boshqa nomli kitoblar (admin tekshirsin — Katalog → Dublikatlar):");
-            $this->table(['book_id', 'isbn13', 'nom'], $conflicts);
-        }
-
-        if ($dry) {
-            $this->info('Dry-run: hech narsa saqlanmadi.');
-
-            return self::SUCCESS;
+        if (! empty($failedIds)) {
+            $this->warn('Ulanmagan takliflar (log: catalog:backfill row failed): ' . implode(', ', array_slice($failedIds, 0, 30)));
         }
 
         if ($this->option('sync')) {
@@ -120,5 +202,15 @@ class CatalogBackfill extends Command
         $this->info("Tayyor: {$count} ta karta.");
 
         return self::SUCCESS;
+    }
+
+    private function report(array $stats, array $conflicts): void
+    {
+        $this->table(["Ko'rsatkich", 'Soni'], collect($stats)->map(fn ($v, $k) => [$k, $v])->values()->all());
+
+        if (! empty($conflicts)) {
+            $this->warn('Bir xil ISBN, lekin boshqa nomli kitoblar (admin tekshirsin — Katalog → Dublikatlar):');
+            $this->table(['book_id', 'isbn13', 'nom'], $conflicts);
+        }
     }
 }

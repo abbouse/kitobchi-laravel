@@ -631,6 +631,7 @@ PROMPT,
                     'images_reviewed' => count($current['vision_images']),
                 ],
             ]);
+            app(\App\Services\Catalog\BuyBoxService::class)->afterModeration($current['model']);
 
             return $status;
         });

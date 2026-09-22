@@ -24,6 +24,7 @@ class ProductModerationStateService
                 'queued_at' => now()->toIso8601String(),
             ],
         ]);
+        app(\App\Services\Catalog\BuyBoxService::class)->afterModeration($product);
     }
 
     public function applyPendingAttributes(Books|Stationery $product, string $source): void
@@ -75,6 +76,12 @@ class ProductModerationStateService
                     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
                     'updated_at' => now(),
                 ]);
+
+                if ($modelClass === Books::class) {
+                    $buyBox = app(\App\Services\Catalog\BuyBoxService::class);
+                    Books::query()->whereKey($chunk->all())->whereNotNull('edition_id')->distinct()->pluck('edition_id')
+                        ->each(fn ($editionId) => $buyBox->touch((int) $editionId));
+                }
             });
     }
 }

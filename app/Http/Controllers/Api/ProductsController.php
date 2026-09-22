@@ -18,6 +18,7 @@ use App\Services\ProductStockAlertService;
 use App\Support\ProductImageUrls;
 use App\Support\ProductPayloadFormatter;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -219,6 +220,15 @@ class ProductsController extends Controller
         return $this->visibleBooks();
     }
 
+    /**
+     * Mijoz RO'YXATLARI uchun: global katalogda har kitobdan faqat bitta taklif
+     * (buy box). Kitob sahifasi va do'kon sahifasi bookScope() ishlatadi.
+     */
+    private function bookListScope()
+    {
+        return $this->bookScope()->catalogFeatured();
+    }
+
     // ── Stationery uchun base scope ───────────────────────────────
     private function stationeryScope()
     {
@@ -317,7 +327,7 @@ class ProductsController extends Controller
             $limit = 20;
         }
 
-        $books = $this->bookScope()
+        $books = $this->bookListScope()
             ->with(['seller', 'category', 'tags'])
             ->orderBy('created_at', 'DESC')
             ->limit($limit)
@@ -352,7 +362,7 @@ class ProductsController extends Controller
         $result = collect($personalized);
 
         // ── 1. Recommended (true + muddati o'tmagan) ─────────────
-        $recBooks = $this->isRecommended($this->bookScope())
+        $recBooks = $this->isRecommended($this->bookListScope())
             ->with(['category', 'tags', 'seller'])
             ->orderByDesc('totalSalesWeek')
             ->limit($limit)
@@ -372,7 +382,7 @@ class ProductsController extends Controller
         if ($result->count() < $limit) {
             $existIds = $result->pluck('id')->toArray();
 
-            $discBooks = $this->hasActiveDiscount($this->bookScope(), true)
+            $discBooks = $this->hasActiveDiscount($this->bookListScope(), true)
                 ->whereNotIn('id', $existIds)
                 ->with(['category', 'tags', 'seller'])
                 ->orderByDesc('totalSalesWeek')
@@ -388,7 +398,7 @@ class ProductsController extends Controller
             $existIds = $result->pluck('id')->toArray();
             $need     = $limit - $result->count();
 
-            $trendBooks = $this->bookScope()
+            $trendBooks = $this->bookListScope()
                 ->whereNotIn('id', $existIds)
                 ->with(['category', 'tags', 'seller'])
                 ->orderByDesc('totalSalesWeek')
@@ -413,7 +423,7 @@ class ProductsController extends Controller
         if ($result->count() < $limit) {
             $existIds = $result->pluck('id')->toArray();
 
-            $newBooks = $this->bookScope()
+            $newBooks = $this->bookListScope()
                 ->whereNotIn('id', $existIds)
                 ->with(['category', 'tags', 'seller'])
                 ->orderByDesc('created_at')
@@ -570,7 +580,7 @@ class ProductsController extends Controller
 
         // 1. Recommended mahsulotlar
         $pushBooks(
-            $this->isRecommended($this->bookScope())
+            $this->isRecommended($this->bookListScope())
                 ->orderByDesc('totalSalesWeek')
                 ->orderByDesc('totalSales'),
             $limit
@@ -586,7 +596,7 @@ class ProductsController extends Controller
         if ($result->count() < $limit) {
             $need = $limit - $result->count();
             $pushBooks(
-                $this->bookScope()
+                $this->bookListScope()
                     ->whereHas('seller', fn($q) => $this->premiumSellerScope($q))
                     ->orderByDesc('recommended')
                     ->orderByDesc('totalSalesWeek')
@@ -607,7 +617,7 @@ class ProductsController extends Controller
         if ($result->count() < $limit && (!empty($cartBookCategoryIds) || !empty($cartStationeryCategoryIds))) {
             if (!empty($cartBookCategoryIds)) {
                 $pushBooks(
-                    $this->bookScope()
+                    $this->bookListScope()
                         ->whereIn('category_id', $cartBookCategoryIds)
                         ->orderByDesc('recommended')
                         ->orderByDesc('totalSalesWeek')
@@ -631,7 +641,7 @@ class ProductsController extends Controller
         // 4. Statistikasi yuqori trenddagi mahsulotlar
         if ($result->count() < $limit) {
             $pushBooks(
-                $this->bookScope()
+                $this->bookListScope()
                     ->orderByDesc('totalSalesWeek')
                     ->orderByDesc('totalSales')
                     ->orderByDesc('views'),
@@ -649,7 +659,7 @@ class ProductsController extends Controller
         // 5. Yetmasa random fallback
         if ($result->count() < $limit) {
             $pushBooks(
-                $this->bookScope()
+                $this->bookListScope()
                     ->inRandomOrder(),
                 $limit - $result->count()
             );
@@ -681,8 +691,8 @@ class ProductsController extends Controller
         $perPage = max(3, min(40, (int) $request->input('per_page', 20)));
 
         $base = $type === 'book'
-            ? $this->bookScope()->with(['category', 'tags', 'seller'])->find($id)
-            : $this->stationeryScope()->with(['category', 'tags', 'variants', 'seller'])->find($id);
+            ? $this->bookScope()->addSelect('books.vectorData')->with(['category', 'tags', 'seller'])->find($id)
+            : $this->stationeryScope()->addSelect('stationeries.vectorData')->with(['category', 'tags', 'variants', 'seller'])->find($id);
 
         if (! $base) {
             return response()->json([
@@ -691,10 +701,24 @@ class ProductsController extends Controller
             ], 404);
         }
 
-        $scored = $this->rankSimilarProducts($base, $type, $page, $perPage);
-        $total = $scored->count();
-        $items = $scored
-            ->slice(($page - 1) * $perPage, $perPage)
+        // TEZLIK: o'xshashlik reytingi (160–700 nomzod, vektor hisobi) foydalanuvchiga
+        // bog'liq emas — tartiblangan id'lar 10 daqiqa keshlanadi, sahifa kartalari
+        // (sevimli, qoldiq) har so'rovda yangi yuklanadi.
+        $candidateLimit = min(700, max(160, ($page * $perPage) + 160));
+        $rankedIds = Cache::remember(
+            "similar:v2:{$type}:{$id}:{$candidateLimit}",
+            now()->addMinutes(10),
+            fn () => $this->rankSimilarProducts($base, $type, $page, $perPage)->pluck('id')->map(fn ($v) => (int) $v)->all()
+        );
+        $total = count($rankedIds);
+        $pageIds = array_slice($rankedIds, ($page - 1) * $perPage, $perPage);
+        $pageProducts = empty($pageIds) ? collect() : ($type === 'book'
+            ? $this->bookScope()->with(['category', 'tags', 'seller'])
+            : $this->stationeryScope()->with(['category', 'tags', 'variants', 'seller']))
+            ->whereIn('id', $pageIds)->get()->keyBy('id');
+        $items = collect($pageIds)
+            ->map(fn ($pid) => $pageProducts->get($pid))
+            ->filter()
             ->values()
             ->map(fn ($product) => $this->formatProduct($product, $user, $type));
 
@@ -722,10 +746,14 @@ class ProductsController extends Controller
 
         $candidateLimit = min(700, max(160, ($page * $perPage) + 160));
         $query = $type === 'book'
-            ? $this->bookScope()->with(['category', 'tags', 'seller'])
-            : $this->stationeryScope()->with(['category', 'tags', 'variants', 'seller']);
+            ? $this->bookListScope()->addSelect('books.vectorData')->with(['category', 'tags', 'seller'])
+            : $this->stationeryScope()->addSelect('stationeries.vectorData')->with(['category', 'tags', 'variants', 'seller']);
 
         $query->where('id', '!=', $base->id);
+        // Shu kitobning boshqa do'konlardagi takliflari "o'xshash" emas — ular kitob sahifasida "Takliflar"da
+        if ($type === 'book' && $base->edition_id) {
+            $query->where(fn ($q) => $q->whereNull('edition_id')->orWhere('edition_id', '!=', $base->edition_id));
+        }
 
         $hasFocusedFilter = ! empty($base->category_id)
             || ($type === 'book' && ! empty($base->author))
@@ -766,8 +794,9 @@ class ProductsController extends Controller
         if ($candidates->count() < ($page * $perPage)) {
             $existingIds = $candidates->pluck('id')->push($base->id)->all();
             $fallback = ($type === 'book'
-                ? $this->bookScope()->with(['category', 'tags', 'seller'])
-                : $this->stationeryScope()->with(['category', 'tags', 'variants', 'seller']))
+                ? $this->bookListScope()->addSelect('books.vectorData')->with(['category', 'tags', 'seller'])
+                    ->when($base->edition_id, fn ($q) => $q->where(fn ($w) => $w->whereNull('edition_id')->orWhere('edition_id', '!=', $base->edition_id)))
+                : $this->stationeryScope()->addSelect('stationeries.vectorData')->with(['category', 'tags', 'variants', 'seller']))
                 ->whereNotIn('id', $existingIds)
                 ->orderByDesc('totalSalesWeek')
                 ->orderByDesc('totalSales')
@@ -987,7 +1016,7 @@ class ProductsController extends Controller
 
             if ($type === 'recommended') {
                 foreach ($categoryIds as $catId) {
-                    $books = $this->bookScope()
+                    $books = $this->bookListScope()
                         ->where('category_id', $catId)
                         ->with(['seller', 'category', 'tags'])
                         ->orderByDesc('totalSales')
@@ -1001,7 +1030,7 @@ class ProductsController extends Controller
                 }
             } else {
                 foreach ($categoryIds as $catId) {
-                    $books = $this->bookScope()
+                    $books = $this->bookListScope()
                         ->where('category_id', $catId)
                         ->with(['seller', 'category', 'tags'])
                         ->orderByDesc('created_at')
@@ -1654,7 +1683,12 @@ class ProductsController extends Controller
     {
         $user = Auth::guard('user')->user();
 
-        $sellers = Seller::where('is_hidden', 0)
+        // TEZLIK: 50 do'kon × 20+20 mahsulot. Oldin har kartada qoldiq (SUM) va
+        // muallif alohida so'rov bilan olinardi (~2–4 ming so'rov) hamda har
+        // qatorda ~30KB vectorData tortilardi. Endi qoldiq subselect, muallif
+        // eager, vektorsiz ustunlar; tanlov foydalanuvchidan mustaqil bo'lgani
+        // uchun 60 soniya keshlanadi (sevimli belgisi har so'rovda hisoblanadi).
+        $sellers = Cache::remember('api:sellers-rail:v2', 60, fn () => Seller::where('is_hidden', 0)
             ->where(function ($q) {
                 $q->whereNull('parent_id')
                     ->orWhere('parent_id', 0);
@@ -1669,16 +1703,18 @@ class ProductsController extends Controller
             ->with([
                 'books' => fn($q) => $q
                     ->where('status', true)->where('is_hidden', 0)->where('is_approved', 1)
+                    ->withAvailableTotal()
                     ->latest('created_at')->take(20)
-                    ->with(['category', 'tags', 'seller']),
+                    ->with(['category', 'tags', 'seller', 'authorProfile', 'edition:id,offers_count,in_stock_offers_count,min_price']),
                 'stationeries' => fn($q) => $q
                     ->where('status', true)->where('is_hidden', 0)->where('is_approved', 1)
+                    ->withAvailableTotal()
                     ->latest('created_at')->take(20)
                     ->with(['category', 'tags', 'variants', 'seller']),
             ])
             ->inRandomOrder()
             ->take(50)
-            ->get();
+            ->get());
 
         $result = $sellers->map(fn($seller) => [
             ...$this->formatSellerInfo($seller),
@@ -1702,7 +1738,8 @@ class ProductsController extends Controller
             ->where('is_hidden', 0)
             ->where('is_approved', 1)
             ->whereHas('seller', fn($q) => $q->where('is_hidden', 0)->where('status', 'approved'))
-            ->with(['seller', 'tags', 'authorProfile', 'publisherProfile', 'category', 'authors'])
+            ->withAvailableTotal()
+            ->with(['seller', 'tags', 'authorProfile', 'publisher', 'category'])
             ->first();
 
         if (! $book) {
@@ -1752,11 +1789,12 @@ class ProductsController extends Controller
             ->where('is_hidden', 0)
             ->where('is_approved', 1)
             ->where(function ($q) use ($authorId) {
-                $q->where('author_id', $authorId)
-                    ->orWhereHas('authors', fn($sub) => $sub->where('author_id', $authorId));
+                $q->where('author_id', $authorId);
             })
             ->whereHas('seller', fn($q) => $q->where('is_hidden', 0)->where('status', 'approved'))
-            ->with(['seller', 'tags', 'category', 'authorProfile', 'publisherProfile'])
+            ->catalogFeatured()
+            ->withAvailableTotal()
+            ->with(['seller', 'tags', 'category', 'authorProfile', 'publisher'])
             ->latest('id')
             ->paginate($perPage);
 
@@ -1782,7 +1820,9 @@ class ProductsController extends Controller
             ->where('is_approved', 1)
             ->where('publisher_id', $publisherId)
             ->whereHas('seller', fn($q) => $q->where('is_hidden', 0)->where('status', 'approved'))
-            ->with(['seller', 'tags', 'category', 'authorProfile', 'publisherProfile'])
+            ->catalogFeatured()
+            ->withAvailableTotal()
+            ->with(['seller', 'tags', 'category', 'authorProfile', 'publisher'])
             ->latest('id')
             ->paginate($perPage);
 

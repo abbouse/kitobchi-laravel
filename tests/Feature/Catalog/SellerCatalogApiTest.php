@@ -19,8 +19,8 @@ class SellerCatalogApiTest extends TestCase
 
     protected function setUp(): void
     {
-        parent::setUp();
         $this->requireMysql();
+        parent::setUp();
         Storage::fake('public');
         config(['catalog.vision_fallback' => false]);
     }
@@ -217,5 +217,43 @@ class SellerCatalogApiTest extends TestCase
         imagepng($img);
 
         return (string) ob_get_clean();
+    }
+
+    public function test_offer_on_unverified_edition_still_goes_through_moderation(): void
+    {
+        $cat = $this->makeCategory();
+        $original = $this->makeBook($this->makeSeller(), $cat);
+        $edition = BookEdition::find($original->edition_id);
+        $this->assertSame(BookEdition::STATUS_ACTIVE, $edition->status);
+        $this->assertNull($edition->verified_at, 'avto-karta tasdiqlanmagan bo\'lishi kerak');
+
+        $this->actingSeller();
+        $res = $this->postJson(self::API . 'catalog/offers', ['edition_id' => $edition->id, 'price' => 30000, 'count' => 2])
+            ->assertStatus(201);
+
+        $offer = Books::find($res->json('offer.id'));
+        $this->assertSame(0, (int) $offer->is_approved, 'tasdiqlanmagan kartadagi taklif moderatsiyaga tushishi kerak');
+        $this->assertSame('pending', $offer->ai_moderation_status);
+    }
+
+    public function test_seller_does_not_see_another_shops_pending_submission(): void
+    {
+        $this->makeCategory();
+        $other = $this->makeSeller();
+        \Laravel\Sanctum\Sanctum::actingAs($other, ['*'], 'seller');
+        $this->post(self::API . 'catalog/submissions', $this->submissionFields([
+            'front_image' => UploadedFile::fake()->image('f.jpg'),
+            'back_image' => UploadedFile::fake()->image('b.jpg'),
+        ]), ['Accept' => 'application/json'])->assertStatus(201);
+
+        // Boshqa do'kon shu ISBN'ni skan qiladi — begona ariza ko'rinmaydi
+        $this->actingSeller();
+        $this->getJson(self::API . 'catalog/lookup?isbn=9789943081239')
+            ->assertOk()
+            ->assertJson(['found' => false]);
+
+        // Ariza egasi esa o'z kartasini ko'radi
+        \Laravel\Sanctum\Sanctum::actingAs($other, ['*'], 'seller');
+        $this->getJson(self::API . 'catalog/lookup?isbn=9789943081239')->assertOk()->assertJson(['found' => true]);
     }
 }

@@ -816,7 +816,11 @@ class ChatBotController extends Controller
             $q->inRandomOrder()->limit(20);
         }
 
-        return $q->get()->each(fn($b) => $b->_type = 'book');
+        return $q->get()
+            // GLOBAL KATALOG: bir kitobning bir nechta do'kon taklifi — bitta
+            ->unique(fn ($b) => $b->edition_id ? 'e' . $b->edition_id : 'b' . $b->id)
+            ->values()
+            ->each(fn($b) => $b->_type = 'book');
     }
 
     // =========================================================================

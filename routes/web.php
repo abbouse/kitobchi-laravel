@@ -28,7 +28,7 @@ Route::get('/', function () {
         // kitoblari ham bosh sahifada "xaridorgir mahsulotlar"da chiqardi.
         // Endi \App\Support\ProductVisibilityScope — saytning boshqa hamma
         // joyida ishlatiladigan YAGONA qoida manbasi — orqali tekshiriladi.
-        $featuredBooks = \App\Support\ProductVisibilityScope::applyBooks(\App\Models\Books::query())
+        $featuredBooks = \App\Support\ProductVisibilityScope::applyBooks(\App\Models\Books::query()->catalogFeatured())
             ->orderByDesc('totalSales')
             ->take(20)
             ->get();

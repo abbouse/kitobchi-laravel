@@ -40,7 +40,7 @@ class ProductModerationObserver
         // va qoldiq kiritadi) — mazmuni allaqachon tekshirilgan, darhol sotuvda.
         if ($product instanceof Books && $product->edition_id) {
             $edition = \App\Models\BookEdition::find($product->edition_id);
-            if ($edition && $edition->status === \App\Models\BookEdition::STATUS_ACTIVE) {
+            if ($edition && $edition->status === \App\Models\BookEdition::STATUS_ACTIVE && $edition->verified_at !== null) {
                 $product->is_approved = 1;
                 $product->ai_moderation_status = 'approved';
                 $product->ai_moderation_checked_at = now();

@@ -49,6 +49,9 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureRateLimiters();
 
+        // TEZLIK: token `last_used_at` yozuvi 5 daqiqada bir marta
+        \Laravel\Sanctum\Sanctum::usePersonalAccessTokenModel(\App\Models\PersonalAccessToken::class);
+
         Relation::morphMap([
             'book' => \App\Models\Books::class,
             'stationery' => \App\Models\Stationery::class,

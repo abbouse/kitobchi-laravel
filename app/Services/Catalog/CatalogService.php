@@ -108,8 +108,12 @@ class CatalogService
         return $edition && ! $edition->trashed() ? $edition : null;
     }
 
-    /** @return Collection<int, BookEdition> */
-    public function findByIsbn(?string $raw): Collection
+    /**
+     * @param  int|null  $sellerId  berilgan bo'lsa — boshqa do'konlarning tekshiruvdagi
+     *                              arizalari chiqmaydi (o'zinikilar va eski kartalar qoladi)
+     * @return Collection<int, BookEdition>
+     */
+    public function findByIsbn(?string $raw, ?int $sellerId = null): Collection
     {
         $isbn13 = Isbn::toIsbn13($raw);
         if ($isbn13 === null) {
@@ -118,6 +122,7 @@ class CatalogService
 
         return BookEdition::query()
             ->usable()
+            ->when($sellerId !== null, fn ($q) => $q->selectableBySeller($sellerId))
             ->where('isbn13', $isbn13)
             ->orderByRaw("CASE WHEN status = 'active' THEN 0 ELSE 1 END")
             ->orderByDesc('offers_count')
@@ -126,7 +131,7 @@ class CatalogService
     }
 
     /** Nom / muallif / ISBN bo'yicha qidiruv (do'kon va admin uchun). */
-    public function search(string $query, int $limit = 20): Collection
+    public function search(string $query, int $limit = 20, ?int $sellerId = null): Collection
     {
         $query = trim($query);
         if ($query === '') {
@@ -134,13 +139,14 @@ class CatalogService
         }
 
         if ($isbn13 = Isbn::toIsbn13($query)) {
-            return $this->findByIsbn($isbn13)->take($limit);
+            return $this->findByIsbn($isbn13, $sellerId)->take($limit);
         }
 
         $like = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $query) . '%';
 
         return BookEdition::query()
             ->usable()
+            ->when($sellerId !== null, fn ($q) => $q->selectableBySeller($sellerId))
             ->where(fn ($q) => $q->where('title', 'like', $like)->orWhere('author', 'like', $like))
             ->orderByRaw('CASE WHEN title LIKE ? THEN 0 ELSE 1 END', [str_replace('%', '', $like) . '%'])
             ->orderByDesc('offers_count')

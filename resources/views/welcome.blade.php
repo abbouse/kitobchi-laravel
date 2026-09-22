@@ -95,7 +95,7 @@
         // hamma joyida ishlatiladigan XUDDI SHU qoida qo'llaniladi.
         try {
             $newBooks = Cache::remember('web_home_new_books_v4', 300, function() {
-                return \App\Support\ProductVisibilityScope::applyBooks(\App\Models\Books::query())
+                return \App\Support\ProductVisibilityScope::applyBooks(\App\Models\Books::query()->catalogFeatured())
                     ->orderByDesc('created_at')
                     ->take(10)
                     ->get();
@@ -105,7 +105,7 @@
         // 3. Recommended Books (Tavsiya etamiz)
         try {
             $recommendedBooks = Cache::remember('web_home_rec_books_v4', 300, function() {
-                return \App\Support\ProductVisibilityScope::applyBooks(\App\Models\Books::query())
+                return \App\Support\ProductVisibilityScope::applyBooks(\App\Models\Books::query()->catalogFeatured())
                     ->orderByDesc('totalSales')
                     ->take(10)
                     ->get();
@@ -121,7 +121,7 @@
 
                 $sections = collect();
                 foreach ($categories as $cat) {
-                    $books = \App\Support\ProductVisibilityScope::applyBooks(\App\Models\Books::query())
+                    $books = \App\Support\ProductVisibilityScope::applyBooks(\App\Models\Books::query()->catalogFeatured())
                         ->where('category_id', $cat->id)
                         ->orderByDesc('totalSales')
                         ->take(5)

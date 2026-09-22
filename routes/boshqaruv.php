@@ -47,6 +47,23 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
             Route::get('/publishers', fn (AdminController $controller) => $controller->page('Publishers'))->name('publishers');
 
             Route::patch('/books/{book}/moderate', [\App\Http\Controllers\A122\BookController::class, 'moderate'])->name('books.moderate');
+            // GLOBAL KATALOG: kitob kartalari, do'kon arizalari, kitob qo'shish / arxivlash
+            Route::post('/books', [\App\Http\Controllers\Boshqaruv\CatalogController::class, 'storeBook'])->name('books.store');
+            Route::delete('/books/{book}', [\App\Http\Controllers\Boshqaruv\CatalogController::class, 'archiveBook'])->name('books.archive');
+            Route::patch('/books/{book}/restore', [\App\Http\Controllers\Boshqaruv\CatalogController::class, 'restoreBook'])->name('books.restore');
+            Route::get('/catalog', [\App\Http\Controllers\Boshqaruv\CatalogController::class, 'index'])->name('catalog');
+            Route::get('/catalog/search', [\App\Http\Controllers\Boshqaruv\CatalogController::class, 'search'])->name('catalog.search');
+            Route::get('/catalog/submissions', [\App\Http\Controllers\Boshqaruv\CatalogController::class, 'submissions'])->name('catalog.submissions');
+            Route::post('/catalog/submissions/{submission}/approve', [\App\Http\Controllers\Boshqaruv\CatalogController::class, 'approveSubmission'])->name('catalog.submissions.approve');
+            Route::post('/catalog/submissions/{submission}/reject', [\App\Http\Controllers\Boshqaruv\CatalogController::class, 'rejectSubmission'])->name('catalog.submissions.reject');
+            Route::post('/catalog/submissions/{submission}/merge', [\App\Http\Controllers\Boshqaruv\CatalogController::class, 'mergeSubmission'])->name('catalog.submissions.merge');
+            Route::post('/catalog', [\App\Http\Controllers\Boshqaruv\CatalogController::class, 'store'])->name('catalog.store');
+            Route::get('/catalog/{edition}', [\App\Http\Controllers\Boshqaruv\CatalogController::class, 'show'])->whereNumber('edition')->name('catalog.show');
+            Route::put('/catalog/{edition}', [\App\Http\Controllers\Boshqaruv\CatalogController::class, 'update'])->whereNumber('edition')->name('catalog.update');
+            Route::post('/catalog/{edition}/verify', [\App\Http\Controllers\Boshqaruv\CatalogController::class, 'verify'])->whereNumber('edition')->name('catalog.verify');
+            Route::post('/catalog/{edition}/merge', [\App\Http\Controllers\Boshqaruv\CatalogController::class, 'merge'])->whereNumber('edition')->name('catalog.merge');
+            Route::delete('/catalog/{edition}', [\App\Http\Controllers\Boshqaruv\CatalogController::class, 'destroy'])->whereNumber('edition')->name('catalog.destroy');
+            Route::patch('/catalog/{edition}/restore', [\App\Http\Controllers\Boshqaruv\CatalogController::class, 'restore'])->whereNumber('edition')->name('catalog.restore');
             Route::put('/books/{book}', [AdminController::class, 'updateBook'])->name('books.update');
             Route::patch('/stationery/{id}/moderate', [\App\Http\Controllers\A122\StationeryController::class, 'moderate'])->name('stationery.moderate');
             Route::put('/stationery/{stationery}', [AdminController::class, 'updateStationery'])->name('stationery.update');

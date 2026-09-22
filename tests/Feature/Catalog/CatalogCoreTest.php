@@ -16,8 +16,8 @@ class CatalogCoreTest extends TestCase
 
     protected function setUp(): void
     {
-        parent::setUp();
         $this->requireMysql();
+        parent::setUp();
     }
 
     public function test_isbn_normalization(): void

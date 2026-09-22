@@ -92,6 +92,8 @@ return new class extends Migration
             // Admin "o'chirish" — buyurtma tarixi saqlanishi uchun arxivlash
             $table->timestamp('archived_at')->nullable();
             $table->unsignedBigInteger('archived_by')->nullable();
+            // Arxivlashdan oldingi ko'rinish holati (tiklashda qaytariladi)
+            $table->json('archived_state')->nullable();
 
             $table->index(['catalog_featured', 'is_approved', 'is_hidden', 'status'], 'books_catalog_featured_idx');
             $table->index(['edition_id', 'seller_id'], 'books_edition_seller_idx');
@@ -104,7 +106,7 @@ return new class extends Migration
             $table->dropIndex('books_catalog_featured_idx');
             $table->dropIndex('books_edition_seller_idx');
             $table->dropIndex(['edition_id']);
-            $table->dropColumn(['edition_id', 'catalog_featured', 'condition', 'archived_at', 'archived_by']);
+            $table->dropColumn(['edition_id', 'catalog_featured', 'condition', 'archived_at', 'archived_by', 'archived_state']);
         });
         Schema::dropIfExists('book_edition_submissions');
         Schema::dropIfExists('book_editions');

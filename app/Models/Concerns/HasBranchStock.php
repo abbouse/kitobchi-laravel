@@ -60,7 +60,10 @@ trait HasBranchStock
     public function scopeWithAvailableTotal(Builder $query): Builder
     {
         if (is_null($query->getQuery()->columns)) {
-            $query->select($this->getTable() . '.*');
+            // TEZLIK: `table.*` o'rniga og'ir vectorData (1536 float, ~30KB/qator)
+            // ustunisiz ro'yxat — ro'yxat javoblari bu maydonni hech qachon
+            // qaytarmaydi ($hidden). Kerak bo'lgan joy addSelect bilan so'raydi.
+            $query->select(static::lightColumns());
         }
 
         $sql = BranchStock::availableSql($this->branchStockType(), $this->getTable() . '.id');
@@ -68,6 +71,37 @@ trait HasBranchStock
         return $query->addSelect(
             \Illuminate\Support\Facades\DB::raw("{$sql} as branch_available_total")
         );
+    }
+
+    /**
+     * Jadvalning og'ir ustunlarsiz (vectorData) to'liq ustunlar ro'yxati.
+     * Ustunlar keshlanadi; migratsiyalar papkasi o'zgarsa (yangi deploy) kesh
+     * kaliti ham o'zgaradi — yangi ustun hech qachon tushib qolmaydi.
+     *
+     * @return array<int, string>
+     */
+    /** So'rov ichida takroriy schema so'rovlarini kesish (kesh EMAS — deploydan keyin eskirmaydi). */
+    private static array $lightColumnsCache = [];
+
+    public static function lightColumns(): array
+    {
+        $table = (new static)->getTable();
+
+        if (isset(self::$lightColumnsCache[$table])) {
+            return self::$lightColumnsCache[$table];
+        }
+
+        try {
+            $columns = \Illuminate\Support\Facades\Schema::getColumnListing($table);
+        } catch (\Throwable) {
+            $columns = [];
+        }
+
+        $columns = array_values(array_diff($columns, ['vectorData']));
+
+        return self::$lightColumnsCache[$table] = $columns === []
+            ? [$table . '.*']
+            : array_map(fn (string $column) => $table . '.' . $column, $columns);
     }
 
     // ── Query scope'lar (legacy where('count'...) o'rnini bosadi) ─────────

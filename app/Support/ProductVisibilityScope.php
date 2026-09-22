@@ -48,6 +48,8 @@ class ProductVisibilityScope
             ->where('status', true)
             ->where('is_approved', 1)
             ->where('is_hidden', false)
+            // Admin "o'chirgan" (arxivlangan) taklif hech bir ro'yxatda/sahifada chiqmaydi
+            ->whereNull('archived_at')
             ->whereHas('seller', self::activeSeller());
     }
 

@@ -327,6 +327,7 @@ class BookController extends Controller
             'ai_moderation_next_retry_at' => null,
             'ai_moderation_meta' => ['source' => 'admin_manual_override', 'manual_note' => $note ?: null],
         ]);
+        app(\App\Services\Catalog\BuyBoxService::class)->afterModeration($book);
 
         return back()->with('success', $approval === 2 ? 'Mahsulot rad etildi.' : 'Moderatsiya yangilandi.');
     }

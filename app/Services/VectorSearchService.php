@@ -278,6 +278,9 @@ class VectorSearchService
             $product->_similarity = $row['_similarity'];
 
             return $product;
-        })->filter()->values();
+        })->filter()
+            // GLOBAL KATALOG: bir kitobning bir nechta do'kon taklifi — natijada bitta
+            ->unique(fn ($p) => $p->_type === 'book' && $p->edition_id ? 'e' . $p->edition_id : $p->_type . $p->id)
+            ->values();
     }
 }
