@@ -93,7 +93,7 @@ class CourierAuthController extends Controller
 
         $tokenResult = $courier->createToken('courier-token');
         $plainTextToken = $tokenResult->plainTextToken;
-        $hashedToken = hash('sha256', explode('|', $plainTextToken)[1]);
+        $hashedToken = hash('sha256', explode('|', (string) $plainTextToken, 2)[1] ?? (string) $plainTextToken);
 
         DB::table('connected_devices')->updateOrInsert(
             ['device_id' => $request->device_id],

@@ -99,7 +99,8 @@ class SellerController extends Controller
 
         // ✅ HAR KIM O'Z QURILMALARINI KO'radi
         $currentToken = $request->bearerToken();
-        $currentTokenHash = hash('sha256', explode('|', $currentToken)[1]);
+        // Token "id|plain" shaklida keladi; formati boshqacha bo'lsa 500 bermaydi
+        $currentTokenHash = hash('sha256', explode('|', (string) $currentToken, 2)[1] ?? (string) $currentToken);
 
         $devices = DB::table('connected_devices')
             ->join('personal_access_tokens', 'connected_devices.token', '=', 'personal_access_tokens.token')

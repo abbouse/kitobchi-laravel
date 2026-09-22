@@ -139,4 +139,23 @@ class CatalogCoreTest extends TestCase
         $this->assertFalse((bool) $a->fresh()->catalog_featured);
         $this->assertTrue((bool) $c->fresh()->catalog_featured);
     }
+
+    public function test_sale_inside_transaction_moves_buy_box_after_commit(): void
+    {
+        $cat = $this->makeCategory();
+        $cheap = $this->makeBook($this->makeSeller(), $cat, ['price' => 40000], 1);
+        $other = $this->makeBook($this->makeSeller(), $cat, ['price' => 55000], 4);
+        $this->assertTrue((bool) $cheap->fresh()->catalog_featured);
+
+        // Checkout kabi: bitta tranzaksiya ichida sotuv + boshqa yozuvlar
+        \Illuminate\Support\Facades\DB::transaction(function () use ($cheap) {
+            app(BranchStockService::class)->decrementForSale('book', (int) $cheap->id, 0, 1, null, ['reason' => 'sale']);
+            $this->assertTrue((bool) $cheap->fresh()->catalog_featured, 'tranzaksiya ichida hali o\'zgarmaydi');
+        });
+
+        $this->assertSame(0, $cheap->fresh()->count);
+        $this->assertFalse((bool) $cheap->fresh()->catalog_featured);
+        $this->assertTrue((bool) $other->fresh()->catalog_featured);
+        $this->assertSame(1, Books::query()->catalogFeatured()->count());
+    }
 }

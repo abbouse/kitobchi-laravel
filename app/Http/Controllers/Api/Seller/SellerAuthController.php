@@ -153,7 +153,7 @@ class SellerAuthController extends Controller
         $plainTextToken = $tokenResult->plainTextToken;
 
         // Sanctum tokenni bazada shunday saqlaydi (solishtirish uchun kerak)
-        $hashedToken = hash('sha256', explode('|', $plainTextToken)[1]);
+        $hashedToken = hash('sha256', explode('|', (string) $plainTextToken, 2)[1] ?? (string) $plainTextToken);
 
         // Qurilmani saqlash
         DB::table('connected_devices')->updateOrInsert(

@@ -197,7 +197,7 @@ class AuthController extends Controller
             // Token yaratish
             $tokenResult    = $user->createToken('user_token');
             $plainTextToken = $tokenResult->plainTextToken;
-            $hashedToken    = hash('sha256', explode('|', $plainTextToken)[1]);
+            $hashedToken    = hash('sha256', explode('|', (string) $plainTextToken, 2)[1] ?? (string) $plainTextToken);
 
             // Qurilmani saqlash
             //
@@ -470,7 +470,7 @@ class AuthController extends Controller
     {
         $tokenResult = $user->createToken('user_token');
         $plainTextToken = $tokenResult->plainTextToken;
-        $hashedToken = hash('sha256', explode('|', $plainTextToken)[1]);
+        $hashedToken = hash('sha256', explode('|', (string) $plainTextToken, 2)[1] ?? (string) $plainTextToken);
 
         // MUHIM: xuddi shu tuzatish bu yerda ham qo'llanildi — match kaliti
         // `user_id`ni ham o'z ichiga oladi (store() metodidagi izohga qarang,

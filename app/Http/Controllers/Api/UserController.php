@@ -431,6 +431,11 @@ class UserController extends Controller
             return response()->json(['status' => 'error', 'message' => 'Username topilmadi'], 404);
         }
 
+        // `username` ustuni bazada bo'lmasa (hozircha yo'q) — 500 emas, oddiy "topilmadi"
+        if (! Schema::hasColumn('users', 'username')) {
+            return response()->json(['status' => 'error', 'message' => 'User not found'], 404);
+        }
+
         $user = User::query()
             ->select('id', 'name', 'lastname', 'username', 'avatar', 'position', 'staff_role', 'isVerified', 'isSupport', 'role_emoji', 'role_title', 'role_place')
             ->where('username', $normalized)
