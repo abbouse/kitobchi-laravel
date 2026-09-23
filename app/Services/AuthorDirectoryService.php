@@ -139,6 +139,21 @@ class AuthorDirectoryService
                 }
 
                 if ((int) $beforeAuthorId !== (int) $author->id || $book->getRawOriginal('author') !== $author->name) {
+                    // GLOBAL KATALOG: ulangan taklifda muallif kartadan olinadi —
+                    // shuning uchun avval karta to'ldiriladi, keyin taklifga ko'chadi.
+                    if ($book->edition_id) {
+                        \App\Models\BookEdition::query()
+                            ->whereKey($book->edition_id)
+                            ->update(['author_id' => $author->id, 'author' => $author->name]);
+                        Books::writingFromCatalog(fn () => Books::query()
+                            ->whereKey($book->id)
+                            ->toBase()
+                            ->update(['author_id' => $author->id, 'author' => $author->name, 'vector_text_hash' => null]));
+                        $linked++;
+
+                        continue;
+                    }
+
                     $book->forceFill([
                         'author_id' => $author->id,
                         'author' => $author->name,

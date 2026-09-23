@@ -31,6 +31,11 @@ use Illuminate\Support\Str;
  *   POST catalog/offers              topilgan kartaga taklif (narx + qoldiq)
  *   POST catalog/submissions         topilmagan kitob: old + orqa muqova majburiy
  *   GET  catalog/submissions         do'kon arizalari holati
+ *   POST catalog/editions/{id}/correction   kartadagi xato haqida tuzatish taklifi
+ *
+ * MUHIM: kitobning O'ZINIKI bo'lgan ma'lumotlari (nom, muallif, muqova, tavsif,
+ * rasmlar) faqat katalog kartasida turadi va do'kon ularni o'zgartira olmaydi —
+ * xato bo'lsa shu yerdan tuzatish TAKLIFI yuboriladi, qarorni admin qabul qiladi.
  */
 class CatalogController extends ProductController
 {
@@ -95,8 +100,8 @@ class CatalogController extends ProductController
             return $denied;
         }
 
-        $edition = $catalog->resolve(BookEdition::withTrashed()->find($id));
-        if (! $edition || ! $edition->isUsable()) {
+        $edition = $this->selectableEdition($catalog, $id);
+        if (! $edition) {
             return response()->json(['success' => false, 'message' => 'Kitob katalogda topilmadi'], 404);
         }
 
@@ -125,8 +130,8 @@ class CatalogController extends ProductController
             return response()->json(['success' => false, 'message' => 'Validation failed', 'errors' => $validator->errors()], 422);
         }
 
-        $edition = $catalog->resolve(BookEdition::withTrashed()->find((int) $request->input('edition_id')));
-        if (! $edition || ! $edition->isUsable()) {
+        $edition = $this->selectableEdition($catalog, (int) $request->input('edition_id'));
+        if (! $edition) {
             return response()->json(['success' => false, 'message' => 'Kitob katalogda topilmadi'], 404);
         }
 
@@ -198,10 +203,10 @@ class CatalogController extends ProductController
         $validator = Validator::make($request->all(), [
             'isbn' => 'nullable|string|max:20',
             'back_isbn_client' => 'nullable|string|max:20',
-            'front_image' => 'required|image|mimes:jpeg,png,jpg,webp|max:10240',
-            'back_image' => 'required|image|mimes:jpeg,png,jpg,webp|max:10240',
+            'front_image' => 'required|image|mimes:jpeg,png,jpg,webp|max:10240|dimensions:max_width=8000,max_height=8000',
+            'back_image' => 'required|image|mimes:jpeg,png,jpg,webp|max:10240|dimensions:max_width=8000,max_height=8000',
             'images' => 'nullable|array|max:6',
-            'images.*' => 'image|mimes:jpeg,png,jpg,webp|max:10240',
+            'images.*' => 'image|mimes:jpeg,png,jpg,webp|max:10240|dimensions:max_width=8000,max_height=8000',
             'name' => 'required|string|max:255',
             'author' => 'required|string|max:255',
             'translator' => 'nullable|string|max:255',
@@ -339,6 +344,7 @@ class CatalogController extends ProductController
 
             $submission = BookEditionSubmission::create([
                 'seller_id' => $storeSellerId,
+                'type' => BookEditionSubmission::TYPE_NEW,
                 'staff_id' => $staff->id,
                 'edition_id' => $edition->id,
                 'book_id' => $book->id,
@@ -375,6 +381,88 @@ class CatalogController extends ProductController
         ], 201);
     }
 
+    /**
+     * Kartadagi xato haqida tuzatish taklifi. Do'kon hech narsani o'zgartirmaydi —
+     * ariza moderatsiya navbatiga tushadi (Boshqaruv → Katalog → Arizalar).
+     */
+    public function storeCorrection(Request $request, int $id): JsonResponse
+    {
+        if ($denied = $this->denyWithoutAccess()) {
+            return $denied;
+        }
+
+        $validator = Validator::make($request->all(), [
+            'field' => 'nullable|string|in:name,author,translator,publisher,category,language,coverType,pages,year,description,images,isbn,other',
+            'message' => 'required|string|min:5|max:2000',
+            'suggested' => 'nullable|string|max:2000',
+            'images' => 'nullable|array|max:3',
+            'images.*' => 'image|mimes:jpeg,png,jpg,webp|max:5120|dimensions:max_width=8000,max_height=8000',
+        ]);
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'message' => 'Validation failed', 'errors' => $validator->errors()], 422);
+        }
+
+        $edition = $this->selectableEdition(app(CatalogService::class), $id);
+        if (! $edition) {
+            return response()->json(['success' => false, 'message' => 'Kitob katalogda topilmadi'], 404);
+        }
+
+        $storeSellerId = $this->storeSellerId();
+
+        // Bir kartaga bir do'kondan bitta ochiq ariza yetarli (spam bo'lmasin)
+        $open = BookEditionSubmission::query()
+            ->where('seller_id', $storeSellerId)
+            ->where('edition_id', $edition->id)
+            ->where('type', BookEditionSubmission::TYPE_CORRECTION)
+            ->where('status', BookEditionSubmission::STATUS_PENDING)
+            ->first();
+        if ($open) {
+            return response()->json([
+                'success' => false,
+                'code' => 'correction_pending',
+                'message' => "Bu kitob bo'yicha tuzatish taklifingiz allaqachon ko'rib chiqilmoqda.",
+                'data' => $this->submissionPayload($open),
+            ], 409);
+        }
+
+        $images = [];
+        foreach ((array) $request->file('images', []) as $index => $file) {
+            if ($file instanceof UploadedFile && $file->isValid()) {
+                $images[] = $this->storeImage($file, 'fix' . $index);
+            }
+        }
+
+        $staff = Auth::guard('seller')->user();
+        $submission = BookEditionSubmission::create([
+            'seller_id' => $storeSellerId,
+            'type' => BookEditionSubmission::TYPE_CORRECTION,
+            'staff_id' => $staff?->id,
+            'edition_id' => $edition->id,
+            'book_id' => Books::query()
+                ->where('seller_id', $storeSellerId)
+                ->where('edition_id', $edition->id)
+                ->whereNull('archived_at')
+                ->value('id'),
+            'isbn13' => $edition->isbn13,
+            'payload' => [
+                'name' => $edition->title,
+                'author' => $edition->author,
+                'field' => $request->input('field') ?: 'other',
+                'message' => trim((string) $request->input('message')),
+                'suggested' => $request->filled('suggested') ? trim((string) $request->input('suggested')) : null,
+                'images' => $images,
+            ],
+            'front_image' => $images[0] ?? null,
+            'status' => BookEditionSubmission::STATUS_PENDING,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => "Tuzatish taklifi yuborildi. Admin tekshirgach karta yangilanadi.",
+            'data' => $this->submissionPayload($submission),
+        ], 201);
+    }
+
     public function submissions(Request $request): JsonResponse
     {
         if ($denied = $this->denyWithoutAccess()) {
@@ -383,6 +471,7 @@ class CatalogController extends ProductController
 
         $items = BookEditionSubmission::query()
             ->where('seller_id', $this->storeSellerId())
+            ->when($request->filled('type'), fn ($q) => $q->where('type', $request->query('type')))
             ->latest('id')
             ->paginate(min(50, max(5, (int) $request->query('per_page', 20))));
 
@@ -428,6 +517,24 @@ class CatalogController extends ProductController
         }
 
         return null;
+    }
+
+    /**
+     * Kartani id bo'yicha ochadi. XAVFSIZLIK: boshqa do'konning tekshiruvdagi
+     * arizasi (uning rasmi, tavsifi) begona do'konga ko'rinmaydi — shuning
+     * uchun `selectableBySeller` qidiruv/lookup bilan bir xil qo'llanadi.
+     */
+    private function selectableEdition(CatalogService $catalog, int $id): ?BookEdition
+    {
+        $edition = $catalog->resolve(BookEdition::withTrashed()->find($id));
+        if (! $edition || ! $edition->isUsable()) {
+            return null;
+        }
+
+        return BookEdition::query()
+            ->selectableBySeller($this->storeSellerId())
+            ->whereKey($edition->id)
+            ->exists() ? $edition : null;
     }
 
     private function storeSellerId(): int
@@ -560,6 +667,7 @@ class CatalogController extends ProductController
     {
         return [
             'id' => (int) $submission->id,
+            'type' => $submission->type ?: BookEditionSubmission::TYPE_NEW,
             'status' => $submission->status,
             'isbn' => $submission->isbn13,
             'isbn_check' => $submission->isbn_check,
@@ -569,6 +677,8 @@ class CatalogController extends ProductController
             'back_image' => ProductImageUrls::originalUrl($submission->back_image),
             'edition_id' => $submission->edition_id,
             'book_id' => $submission->book_id,
+            'message' => $submission->payload['message'] ?? null,
+            'field' => $submission->payload['field'] ?? null,
             'reject_reason' => $submission->reject_reason,
             'created_at' => $submission->created_at?->toIso8601String(),
             'reviewed_at' => $submission->reviewed_at?->toIso8601String(),

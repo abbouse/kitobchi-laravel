@@ -122,9 +122,9 @@ export default function CatalogEdition() {
               <label className="form-label">Mavjud rasmlar</label>
               <KeepImages items={keepItems} />
               <div className="mt-3"><CoverInputs requireFront={false} /></div>
-              <div className="form-check mt-3">
-                <input className="form-check-input" type="checkbox" name="sync_offers" value="1" id="sync_offers" defaultChecked />
-                <label className="form-check-label" htmlFor="sync_offers">Takliflarga ko'chirish</label>
+              <div className="alert alert-light-primary mt-3 mb-0 f-s-13">
+                <i className="ti ti-info-circle me-1"></i>
+                Saqlangach ma'lumot shu kartaga ulangan barcha do'kon takliflariga avtomatik ko'chiriladi.
               </div>
             </FormAction>
           ) : null}

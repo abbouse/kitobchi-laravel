@@ -8,6 +8,7 @@ import { isbnCheckChip, type PickedEdition } from '../components/CatalogFields';
 
 interface Submission {
   id: number;
+  type?: string;
   status: string;
   seller: string;
   isbn?: string | null;
@@ -18,6 +19,10 @@ interface Submission {
   frontUrl?: string | null;
   backUrl?: string | null;
   payload?: Record<string, unknown> | null;
+  message?: string | null;
+  field?: string | null;
+  suggested?: string | null;
+  proofUrls?: string[];
   editionId?: number | null;
   bookId?: number | null;
   rejectReason?: string | null;
@@ -33,8 +38,9 @@ interface Submission {
 type Props = {
   submissions: Submission[];
   pagination: { page: number; totalPages: number; from: number; to: number; total: number };
-  filters: { tab?: string };
+  filters: { tab?: string; type?: string };
   counts: Record<string, number>;
+  typeCounts?: Record<string, number>;
 };
 
 const STATUS: Record<string, [string, string]> = {
@@ -46,13 +52,21 @@ const STATUS: Record<string, [string, string]> = {
 
 const METHOD: Record<string, string> = { zbar: 'shtrix-kod', vision: 'AI (raqamlar)' };
 
+const FIELD: Record<string, string> = {
+  name: 'Nom', author: 'Muallif', translator: 'Tarjimon', publisher: 'Nashriyot',
+  category: 'Kategoriya', language: 'Til', coverType: 'Muqova', pages: 'Sahifa',
+  year: 'Yil', description: 'Tavsif', images: 'Rasmlar', isbn: 'ISBN', other: 'Boshqa',
+};
+
 export default function CatalogSubmissions() {
-  const { submissions = [], pagination, filters = {}, counts = {} } = usePage<Props>().props;
+  const { submissions = [], pagination, filters = {}, counts = {}, typeCounts = {} } = usePage<Props>().props;
   const tab = filters.tab || 'pending';
+  const type = filters.type || 'new_book';
+  const corrections = type === 'correction';
   const [rejectTarget, setRejectTarget] = useState<Submission | null>(null);
 
   const load = (params: Record<string, string | number>) => {
-    router.get('/boshqaruv/catalog/submissions', { tab, ...params }, { preserveState: true, preserveScroll: true, replace: true });
+    router.get('/boshqaruv/catalog/submissions', { tab, type, ...params }, { preserveState: true, preserveScroll: true, replace: true });
   };
 
   return (
@@ -60,10 +74,26 @@ export default function CatalogSubmissions() {
       <div className="d-flex align-items-end justify-content-between flex-wrap gap-3 mx-1 mb-3">
         <div>
           <h4 className="main-title mb-0">Kitob arizalari</h4><PageCrumbs />
-          <p className="mb-0 text-secondary">Do'konlar katalogda topmagan kitoblar: old va orqa muqova, ISBN tekshiruvi</p>
+          <p className="mb-0 text-secondary">{corrections
+            ? "Do'konlar kartadagi xato haqida yuborgan tuzatish takliflari"
+            : "Do'konlar katalogda topmagan kitoblar: old va orqa muqova, ISBN tekshiruvi"}</p>
         </div>
         <Link href="/boshqaruv/catalog" className="btn btn-light-secondary btn-sm"><i className="ti ti-book me-1"></i>Global katalog</Link>
       </div>
+
+      <ul className="nav nav-pills mb-3 gap-2">
+        {[
+          { key: 'new_book', label: 'Yangi kitob', icon: 'ti-book-upload' },
+          { key: 'correction', label: 'Tuzatish takliflari', icon: 'ti-edit' },
+        ].map((item) => (
+          <li className="nav-item" key={item.key}>
+            <button type="button" className={`nav-link ${type === item.key ? 'active' : ''}`} onClick={() => load({ type: item.key, tab: 'pending', page: 1 })}>
+              <i className={`ti ${item.icon} me-1`}></i>{item.label}
+              {typeCounts[item.key] ? <span className="badge bg-danger ms-2">{typeCounts[item.key]}</span> : null}
+            </button>
+          </li>
+        ))}
+      </ul>
 
       <div className="row">
         {[
@@ -71,7 +101,7 @@ export default function CatalogSubmissions() {
           { key: 'approved', label: 'Tasdiqlangan', sub: 'Katalogga qo\'shildi' },
           { key: 'merged', label: 'Birlashtirilgan', sub: 'Mavjud kartaga ulandi' },
           { key: 'rejected', label: 'Rad etilgan', sub: "Do'konga sabab bilan qaytdi" },
-        ].map((item, index) => (
+        ].filter((item) => !(corrections && item.key === 'merged')).map((item, index) => (
           <div className="col-xl-3 col-md-6" key={item.key}>
             <StatWidget index={index} label={item.label} value={counts[item.key] || 0} sub={item.sub} selected={tab === item.key} onClick={() => load({ tab: item.key, page: 1 })} />
           </div>
@@ -92,7 +122,9 @@ export default function CatalogSubmissions() {
                 <p className="mb-0 text-secondary f-s-13">#{item.id} · {item.seller} · {item.createdAt}</p>
               </div>
               <div className="d-flex gap-2 align-items-center flex-wrap">
-                <span className={`badge ${checkChip}`}><i className={`${checkIcon} me-1`}></i>{checkLabel}</span>
+                {corrections
+                  ? <span className="badge text-light-primary"><i className="ti ti-edit me-1"></i>{FIELD[item.field || 'other'] || item.field}</span>
+                  : <span className={`badge ${checkChip}`}><i className={`${checkIcon} me-1`}></i>{checkLabel}</span>}
                 <span className={`badge ${statusChip}`}>{statusLabel}</span>
               </div>
             </div>
@@ -100,19 +132,38 @@ export default function CatalogSubmissions() {
               <div className="row g-3">
                 <div className="col-md-5 col-xl-4">
                   <div className="row g-2">
-                    {[['Old muqova', item.frontUrl], ['Orqa muqova', item.backUrl]].map(([label, url]) => (
-                      <div className="col-6" key={label as string}>
+                    {(corrections
+                      ? (item.proofUrls || []).map((url, i) => [`Dalil ${i + 1}`, url] as [string, string])
+                      : [['Old muqova', item.frontUrl], ['Orqa muqova', item.backUrl]] as [string, string | null | undefined][]
+                    ).map(([label, url]) => (
+                      <div className="col-6" key={label}>
                         <p className="f-s-12 text-secondary mb-1">{label}</p>
-                        <a href={(url as string) || undefined} target="_blank" rel="noreferrer" className="d-block b-r-10 overflow-hidden bg-light-secondary h-200">
-                          {url ? <img className="w-100 h-100 object-fit-cover" src={url as string} alt="" /> : null}
+                        <a href={url || undefined} target="_blank" rel="noreferrer" className="d-block b-r-10 overflow-hidden bg-light-secondary h-200">
+                          {url ? <img className="w-100 h-100 object-fit-cover" src={url} alt="" /> : null}
                         </a>
                       </div>
                     ))}
+                    {corrections && !(item.proofUrls || []).length ? (
+                      <div className="col-12"><div className="p-3 b-r-10 bg-light-secondary text-secondary f-s-13">Rasm biriktirilmagan</div></div>
+                    ) : null}
+                    {corrections && edition?.cover ? (
+                      <div className="col-12">
+                        <p className="f-s-12 text-secondary mb-1">Kartadagi muqova</p>
+                        <div className="b-r-10 overflow-hidden bg-light-secondary h-200"><img className="w-100 h-100 object-fit-contain" src={edition.cover} alt="" /></div>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
                 <div className="col-md-7 col-xl-8">
                   <div className="row g-3">
-                    {[
+                    {(corrections ? [
+                      ['Karta ISBN', item.isbn || '—'],
+                      ['Qaysi maydon', FIELD[item.field || 'other'] || item.field || '—'],
+                      ['Muallif', edition?.author || String(item.payload?.author || '—')],
+                      ['Nashriyot', edition?.publisher || '—'],
+                      ['Kategoriya', edition?.category || '—'],
+                      ['Takliflar', edition ? `${edition.offersCount ?? 0} ta` : '—'],
+                    ] : [
                       ['Kiritilgan ISBN', item.isbn || '—'],
                       ['Orqa muqovadan (server)', item.backIsbnServer ? `${item.backIsbnServer} · ${METHOD[item.backIsbnMethod || ''] || item.backIsbnMethod}` : "o'qilmadi"],
                       ['Ilova o\'qigan', item.backIsbnClient || '—'],
@@ -121,17 +172,24 @@ export default function CatalogSubmissions() {
                       ['Kategoriya', edition?.category || '—'],
                       ['Til / yozuv / muqova', [edition?.lang, edition?.langType, edition?.coverType].filter(Boolean).join(' / ') || '—'],
                       ['Sahifa / yil', [edition?.pages ? `${edition.pages} bet` : null, edition?.year].filter(Boolean).join(' / ') || '—'],
-                    ].map(([label, value]) => (
+                    ]).map(([label, value]) => (
                       <div className="col-sm-6 col-xl-3" key={label}>
                         <p className="mb-1 f-s-12 text-secondary">{label}</p>
                         <h6 className="mb-0 f-s-14 f-w-600 text-break">{value}</h6>
                       </div>
                     ))}
                   </div>
-                  {edition?.description ? <p className="text-secondary f-s-13 mt-3 mb-0" style={{ whiteSpace: 'pre-wrap' }}>{edition.description}</p> : null}
+                  {corrections ? (
+                    <div className="alert alert-light-primary mt-3 mb-0 f-s-13">
+                      <p className="f-w-600 mb-1"><i className="ti ti-message me-1"></i>Do'kon izohi</p>
+                      <p className="mb-0" style={{ whiteSpace: 'pre-wrap' }}>{item.message || '—'}</p>
+                      {item.suggested ? <p className="mb-0 mt-2"><span className="text-secondary">Taklif qilingan qiymat:</span> <b>{item.suggested}</b></p> : null}
+                    </div>
+                  ) : null}
+                  {!corrections && edition?.description ? <p className="text-secondary f-s-13 mt-3 mb-0" style={{ whiteSpace: 'pre-wrap' }}>{edition.description}</p> : null}
                   {item.rejectReason ? <div className="alert alert-light-danger mt-3 mb-0 f-s-13">Rad etish sababi: {item.rejectReason}</div> : null}
 
-                  {item.duplicates && item.duplicates.length ? (
+                  {!corrections && item.duplicates && item.duplicates.length ? (
                     <div className="mt-3">
                       <p className="f-w-600 mb-2"><i className="ti ti-alert-triangle text-warning me-1"></i>Katalogda shu ISBN bilan karta bor</p>
                       {item.duplicates.map((dup) => (
@@ -158,7 +216,7 @@ export default function CatalogSubmissions() {
                     {pending ? (
                       <>
                         <button type="button" className="btn btn-light-danger btn-sm" onClick={() => setRejectTarget(item)}><i className="ti ti-x me-1"></i>Rad etish</button>
-                        <button type="button" className="btn btn-success btn-sm" onClick={() => router.post(item.approveUrl, {}, { preserveScroll: true })}><i className="ti ti-check me-1"></i>Tasdiqlash</button>
+                        <button type="button" className="btn btn-success btn-sm" onClick={() => router.post(item.approveUrl, {}, { preserveScroll: true })}><i className="ti ti-check me-1"></i>{corrections ? 'Qabul qilindi' : 'Tasdiqlash'}</button>
                       </>
                     ) : null}
                   </div>

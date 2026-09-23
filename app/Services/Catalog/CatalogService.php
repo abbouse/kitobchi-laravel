@@ -166,8 +166,15 @@ class CatalogService
             return BookEdition::find($book->edition_id);
         }
 
-        $edition = $this->findMatchingEdition($book) ?? $this->createEditionFromOffer($book, $source);
+        $existing = $this->findMatchingEdition($book);
+        $edition = $existing ?? $this->createEditionFromOffer($book, $source);
         $this->attachOffer($book, $edition);
+
+        // Kitob MAVJUD kartaga ulandi — taklif ma'lumoti kartadan olinadi
+        // (do'kon kiritgan nom/rasm o'rniga umumiy, tekshirilgan ma'lumot).
+        if ($existing) {
+            $this->syncOffers($edition, [(int) $book->id]);
+        }
 
         return $edition;
     }
@@ -293,9 +300,12 @@ class CatalogService
             return 0;
         }
 
-        foreach (array_chunk($ids, 500) as $chunk) {
-            Books::query()->whereIn('id', $chunk)->toBase()->update($row);
-        }
+        // Yagona ruxsat etilgan yozuv nuqtasi (model qulfi shu yerda ochiladi)
+        Books::writingFromCatalog(function () use ($ids, $row) {
+            foreach (array_chunk($ids, 500) as $chunk) {
+                Books::query()->whereIn('id', $chunk)->toBase()->update($row);
+            }
+        });
 
         $tagIds = array_values(array_unique(array_map('intval', (array) ($edition->tag_ids ?? []))));
         if (! empty($tagIds)) {

@@ -112,6 +112,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
@@ -1767,14 +1768,26 @@ class AdminController extends Controller
         $author->update($data);
 
         if ($nameChanged) {
+            // GLOBAL KATALOG: avval karta, keyin uning takliflari (kitob maydoni
+            // faqat katalog orqali o'zgaradi). Ulanmagan takliflar odatdagidek.
+            \App\Models\BookEdition::query()->where('author_id', $author->id)->update(['author' => $author->name]);
+            Books::writingFromCatalog(fn () => Books::query()
+                ->whereNotNull('edition_id')
+                ->where('author_id', $author->id)
+                ->toBase()
+                ->update(['author' => $author->name, 'vector_text_hash' => null]));
+
             // vector_text_hash = null — scheduler (vectors:rebuild) bu kitoblarni
             // avtomatik qayta embed qiladi (bulk update observer ni chetlab o'tadi)
             Books::query()->where('author_id', $author->id)->update([
                 'author' => $author->name,
                 'vector_text_hash' => null,
             ]);
+            // Ulangan takliflar kartadan yashaydi — ular qayta moderatsiyaga
+            // yuborilmaydi (aks holda bitta tahrir minglab taklifni sotuvdan
+            // chiqarib yuborardi). Kartaning o'zini admin tekshiradi.
             app(ProductModerationStateService::class)->markBooksPendingByIds(
-                Books::query()->where('author_id', $author->id)->pluck('id'),
+                Books::query()->whereNull('edition_id')->where('author_id', $author->id)->pluck('id'),
                 'author_changed',
             );
         }
@@ -1797,7 +1810,16 @@ class AdminController extends Controller
 
     public function destroyAuthor(Author $author): \Illuminate\Http\RedirectResponse
     {
-        $affectedBookIds = Books::query()->where('author_id', $author->id)->pluck('id');
+        // MUHIM: qayta moderatsiyaga faqat katalogga ULANMAGAN takliflar
+        // yuboriladi — ulangan taklifdagi muallif kartaniki va uni admin
+        // atayin o'zgartirdi; ularni ro'yxatdan tushirib yuborish noto'g'ri.
+        $affectedBookIds = Books::query()->whereNull('edition_id')->where('author_id', $author->id)->pluck('id');
+        \App\Models\BookEdition::query()->where('author_id', $author->id)->update(['author_id' => null]);
+        Books::writingFromCatalog(fn () => Books::query()
+            ->whereNotNull('edition_id')
+            ->where('author_id', $author->id)
+            ->toBase()
+            ->update(['author_id' => null, 'vector_text_hash' => null]));
         Books::query()
             ->where('author_id', $author->id)
             ->update(['author_id' => null, 'author' => null, 'vector_text_hash' => null]);
@@ -1858,7 +1880,14 @@ class AdminController extends Controller
 
     public function destroyPublisher(Publisher $publisher): \Illuminate\Http\RedirectResponse
     {
-        $affectedBookIds = Books::query()->where('publisher_id', $publisher->id)->pluck('id');
+        // Qayta moderatsiya — faqat ulanmagan takliflar (yuqoridagi izohga qarang)
+        $affectedBookIds = Books::query()->whereNull('edition_id')->where('publisher_id', $publisher->id)->pluck('id');
+        \App\Models\BookEdition::query()->where('publisher_id', $publisher->id)->update(['publisher_id' => null]);
+        Books::writingFromCatalog(fn () => Books::query()
+            ->whereNotNull('edition_id')
+            ->where('publisher_id', $publisher->id)
+            ->toBase()
+            ->update(['publisher_id' => null]));
         Books::query()->where('publisher_id', $publisher->id)->update(['publisher_id' => null]);
         app(ProductModerationStateService::class)->markBooksPendingByIds($affectedBookIds, 'publisher_removed');
 
@@ -1931,42 +1960,57 @@ class AdminController extends Controller
 
     public function updateBook(Request $request, Books $book): \Illuminate\Http\RedirectResponse
     {
-        $data = $request->validate([
+        // GLOBAL KATALOG: kartaga ulangan taklifda kitob maydonlari formada
+        // umuman yo'q (faqat o'qish uchun ko'rsatiladi) — ularni talab qilmaymiz.
+        $catalogFields = $book->edition_id ? [] : [
             'name' => ['required', 'string', 'max:255'],
             'author' => ['required', 'string', 'max:255'],
             'translator' => ['nullable', 'string', 'max:255'],
             'isbn' => ['nullable', 'string', 'max:20'],
             'category_id' => ['required', 'exists:book_categories,id'],
             'publisher_id' => ['nullable', 'exists:publishers,id'],
-            'seller_id' => ['nullable', 'exists:sellers,id'],
             'description' => ['nullable', 'string', 'max:3000'],
-            'price' => ['required', 'numeric', 'min:0'],
-            'discountPrice' => ['nullable', 'numeric', 'min:0'],
-            'discountExpiresAt' => ['nullable', 'date'],
-            'count' => ['required', 'integer', 'min:0'],
             'lang' => ['nullable', 'string', 'max:10'],
             'langType' => ['nullable', 'string', 'max:40'],
             'coverType' => ['nullable', 'string', 'max:40'],
             'year' => ['nullable', 'integer', 'min:0', 'max:2100'],
             'pages' => ['nullable', 'integer', 'min:0'],
+            'images_text' => ['nullable', 'string'],
+            'images.*' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:10240'],
+        ];
+
+        $data = $request->validate($catalogFields + [
+            'seller_id' => ['nullable', 'exists:sellers,id'],
+            'price' => ['required', 'numeric', 'min:0'],
+            'discountPrice' => ['nullable', 'numeric', 'min:0'],
+            'discountExpiresAt' => ['nullable', 'date'],
+            'count' => ['required', 'integer', 'min:0'],
             'status' => ['nullable', 'boolean'],
             'is_hidden' => ['nullable', 'boolean'],
             'recommended' => ['nullable', 'boolean'],
             'recommendedExpiresAt' => ['nullable', 'date'],
             'is_approved' => ['nullable', Rule::in([0, 1, 2, '0', '1', '2'])],
-            'images_text' => ['nullable', 'string'],
-            'images.*' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:10240'],
         ]);
 
-        $author = app(\App\Services\AuthorDirectoryService::class)->resolveOrCreateByName($request->input('author'));
         $data['artikul'] = $book->artikul ?: ProductArtikul::generate('book', (int) $book->id);
-        $data['isbn'] = Books::normalizeIsbn($request->input('isbn'));
-        $data['images'] = $this->syncCatalogImages($request, $book->images ?? [], 'images', 'images_text', 'books', 'admin_book');
         $data['status'] = $request->boolean('status');
         $data['is_hidden'] = $request->boolean('is_hidden');
         $data['recommended'] = $request->boolean('recommended');
-        $data['author_id'] = $author?->id;
-        $data['author'] = $author?->name ?: trim((string) $request->input('author'));
+
+        if ($book->edition_id) {
+            // GLOBAL KATALOG: kitobning O'ZINIKI bo'lgan ma'lumotlari (nom, muallif,
+            // ISBN, muqova, tavsif, rasmlar) faqat kartada turadi va u yerdan
+            // barcha takliflarga tarqaladi. Bu yerda faqat taklif maydonlari
+            // (narx, chegirma, qoldiq, ko'rinish, moderatsiya) yangilanadi —
+            // kitob ma'lumotini tahrirlash: Katalog → karta sahifasi.
+            $data = Arr::except($data, array_merge(Books::CATALOG_MANAGED, ['images_text']));
+        } else {
+            $author = app(\App\Services\AuthorDirectoryService::class)->resolveOrCreateByName($request->input('author'));
+            $data['isbn'] = Books::normalizeIsbn($request->input('isbn'));
+            $data['images'] = $this->syncCatalogImages($request, $book->images ?? [], 'images', 'images_text', 'books', 'admin_book');
+            $data['author_id'] = $author?->id;
+            $data['author'] = $author?->name ?: trim((string) $request->input('author'));
+        }
 
         $book->update($data);
 

@@ -17,6 +17,7 @@ use App\Support\Isbn;
 use App\Support\ProductArtikul;
 use App\Support\ProductImageUrls;
 use App\Support\ProductImageVariantGenerator;
+use App\Support\SharedImageGuard;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -179,7 +180,9 @@ class CatalogController extends Controller
             'verified_at' => $model->verified_at ?? ($request->boolean('verify') ? now() : null),
         ]);
 
-        $synced = $request->boolean('sync_offers') ? $this->catalog->syncOffers($model->fresh()) : 0;
+        // Karta — YAGONA manba: takliflardagi nusxa har doim shundan yangilanadi
+        // (tanlov yo'q, aks holda do'kon kartalari darhol chetga chiqib ketardi).
+        $synced = $this->catalog->syncOffers($model->fresh());
         $this->buyBox->touch((int) $model->id);
 
         return back()->with('success', "Kitob kartasi saqlandi" . ($synced ? " va {$synced} ta taklifga ko'chirildi." : '.'));
@@ -187,7 +190,10 @@ class CatalogController extends Controller
 
     public function verify(int $edition): RedirectResponse
     {
-        $model = BookEdition::findOrFail($edition);
+        $model = BookEdition::withTrashed()->find($edition);
+        if (! $model || $model->trashed()) {
+            return back()->with('error', "Karta topilmadi (o'chirilgan).");
+        }
         if (in_array($model->status, [BookEdition::STATUS_MERGED, BookEdition::STATUS_REJECTED], true)) {
             return back()->with('error', 'Bu karta tasdiqlanmaydi (birlashtirilgan yoki rad etilgan).');
         }
@@ -196,8 +202,11 @@ class CatalogController extends Controller
             $model->forceFill(['status' => BookEdition::STATUS_ACTIVE, 'verified_at' => now()])->save();
             $this->approvePendingOffers($model, 'Katalog kartasi admin tomonidan tasdiqlandi.');
             $this->catalog->syncOffers($model->fresh());
+            // FAQAT yangi kitob arizalari yopiladi — tuzatish takliflari
+            // kartani tasdiqlash bilan hal bo'lmaydi va navbatda qoladi.
             BookEditionSubmission::query()
                 ->where('edition_id', $model->id)
+                ->where('type', BookEditionSubmission::TYPE_NEW)
                 ->where('status', BookEditionSubmission::STATUS_PENDING)
                 ->update(['status' => BookEditionSubmission::STATUS_APPROVED, 'reviewer_id' => Auth::guard('panel')->id(), 'reviewed_at' => now()]);
         });
@@ -221,6 +230,7 @@ class CatalogController extends Controller
             }
             BookEditionSubmission::query()
                 ->where('edition_id', $into->id)
+                ->where('type', BookEditionSubmission::TYPE_NEW)
                 ->where('status', BookEditionSubmission::STATUS_PENDING)
                 ->update(['status' => BookEditionSubmission::STATUS_MERGED, 'reviewer_id' => Auth::guard('panel')->id(), 'reviewed_at' => now()]);
 
@@ -265,8 +275,13 @@ class CatalogController extends Controller
     public function submissions(Request $request): Response
     {
         $tab = (string) $request->query('tab', 'pending');
+        // Navbat ikki xil: yangi kitob arizasi va kartadagi xatoni tuzatish taklifi
+        $type = in_array($request->query('type'), [BookEditionSubmission::TYPE_NEW, BookEditionSubmission::TYPE_CORRECTION], true)
+            ? (string) $request->query('type')
+            : BookEditionSubmission::TYPE_NEW;
         $items = BookEditionSubmission::query()
             ->with(['seller:id,shop_name', 'edition' => fn ($q) => $q->with(['publisher:id,name', 'category:id,name_uz'])])
+            ->where('type', $type)
             ->when($tab !== 'all', fn ($q) => $q->where('status', $tab))
             ->orderByRaw("CASE isbn_check WHEN 'mismatch' THEN 0 WHEN 'unreadable' THEN 1 WHEN 'no_isbn' THEN 2 ELSE 3 END")
             ->latest('id')
@@ -274,21 +289,31 @@ class CatalogController extends Controller
             ->withQueryString();
 
         return Inertia::render('CatalogSubmissions', [
-            'submissions' => collect($items->items())->map(function (BookEditionSubmission $s) {
+            'submissions' => collect($items->items())->map(function (BookEditionSubmission $s) use ($type) {
                 $row = $this->submissionRow($s);
                 $row['edition'] = $s->edition ? $this->editionRow($s->edition, true) : null;
-                $row['duplicates'] = $s->edition
-                    ? $this->catalog->findByIsbn($s->isbn13)->where('id', '!=', $s->edition_id)->map(fn ($e) => $this->editionRow($e))->values()
+                // Dublikatlar faqat yangi kitob arizalarida kerak (tuzatish
+                // taklifida karta allaqachon ma'lum) — har qator uchun qo'shimcha
+                // so'rov qilinmaydi.
+                $row['duplicates'] = $s->edition && $type === BookEditionSubmission::TYPE_NEW && filled($s->isbn13)
+                    ? $this->catalog->findByIsbn($s->isbn13)
+                        ->where('id', '!=', $s->edition_id)
+                        ->loadMissing(['publisher:id,name', 'category:id,name_uz'])
+                        ->map(fn ($e) => $this->editionRow($e))->values()
                     : [];
 
                 return $row;
             })->values(),
             'pagination' => $this->pagination($items),
-            'filters' => ['tab' => $tab],
+            'filters' => ['tab' => $tab, 'type' => $type],
             'counts' => collect(['pending', 'approved', 'rejected', 'merged'])
-                ->mapWithKeys(fn ($s) => [$s => BookEditionSubmission::query()->where('status', $s)->count()])
-                ->put('all', BookEditionSubmission::query()->count())
+                ->mapWithKeys(fn ($s) => [$s => BookEditionSubmission::query()->where('type', $type)->where('status', $s)->count()])
+                ->put('all', BookEditionSubmission::query()->where('type', $type)->count())
                 ->all(),
+            'typeCounts' => [
+                BookEditionSubmission::TYPE_NEW => BookEditionSubmission::query()->where('type', BookEditionSubmission::TYPE_NEW)->where('status', BookEditionSubmission::STATUS_PENDING)->count(),
+                BookEditionSubmission::TYPE_CORRECTION => BookEditionSubmission::query()->where('type', BookEditionSubmission::TYPE_CORRECTION)->where('status', BookEditionSubmission::STATUS_PENDING)->count(),
+            ],
         ]);
     }
 
@@ -296,6 +321,23 @@ class CatalogController extends Controller
     {
         if ($submission->status !== BookEditionSubmission::STATUS_PENDING || ! $submission->edition_id) {
             return back()->with('error', "Ariza allaqachon ko'rib chiqilgan.");
+        }
+
+        $edition = BookEdition::withTrashed()->find($submission->edition_id);
+        if (! $edition || $edition->trashed() || in_array($edition->status, [BookEdition::STATUS_MERGED, BookEdition::STATUS_REJECTED], true)) {
+            return back()->with('error', "Bu arizaning kartasi o'chirilgan yoki birlashtirilgan — arizani rad eting.");
+        }
+
+        // Tuzatish taklifi: karta tasdiqlanmaydi (u allaqachon faol) — admin
+        // kartani o'zi tahrirlaydi, bu yerda ariza yopiladi.
+        if ($submission->isCorrection()) {
+            $submission->forceFill([
+                'status' => BookEditionSubmission::STATUS_APPROVED,
+                'reviewer_id' => Auth::guard('panel')->id(),
+                'reviewed_at' => now(),
+            ])->save();
+
+            return back()->with('success', 'Tuzatish taklifi qabul qilindi.');
         }
 
         return $this->verify((int) $submission->edition_id);
@@ -306,6 +348,27 @@ class CatalogController extends Controller
         $data = $request->validate(['reason' => 'required|string|max:500']);
         if ($submission->status !== BookEditionSubmission::STATUS_PENDING) {
             return back()->with('error', "Ariza allaqachon ko'rib chiqilgan.");
+        }
+
+        // Tuzatish taklifini rad etish — kartaga ham, do'kon taklifiga ham tegmaydi
+        if ($submission->isCorrection()) {
+            // Dalil rasmlari kerak emas — diskda qolib ketmasin
+            $proof = array_values(array_filter((array) ($submission->payload['images'] ?? []), 'is_string'));
+            foreach ($proof as $path) {
+                if (SharedImageGuard::canDelete($path)) {
+                    Storage::disk('public')->delete($path);
+                    ProductImageVariantGenerator::deleteForPath($path);
+                }
+            }
+
+            $submission->forceFill([
+                'status' => BookEditionSubmission::STATUS_REJECTED,
+                'reject_reason' => $data['reason'],
+                'reviewer_id' => Auth::guard('panel')->id(),
+                'reviewed_at' => now(),
+            ])->save();
+
+            return back()->with('success', 'Tuzatish taklifi rad etildi.');
         }
 
         DB::transaction(function () use ($submission, $data) {
@@ -352,6 +415,9 @@ class CatalogController extends Controller
     {
         if ($submission->status !== BookEditionSubmission::STATUS_PENDING || ! $submission->edition_id) {
             return back()->with('error', "Ariza allaqachon ko'rib chiqilgan.");
+        }
+        if ($submission->isCorrection()) {
+            return back()->with('error', "Tuzatish taklifi birlashtirilmaydi — kartani tahrirlang.");
         }
 
         return $this->merge($request, (int) $submission->edition_id);
@@ -644,6 +710,7 @@ class CatalogController extends Controller
     {
         return [
             'id' => $s->id,
+            'type' => $s->type ?: BookEditionSubmission::TYPE_NEW,
             'status' => $s->status,
             'seller' => $s->seller?->shop_name ?: ('#' . $s->seller_id),
             'isbn' => $s->isbn13,
@@ -654,6 +721,15 @@ class CatalogController extends Controller
             'frontUrl' => ProductImageUrls::originalUrl($s->front_image),
             'backUrl' => ProductImageUrls::originalUrl($s->back_image),
             'payload' => $s->payload,
+            // Tuzatish taklifi: do'kon nima xato deganini ko'rsatamiz
+            'message' => $s->payload['message'] ?? null,
+            'field' => $s->payload['field'] ?? null,
+            'suggested' => $s->payload['suggested'] ?? null,
+            'proofUrls' => collect((array) ($s->payload['images'] ?? []))
+                ->filter('is_string')
+                ->map(fn ($path) => ProductImageUrls::originalUrl($path))
+                ->values()
+                ->all(),
             'editionId' => $s->edition_id,
             'bookId' => $s->book_id,
             'rejectReason' => $s->reject_reason,

@@ -77,19 +77,6 @@ class ProductController extends Controller
         ]);
     }
 
-    /** Kitob ma'lumoti katalogdan olinadimi (do'kon faqat narx/qoldiqni boshqaradi). */
-    protected function isCatalogLocked(\App\Models\BookEdition $edition, int $storeSellerId): bool
-    {
-        return $edition->verified_at !== null
-            || $edition->status === \App\Models\BookEdition::STATUS_PENDING && $edition->source === 'seller' && (int) $edition->created_by_id !== $storeSellerId
-            || Books::query()
-                ->where('edition_id', $edition->id)
-                ->where('seller_id', '!=', $storeSellerId)
-                ->where('is_approved', '!=', 2)
-                ->whereNull('archived_at')
-                ->exists();
-    }
-
     protected function assignGeneratedArtikul($product, string $type): void
     {
         if ($product->artikul) {
@@ -117,7 +104,7 @@ class ProductController extends Controller
         }
 
         $storeSellerId = $this->getStoreSellerId($seller);
-        $books = Seller::find($storeSellerId)->books()
+        $books = Books::query()->where('seller_id', $storeSellerId)
             ->where('is_hidden', false)
             ->with(['category', 'tags', 'publisher:id,name'])
             ->latest('updated_at')
@@ -159,7 +146,7 @@ public function lastProductsBS(Request $request)
     $booksSearch = $request->input('books_search', '');
     $stationerySearch = $request->input('stationery_search', '');
 
-    $bookBase = Seller::find($storeSellerId)->books()->where('is_hidden', false);
+    $bookBase = Books::query()->where('seller_id', $storeSellerId)->where('is_hidden', false);
     $stationeryBase = Seller::find($storeSellerId)->stationeries()->where('is_hidden', false);
 
     // COUNTS (paginationdan mustaqil, serverdagi aniq sonlar)
@@ -182,7 +169,7 @@ public function lastProductsBS(Request $request)
     ];
 
     // Asosiy querylar
-    $booksQuery = Seller::find($storeSellerId)->books()
+    $booksQuery = Books::query()->where('seller_id', $storeSellerId)
         ->withAvailableTotal()
         ->where('is_hidden', false)
         ->with(['category', 'tags', 'publisher:id,name']);
@@ -277,7 +264,7 @@ public function lastProductsBS(Request $request)
         }
 
         $storeSellerId = $this->getStoreSellerId($seller);
-        $count = Seller::find($storeSellerId)->books()
+        $count = Books::query()->where('seller_id', $storeSellerId)
             ->where('is_hidden', false)
             ->count();
 
@@ -742,7 +729,7 @@ public function removeProduct(Request $request)
         $product = \App\Models\Stationery::where('seller_id', $storeSellerId)->find($productId);
     } else {
         // Default bo'lib 'book' deb hisoblaymiz (eski kod saqlanib qolishi uchun)
-        $product = \App\Models\Seller::find($storeSellerId)->books()->find($productId);
+        $product = \App\Models\Books::query()->where('seller_id', $storeSellerId)->find($productId);
     }
 
     if (!$product) {
@@ -795,7 +782,7 @@ public function updateProductStatus(Request $request)
             ->whereNull('archived_at')
             ->find($productId);
     } else {
-        $product = \App\Models\Seller::find($storeSellerId)->books()->find($productId);
+        $product = \App\Models\Books::query()->where('seller_id', $storeSellerId)->find($productId);
     }
 
     if (!$product) {
@@ -936,10 +923,15 @@ public function updateProductStatus(Request $request)
         $this->productModerationState->markPending($book, 'seller_created');
         $this->writeLog($seller, 'Yangi maxsulot qo\'shdi (AI moderatsiyaga yuborildi)', $book->name);
 
+        // fresh(): taklif global kartaga ulangan bo'lsa (avto-ulash) ma'lumot
+        // kartadan qayta yozilgan — ilovaga bazadagi HAQIQIY holat qaytariladi.
+        $book = $book->fresh();
+
         return response()->json([
             'success' => true,
             'message' => 'Product created successfully',
             'data' => $book->load(['category', 'tags']),
+            'catalog_locked' => (bool) $book->edition_id,
         ], 201);
     }
 
@@ -960,7 +952,21 @@ public function updateProductStatus(Request $request)
 
     $storeSellerId = $this->getStoreSellerId($seller);
 
-    $validator = Validator::make($request->all(), [
+    // GLOBAL KATALOG: ulangan taklifda ilova faqat narx/qoldiq yuboradi —
+    // kitob maydonlarini (nom, muallif, tavsif…) talab qilmaymiz.
+    $linked = Books::query()
+        ->where('seller_id', $storeSellerId)
+        ->whereKey($request->input('id'))
+        ->whereNotNull('edition_id')
+        ->exists();
+
+    $validator = Validator::make($request->all(), $linked ? [
+        'id' => 'required|integer',
+        'price' => 'required|numeric|min:1|max:100000000',
+        'discountPrice' => 'nullable|numeric|min:0|lt:price',
+        'count' => 'required|integer|min:0|max:100000',
+        'discountExpiresAt' => 'nullable|date',
+    ] : [
         'id' => 'required|integer',
         'name' => 'required|string|max:255',
         'author' => 'required|string|max:255',
@@ -992,17 +998,15 @@ public function updateProductStatus(Request $request)
         ], 422);
     }
 
-    $product = Seller::find($storeSellerId)->books()->find($request->id);
+    $product = Books::query()->where('seller_id', $storeSellerId)->find($request->id);
     if (!$product) {
         return response()->json(['success' => false, 'message' => 'Mahsulot topilmadi'], 404);
     }
 
-    // GLOBAL KATALOG: tasdiqlangan yoki boshqa do'konlar bilan umumiy kartaga ulangan
-    // taklifda kitob ma'lumoti (nom, muallif, rasm, tavsif) katalogdan olinadi —
-    // do'kon faqat narx, chegirma va qoldiqni o'zgartiradi. Umumiy rasm fayllari
-    // o'chirilmaydi.
-    $edition = $product->edition_id ? \App\Models\BookEdition::find($product->edition_id) : null;
-    if ($edition && $this->isCatalogLocked($edition, (int) $storeSellerId)) {
+    // Kitobning O'ZINIKI bo'lgan ma'lumoti (nom, muallif, rasm, tavsif) KATALOGNIKI —
+    // ulangan taklifda do'kon faqat narx, chegirma va qoldiqni boshqaradi. Kartada
+    // xato bo'lsa: POST catalog/editions/{id}/correction (tuzatish taklifi).
+    if ($product->edition_id) {
         $product->update([
             'artikul' => $product->artikul ?: ProductArtikul::generate('book', (int) $product->id),
             'price' => $request->price,
@@ -1019,7 +1023,7 @@ public function updateProductStatus(Request $request)
 
         return response()->json([
             'success' => true,
-            'message' => "Narx va qoldiq yangilandi. Kitob ma'lumotlari umumiy katalogdan olinadi.",
+            'message' => "Narx va qoldiq yangilandi. Kitob ma'lumotlari (nom, muallif, muqova, tavsif) umumiy katalogdan olinadi — tuzatish kerak bo'lsa \"Tuzatish taklif qilish\" orqali yuboring.",
             'catalog_locked' => true,
             'data' => $product->fresh()->load(['category', 'tags']),
         ], 200);
@@ -1133,30 +1137,6 @@ public function updateProductStatus(Request $request)
     );
 
     $product->tags()->sync($request->input('tag_ids', []));
-
-    // Karta faqat shu do'konniki va tasdiqlanmagan — karta ham taklifga ergashadi
-    if ($edition) {
-        $fresh = $product->fresh();
-        $edition->update([
-            'title' => $fresh->name,
-            'author' => $fresh->getAttributes()['author'] ?? $fresh->author,
-            'author_id' => $fresh->author_id,
-            'translator' => $fresh->translator,
-            'publisher_id' => $fresh->publisher_id,
-            'isbn13' => \App\Support\Isbn::toIsbn13($fresh->isbn),
-            'isbn10' => \App\Support\Isbn::toIsbn10(\App\Support\Isbn::toIsbn13($fresh->isbn)),
-            'category_id' => $fresh->category_id,
-            'lang' => $fresh->lang,
-            'langType' => $fresh->langType,
-            'coverType' => $fresh->coverType,
-            'pages' => $fresh->pages,
-            'description' => $fresh->description,
-            'images' => $finalImages,
-            'front_image' => $finalImages[0] ?? null,
-            'tag_ids' => array_values(array_map('intval', (array) $request->input('tag_ids', []))),
-            'match_key' => \App\Services\Catalog\CatalogService::offerMatchKey($fresh),
-        ]);
-    }
 
     $this->writeLog($seller, 'Mahsulot ma\'lumotlarini yangiladi', $product->name);
     return response()->json([
@@ -1533,13 +1513,20 @@ public function productStatistics(Request $request, $id)
         if ($type === 'book' || $type === null) {
             $canonical = Books::normalizeIsbn($code);
             if ($canonical !== null) {
-                $book = Seller::find($storeSellerId)->books()->whereIsbn($canonical)->first();
+                $book = Books::query()->where('seller_id', $storeSellerId)->whereIsbn($canonical)->first();
                 if ($book) {
                     $new = $hasStock
                         ? (int) $data['stock']
                         : max(0, (int) $book->count + (int) $data['delta']);
-                    $book->count = $new;
-                    $book->save();
+                    // BUG TUZATILDI: `books.count` ustuni yo'q (filial zaxiralariga
+                    // ko'chirilgan) — `$book->count = …; save()` jimgina hech narsa
+                    // yozmasdi va javob "saqlandi" deb ko'rsatardi.
+                    app(\App\Services\BranchStockService::class)->setTotalFromLegacy(
+                        'book', (int) $book->id, 0, (int) $storeSellerId, $new,
+                        $seller->seller_location_id ? (int) $seller->seller_location_id : null,
+                        ['actor_type' => 'seller', 'actor_id' => $seller->id, 'note' => 'Skaner orqali qoldiq']
+                    );
+                    $new = (int) $book->fresh()->count;
 
                     return response()->json([
                         'success' => true,

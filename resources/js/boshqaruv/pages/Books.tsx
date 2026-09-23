@@ -506,6 +506,22 @@ export default function Books() {
           {selectedBook?.editUrl ? (
             <FormAction label="Tahrirlash" icon="ti ti-edit" variant="light-primary" size="md" modalSize="lg" title={`Kitobni tahrirlash: ${selectedBook.title}`} onSubmit={submitEdit}>
               <div className="row g-3">
+                      {selectedBook.editionId ? (
+                        <div className="col-12">
+                          <div className="alert alert-light-primary mb-0 d-flex align-items-center justify-content-between gap-3 flex-wrap">
+                            <div className="min-w-0">
+                              <p className="f-w-600 mb-1"><i className="ti ti-lock me-1"></i>Kitob ma'lumoti katalog kartasida</p>
+                              <p className="mb-0 f-s-13">
+                                {selectedBook.title}{selectedBook.author ? ` · ${selectedBook.author}` : ''}{selectedBook.isbn ? ` · ISBN ${selectedBook.isbn}` : ''}
+                                {` · ${selectedBook.editionOffers || 1} ta taklif`}
+                              </p>
+                              <p className="mb-0 f-s-13 text-secondary">Nom, muallif, muqova, tavsif va rasmlar barcha do'konlar uchun umumiy — ular faqat kartada o'zgartiriladi.</p>
+                            </div>
+                            {selectedBook.catalogUrl ? <a href={selectedBook.catalogUrl} className="btn btn-light-primary btn-sm flex-shrink-0"><i className="ti ti-edit me-1"></i>Kartani tahrirlash</a> : null}
+                          </div>
+                        </div>
+                      ) : (
+                        <>
                       <div className="col-md-6"><label className="form-label">Nomi</label><input name="name" className="form-control" defaultValue={selectedBook.title} required /></div>
                       <div className="col-md-6"><label className="form-label">Muallif</label><input name="author" className="form-control" defaultValue={selectedBook.author} required /></div>
                       <div className="col-md-4"><label className="form-label">Tarjimon</label><input name="translator" className="form-control" defaultValue={selectedBook.translator || ''} /></div>
@@ -513,15 +529,21 @@ export default function Books() {
                       <div className="col-md-4"><label className="form-label">Yil</label><input name="year" type="number" className="form-control" defaultValue={selectedBook.year || ''} /></div>
                       <div className="col-md-4"><label className="form-label">Kategoriya</label><select name="category_id" className="form-select" defaultValue={selectedBook.categoryId || ''} required>{bookFormOptions.categories.map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</select></div>
                       <div className="col-md-4"><label className="form-label">Nashriyot</label><select name="publisher_id" className="form-select" defaultValue={selectedBook.publisherId || ''}><option value="">Tanlanmagan</option>{bookFormOptions.publishers.map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</select></div>
+                        </>
+                      )}
                       <div className="col-md-4"><label className="form-label">Seller</label><select name="seller_id" className="form-select" defaultValue={selectedBook.sellerId || ''}><option value="">Ichki katalog</option>{bookFormOptions.sellers.map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</select></div>
                       <div className="col-md-3"><label className="form-label">Narx</label><input name="price" type="number" min={0} className="form-control" defaultValue={selectedBook.price} required /></div>
                       <div className="col-md-3"><label className="form-label">Chegirma narxi</label><input name="discountPrice" type="number" min={0} className="form-control" defaultValue={selectedBook.discountPrice || ''} /></div>
                       <div className="col-md-3"><label className="form-label">Chegirma muddati</label><input name="discountExpiresAt" type="datetime-local" className="form-control" defaultValue={toInputDate(selectedBook.discountExpiresAt)} /></div>
                       <div className="col-md-3"><label className="form-label">Ombor</label><input name="count" type="number" min={0} className="form-control" defaultValue={selectedBook.stock} required /></div>
+                      {selectedBook.editionId ? null : (
+                        <>
                       <div className="col-md-3"><label className="form-label">Til</label><input name="lang" className="form-control" defaultValue={selectedBook.lang || ''} /></div>
                       <div className="col-md-3"><label className="form-label">Yozuv</label><input name="langType" className="form-control" defaultValue={selectedBook.langType || ''} /></div>
                       <div className="col-md-3"><label className="form-label">Muqova</label><input name="coverType" className="form-control" defaultValue={selectedBook.coverType || ''} /></div>
                       <div className="col-md-3"><label className="form-label">Sahifa</label><input name="pages" type="number" min={0} className="form-control" defaultValue={selectedBook.pages || ''} /></div>
+                        </>
+                      )}
                       <div className="col-md-4"><label className="form-label">Moderatsiya</label><select name="is_approved" className="form-select" defaultValue={selectedBook.status ?? 0}><option value="0">Moderatsiya</option><option value="1">Tasdiqlangan</option><option value="2">Rad etilgan</option></select></div>
                       <div className="col-md-8 d-flex align-items-end gap-3 flex-wrap">
                         <label className="form-check"><input name="status" value="1" className="form-check-input" type="checkbox" defaultChecked={selectedBook.active} /> <span className="form-check-label">Faol</span></label>
@@ -529,11 +551,15 @@ export default function Books() {
                         <label className="form-check"><input name="recommended" value="1" className="form-check-input" type="checkbox" defaultChecked={selectedBook.recommended} /> <span className="form-check-label">Tavsiya</span></label>
                       </div>
                       <div className="col-md-6"><label className="form-label">Tavsiya muddati</label><input name="recommendedExpiresAt" type="datetime-local" className="form-control" defaultValue={toInputDate(selectedBook.recommendedExpiresAt)} /></div>
+                      {selectedBook.editionId ? null : (
+                        <>
                       <div className="col-12">
                         <label className="form-label">Rasmlar</label>
                         <ImageGalleryEditor key={selectedBook.id} images={selectedBook.rawImages || selectedBook.images || []} />
                       </div>
                       <div className="col-12"><label className="form-label">Tavsif</label><textarea name="description" className="form-control" rows={4} defaultValue={selectedBook.description || ''} /></div>
+                        </>
+                      )}
               </div>
             </FormAction>
           ) : null}

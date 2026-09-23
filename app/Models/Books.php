@@ -86,6 +86,106 @@ class Books extends Model
      */
     protected $hidden = ['vectorData', 'vector_text_hash', 'has_vector', 'branch_available_total'];
 
+    /**
+     * KITOBNING O'ZINIKI bo'lgan maydonlar — ular katalog kartasiga (book_editions)
+     * tegishli. Taklif kartaga ulangan bo'lsa (edition_id), bu ustunlarni HECH KIM
+     * o'zgartira olmaydi: do'kon ham, admin ham, eski ilova ham, import ham.
+     * Yagona yozuvchi — CatalogService::syncOffers() (katalog tahrirlanganda).
+     */
+    public const CATALOG_MANAGED = [
+        'name', 'author', 'author_id', 'translator', 'isbn', 'publisher_id',
+        'category_id', 'lang', 'langType', 'coverType', 'year', 'pages',
+        'description', 'images',
+    ];
+
+    /** Faqat katalog sinxroni shu bayroq bilan yozadi. */
+    private static bool $catalogWriteAllowed = false;
+
+    /** Katalogdan yozish (CatalogService::syncOffers va kartadan taklif yaratish). */
+    public static function writingFromCatalog(callable $callback)
+    {
+        $previous = self::$catalogWriteAllowed;
+        self::$catalogWriteAllowed = true;
+
+        try {
+            return $callback();
+        } finally {
+            self::$catalogWriteAllowed = $previous;
+        }
+    }
+
+    public static function catalogWritesAllowed(): bool
+    {
+        return self::$catalogWriteAllowed;
+    }
+
+    /**
+     * Barcha model yozuvlari shu yerdan o'tadi (update/save/updateQuietly/
+     * forceFill/saveQuietly ham) — kartaga ulangan taklifda kitob maydonlari
+     * jimgina eski qiymatiga qaytariladi va log'ga yoziladi.
+     */
+    protected function performUpdate(\Illuminate\Database\Eloquent\Builder $query)
+    {
+        $this->discardCatalogManagedChanges();
+
+        return parent::performUpdate($query);
+    }
+
+    protected function performInsert(\Illuminate\Database\Eloquent\Builder $query)
+    {
+        // Kartaga ulangan holda yaratilayotgan taklif ma'lumotni faqat kartadan oladi
+        if ($this->edition_id && ! self::$catalogWriteAllowed) {
+            // withTrashed(): o'chirilgan kartaga ulangan taklif ham kartadan
+            // to'ldiriladi (aks holda do'kon kiritgan ma'lumot o'tib ketardi)
+            $edition = BookEdition::withTrashed()->find($this->edition_id);
+            if ($edition) {
+                foreach (app(\App\Services\Catalog\CatalogService::class)->offerAttributes($edition) as $column => $value) {
+                    $this->attributes[$column] = is_array($value)
+                        ? json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+                        : $value;
+                }
+            }
+        }
+
+        return parent::performInsert($query);
+    }
+
+    private function discardCatalogManagedChanges(): void
+    {
+        if (self::$catalogWriteAllowed || ! $this->edition_id) {
+            return;
+        }
+
+        $blocked = [];
+        foreach (self::CATALOG_MANAGED as $column) {
+            if (! array_key_exists($column, $this->attributes) || ! $this->isDirty($column)) {
+                continue;
+            }
+            $blocked[] = $column;
+            // Model to'liq yuklanmagan bo'lsa (select() bilan), asl qiymat yo'q —
+            // ustunni butunlay olib tashlaymiz. Aks holda u "dirty" bo'lib qolib,
+            // butun UPDATE (narx ham) jimgina yo'qolib ketardi.
+            if (array_key_exists($column, $this->original)) {
+                $this->attributes[$column] = $this->getRawOriginal($column);
+            } else {
+                unset($this->attributes[$column]);
+            }
+        }
+
+        if ($blocked !== []) {
+            Log::info('Katalog kitob maydoni himoyalandi (yozuv e\'tiborsiz qoldirildi)', [
+                'book_id' => $this->id,
+                'edition_id' => $this->edition_id,
+                'fields' => $blocked,
+            ]);
+        }
+    }
+
+    public function newEloquentBuilder($query): \App\Models\Builders\BooksBuilder
+    {
+        return new \App\Models\Builders\BooksBuilder($query);
+    }
+
     public function branchStockType(): string
     {
         return 'book';

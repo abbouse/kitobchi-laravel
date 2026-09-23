@@ -63,6 +63,9 @@ Route::middleware('auth:seller')->group(function () {
     Route::post('catalog/offers', [CatalogController::class, 'storeOffer']);
     Route::get('catalog/submissions', [CatalogController::class, 'submissions']);
     Route::post('catalog/submissions', [CatalogController::class, 'storeSubmission'])->middleware('throttle:30,60');
+    // Kartadagi xatoni do'kon o'zi tuzatolmaydi — faqat taklif yuboradi
+    Route::post('catalog/editions/{id}/correction', [CatalogController::class, 'storeCorrection'])
+        ->whereNumber('id')->middleware('throttle:20,60');
     Route::get('products/stationery/by-barcode/{barcode}', [ProductController::class, 'lookupStationeryByBarcode']);
     Route::post('products/stock/by-code', [ProductController::class, 'updateStockByCode']);
     Route::get('products/categories', [ProductController::class, 'getCategories']);

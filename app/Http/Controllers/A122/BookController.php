@@ -13,7 +13,9 @@ use App\Services\AuthorDirectoryService;
 use App\Services\ProductModerationStateService;
 use App\Support\ProductImageUrls;
 use App\Support\ProductImageVariantGenerator;
+use App\Support\SharedImageGuard;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Storage;
 
 class BookController extends Controller
@@ -250,37 +252,45 @@ class BookController extends Controller
             'images.*' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:10240',
         ]);
 
-        $existingImages = $this->parseImagesText($request->input('images_text'));
-        $currentImages = is_array($book->images) ? $book->images : (json_decode((string) $book->images, true) ?: []);
-        $deletedImages = array_diff($currentImages, $existingImages);
-        foreach ($deletedImages as $image) {
-            if (is_string($image) && ! str_starts_with($image, 'http')) {
-                Storage::disk('public')->delete($image);
-                ProductImageVariantGenerator::deleteForPath($image);
-            }
-        }
-
-        $images = $existingImages;
-        if ($request->hasFile('images')) {
-            foreach ($request->file('images') as $index => $image) {
-                if (! $image->isValid()) {
-                    continue;
-                }
-                $filename = time()."_admin_book_{$index}.".$image->getClientOriginalExtension();
-                $path = $image->storeAs('books', $filename, 'public');
-                $images[] = $path;
-                ProductImageVariantGenerator::generateForPath($path);
-            }
-        }
-
-        $data['isbn'] = Books::normalizeIsbn($request->input('isbn'));
-        $data['images'] = array_values(array_unique($images));
         $data['status'] = $request->boolean('status', true);
         $data['is_hidden'] = $request->boolean('is_hidden', false);
         $data['recommended'] = $request->boolean('recommended', false);
-        $author = $this->authorDirectory->resolveOrCreateByName($request->input('author'));
-        $data['author_id'] = $author?->id;
-        $data['author'] = $author?->name ?: trim((string) $request->input('author'));
+
+        if ($book->edition_id) {
+            // GLOBAL KATALOG: kitob ma'lumotlari va rasmlari kartada — taklif
+            // ustidan o'zgartirilmaydi (Boshqaruv → Katalog → karta sahifasi).
+            $data = Arr::except($data, array_merge(Books::CATALOG_MANAGED, ['images_text']));
+        } else {
+            $existingImages = $this->parseImagesText($request->input('images_text'));
+            $currentImages = is_array($book->images) ? $book->images : (json_decode((string) $book->images, true) ?: []);
+            $deletedImages = array_diff($currentImages, $existingImages);
+            foreach ($deletedImages as $image) {
+                // Umumiy (karta yoki boshqa taklif ishlatayotgan) fayl o'chirilmaydi
+                if (is_string($image) && ! str_starts_with($image, 'http') && SharedImageGuard::canDelete($image, (int) $book->id)) {
+                    Storage::disk('public')->delete($image);
+                    ProductImageVariantGenerator::deleteForPath($image);
+                }
+            }
+
+            $images = $existingImages;
+            if ($request->hasFile('images')) {
+                foreach ($request->file('images') as $index => $image) {
+                    if (! $image->isValid()) {
+                        continue;
+                    }
+                    $filename = time()."_admin_book_{$index}.".$image->getClientOriginalExtension();
+                    $path = $image->storeAs('books', $filename, 'public');
+                    $images[] = $path;
+                    ProductImageVariantGenerator::generateForPath($path);
+                }
+            }
+
+            $data['isbn'] = Books::normalizeIsbn($request->input('isbn'));
+            $data['images'] = array_values(array_unique($images));
+            $author = $this->authorDirectory->resolveOrCreateByName($request->input('author'));
+            $data['author_id'] = $author?->id;
+            $data['author'] = $author?->name ?: trim((string) $request->input('author'));
+        }
 
         $book->update($data);
 

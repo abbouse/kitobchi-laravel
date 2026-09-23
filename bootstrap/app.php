@@ -125,6 +125,13 @@ return Application::configure(basePath: dirname(__DIR__))
             ->withoutOverlapping()
             ->runInBackground();
 
+        // GLOBAL KATALOG: taklifdagi kitob ma'lumoti kartadan chetga chiqmasin
+        // (eski yozuvlar, import, qo'lda SQL) — kechasi tenglashtiriladi
+        $schedule->command('catalog:sync-offers')
+            ->dailyAt('04:20')->timezone($tz)
+            ->withoutOverlapping()
+            ->runInBackground();
+
         $schedule->command('queue:prune-batches --hours=24')
             ->dailyAt('03:00')->timezone($tz);
 

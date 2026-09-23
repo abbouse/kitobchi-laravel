@@ -6,6 +6,13 @@ use Illuminate\Support\Facades\Storage;
 
 class ProductImageVariantGenerator
 {
+    /**
+     * XAVFSIZLIK: "dekompressiya bombasi" — hajmi kichik, lekin piksellari
+     * juda katta rasm (masalan 25000x25000) GD'da bir necha GB xotira so'rab,
+     * PHP jarayonini o'ldiradi. Shuning uchun o'lcham OLDIN o'qiladi.
+     */
+    private const MAX_PIXELS = 50_000_000; // ~50 MP (8000x6000 dan kattasi rad etiladi)
+
     public static function generateForPath(?string $path): int
     {
         $path = ltrim(trim((string) $path), '/');
@@ -14,6 +21,13 @@ class ProductImageVariantGenerator
         }
 
         $absolutePath = Storage::disk('public')->path($path);
+
+        $size = @getimagesize($absolutePath);
+        if (is_array($size) && (int) $size[0] > 0 && (int) $size[1] > 0
+            && (int) $size[0] * (int) $size[1] > self::MAX_PIXELS) {
+            return 0;
+        }
+
         $binary = @file_get_contents($absolutePath);
         if ($binary === false) {
             return 0;
