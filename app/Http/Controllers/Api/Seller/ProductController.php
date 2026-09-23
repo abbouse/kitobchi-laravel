@@ -1576,43 +1576,30 @@ public function productStatistics(Request $request, $id)
     }
 
     /**
-     * DB'da turli xil yozilgan til qiymatlarini Flutter forma kutadigan
-     * uch belgili kodga moslashtiramiz.
+     * DB'da turli xil yozilgan qiymatlarni Flutter forma kutadigan kodga
+     * moslashtiramiz.
+     *
+     * MUHIM: bular `CatalogService::canon*` bilan BIR XIL bo'lishi shart.
+     * Ilgari bu yerda "tanib bo'lmasa — uz / latin / soft" degan standart
+     * tarmoq bor edi: karta "Русский" bo'lsa, ilovaga "uz" ketardi, keyin
+     * ilova o'sha "uz" ni qaytarib yuborganda server uni karta bilan
+     * solishtirib "boshqa nashr" deb rad etardi (409). Endi ikkala yo'nalish
+     * ham bitta manbadan — tanib bo'lmasa `null` (ya'ni "noma'lum", hech nima
+     * bilan ziddiyatga kirmaydi).
      */
     protected function normalizeLanguageOut(?string $raw): ?string
     {
-        $v = mb_strtolower(trim((string) $raw));
-        if ($v === '') return null;
-        return match (true) {
-            str_contains($v, 'rus') || $v === 'ru'                         => 'ru',
-            str_contains($v, 'en') || str_contains($v, 'ingl')             => 'en',
-            str_contains($v, 'qq') || str_contains($v, 'qora')             => 'qq',
-            default                                                         => 'uz',
-        };
+        return \App\Services\Catalog\CatalogService::canonLang($raw);
     }
 
-    /**
-     * "Lotin"/"Kirill" varianti — DB'da turli yozilgan bo'lishi mumkin.
-     */
     protected function normalizeLangTypeOut(?string $raw): ?string
     {
-        $v = mb_strtolower(trim((string) $raw));
-        if ($v === '') return null;
-        return str_contains($v, 'kir') || str_contains($v, 'cyr')
-            ? 'cyrillic'
-            : 'latin';
+        return \App\Services\Catalog\CatalogService::canonScript($raw);
     }
 
-    /**
-     * "Yumshoq"/"Qattiq" → "soft"/"hard".
-     */
     protected function normalizeCoverTypeOut(?string $raw): ?string
     {
-        $v = mb_strtolower(trim((string) $raw));
-        if ($v === '') return null;
-        return str_contains($v, 'qat') || str_contains($v, 'hard')
-            ? 'hard'
-            : 'soft';
+        return \App\Services\Catalog\CatalogService::canonCover($raw);
     }
 
     private function normalizeBarcode(?string $raw): ?string

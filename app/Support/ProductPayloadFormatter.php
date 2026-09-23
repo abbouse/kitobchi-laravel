@@ -91,6 +91,8 @@ class ProductPayloadFormatter
                 $payload['offers'] = $product->edition_id
                     ? CatalogOffers::forEdition((int) $product->edition_id, (int) $product->id)
                     : [];
+                // Bir xil ISBN, boshqa nashr (qattiq/yumshoq muqova, boshqa til)
+                $payload['other_printings'] = CatalogOffers::otherPrintings($product->edition_id ? (int) $product->edition_id : null);
             }
         }
 

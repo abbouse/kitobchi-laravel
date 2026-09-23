@@ -167,6 +167,7 @@ export function EditionPicker({ searchUrl, onPick, value }: { searchUrl: string;
         <div className="flex-grow-1 min-w-0">
           <h6 className="mb-0 f-w-600 text-truncate">{value.title}</h6>
           <small className="text-secondary">{value.author || '—'} · {value.isbn || "ISBN yo'q"} · {value.offersCount} ta taklif</small>
+          {value.variant ? <small className="d-block text-primary f-w-500">{value.variant}</small> : null}
         </div>
         <input type="hidden" name="edition_id" value={value.id} />
         <button type="button" className="btn btn-light-secondary btn-sm" onClick={() => onPick(null)}>Almashtirish</button>
@@ -191,6 +192,7 @@ export function EditionPicker({ searchUrl, onPick, value }: { searchUrl: string;
               <div className="min-w-0 text-start">
                 <div className="f-w-600 text-truncate">{item.title}</div>
                 <small className="text-secondary">{item.author || '—'} · {item.isbn || "ISBN yo'q"} · {item.offersCount} ta taklif</small>
+                {item.variant ? <small className="d-block text-primary f-w-500">{item.variant}</small> : null}
               </div>
             </button>
           ))}
@@ -211,4 +213,7 @@ export interface PickedEdition {
   status?: string;
   verified?: boolean;
   url?: string;
+  /** "Qattiq muqova · O'zbek · Lotin" — bir xil ISBN'li kartalarni farqlash uchun */
+  variant?: string;
+  variantDiff?: string[];
 }

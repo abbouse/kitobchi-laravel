@@ -108,7 +108,11 @@ class SellerCatalogApiTest extends TestCase
     public function test_submission_for_existing_isbn_redirects_to_offer_flow(): void
     {
         $cat = $this->makeCategory();
-        $this->makeBook($this->makeSeller(), $cat, ['isbn' => '9789943081239', 'name' => 'Kitob nomi']);
+        // MUHIM: aynan SHU nashr (muqova/til bir xil) — boshqa muqova bo'lsa,
+        // bu boshqa nashr hisoblanadi va alohida karta ochiladi (CatalogVariantTest).
+        $this->makeBook($this->makeSeller(), $cat, [
+            'isbn' => '9789943081239', 'name' => 'Kitob nomi', 'coverType' => 'soft',
+        ]);
         $this->actingSeller();
 
         $this->post(self::API . 'catalog/submissions', $this->submissionFields([

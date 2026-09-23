@@ -25,6 +25,7 @@ interface EditionRow {
   deleted?: boolean;
   createdAt?: string;
   url: string;
+  variant?: string;
 }
 
 type Props = {
@@ -76,7 +77,7 @@ export default function Catalog() {
           { key: 'all', label: 'Kitob kartalari', value: counts.all || 0, sub: `${fmt(counts.unlinked || 0)} ta taklif hali ulanmagan` },
           { key: 'unverified', label: 'Tasdiqlanmagan', value: counts.unverified || 0, sub: "Mavjud kitoblardan avtomatik ochilgan" },
           { key: 'pending', label: "Do'kon arizalari", value: counts.submissions || 0, sub: 'Old/orqa muqova bilan tekshiruvda', href: '/boshqaruv/catalog/submissions' },
-          { key: 'duplicates', label: 'Dublikat ISBN', value: undefined, sub: 'Bir ISBN — bir nechta karta' },
+          { key: 'duplicates', label: 'Dublikat ISBN', value: undefined, sub: "Bir ISBN — bir nechta karta (muqova/til boshqa bo'lsa normal)" },
         ].map((item, index) => (
           <div className="col-xl-3 col-md-6" key={item.key}>
             <StatWidget
@@ -145,7 +146,10 @@ export default function Catalog() {
                         <Link href={edition.url} className="f-w-600 d-block text-truncate text-dark" style={{ maxWidth: 280 }}>{edition.title}</Link>
                         <small className="d-block text-secondary">#{edition.id} · {edition.author || '—'} · {SOURCE[edition.source || ''] || edition.source}</small>
                       </td>
-                      <td className="text-secondary">{edition.isbn || '—'}</td>
+                      <td className="text-secondary">
+                        {edition.isbn || '—'}
+                        {edition.variant ? <small className="d-block text-primary">{edition.variant}</small> : null}
+                      </td>
                       <td className="text-secondary">{edition.publisher || '—'}</td>
                       <td>
                         <span className="f-w-600">{edition.offersCount}</span>

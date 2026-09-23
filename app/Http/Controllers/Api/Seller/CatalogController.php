@@ -125,6 +125,10 @@ class CatalogController extends ProductController
             'discountExpiresAt' => 'nullable|date|after:now',
             'count' => 'required|integer|min:0|max:100000',
             'condition' => 'nullable|string|in:new,used_good,used_fair',
+            // Do'kondagi jismoniy kitob xarakteristikasi (ixtiyoriy tekshiruv)
+            'coverType' => 'nullable|string|in:soft,hard',
+            'language' => 'nullable|string|in:uz,ru,en,qq',
+            'languageWrite' => 'nullable|string|in:cyrillic,latin',
         ]);
         if ($validator->fails()) {
             return response()->json(['success' => false, 'message' => 'Validation failed', 'errors' => $validator->errors()], 422);
@@ -133,6 +137,23 @@ class CatalogController extends ProductController
         $edition = $this->selectableEdition($catalog, (int) $request->input('edition_id'));
         if (! $edition) {
             return response()->json(['success' => false, 'message' => 'Kitob katalogda topilmadi'], 404);
+        }
+
+        // Do'kondagi kitob boshqa nashr bo'lsa (masalan qattiq muqova, karta esa
+        // yumshoq) — bu kartaga ulanmaydi, ariza orqali alohida karta ochiladi.
+        $diff = CatalogService::variantDifferences(
+            $request->input('coverType'), $request->input('language'), $request->input('languageWrite'),
+            $edition->coverType, $edition->lang, $edition->langType
+        );
+        if ($diff !== []) {
+            return response()->json([
+                'success' => false,
+                'code' => 'variant_mismatch',
+                'message' => "Bu karta boshqa nashr: " . $this->variantLabel($diff)
+                    . ". Sizdagi kitob uchun alohida karta ochiladi — \"Bu boshqa nashr\" orqali ariza yuboring.",
+                'differences' => array_keys($diff),
+                'edition' => $this->editionPayload($edition, $this->storeSellerId()),
+            ], 409);
         }
 
         $staff = Auth::guard('seller')->user();
@@ -241,9 +262,16 @@ class CatalogController extends ProductController
                 ], 422);
             }
 
-            // Karta allaqachon bor — dublikat ochilmasin, taklif oqimiga yo'naltiramiz
-            $match = $catalog->findByIsbn($isbn13)
-                ->first(fn (BookEdition $e) => CatalogService::titlesSimilar($request->input('name'), $e->title));
+            // Karta allaqachon bor — dublikat ochilmasin, taklif oqimiga yo'naltiramiz.
+            // MUHIM: muqova/til/yozuv farq qilsa bu BOSHQA nashr — yangi karta ochiladi
+            // (bitta ISBN ostida qattiq va yumshoq muqova aralashib ketmasligi uchun).
+            $match = $catalog->findByIsbn($isbn13)->first(
+                fn (BookEdition $e) => CatalogService::titlesSimilar($request->input('name'), $e->title)
+                    && CatalogService::sameVariant(
+                        $request->input('coverType'), $request->input('language'), $request->input('languageWrite'),
+                        $e->coverType, $e->lang, $e->langType
+                    )
+            );
             if ($match) {
                 return response()->json([
                     'success' => false,
@@ -535,6 +563,24 @@ class CatalogController extends ProductController
             ->selectableBySeller($this->storeSellerId())
             ->whereKey($edition->id)
             ->exists() ? $edition : null;
+    }
+
+    /** "muqova: kartada yumshoq, sizda qattiq" ko'rinishidagi izoh. */
+    private function variantLabel(array $differences): string
+    {
+        $names = [
+            'cover' => ['muqova', ['hard' => 'qattiq', 'soft' => 'yumshoq']],
+            'lang' => ['til', ['uz' => "o'zbek", 'ru' => 'rus', 'en' => 'ingliz', 'qq' => 'qoraqalpoq']],
+            'script' => ['yozuv', ['latin' => 'lotin', 'cyrillic' => 'kirill']],
+        ];
+
+        $parts = [];
+        foreach ($differences as $key => [$mine, $card]) {
+            [$label, $map] = $names[$key];
+            $parts[] = "{$label} (kartada: " . ($map[$card] ?? $card) . ', sizda: ' . ($map[$mine] ?? $mine) . ')';
+        }
+
+        return implode(', ', $parts);
     }
 
     private function storeSellerId(): int

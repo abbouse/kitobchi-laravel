@@ -96,20 +96,12 @@ class CatalogSyncOffers extends Command
     /** @return array<int, int> Kartadan farq qiladigan taklif id'lari */
     private function staleOfferIds(CatalogService $catalog, BookEdition $edition): array
     {
-        $expected = $catalog->offerAttributes($edition);
+        // `false` — kartada bo'sh maydonlar umuman qatnashmaydi (syncOffers ham
+        // aynan shu ro'yxatni yozadi). Aks holda "joriy yil"/"Yumshoq" kabi
+        // standart qiymatlar har 1-yanvarda butun katalogni "farqli" qilardi.
+        $expected = $catalog->offerAttributes($edition, false);
         $expectedImages = $expected['images'];
         unset($expected['images']);
-
-        // MUHIM: kartada bo'sh maydonlar uchun `offerAttributes()` "joriy yil",
-        // "O'zbek", "Lotin", "Yumshoq" kabi standart qiymat beradi. Ular bo'yicha
-        // solishtirsak, 1-yanvarda butun katalog "farqli" bo'lib chiqib, minglab
-        // qator behuda qayta yozilardi (va qayta embed qilinardi). Shuning uchun
-        // kartada qiymat yo'q ustunlar tekshirilmaydi.
-        foreach (['year' => $edition->year, 'lang' => $edition->lang, 'langType' => $edition->langType, 'coverType' => $edition->coverType, 'pages' => $edition->pages] as $column => $cardValue) {
-            if (blank($cardValue)) {
-                unset($expected[$column]);
-            }
-        }
 
         $rows = DB::table('books')
             ->where('edition_id', $edition->id)

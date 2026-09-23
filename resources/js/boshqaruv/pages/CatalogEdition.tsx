@@ -38,6 +38,8 @@ interface Edition {
   backUrl?: string | null;
   rawImages?: string[];
   images?: (string | null)[];
+  variant?: string;
+  variantDiff?: string[];
   mergedInto?: { id: number; title: string; url: string } | null;
 }
 
@@ -106,7 +108,7 @@ export default function CatalogEdition() {
       <div className="d-flex align-items-end justify-content-between flex-wrap gap-3 mx-1 mb-3">
         <div>
           <h4 className="main-title mb-0">{edition.title}</h4><PageCrumbs />
-          <p className="mb-0 text-secondary">Katalog kartasi #{edition.id}</p>
+          <p className="mb-0 text-secondary">Katalog kartasi #{edition.id}{edition.variant ? ` · ${edition.variant}` : ''}</p>
         </div>
         <div className="d-flex gap-2 flex-wrap">
           <Link href="/boshqaruv/catalog" className="btn btn-light-secondary btn-sm"><i className="ti ti-arrow-left me-1"></i>Katalog</Link>
@@ -138,12 +140,20 @@ export default function CatalogEdition() {
                       <span className="min-w-0">
                         <span className="f-w-600 d-block text-truncate">{item.title}</span>
                         <small className="text-secondary">#{item.id} · {item.author || '—'} · {item.isbn || "ISBN yo'q"} · {item.offersCount} ta taklif</small>
+                        {item.variant ? <small className="d-block text-primary">{item.variant}</small> : null}
+                        {item.variantDiff?.length ? (
+                          <small className="d-block text-danger"><i className="ti ti-alert-triangle me-1"></i>Boshqa nashr — birlashtirilmasin ({item.variantDiff.join(', ')})</small>
+                        ) : null}
                       </span>
                     </label>
                   ))}
                 </div>
               ) : <p className="text-secondary f-s-13">O'xshash karta topilmadi — ID ni qo'lda kiriting.</p>}
               {!mergeCandidates.length ? <input className="form-control" name="into_id" type="number" min={1} placeholder="Karta ID" required /> : null}
+              <div className="form-check mt-3">
+                <input className="form-check-input" type="checkbox" name="force" value="1" id="merge_force" />
+                <label className="form-check-label" htmlFor="merge_force">Majburiy birlashtirish (muqova/til farqiga qaramay)</label>
+              </div>
             </FormAction>
           ) : null}
           {edition.deleted ? (

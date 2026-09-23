@@ -43,9 +43,9 @@ class CatalogBackfill extends Command
      */
     private function dryRun(CatalogService $catalog): int
     {
-        $stats = ['offers' => 0, 'linked_existing' => 0, 'editions_created' => 0, 'invalid_isbn' => 0, 'isbn_conflicts' => 0];
+        $stats = ['offers' => 0, 'linked_existing' => 0, 'editions_created' => 0, 'invalid_isbn' => 0, 'other_printings' => 0, 'isbn_conflicts' => 0, 'failed' => 0];
         $conflicts = [];
-        $plannedIsbn = [];   // isbn13 => [nom, ...]
+        $plannedIsbn = [];   // isbn13 => [[nom, muqova, til, yozuv], ...]
         $plannedKeys = [];   // match_key => true
 
         $total = Books::query()->whereNull('edition_id')->count();
@@ -76,47 +76,74 @@ class CatalogBackfill extends Command
                     $stats['offers']++;
                     $bar->advance();
 
-                    $isbn13 = Isbn::toIsbn13($book->isbn);
-                    if (filled($book->isbn) && $isbn13 === null) {
-                        $stats['invalid_isbn']++;
-                    }
-
-                    // 1. Bazadagi mavjud karta
-                    if ($catalog->findMatchingEdition($book)) {
-                        $stats['linked_existing']++;
-
-                        continue;
-                    }
-
-                    // 2. Shu yugurishda rejalashtirilgan karta
-                    if ($isbn13 !== null) {
-                        foreach ($plannedIsbn[$isbn13] ?? [] as $title) {
-                            if (CatalogService::titlesSimilar($book->name, $title)) {
-                                $stats['linked_existing']++;
-
-                                continue 2;
-                            }
+                    try {
+                        $isbn13 = Isbn::toIsbn13($book->isbn);
+                        if (filled($book->isbn) && $isbn13 === null) {
+                            $stats['invalid_isbn']++;
                         }
-                        if (isset($plannedIsbn[$isbn13]) || BookEdition::query()->usable()->where('isbn13', $isbn13)->exists()) {
-                            $stats['isbn_conflicts']++;
-                            if (count($conflicts) < 50) {
-                                $conflicts[] = [$book->id, $isbn13, mb_strimwidth((string) $book->name, 0, 50, '…')];
-                            }
-                        }
-                        $plannedIsbn[$isbn13][] = (string) $book->name;
-                    } else {
-                        $key = CatalogService::offerMatchKey($book);
-                        if ($key !== null && isset($plannedKeys[$key])) {
+
+                        // 1. Bazadagi mavjud karta
+                        if ($catalog->findMatchingEdition($book)) {
                             $stats['linked_existing']++;
 
                             continue;
                         }
-                        if ($key !== null) {
-                            $plannedKeys[$key] = true;
-                        }
-                    }
 
-                    $stats['editions_created']++;
+                        // 2. Shu yugurishda rejalashtirilgan karta
+                        if ($isbn13 !== null) {
+                            foreach ($plannedIsbn[$isbn13] ?? [] as [$title, $cover, $lang, $script]) {
+                                if (CatalogService::titlesSimilar($book->name, $title)
+                                    && CatalogService::sameVariant($book->coverType, $book->lang, $book->langType, $cover, $lang, $script)) {
+                                    $stats['linked_existing']++;
+
+                                    continue 2;
+                                }
+                            }
+
+                            $sameIsbn = isset($plannedIsbn[$isbn13]) || BookEdition::query()->usable()->where('isbn13', $isbn13)->exists();
+                            if ($sameIsbn) {
+                                // Bir xil ISBN, lekin muqova/til boshqa → bu BOSHQA NASHR
+                                // (to'g'ri xulq-atvor), nomi ham boshqa bo'lsa → shubhali.
+                                $otherPrinting = false;
+                                foreach ($plannedIsbn[$isbn13] ?? [] as [$title, $cover, $lang, $script]) {
+                                    if (CatalogService::titlesSimilar($book->name, $title)) {
+                                        $otherPrinting = true;
+                                        break;
+                                    }
+                                }
+                                if (! $otherPrinting) {
+                                    $otherPrinting = BookEdition::query()->usable()->where('isbn13', $isbn13)->get()
+                                        ->contains(fn (BookEdition $e) => CatalogService::titlesSimilar($book->name, $e->title));
+                                }
+
+                                if ($otherPrinting) {
+                                    $stats['other_printings']++;
+                                } else {
+                                    $stats['isbn_conflicts']++;
+                                    if (count($conflicts) < 50) {
+                                        $conflicts[] = [$book->id, $isbn13, mb_strimwidth((string) $book->name, 0, 50, '…')];
+                                    }
+                                }
+                            }
+                            $plannedIsbn[$isbn13][] = [(string) $book->name, $book->coverType, $book->lang, $book->langType];
+                        } else {
+                            $key = CatalogService::offerMatchKey($book);
+                            if ($key !== null && isset($plannedKeys[$key])) {
+                                $stats['linked_existing']++;
+
+                                continue;
+                            }
+                            if ($key !== null) {
+                                $plannedKeys[$key] = true;
+                            }
+                        }
+
+                        $stats['editions_created']++;
+                    } catch (\Throwable $e) {
+                        // apply() bilan bir xil: bitta yomon qator hisobotni buzmasin
+                        $stats['failed']++;
+                        Log::warning('catalog:backfill dry-run row failed', ['book_id' => $book->id, 'error' => $e->getMessage()]);
+                    }
                 }
             });
 
@@ -130,7 +157,7 @@ class CatalogBackfill extends Command
 
     private function apply(CatalogService $catalog, BuyBoxService $buyBox): int
     {
-        $stats = ['offers' => 0, 'linked_existing' => 0, 'editions_created' => 0, 'invalid_isbn' => 0, 'isbn_conflicts' => 0, 'failed' => 0];
+        $stats = ['offers' => 0, 'linked_existing' => 0, 'editions_created' => 0, 'invalid_isbn' => 0, 'other_printings' => 0, 'isbn_conflicts' => 0, 'failed' => 0];
         $conflicts = [];
         $failedIds = [];
 
@@ -170,10 +197,18 @@ class CatalogBackfill extends Command
                         }
 
                         $isbn13 = Isbn::toIsbn13($book->isbn);
-                        if ($isbn13 && BookEdition::query()->usable()->where('isbn13', $isbn13)->exists()) {
-                            $stats['isbn_conflicts']++;
-                            if (count($conflicts) < 50) {
-                                $conflicts[] = [$book->id, $isbn13, mb_strimwidth((string) $book->name, 0, 50, '…')];
+                        if ($isbn13) {
+                            $sameIsbn = BookEdition::query()->usable()->where('isbn13', $isbn13)->get();
+                            if ($sameIsbn->isNotEmpty()) {
+                                // Nomi mos, lekin muqova/til boshqa → boshqa nashr (normal holat)
+                                if ($sameIsbn->contains(fn (BookEdition $e) => CatalogService::titlesSimilar($book->name, $e->title))) {
+                                    $stats['other_printings']++;
+                                } else {
+                                    $stats['isbn_conflicts']++;
+                                    if (count($conflicts) < 50) {
+                                        $conflicts[] = [$book->id, $isbn13, mb_strimwidth((string) $book->name, 0, 50, '…')];
+                                    }
+                                }
                             }
                         }
 
@@ -223,7 +258,9 @@ class CatalogBackfill extends Command
         $this->table(["Ko'rsatkich", 'Soni'], collect($stats)->map(fn ($v, $k) => [$k, $v])->values()->all());
 
         if (! empty($conflicts)) {
-            $this->warn('Bir xil ISBN, lekin boshqa nomli kitoblar (admin tekshirsin — Katalog → Dublikatlar):');
+            $this->warn('Bir xil ISBN, lekin boshqa NOMLI kitoblar (admin tekshirsin — Katalog → Dublikatlar).');
+            $this->line("  Eslatma: \"other_printings\" — bir xil ISBN, bir xil nom, lekin boshqa muqova/til:");
+            $this->line('  ular ataylab alohida karta bo\'ladi (qattiq va yumshoq muqova aralashmasin).');
             $this->table(['book_id', 'isbn13', 'nom'], $conflicts);
         }
     }

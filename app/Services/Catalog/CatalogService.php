@@ -66,6 +66,117 @@ class CatalogService
         return $percent >= 72;
     }
 
+    // ── Nashr varianti (muqova / til / yozuv) ───────────────────────────
+
+    /**
+     * MUHIM: ISBN standarti bo'yicha qattiq va yumshoq muqova, boshqa til yoki
+     * tarjima — har biri ALOHIDA ISBN olishi kerak. Amalda (O'zbekiston/MDH)
+     * nashriyotlar ISBN'ni qayta ishlatadi, shuning uchun bitta ISBN ostida
+     * fizik jihatdan boshqa kitob chiqishi mumkin. Bunday holatda ular bitta
+     * kartaga QO'SHILMAYDI — aks holda do'kon qattiq muqovali kitobni sotib,
+     * mijozga "yumshoq muqova" deb ko'rsatilardi (va do'kon buni tuzata olmaydi,
+     * chunki kitob ma'lumoti kartada qulflangan).
+     *
+     * Qiymat bo'sh yoki tanib bo'lmaydigan bo'lsa — "mos" deb hisoblanadi
+     * (eski ma'lumotning katta qismi to'ldirilmagan, ularni ajratib yuborsak
+     * katalog bo'linib ketardi).
+     */
+    public static function canonCover(?string $raw): ?string
+    {
+        $v = self::normalizeText($raw);
+
+        return match (true) {
+            $v === '' => null,
+            // qattiq / қаттиқ / твёрдый / тверд / hard / hardcover / kartonli
+            str_contains($v, 'qat') || str_contains($v, 'қат') || str_contains($v, 'hard')
+                || str_contains($v, 'тверд') || str_contains($v, 'твёрд')
+                || str_contains($v, 'karton') || str_contains($v, 'картон') => 'hard',
+            // yumshoq / юмшоқ / мягкий / soft / paperback / pocket
+            str_contains($v, 'yum') || str_contains($v, 'юмш') || str_contains($v, 'soft')
+                || str_contains($v, 'мягк') || str_contains($v, 'paper') || str_contains($v, 'pocket')
+                || str_contains($v, 'обложк') => 'soft',
+            default => null,
+        };
+    }
+
+    public static function canonLang(?string $raw): ?string
+    {
+        $v = self::normalizeText($raw);
+
+        return match (true) {
+            $v === '' => null,
+            $v === 'ru' || str_contains($v, 'rus') || str_contains($v, 'русск') => 'ru',
+            $v === 'en' || str_contains($v, 'ingl') || str_contains($v, 'engl') || str_contains($v, 'англ') => 'en',
+            $v === 'qq' || str_contains($v, 'qora') || str_contains($v, 'qaraqalpaq')
+                || str_contains($v, 'karakalpak') || str_contains($v, 'каракалпак') || str_contains($v, 'қорақалпоқ') => 'qq',
+            $v === 'uz' || str_contains($v, 'ozbek') || str_contains($v, 'uzbek')
+                || str_contains($v, 'узбек') || str_contains($v, 'ўзбек') || str_contains($v, 'узбе') => 'uz',
+            default => null,
+        };
+    }
+
+    public static function canonScript(?string $raw): ?string
+    {
+        $v = self::normalizeText($raw);
+
+        return match (true) {
+            $v === '' => null,
+            str_contains($v, 'kir') || str_contains($v, 'cyr') || str_contains($v, 'кирил') => 'cyrillic',
+            str_contains($v, 'lot') || str_contains($v, 'lat') || str_contains($v, 'латин')
+                || str_contains($v, 'лотин') => 'latin',
+            default => null,
+        };
+    }
+
+    /** Ikkalasi ham aniq va farq qilsa — bu boshqa nashr (alohida karta). */
+    public static function sameVariant(
+        ?string $coverA, ?string $langA, ?string $scriptA,
+        ?string $coverB, ?string $langB, ?string $scriptB
+    ): bool {
+        $pairs = [
+            [self::canonCover($coverA), self::canonCover($coverB)],
+            [self::canonLang($langA), self::canonLang($langB)],
+            [self::canonScript($scriptA), self::canonScript($scriptB)],
+        ];
+
+        foreach ($pairs as [$a, $b]) {
+            if ($a !== null && $b !== null && $a !== $b) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /** Karta bilan taklif farqi: ['cover'] / ['lang'] / ['script'] — bo'sh bo'lsa mos. */
+    public static function variantDifferences(
+        ?string $coverA, ?string $langA, ?string $scriptA,
+        ?string $coverB, ?string $langB, ?string $scriptB
+    ): array {
+        $out = [];
+        foreach ([
+            'cover' => [self::canonCover($coverA), self::canonCover($coverB)],
+            'lang' => [self::canonLang($langA), self::canonLang($langB)],
+            'script' => [self::canonScript($scriptA), self::canonScript($scriptB)],
+        ] as $key => [$a, $b]) {
+            if ($a !== null && $b !== null && $a !== $b) {
+                $out[$key] = [$a, $b];
+            }
+        }
+
+        return $out;
+    }
+
+    /** Taklif shu kartaga tegishlimi: nom o'xshash VA nashr varianti bir xil. */
+    public static function offerMatchesEdition(Books $book, BookEdition $edition): bool
+    {
+        return self::titlesSimilar($book->name, $edition->title)
+            && self::sameVariant(
+                $book->coverType, $book->lang, $book->langType,
+                $edition->coverType, $edition->lang, $edition->langType
+            );
+    }
+
     public static function matchKey(?string $title, ?string $author, ?string $lang, ?string $langType, ?string $coverType, $publisherId): ?string
     {
         $title = self::normalizeText($title);
@@ -183,8 +294,10 @@ class CatalogService
     {
         $isbn13 = Isbn::toIsbn13($book->isbn);
         if ($isbn13 !== null) {
+            // Bir xil ISBN bir nechta kartaga tegishli bo'lishi mumkin:
+            // nom o'xshash VA muqova/til/yozuv mos kelganigina ulanadi.
             return $this->findByIsbn($isbn13)
-                ->first(fn (BookEdition $e) => self::titlesSimilar($book->name, $e->title));
+                ->first(fn (BookEdition $e) => self::offerMatchesEdition($book, $e));
         }
 
         $key = self::offerMatchKey($book);
@@ -251,14 +364,23 @@ class CatalogService
     // ── Kartadan takliflarga ma'lumot ko'chirish ─────────────────────────
 
     /** Karta ma'lumotidan `books` ustunlari (yangi taklif yaratish va sinxron uchun). */
-    public function offerAttributes(BookEdition $edition): array
+    /**
+     * @param  bool  $withDefaults  false — kartada BO'SH bo'lgan ustunlar
+     *   umuman qaytarilmaydi. Sinxronda shu ishlatiladi: aks holda kartada
+     *   ma'lumot yo'qligi sababli o'ylab topilgan standart qiymat ("Yumshoq",
+     *   joriy yil, 0 bet) do'kon taklifining HAQIQIY ma'lumotini bosib
+     *   yozardi — va do'kon uni tuzata olmasdi (kitob maydonlari qulflangan).
+     *   Yaratishda (insert) esa ustunlar NOT NULL, shuning uchun standart
+     *   qiymat kerak — u yerda true qoladi.
+     */
+    public function offerAttributes(BookEdition $edition, bool $withDefaults = true): array
     {
         $images = array_values(array_filter((array) ($edition->images ?? []), 'is_string'));
         if ($edition->front_image && ! in_array($edition->front_image, $images, true)) {
             array_unshift($images, $edition->front_image);
         }
 
-        return [
+        $attributes = [
             'name' => $edition->title,
             'author' => $edition->author ?: ($edition->authorProfile?->name ?? ''),
             'author_id' => $edition->author_id,
@@ -274,6 +396,16 @@ class CatalogService
             'description' => (string) ($edition->description ?? ''),
             'images' => $images,
         ];
+
+        if (! $withDefaults) {
+            foreach (['lang', 'langType', 'coverType', 'year', 'pages'] as $column) {
+                if (blank($edition->{$column})) {
+                    unset($attributes[$column]);
+                }
+            }
+        }
+
+        return $attributes;
     }
 
     /**
@@ -284,7 +416,9 @@ class CatalogService
      */
     public function syncOffers(BookEdition $edition, ?array $bookIds = null): int
     {
-        $attributes = $this->offerAttributes($edition);
+        // Sinxron kartada bor ma'lumotni ko'chiradi; bo'sh maydonlarni o'ylab
+        // topilgan standart qiymat bilan bosib yozmaydi (yuqoridagi izoh).
+        $attributes = $this->offerAttributes($edition, false);
         $row = $attributes;
         $row['images'] = json_encode($attributes['images'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $row['updated_at'] = now();

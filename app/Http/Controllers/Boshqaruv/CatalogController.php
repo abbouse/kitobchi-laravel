@@ -132,7 +132,16 @@ class CatalogController extends Controller
             ])->values(),
             'submissions' => BookEditionSubmission::query()->where('edition_id', $model->id)->latest('id')->limit(20)->get()
                 ->map(fn ($s) => $this->submissionRow($s))->values(),
-            'mergeCandidates' => $candidates->map(fn (BookEdition $e) => $this->editionRow($e))->values(),
+            'mergeCandidates' => $candidates->map(function (BookEdition $e) use ($model) {
+                $row = $this->editionRow($e);
+                // Admin ko'rib turishi kerak: bu boshqa nashrmi yoki haqiqiy dublikat
+                $row['variantDiff'] = array_keys(CatalogService::variantDifferences(
+                    $model->coverType, $model->lang, $model->langType,
+                    $e->coverType, $e->lang, $e->langType
+                ));
+
+                return $row;
+            })->values(),
             'formOptions' => $this->formOptions(),
         ]);
     }
@@ -221,6 +230,18 @@ class CatalogController extends Controller
         $into = $this->catalog->resolve(BookEdition::find((int) $data['into_id']));
         if (! $into || $into->id === $from->id || ! $into->isUsable()) {
             return back()->with('error', 'Birlashtiriladigan karta topilmadi.');
+        }
+
+        // Muqova/til farq qilsa bu fizik jihatdan BOSHQA kitob — birlashtirilsa
+        // do'konlar noto'g'ri xarakteristika bilan sotadi. Admin ataylab qilsa
+        // `force=1` bilan tasdiqlaydi.
+        $diff = CatalogService::variantDifferences(
+            $from->coverType, $from->lang, $from->langType,
+            $into->coverType, $into->lang, $into->langType
+        );
+        if ($diff !== [] && ! $request->boolean('force')) {
+            return back()->with('error', 'Bu kartalar boshqa nashr (' . implode(', ', array_keys($diff))
+                . ') — birlashtirilmaydi. Ataylab birlashtirmoqchi bo\'sangiz "Majburiy birlashtirish" ni belgilang.');
         }
 
         $moved = DB::transaction(function () use ($from, $into) {
@@ -574,7 +595,9 @@ class CatalogController extends Controller
             'category_id' => 'required|integer|exists:book_categories,id',
             'lang' => 'nullable|string|max:20',
             'langType' => 'nullable|string|max:10',
-            'coverType' => 'nullable|string|max:10',
+            // max:7 — `books.coverType` ustuni varchar(7); karta qiymati
+            // takliflarga ko'chiriladi, uzunroq qiymat u yerda sig'masdi.
+            'coverType' => 'nullable|string|max:7',
             'year' => 'nullable|integer|min:1800|max:' . (now()->year + 1),
             'pages' => 'nullable|integer|min:0|max:20000',
             'description' => 'nullable|string|max:10000',
@@ -655,6 +678,28 @@ class CatalogController extends Controller
         ];
     }
 
+    /** "Qattiq muqova · O'zbek · Lotin" — bir xil ISBN'li kartalarni ajratish uchun. */
+    private static function variantLabel(BookEdition $e): string
+    {
+        $parts = array_filter([
+            match (CatalogService::canonCover($e->coverType)) {
+                'hard' => 'Qattiq muqova',
+                'soft' => 'Yumshoq muqova',
+                default => null,
+            },
+            match (CatalogService::canonLang($e->lang)) {
+                'uz' => "O'zbek", 'ru' => 'Rus', 'en' => 'Ingliz', 'qq' => 'Qoraqalpoq',
+                default => null,
+            },
+            match (CatalogService::canonScript($e->langType)) {
+                'latin' => 'Lotin', 'cyrillic' => 'Kirill',
+                default => null,
+            },
+        ]);
+
+        return $parts ? implode(' · ', $parts) : '';
+    }
+
     private function editionRow(BookEdition $e, bool $full = false): array
     {
         $images = array_values(array_filter((array) ($e->images ?? []), 'is_string'));
@@ -676,6 +721,8 @@ class CatalogController extends Controller
             'offersCount' => (int) $e->offers_count,
             'inStockOffers' => (int) $e->in_stock_offers_count,
             'minPrice' => $e->min_price,
+            // Nashr varianti — bir xil ISBN ostidagi kartalarni farqlash uchun
+            'variant' => self::variantLabel($e),
             'deleted' => $e->trashed(),
             'createdAt' => optional($e->created_at)->format('Y-m-d H:i'),
             'url' => route('boshqaruv.catalog.show', $e->id),

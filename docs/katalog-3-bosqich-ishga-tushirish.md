@@ -67,6 +67,47 @@ php artisan catalog:buybox
   takliflar yangilanadi. **Ulangan takliflar qayta moderatsiyaga
   yuborilmaydi** (aks holda bitta tahrir minglab kitobni sotuvdan chiqarardi).
 
+## 3.5. Bir xil ISBN — boshqa nashr
+
+ISBN standarti bo'yicha qattiq/yumshoq muqova, boshqa til yoki tarjima alohida
+ISBN olishi shart. O'zbekiston/MDH amaliyotida nashriyotlar ISBN'ni qayta
+ishlatadi, shuning uchun bitta ISBN ostida **fizik jihatdan boshqa kitob**
+chiqishi mumkin. Ular bitta kartaga qo'shilmaydi:
+
+- Taklif kartaga ulanishi uchun **nom o'xshash VA muqova/til/yozuv mos** bo'lishi
+  kerak. Kartada yoki taklifda qiymat bo'sh bo'lsa — mos deb hisoblanadi
+  (eski ma'lumotning katta qismi to'ldirilmagan, ularni ajratib yuborsak
+  katalog bo'linib ketardi).
+- **Yil va sahifa bo'yicha AJRATILMAYDI** — qayta nashrda yil o'zgaradi, ISBN
+  qoladi; yil bo'yicha ajratsak katalog portlardi.
+- Do'kon ilovasida taklif oynasida "Sizdagi kitobning muqovasi" tanlanadi.
+  Kartanikidan farq qilsa — "Boshqa nashr sifatida qo'shish" (ariza oqimi,
+  old/orqa muqova rasmi bilan). Server ham tekshiradi: `409 variant_mismatch`.
+- Mijoz kitob sahifasida **"Boshqa nashrlari"** qatori chiqadi (bir xil ISBN,
+  boshqa muqova/til) — Amazon'dagi format almashtirgichga o'xshash.
+- Boshqaruvda kartalarda "Qattiq muqova · O'zbek · Lotin" yorlig'i ko'rinadi;
+  boshqa nashrli kartalarni birlashtirish uchun "Majburiy birlashtirish"
+  belgilanishi kerak.
+- `catalog:backfill` hisobotida yangi ko'rsatkich: **other_printings** — bir xil
+  ISBN, bir xil nom, lekin boshqa muqova/til (normal holat). `isbn_conflicts` —
+  bir xil ISBN, **boshqa nom** (admin tekshirsin).
+- "Boshqa nashrlari" ro'yxatiga faqat nomi ham o'xshash kartalar tushadi —
+  ISBN butunlay boshqa kitobga qayta ishlatilgan bo'lsa, mijozga ko'rsatilmaydi.
+
+**Muqova/til qiymatlari qanday tanib olinadi.** Bazada ular erkin matn:
+"Yumshoq", "soft", "Мягкая", "Твёрдый", "Қаттиқ", "Paperback"… Ularning barchasi
+bitta `CatalogService::canonCover/canonLang/canonScript` orqali `hard|soft`,
+`uz|ru|en|qq`, `latin|cyrillic` ga keltiriladi. **Tanib bo'lmasa — `null`**,
+ya'ni "noma'lum" va hech nima bilan ziddiyatga kirmaydi (katalog bo'linmaydi).
+Ilovaga chiqadigan qiymat ham aynan shu funksiyalardan olinadi — aks holda
+karta o'ziga o'zi mos kelmay, do'kon 409 olardi (regressiya testi:
+`test_card_value_round_trips_without_false_mismatch`).
+
+**Sinxron kartadagi bo'sh maydonni taklifga yozmaydi.** Kartada muqova yoki
+sahifa yo'q bo'lsa, `catalog:sync-offers` ularni umuman tegmaydi — ilgari
+"Yumshoq"/"0 bet" kabi standart qiymat do'konning haqiqiy ma'lumotini bosib
+yozib ketardi (va do'kon uni tuzata olmasdi).
+
 ## 4. Qulf qanday ishlaydi (texnik)
 
 | Yo'l | Himoya |
@@ -96,3 +137,6 @@ himoyalandi` qatori chiqsa — kimdir eski yo'l bilan yozmoqchi bo'lgan; tekshir
 - [ ] Boshqaruvda kartani tahrirlash → barcha takliflarda nom yangilandi.
 - [ ] Mijoz ilovasida bitta kitob bitta karta bo'lib chiqadi, ichida do'kon takliflari.
 - [ ] `php artisan catalog:sync-offers --dry-run` → "farqli kartalar: 0".
+- [ ] Qattiq muqovali kitobni yumshoq muqovali karta ustiga qo'shib ko'ring —
+      "Boshqa nashr sifatida qo'shish" chiqishi kerak.
+- [ ] Mijoz ilovasida shu kitob sahifasida "Boshqa nashrlari" qatori ko'rinadi.

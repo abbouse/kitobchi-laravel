@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\Books;
 use App\Services\Catalog\BuyBoxService;
+use App\Services\Catalog\CatalogService;
 use Illuminate\Support\Collection;
 
 /**
@@ -68,6 +69,84 @@ final class CatalogOffers
             BuyBoxService::effectivePrice($b),
             (int) $b->id,
         ])->values();
+    }
+
+    /**
+     * "Boshqa nashrlar": bir xil ISBN'ga ega, lekin boshqa nashr bo'lgan
+     * kartalar (qattiq/yumshoq muqova, boshqa til yoki yozuv). ISBN standarti
+     * bo'yicha ular alohida ISBN olishi kerak, amalda esa nashriyotlar ISBN'ni
+     * qayta ishlatadi — shuning uchun ular bitta kartaga qo'shilmaydi, balki
+     * mijozga "boshqa nashri ham bor" deb ko'rsatiladi (Amazon'dagi format
+     * almashtirgichga o'xshash).
+     *
+     * @return array<int, array>
+     */
+    public static function otherPrintings(?int $editionId, int $limit = 6): array
+    {
+        if (! $editionId) {
+            return [];
+        }
+
+        // MUHIM: kartani yuklangan relationdan OLMAYMIZ — ro'yxatlarda u qisman
+        // (`edition:id,offers_count,…`) yuklanadi va `isbn13` bo'lmaydi.
+        $current = \App\Models\BookEdition::query()->whereKey($editionId)->first(['id', 'isbn13', 'title']);
+        if (! $current || blank($current->isbn13)) {
+            return [];
+        }
+
+        return \App\Models\BookEdition::query()
+            ->where('status', \App\Models\BookEdition::STATUS_ACTIVE)
+            ->where('isbn13', $current->isbn13)
+            ->whereKeyNot($editionId)
+            ->whereNotNull('featured_book_id')
+            ->where('offers_count', '>', 0)
+            ->orderByDesc('in_stock_offers_count')
+            ->orderByDesc('offers_count')
+            ->limit($limit + 4)
+            ->get()
+            // MUHIM: bir xil ISBN har doim ham bir xil kitob emas — nashriyotlar
+            // ISBN'ni butunlay boshqa kitobga ham qayta ishlatadi (backfill buni
+            // `isbn_conflicts` deb sanaydi). Mijozga "boshqa nashri" deb begona
+            // kitob ko'rsatilmasligi uchun nom ham o'xshash bo'lishi shart.
+            ->filter(fn (\App\Models\BookEdition $e) => \App\Services\Catalog\CatalogService::titlesSimilar($current->title, $e->title))
+            ->take($limit)
+            ->map(fn (\App\Models\BookEdition $e) => [
+                'edition_id' => (int) $e->id,
+                // Mijoz shu id bo'yicha kitob sahifasini ochadi
+                'product_id' => (int) $e->featured_book_id,
+                'title' => $e->title,
+                // Nom farq qilsa ilova uni ham ko'rsatadi (faqat variant emas)
+                'title_differs' => CatalogService::normalizeText($current->title) !== CatalogService::normalizeText($e->title),
+                'variant' => self::variantLabel($e),
+                'coverType' => \App\Services\Catalog\CatalogService::canonCover($e->coverType),
+                'language' => \App\Services\Catalog\CatalogService::canonLang($e->lang),
+                'languageWrite' => \App\Services\Catalog\CatalogService::canonScript($e->langType),
+                'image' => ProductImageUrls::originalUrl($e->coverPath()),
+                'min_price' => $e->min_price !== null ? (int) $e->min_price : null,
+                'offers_count' => (int) $e->offers_count,
+                'in_stock' => (int) $e->in_stock_offers_count > 0,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /** "Qattiq muqova · Rus · Kirill" */
+    public static function variantLabel(\App\Models\BookEdition $edition): string
+    {
+        $service = \App\Services\Catalog\CatalogService::class;
+        $parts = array_filter([
+            match ($service::canonCover($edition->coverType)) {
+                'hard' => 'Qattiq muqova', 'soft' => 'Yumshoq muqova', default => null,
+            },
+            match ($service::canonLang($edition->lang)) {
+                'uz' => "O'zbek", 'ru' => 'Rus', 'en' => 'Ingliz', 'qq' => 'Qoraqalpoq', default => null,
+            },
+            match ($service::canonScript($edition->langType)) {
+                'latin' => 'Lotin', 'cyrillic' => 'Kirill', default => null,
+            },
+        ]);
+
+        return implode(' · ', $parts);
     }
 
     /** Bir kitob kartasining barcha taklif id'lari (sharh va reytingni birlashtirish uchun). */
