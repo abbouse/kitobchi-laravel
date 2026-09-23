@@ -52,7 +52,6 @@ interface Offer {
   discountPrice: number;
   effectivePrice: number;
   stock: number;
-  condition: string;
   featured: boolean;
   approved: number;
   active: boolean;
@@ -82,7 +81,6 @@ type Props = {
   formOptions: { categories: OptionItem[]; publishers: OptionItem[] };
 };
 
-const CONDITION: Record<string, string> = { new: 'Yangi', used_good: 'Ishlatilgan (yaxshi)', used_fair: 'Ishlatilgan' };
 
 export default function CatalogEdition() {
   const { edition, offers = [], submissions = [], mergeCandidates = [], formOptions } = usePage<Props>().props;
@@ -225,7 +223,7 @@ export default function CatalogEdition() {
             <div className="card-body">
               <div className="table-responsive app-scroll">
                 <table className="table table-bottom-border align-middle mb-0">
-                  <thead><tr><th>Do'kon</th><th>Narx</th><th>Qoldiq</th><th>Holat</th><th>Sotilgan</th><th>Status</th><th></th></tr></thead>
+                  <thead><tr><th>Do'kon</th><th>Narx</th><th>Qoldiq</th><th>Sotilgan</th><th>Status</th><th></th></tr></thead>
                   <tbody>
                     {offers.map((offer) => (
                       <tr key={offer.id}>
@@ -238,7 +236,6 @@ export default function CatalogEdition() {
                           {offer.effectivePrice < offer.price ? <small className="d-block text-secondary text-decoration-line-through">{fmt(offer.price)}</small> : null}
                         </td>
                         <td>{fmt(offer.stock)}</td>
-                        <td>{CONDITION[offer.condition] || offer.condition}</td>
                         <td>{fmt(offer.sold)}</td>
                         <td>
                           <div className="d-flex gap-1 flex-wrap">

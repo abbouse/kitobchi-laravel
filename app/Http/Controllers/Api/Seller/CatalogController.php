@@ -124,7 +124,6 @@ class CatalogController extends ProductController
             'discountPrice' => 'nullable|integer|min:0|lt:price',
             'discountExpiresAt' => 'nullable|date|after:now',
             'count' => 'required|integer|min:0|max:100000',
-            'condition' => 'nullable|string|in:new,used_good,used_fair',
             // Do'kondagi jismoniy kitob xarakteristikasi (ixtiyoriy tekshiruv)
             'coverType' => 'nullable|string|in:soft,hard',
             'language' => 'nullable|string|in:uz,ru,en,qq',
@@ -158,9 +157,8 @@ class CatalogController extends ProductController
 
         $staff = Auth::guard('seller')->user();
         $storeSellerId = $this->storeSellerId();
-        $condition = (string) $request->input('condition', 'new');
 
-        $existing = $this->activeOffer($storeSellerId, (int) $edition->id, $condition);
+        $existing = $this->activeOffer($storeSellerId, (int) $edition->id);
         if ($existing) {
             return response()->json([
                 'success' => false,
@@ -170,11 +168,10 @@ class CatalogController extends ProductController
             ], 409);
         }
 
-        $book = DB::transaction(function () use ($request, $catalog, $stock, $edition, $staff, $storeSellerId, $condition) {
+        $book = DB::transaction(function () use ($request, $catalog, $stock, $edition, $staff, $storeSellerId) {
             $book = Books::create($catalog->offerAttributes($edition) + [
                 'edition_id' => $edition->id,
                 'seller_id' => $storeSellerId,
-                'condition' => $condition,
                 'price' => (int) $request->input('price'),
                 'discountPrice' => (int) $request->input('discountPrice', 0),
                 'discountExpiresAt' => $request->input('discountExpiresAt'),
@@ -259,7 +256,6 @@ class CatalogController extends ProductController
             'price' => $required('required|integer|min:1|max:100000000'),
             'discountPrice' => 'nullable|integer|min:0|lt:price',
             'count' => $required('required|integer|min:0|max:100000'),
-            'condition' => 'nullable|string|in:new,used_good,used_fair',
         ]);
         if ($validator->fails()) {
             return response()->json(['success' => false, 'message' => 'Validation failed', 'errors' => $validator->errors()], 422);
@@ -439,7 +435,6 @@ class CatalogController extends ProductController
             $book = Books::create($catalog->offerAttributes($edition) + [
                 'edition_id' => $edition->id,
                 'seller_id' => $storeSellerId,
-                'condition' => (string) $request->input('condition', 'new'),
                 'price' => (int) $request->input('price'),
                 'discountPrice' => (int) $request->input('discountPrice', 0),
                 'status' => true,
@@ -675,12 +670,11 @@ class CatalogController extends ProductController
         return (int) $this->getStoreSellerId(Auth::guard('seller')->user());
     }
 
-    private function activeOffer(int $sellerId, int $editionId, string $condition): ?Books
+    private function activeOffer(int $sellerId, int $editionId): ?Books
     {
         return Books::query()
             ->where('seller_id', $sellerId)
             ->where('edition_id', $editionId)
-            ->where('condition', $condition)
             ->whereNull('archived_at')
             ->where('is_hidden', false)
             ->withAvailableTotal()
@@ -789,7 +783,6 @@ class CatalogController extends ProductController
             'price' => (int) $book->price,
             'discountPrice' => (int) ($book->discountPrice ?? 0),
             'count' => $book->count,
-            'condition' => $book->condition ?? 'new',
             'is_approved' => (int) $book->is_approved,
             'status' => (bool) $book->status,
             'catalog_featured' => (bool) ($book->catalog_featured ?? true),

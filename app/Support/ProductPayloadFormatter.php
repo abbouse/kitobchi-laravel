@@ -65,7 +65,8 @@ class ProductPayloadFormatter
         // GLOBAL KATALOG (qo'shimcha maydonlar — eski ilovalar e'tiborsiz qoldiradi)
         if ($isBook) {
             $payload['edition_id'] = $product->edition_id ? (int) $product->edition_id : null;
-            $payload['condition'] = $product->condition ?? 'new';
+            // Biz faqat yangi kitob sotamiz — maydon API shartnomasi uchun qoldi.
+            $payload['condition'] = 'new';
             if ($product->edition_id && $product->relationLoaded('edition') && $product->edition) {
                 $edition = $product->edition;
                 $payload['offers_count'] = (int) ($edition->in_stock_offers_count ?: $edition->offers_count);

@@ -21,7 +21,6 @@ class Books extends Model
 
     protected $fillable = [
         'edition_id',
-        'condition',
         'name',
         'artikul',
         'author',

@@ -18,7 +18,7 @@ final class CatalogOffers
     {
         $offers = ProductVisibilityScope::applyBooks(Books::query())
             ->where('edition_id', $editionId)
-            ->select(['id', 'edition_id', 'seller_id', 'price', 'discountPrice', 'discountExpiresAt', 'condition', 'catalog_featured', 'artikul'])
+            ->select(['id', 'edition_id', 'seller_id', 'price', 'discountPrice', 'discountExpiresAt', 'catalog_featured', 'artikul'])
             ->withAvailableTotal()
             ->with('seller:id,shop_name,photo,region,rating,rating_reviews_count,reputation_score,isVerified,isPremiumShop')
             // Limitdan OLDIN tartib: sotuvda borlari va arzonlari kesilib qolmasin
@@ -38,7 +38,6 @@ final class CatalogOffers
                 'stock' => $offer->count,
                 'stock_display' => ProductPayloadFormatter::stockDisplayLabel((int) $offer->count),
                 'in_stock' => $offer->count > 0,
-                'condition' => $offer->condition ?? 'new',
                 'is_current' => $currentBookId !== null && (int) $offer->id === $currentBookId,
                 'is_featured' => (bool) $offer->catalog_featured,
                 'seller' => [

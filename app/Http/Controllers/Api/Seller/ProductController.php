@@ -810,129 +810,30 @@ public function updateProductStatus(Request $request)
     /**
      * ✅ CREATE PRODUCT - LOG YOZILADI
      */
+    /**
+     * ESKI YO'L — YOPILDI (global katalog 3-bosqich).
+     *
+     * Kitobning o'ziga tegishli ma'lumot (nom, muallif, ISBN, til, muqova,
+     * tavsif, rasm) faqat global kartada bo'ladi. Do'kon kitob yaratmaydi:
+     * ISBN bo'yicha kartani topadi va faqat narx/qoldiq kiritadi
+     * (`POST catalog/offers`), karta bo'lmasa qisqa ariza yuboradi
+     * (`POST catalog/submissions`).
+     *
+     * Bu endpoint eski ilova versiyalari uchun ochiq qolgan edi va
+     * katalogni chetlab o'tish yo'li bo'lib turardi — endi yopiq.
+     */
     public function createProduct(Request $request)
     {
         $seller = Auth::guard('seller')->user();
-        if (!$seller) {
+        if (! $seller) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
 
-        // ✅ ACCESS CHECK
-        if (!$this->hasProductAccess($seller)) {
-            return response()->json([
-                'success' => false, 
-                'message' => 'Access denied. Product creation available only for Owner, Admin, and Product Manager.'
-            ], 403);
-        }
-
-        $storeSellerId = $this->getStoreSellerId($seller);
-
-        $validator = Validator::make($request->all(), [
-        'name' => 'required|string|max:255',
-            'author' => 'required|string|max:255',
-            'translator' => 'nullable|string|max:255',
-            // MUHIM: nashriyot endi muallif kabi ERKIN matn — ro'yxatdan
-            // aynan bittasini tanlash MAJBURIY emas. Mos keladigan yozuv
-            // topilmasa, `PublisherDirectoryService` yangi nashriyotni
-            // o'zi yaratadi (pastda, `resolveOrCreateByName`).
-            'publisher' => 'nullable|string|max:255',
-            'isbn' => 'nullable|string|max:20',
-            'pages' => 'required|integer|min:1',
-            'language' => 'required|string|in:uz,ru,en,qq',
-            'languageWrite' => 'required|string|in:cyrillic,latin',
-            'coverType' => 'required|string|in:soft,hard',
-            'price' => 'required|numeric|min:0',
-            'discountPrice' => 'nullable|numeric|min:0',
-            'count' => 'required|integer|min:0',
-            'description' => 'required|string',
-            'images.*' => 'required|image|mimes:jpeg,png,jpg|max:10240',
-            'category_id' => 'required|integer|exists:book_categories,id',
-            'tag_ids' => 'nullable|array',
-            'tag_ids.*' => 'integer|exists:book_tags,id',
-            'year' => 'nullable|integer|min:1800|max:' . (now()->year + 1),
-            'discountExpiresAt' => 'nullable|date',
-        ]);
-
-        if ($validator->fails()) {
-            Log::error('Validation failed', ['errors' => $validator->errors()->toArray()]);
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-
-        // ISBN'ni kanonik shaklga keltiramiz; noto'g'ri formatda kelsa null
-        // saqlanadi (ISBN'siz odatdagidek admin tasdig'i kutiladi).
-        $canonicalIsbn = Books::normalizeIsbn($request->input('isbn'));
-
-        // Image upload (qisqartirildi)
-        $imagePaths = [];
-        if ($request->hasFile('images')) {
-            foreach ($request->file('images') as $index => $image) {
-                if ($image->isValid()) {
-                    $filename = time() . '_' . $index . '.' . $image->getClientOriginalExtension();
-                    $path = Storage::disk('public')->putFileAs('books', $image, $filename);
-                    $normalizedPath = str_replace('public/', '', $path);
-                    $imagePaths[] = $normalizedPath;
-                    ProductImageVariantGenerator::generateForPath($normalizedPath);
-                }
-            }
-        }
-
-        $author = $this->authorDirectory->resolveOrCreateByName($request->input('author'));
-        $publisher = $this->publisherDirectory->resolveOrCreateByName($request->input('publisher'));
-
-        $book = Books::create([
-            'seller_id' => $storeSellerId,
-            'name' => $request->input('name'),
-            'author' => $author?->name ?: $request->input('author'),
-            'author_id' => $author?->id,
-            'translator' => $request->input('translator'),
-            'publisher_id' => $publisher?->id,
-            'isbn' => $canonicalIsbn,
-            'pages' => $request->input('pages'),
-            'lang' => $request->input('language'),
-            'langType' => $request->input('languageWrite'),
-            'coverType' => $request->input('coverType'),
-            'price' => $request->input('price'),
-            'discountPrice' => $request->input('discountPrice', 0),
-            'discountExpiresAt' => $request->filled('discountExpiresAt') ? $request->input('discountExpiresAt') : null,
-            'description' => $request->input('description'),
-            'images' => $imagePaths,
-            'year' => (int) ($request->input('year') ?: now()->year),
-            'category_id' => $request->input('category_id'),
-            'status' => true,
-            'is_hidden' => false,
-            'is_approved' => 0,
-        ]);
-        $this->assignGeneratedArtikul($book, 'book');
-
-        // FILIAL STOCK: kirim hodim filialiga (bo'lmasa asosiy filialga)
-        app(\App\Services\BranchStockService::class)->setTotalFromLegacy(
-            'book', (int) $book->id, 0, (int) $storeSellerId,
-            (int) $request->input('count'),
-            $seller->seller_location_id ? (int) $seller->seller_location_id : null,
-            ['actor_type' => 'seller', 'actor_id' => $seller->id, 'note' => 'Mahsulot yaratildi']
-        );
-
-        if ($request->has('tag_ids')) {
-            $book->tags()->attach($request->input('tag_ids'));
-        }
-
-        $this->productModerationState->markPending($book, 'seller_created');
-        $this->writeLog($seller, 'Yangi maxsulot qo\'shdi (AI moderatsiyaga yuborildi)', $book->name);
-
-        // fresh(): taklif global kartaga ulangan bo'lsa (avto-ulash) ma'lumot
-        // kartadan qayta yozilgan — ilovaga bazadagi HAQIQIY holat qaytariladi.
-        $book = $book->fresh();
-
         return response()->json([
-            'success' => true,
-            'message' => 'Product created successfully',
-            'data' => $book->load(['category', 'tags']),
-            'catalog_locked' => (bool) $book->edition_id,
-        ], 201);
+            'success' => false,
+            'code' => 'catalog_only',
+            'message' => "Kitob endi global katalogdan qo'shiladi: ISBN'ni skanerlang va narx bilan qoldiqni kiriting. Katalogda kitob bo'lmasa — qisqa so'rov yuboring. Ilovani yangilang.",
+        ], 409);
     }
 
     public function updateProduct(Request $request)
@@ -1509,39 +1410,47 @@ public function productStatistics(Request $request, $id)
         $code = trim($data['code']);
         $type = $data['type'] ?? null;
 
-        // ── Kitob (ISBN) ──
+        // ── Kitob (ISBN yoki 8 xonali artikul) ──
         if ($type === 'book' || $type === null) {
-            $canonical = Books::normalizeIsbn($code);
-            if ($canonical !== null) {
-                $book = Books::query()->where('seller_id', $storeSellerId)->whereIsbn($canonical)->first();
-                if ($book) {
-                    $new = $hasStock
-                        ? (int) $data['stock']
-                        : max(0, (int) $book->count + (int) $data['delta']);
-                    // BUG TUZATILDI: `books.count` ustuni yo'q (filial zaxiralariga
-                    // ko'chirilgan) — `$book->count = …; save()` jimgina hech narsa
-                    // yozmasdi va javob "saqlandi" deb ko'rsatardi.
-                    app(\App\Services\BranchStockService::class)->setTotalFromLegacy(
-                        'book', (int) $book->id, 0, (int) $storeSellerId, $new,
-                        $seller->seller_location_id ? (int) $seller->seller_location_id : null,
-                        ['actor_type' => 'seller', 'actor_id' => $seller->id, 'note' => 'Skaner orqali qoldiq']
-                    );
-                    $new = (int) $book->fresh()->count;
+            $lookup = \App\Support\StockCodeLookup::findSellerBook((int) $storeSellerId, $code);
+            $book = $lookup['book'];
+            if ($book) {
+                $new = $hasStock
+                    ? (int) $data['stock']
+                    : max(0, (int) $book->count + (int) $data['delta']);
+                // BUG TUZATILDI: `books.count` ustuni yo'q (filial zaxiralariga
+                // ko'chirilgan) — `$book->count = …; save()` jimgina hech narsa
+                // yozmasdi va javob "saqlandi" deb ko'rsatardi.
+                app(\App\Services\BranchStockService::class)->setTotalFromLegacy(
+                    'book', (int) $book->id, 0, (int) $storeSellerId, $new,
+                    $seller->seller_location_id ? (int) $seller->seller_location_id : null,
+                    ['actor_type' => 'seller', 'actor_id' => $seller->id, 'note' => 'Skaner orqali qoldiq']
+                );
+                $new = (int) $book->fresh()->count;
 
-                    return response()->json([
-                        'success' => true,
-                        'type' => 'book',
-                        'id' => $book->id,
-                        'name' => $book->name,
-                        'stock' => $new,
-                        'in_stock' => $new > 0,
-                    ]);
-                }
-                if ($type === 'book') {
-                    return response()->json(['success' => false, 'message' => "Bu ISBN sizning do'koningizda topilmadi."], 404);
-                }
-            } elseif ($type === 'book') {
-                return response()->json(['success' => false, 'message' => "ISBN formati noto'g'ri."], 422);
+                return response()->json([
+                    'success' => true,
+                    'type' => 'book',
+                    'id' => $book->id,
+                    'name' => $book->name,
+                    'stock' => $new,
+                    'in_stock' => $new > 0,
+                ]);
+            }
+            // Bir xil ISBN — qattiq va yumshoq muqovali alohida nashrlar. Qaysi
+            // biri ekanini bilmay qoldiq yozmaymiz: do'kon artikulni tanlaydi.
+            if ($lookup['reason'] === 'ambiguous') {
+                return response()->json([
+                    'success' => false,
+                    'code' => 'ambiguous_code',
+                    'message' => "Bu ISBN bilan do'koningizda bir nechta nashr bor. Kerakligini tanlang.",
+                    'candidates' => \App\Support\StockCodeLookup::candidates($lookup['matches']),
+                ], 409);
+            }
+            if ($type === 'book') {
+                return $lookup['reason'] === 'invalid_isbn'
+                    ? response()->json(['success' => false, 'message' => "ISBN formati noto'g'ri."], 422)
+                    : response()->json(['success' => false, 'message' => "Bu kod sizning do'koningizda topilmadi."], 404);
             }
         }
 

@@ -121,7 +121,6 @@ class CatalogController extends Controller
                 'discountPrice' => (int) ($b->discountPrice ?? 0),
                 'effectivePrice' => BuyBoxService::effectivePrice($b),
                 'stock' => (int) $b->count,
-                'condition' => $b->condition ?? 'new',
                 'featured' => (bool) $b->catalog_featured,
                 'approved' => (int) $b->is_approved,
                 'active' => (bool) $b->status,
@@ -525,7 +524,6 @@ class CatalogController extends Controller
             'price' => 'required|integer|min:1',
             'discountPrice' => 'nullable|integer|min:0|lt:price',
             'count' => 'required|integer|min:0',
-            'condition' => 'nullable|in:new,used_good,used_fair',
         ]);
 
         $seller = Seller::query()->findOrFail((int) $request->input('seller_id'));
@@ -559,7 +557,6 @@ class CatalogController extends Controller
             $book = Books::create($this->catalog->offerAttributes($edition) + [
                 'edition_id' => $edition->id,
                 'seller_id' => $seller->id,
-                'condition' => (string) $request->input('condition', 'new'),
                 'price' => (int) $request->input('price'),
                 'discountPrice' => (int) $request->input('discountPrice', 0),
                 'status' => true,

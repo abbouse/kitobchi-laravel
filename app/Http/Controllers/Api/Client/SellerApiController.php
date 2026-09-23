@@ -6,9 +6,9 @@ namespace App\Http\Controllers\Api\Client;
 
 use App\Http\Controllers\Controller;
 use App\Models\ApiClient;
-use App\Models\Books;
 use App\Models\Seller;
 use App\Models\Stationery;
+use App\Support\StockCodeLookup;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -76,12 +76,18 @@ class SellerApiController extends Controller
         $per = min(100, max(1, (int) $request->query('per_page', 50)));
 
         if ($type === 'book') {
-            $page = $seller->books()->where('is_hidden', false)->orderByDesc('updated_at')->paginate($per);
+            // Arxivlangan (admin o'chirgan) takliflar sotuvda emas — ro'yxatda ham chiqmaydi.
+            $page = $seller->books()->where('is_hidden', false)->whereNull('archived_at')
+                ->orderByDesc('updated_at')->paginate($per);
             $data = collect($page->items())->map(fn ($b) => [
                 'id' => $b->id,
                 'type' => 'book',
                 'name' => $b->name,
+                // `code` — ISBN (eski shartnoma). Bir xil ISBN bir nechta nashrga
+                // tegishli bo'lishi mumkin, shu sabab qoldiq yozishda `artikul`
+                // aniqroq kalit.
                 'code' => $b->isbn,
+                'artikul' => $b->artikul,
                 'price' => (int) ($b->price ?? 0),
                 'stock' => (int) ($b->count ?? 0),
                 'in_stock' => (int) ($b->count ?? 0) > 0,
@@ -123,25 +129,34 @@ class SellerApiController extends Controller
         $code = trim($data['code']);
         $type = $data['type'] ?? null;
 
-        // ── Kitob (ISBN) ──
+        // ── Kitob (ISBN yoki 8 xonali artikul) ──
         if ($type === 'book' || $type === null) {
-            $canonical = Books::normalizeIsbn($code);
-            if ($canonical !== null) {
-                $book = $seller->books()->whereIsbn($canonical)->first();
-                if ($book) {
-                    $new = $hasStock ? (int) $data['stock'] : max(0, (int) $book->count + (int) $data['delta']);
-                    app(\App\Services\BranchStockService::class)->setTotalFromLegacy(
-                        'book', (int) $book->id, 0, $sellerId, $new, null,
-                        ['actor_type' => 'api_client', 'note' => 'API stock update']
-                    );
+            $lookup = StockCodeLookup::findSellerBook($sellerId, $code);
+            $book = $lookup['book'];
+            if ($book) {
+                $new = $hasStock ? (int) $data['stock'] : max(0, (int) $book->count + (int) $data['delta']);
+                app(\App\Services\BranchStockService::class)->setTotalFromLegacy(
+                    'book', (int) $book->id, 0, $sellerId, $new, null,
+                    ['actor_type' => 'api_client', 'note' => 'API stock update']
+                );
 
-                    return [$this->ok('book', $book->id, $book->name, $new), 200];
-                }
-                if ($type === 'book') {
-                    return [['status' => 'error', 'success' => false, 'message' => 'ISBN not found in your store.'], 404];
-                }
-            } elseif ($type === 'book') {
-                return [['status' => 'error', 'success' => false, 'message' => 'Invalid ISBN format.'], 422];
+                return [$this->ok('book', $book->id, $book->name, $new), 200];
+            }
+            // Bir xil ISBN ostida bir nechta nashr (qattiq/yumshoq muqova) —
+            // tasodifiy tanlab noto'g'ri kitobning qoldig'ini yozmaymiz.
+            if ($lookup['reason'] === 'ambiguous') {
+                return [[
+                    'status' => 'error',
+                    'success' => false,
+                    'code' => 'ambiguous_code',
+                    'message' => 'Several editions share this ISBN in your store. Send "code" as the 8-digit artikul instead.',
+                    'candidates' => StockCodeLookup::candidates($lookup['matches']),
+                ], 409];
+            }
+            if ($type === 'book') {
+                return $lookup['reason'] === 'invalid_isbn'
+                    ? [['status' => 'error', 'success' => false, 'message' => 'Invalid ISBN format.'], 422]
+                    : [['status' => 'error', 'success' => false, 'message' => 'Code not found in your store.'], 404];
             }
         }
 

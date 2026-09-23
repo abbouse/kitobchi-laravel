@@ -5144,7 +5144,6 @@ PROMPT;
                     'editionOffers' => (int) ($book->edition?->offers_count ?? 0),
                     'submissionsUrl' => route('boshqaruv.catalog.submissions'),
                     'featured' => (bool) $book->catalog_featured,
-                    'condition' => $book->condition ?? 'new',
                     'archived' => $book->archived_at !== null,
                     'archivedAt' => $this->dateTime($book->archived_at),
                     'archiveUrl' => route('boshqaruv.books.archive', $book),

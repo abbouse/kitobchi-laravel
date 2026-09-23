@@ -91,7 +91,6 @@ interface Book {
   editionOffers?: number;
   submissionsUrl?: string;
   featured?: boolean;
-  condition?: string;
   archived?: boolean;
   archivedAt?: string | null;
   archiveUrl?: string;
@@ -212,14 +211,6 @@ export default function Books() {
                   <select name="seller_id" className="form-select" required defaultValue="">
                     <option value="" disabled>Tanlang</option>
                     {bookFormOptions.sellers.map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}
-                  </select>
-                </div>
-                <div className="col-md-6">
-                  <label className="form-label">Holati</label>
-                  <select name="condition" className="form-select" defaultValue="new">
-                    <option value="new">Yangi</option>
-                    <option value="used_good">Ishlatilgan (yaxshi)</option>
-                    <option value="used_fair">Ishlatilgan</option>
                   </select>
                 </div>
                 <div className="col-md-4"><label className="form-label">Narx</label><input name="price" type="number" min={1} className="form-control" required /></div>
