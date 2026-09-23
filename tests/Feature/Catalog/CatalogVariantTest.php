@@ -277,6 +277,96 @@ class CatalogVariantTest extends TestCase
         $this->assertSame([], $printings, "Qayta ishlatilgan ISBN'li begona kitob ko'rsatilmasligi kerak");
     }
 
+    public function test_short_request_creates_submission_without_card_or_offer(): void
+    {
+        $this->makeCategory();
+        $seller = $this->makeSeller();
+        Sanctum::actingAs($seller, ['*'], 'seller');
+
+        $res = $this->post('/api/v1/seller/catalog/submissions', [
+            'isbn' => '9780306406157',
+            'front_image' => UploadedFile::fake()->image('front.jpg'),
+            'back_image' => UploadedFile::fake()->image('back.jpg'),
+            'note' => "Yangi kelgan kitob",
+        ], ['Accept' => 'application/json'])->assertStatus(201);
+
+        $submission = \App\Models\BookEditionSubmission::query()->findOrFail($res->json('data.id'));
+        $this->assertSame(\App\Models\BookEditionSubmission::TYPE_NEW, $submission->type);
+        $this->assertNull($submission->edition_id, "Qisqa so'rovda karta ochilmaydi");
+        $this->assertNull($submission->book_id, "Qisqa so'rovda taklif yaratilmaydi");
+        $this->assertSame('9780306406157', $submission->isbn13);
+        $this->assertSame(0, BookEdition::query()->count());
+        $this->assertSame(0, Books::query()->count());
+        $this->assertFalse($res->json('data.offer_ready'));
+
+        // Ikkinchi marta — takrorlanmaydi
+        $this->post('/api/v1/seller/catalog/submissions', [
+            'isbn' => '9780306406157',
+            'front_image' => UploadedFile::fake()->image('front.jpg'),
+            'back_image' => UploadedFile::fake()->image('back.jpg'),
+        ], ['Accept' => 'application/json'])->assertStatus(409)->assertJson(['code' => 'request_pending']);
+    }
+
+    public function test_short_request_without_isbn_is_rejected(): void
+    {
+        Sanctum::actingAs($this->makeSeller(), ['*'], 'seller');
+
+        $this->post('/api/v1/seller/catalog/submissions', [
+            'front_image' => UploadedFile::fake()->image('front.jpg'),
+            'back_image' => UploadedFile::fake()->image('back.jpg'),
+        ], ['Accept' => 'application/json'])->assertStatus(422)->assertJsonValidationErrors(['isbn']);
+    }
+
+    public function test_admin_opens_card_from_request_then_seller_can_price_it(): void
+    {
+        $cat = $this->makeCategory();
+        $seller = $this->makeSeller();
+        Sanctum::actingAs($seller, ['*'], 'seller');
+
+        $id = $this->post('/api/v1/seller/catalog/submissions', [
+            'isbn' => '9780306406157',
+            'front_image' => UploadedFile::fake()->image('front.jpg'),
+            'back_image' => UploadedFile::fake()->image('back.jpg'),
+        ], ['Accept' => 'application/json'])->assertStatus(201)->json('data.id');
+
+        $admin = Admin::query()->forceCreate([
+            'name' => 'Root', 'email' => 'req@test.uz', 'password' => bcrypt('x'),
+            'role' => 'superadmin', 'is_active' => 1,
+        ]);
+
+        // Tasdiqlab bo'lmaydi — avval karta ochilishi kerak
+        $this->actingAs($admin, 'panel')
+            ->post('/boshqaruv/catalog/submissions/' . $id . '/approve')
+            ->assertRedirect()->assertSessionHas('error');
+
+        $this->actingAs($admin, 'panel')->post('/boshqaruv/catalog/submissions/' . $id . '/edition', [
+            'title' => "O'tkan kunlar",
+            'author' => 'Abdulla Qodiriy',
+            'category_id' => $cat,
+            'coverType' => 'Qattiq',
+        ])->assertRedirect();
+
+        $submission = \App\Models\BookEditionSubmission::query()->findOrFail($id);
+        $this->assertSame(\App\Models\BookEditionSubmission::STATUS_APPROVED, $submission->status);
+        $this->assertNotNull($submission->edition_id);
+
+        $edition = BookEdition::query()->findOrFail($submission->edition_id);
+        $this->assertSame('9780306406157', $edition->isbn13, 'ISBN so\'rovdan olinishi kerak');
+        $this->assertNotNull($edition->front_image, "Muqova rasmi so'rovdan ko'chishi kerak");
+        $this->assertSame(BookEdition::STATUS_ACTIVE, $edition->status);
+
+        // Do'kon endi narx/qoldiq kiritadi
+        Sanctum::actingAs($seller, ['*'], 'seller');
+        $list = $this->getJson('/api/v1/seller/catalog/submissions')->assertOk();
+        $row = collect($list->json('data'))->firstWhere('id', $id);
+        $this->assertTrue($row['offer_ready']);
+        $this->assertSame((int) $edition->id, $row['edition']['id']);
+
+        $this->postJson('/api/v1/seller/catalog/offers', [
+            'edition_id' => $edition->id, 'price' => 45000, 'count' => 3,
+        ])->assertStatus(201);
+    }
+
     public function test_backfill_keeps_printings_apart(): void
     {
         $cat = $this->makeCategory();

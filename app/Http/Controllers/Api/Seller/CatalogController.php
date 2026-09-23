@@ -211,9 +211,17 @@ class CatalogController extends ProductController
     }
 
     /**
-     * Katalogda yo'q kitob: old va orqa muqova rasmlari MAJBURIY. Orqa
-     * muqovadagi shtrix-kod server tomonda o'qiladi va kiritilgan ISBN bilan
-     * solishtiriladi. Natija: tekshiruvdagi karta + do'kon taklifi + ariza.
+     * KATALOGGA QO'SHISH SO'ROVI.
+     *
+     * Do'kon kitob ma'lumotini kiritmaydi — u faqat ISBN'ni skanerlaydi va
+     * old/orqa muqovani suratga oladi. Kartani admin ochadi (Boshqaruv →
+     * Katalog → Arizalar), do'kon esa karta tayyor bo'lgach narx va qoldiqni
+     * kiritadi. Orqa muqovadagi shtrix-kod server tomonda o'qilib, kiritilgan
+     * ISBN bilan solishtiriladi.
+     *
+     * ESKI ILOVALAR: to'liq forma (name, author, pages…) yuboradigan versiyalar
+     * avvalgidek ishlaydi — karta va taklif darhol ochiladi. Yangi ilova esa
+     * faqat ISBN va ikki rasm yuboradi.
      */
     public function storeSubmission(Request $request, CatalogService $catalog, BranchStockService $stock, BarcodeIsbnReader $reader): JsonResponse
     {
@@ -221,29 +229,36 @@ class CatalogController extends ProductController
             return $denied;
         }
 
+        // To'liq forma yuborilganmi (eski ilova) yoki qisqa so'rovmi (yangi ilova)
+        $legacyForm = $request->filled('name');
+
+        $required = fn (string $rules) => $legacyForm ? $rules : str_replace('required', 'nullable', $rules);
+
         $validator = Validator::make($request->all(), [
-            'isbn' => 'nullable|string|max:20',
+            // Yangi oqimda ISBN majburiy: karta aynan shu kitobga ochiladi
+            'isbn' => ($legacyForm ? 'nullable' : 'required') . '|string|max:20',
             'back_isbn_client' => 'nullable|string|max:20',
             'front_image' => 'required|image|mimes:jpeg,png,jpg,webp|max:10240|dimensions:max_width=8000,max_height=8000',
             'back_image' => 'required|image|mimes:jpeg,png,jpg,webp|max:10240|dimensions:max_width=8000,max_height=8000',
             'images' => 'nullable|array|max:6',
             'images.*' => 'image|mimes:jpeg,png,jpg,webp|max:10240|dimensions:max_width=8000,max_height=8000',
-            'name' => 'required|string|max:255',
-            'author' => 'required|string|max:255',
+            'note' => 'nullable|string|max:500',
+            'name' => $required('required|string|max:255'),
+            'author' => $required('required|string|max:255'),
             'translator' => 'nullable|string|max:255',
             'publisher' => 'nullable|string|max:255',
-            'pages' => 'required|integer|min:1|max:20000',
+            'pages' => $required('required|integer|min:1|max:20000'),
             'year' => 'nullable|integer|min:1800|max:' . (now()->year + 1),
-            'language' => 'required|string|in:uz,ru,en,qq',
-            'languageWrite' => 'required|string|in:cyrillic,latin',
-            'coverType' => 'required|string|in:soft,hard',
-            'description' => 'required|string|max:10000',
-            'category_id' => 'required|integer|exists:book_categories,id',
+            'language' => $required('required|string|in:uz,ru,en,qq'),
+            'languageWrite' => $required('required|string|in:cyrillic,latin'),
+            'coverType' => $required('required|string|in:soft,hard'),
+            'description' => $required('required|string|max:10000'),
+            'category_id' => $required('required|integer|exists:book_categories,id'),
             'tag_ids' => 'nullable|array',
             'tag_ids.*' => 'integer|exists:book_tags,id',
-            'price' => 'required|integer|min:1|max:100000000',
+            'price' => $required('required|integer|min:1|max:100000000'),
             'discountPrice' => 'nullable|integer|min:0|lt:price',
-            'count' => 'required|integer|min:0|max:100000',
+            'count' => $required('required|integer|min:0|max:100000'),
             'condition' => 'nullable|string|in:new,used_good,used_fair',
         ]);
         if ($validator->fails()) {
@@ -265,19 +280,44 @@ class CatalogController extends ProductController
             // Karta allaqachon bor — dublikat ochilmasin, taklif oqimiga yo'naltiramiz.
             // MUHIM: muqova/til/yozuv farq qilsa bu BOSHQA nashr — yangi karta ochiladi
             // (bitta ISBN ostida qattiq va yumshoq muqova aralashib ketmasligi uchun).
-            $match = $catalog->findByIsbn($isbn13)->first(
-                fn (BookEdition $e) => CatalogService::titlesSimilar($request->input('name'), $e->title)
-                    && CatalogService::sameVariant(
+            // Qisqa so'rovda nom yo'q — shu ISBN bilan mos variantli birinchi karta.
+            $candidates = $catalog->findByIsbn($isbn13, $this->storeSellerId());
+            $match = $legacyForm
+                ? $candidates->first(
+                    fn (BookEdition $e) => CatalogService::titlesSimilar($request->input('name'), $e->title)
+                        && CatalogService::sameVariant(
+                            $request->input('coverType'), $request->input('language'), $request->input('languageWrite'),
+                            $e->coverType, $e->lang, $e->langType
+                        )
+                )
+                : $candidates->first(
+                    fn (BookEdition $e) => CatalogService::sameVariant(
                         $request->input('coverType'), $request->input('language'), $request->input('languageWrite'),
                         $e->coverType, $e->lang, $e->langType
                     )
-            );
+                );
             if ($match) {
                 return response()->json([
                     'success' => false,
                     'code' => 'edition_exists',
                     'message' => "Bu kitob katalogda bor — faqat narx va qoldiqni kiriting.",
                     'edition' => $this->editionPayload($match, $this->storeSellerId()),
+                ], 409);
+            }
+
+            // Shu ISBN bo'yicha ochiq so'rov bor — ikkinchisi kerak emas
+            $open = BookEditionSubmission::query()
+                ->where('seller_id', $this->storeSellerId())
+                ->where('type', BookEditionSubmission::TYPE_NEW)
+                ->where('isbn13', $isbn13)
+                ->where('status', BookEditionSubmission::STATUS_PENDING)
+                ->first();
+            if ($open) {
+                return response()->json([
+                    'success' => false,
+                    'code' => 'request_pending',
+                    'message' => "Bu kitob bo'yicha so'rovingiz allaqachon ko'rib chiqilmoqda.",
+                    'data' => $this->submissionPayload($open),
                 ], 409);
             }
         }
@@ -315,6 +355,53 @@ class CatalogController extends ProductController
 
         $staff = Auth::guard('seller')->user();
         $storeSellerId = $this->storeSellerId();
+
+        // ── QISQA SO'ROV: faqat ariza yoziladi ─────────────────────────────
+        // Karta ochilmaydi (kitob ma'lumotini bilmaymiz) va taklif ham
+        // yaratilmaydi (narx/qoldiq hali yo'q). Admin kartani ochgach, do'kon
+        // "Arizalarim" ro'yxatidan narx va qoldiqni kiritadi.
+        if (! $legacyForm) {
+            $submission = BookEditionSubmission::create([
+                'seller_id' => $storeSellerId,
+                'type' => BookEditionSubmission::TYPE_NEW,
+                'staff_id' => $staff->id,
+                'isbn13' => $isbn13,
+                'back_isbn_server' => $server['isbn'],
+                'back_isbn_server_method' => $server['method'],
+                'back_isbn_client' => $client,
+                'isbn_check' => $check,
+                'front_image' => $front,
+                'back_image' => $back,
+                'payload' => [
+                    'isbn' => $isbnInput,
+                    'note' => $request->filled('note') ? trim((string) $request->input('note')) : null,
+                    // "Boshqa nashr" so'rovi: do'kondagi kitob muqovasi — admin
+                    // kartani shu variant bilan ochadi
+                    'coverType' => $request->input('coverType'),
+                    'language' => $request->input('language'),
+                    'languageWrite' => $request->input('languageWrite'),
+                    'images' => $extra,
+                ],
+                'status' => BookEditionSubmission::STATUS_PENDING,
+            ]);
+
+            if ($isbn13 && $server['isbn'] === null) {
+                $submissionId = $submission->id;
+                dispatch(function () use ($submissionId) {
+                    app(self::class)->refreshBackIsbn($submissionId);
+                })->afterResponse();
+            }
+
+            $this->writeLog($staff, "Katalogga kitob qo'shishni so'radi", $isbn13 ?: $isbnInput);
+
+            return response()->json([
+                'success' => true,
+                'message' => "So'rov yuborildi. Kitob katalogga qo'shilgach sizga xabar beramiz — keyin narx va qoldiqni kiritasiz.",
+                'isbn_check' => $check,
+                'data' => $this->submissionPayload($submission->fresh()),
+            ], 201);
+        }
+
         $author = $this->authorDirectory->resolveOrCreateByName($request->input('author'));
         $publisher = $this->publisherDirectory->resolveOrCreateByName($request->input('publisher'));
 
@@ -711,23 +798,40 @@ class CatalogController extends ProductController
 
     private function submissionPayload(BookEditionSubmission $submission): array
     {
+        // Karta ochilgan bo'lsa — do'kon shu yerdan narx/qoldiq kiritadi
+        $edition = $submission->edition_id
+            ? $this->catalogService()->resolve(BookEdition::withTrashed()->find($submission->edition_id))
+            : null;
+        $ready = $edition !== null
+            && $edition->isUsable()
+            && $submission->book_id === null;
+
         return [
             'id' => (int) $submission->id,
             'type' => $submission->type ?: BookEditionSubmission::TYPE_NEW,
             'status' => $submission->status,
             'isbn' => $submission->isbn13,
             'isbn_check' => $submission->isbn_check,
-            'name' => $submission->payload['name'] ?? null,
-            'author' => $submission->payload['author'] ?? null,
+            'name' => $edition?->title ?? ($submission->payload['name'] ?? null),
+            'author' => $edition?->author ?? ($submission->payload['author'] ?? null),
+            'note' => $submission->payload['note'] ?? null,
             'front_image' => ProductImageUrls::originalUrl($submission->front_image),
             'back_image' => ProductImageUrls::originalUrl($submission->back_image),
             'edition_id' => $submission->edition_id,
             'book_id' => $submission->book_id,
+            // Karta tayyor va do'konda hali taklif yo'q — ilovada "Narx kiriting"
+            'offer_ready' => $ready,
+            'edition' => $ready ? $this->editionPayload($edition, $this->storeSellerId()) : null,
             'message' => $submission->payload['message'] ?? null,
             'field' => $submission->payload['field'] ?? null,
             'reject_reason' => $submission->reject_reason,
             'created_at' => $submission->created_at?->toIso8601String(),
             'reviewed_at' => $submission->reviewed_at?->toIso8601String(),
         ];
+    }
+
+    private function catalogService(): CatalogService
+    {
+        return app(CatalogService::class);
     }
 }

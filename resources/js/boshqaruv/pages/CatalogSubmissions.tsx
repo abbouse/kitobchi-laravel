@@ -4,7 +4,8 @@ import { PageCrumbs } from '../Layout';
 import PaginationControls from '../components/PaginationControls';
 import ModerationRejectModal from '../components/ModerationRejectModal';
 import { EmptyState, StatWidget } from '../components/Axelit';
-import { isbnCheckChip, type PickedEdition } from '../components/CatalogFields';
+import { EditionFields, isbnCheckChip, type OptionItem, type PickedEdition } from '../components/CatalogFields';
+import FormAction from '../components/FormAction';
 
 interface Submission {
   id: number;
@@ -29,6 +30,7 @@ interface Submission {
   createdAt?: string;
   reviewedAt?: string | null;
   approveUrl: string;
+  createEditionUrl: string;
   rejectUrl: string;
   mergeUrl: string;
   edition?: (PickedEdition & { publisher?: string | null; category?: string | null; lang?: string | null; langType?: string | null; coverType?: string | null; pages?: number | null; year?: number | null; description?: string | null }) | null;
@@ -41,6 +43,7 @@ type Props = {
   filters: { tab?: string; type?: string };
   counts: Record<string, number>;
   typeCounts?: Record<string, number>;
+  formOptions: { categories: OptionItem[]; publishers: OptionItem[] };
 };
 
 const STATUS: Record<string, [string, string]> = {
@@ -59,7 +62,7 @@ const FIELD: Record<string, string> = {
 };
 
 export default function CatalogSubmissions() {
-  const { submissions = [], pagination, filters = {}, counts = {}, typeCounts = {} } = usePage<Props>().props;
+  const { submissions = [], pagination, filters = {}, counts = {}, typeCounts = {}, formOptions } = usePage<Props>().props;
   const tab = filters.tab || 'pending';
   const type = filters.type || 'new_book';
   const corrections = type === 'correction';
@@ -118,13 +121,16 @@ export default function CatalogSubmissions() {
           <div className="card" key={item.id}>
             <div className="card-header d-flex align-items-center justify-content-between gap-2 flex-wrap">
               <div className="min-w-0">
-                <h5 className="mb-0 text-truncate">{edition?.title || String(item.payload?.name || 'Nomsiz')}</h5>
+                <h5 className="mb-0 text-truncate">{edition?.title || String(item.payload?.name || (item.isbn ? `ISBN ${item.isbn}` : 'Nomsiz'))}</h5>
                 <p className="mb-0 text-secondary f-s-13">#{item.id} · {item.seller} · {item.createdAt}</p>
               </div>
               <div className="d-flex gap-2 align-items-center flex-wrap">
                 {corrections
                   ? <span className="badge text-light-primary"><i className="ti ti-edit me-1"></i>{FIELD[item.field || 'other'] || item.field}</span>
-                  : <span className={`badge ${checkChip}`}><i className={`${checkIcon} me-1`}></i>{checkLabel}</span>}
+                  : <>
+                      {!item.editionId ? <span className="badge text-light-warning"><i className="ti ti-help-circle me-1"></i>Karta yo'q</span> : null}
+                      <span className={`badge ${checkChip}`}><i className={`${checkIcon} me-1`}></i>{checkLabel}</span>
+                    </>}
                 <span className={`badge ${statusChip}`}>{statusLabel}</span>
               </div>
             </div>
@@ -213,10 +219,30 @@ export default function CatalogSubmissions() {
 
                   <div className="d-flex gap-2 flex-wrap mt-3">
                     {edition?.url ? <Link href={edition.url} className="btn btn-light-primary btn-sm"><i className="ti ti-edit me-1"></i>Kartani ochish / tahrirlash</Link> : null}
+                    {pending && !corrections && !item.editionId ? (
+                      <FormAction
+                        label="Karta ochish"
+                        icon="ti ti-plus"
+                        variant="primary"
+                        size="sm"
+                        modalSize="lg"
+                        title="Do'kon so'rovidan karta ochish"
+                        description="ISBN va muqova rasmlari so'rovdan olinadi — kitob ma'lumotini siz to'ldirasiz. Karta ochilgach do'kon narx va qoldiqni kirita oladi."
+                        submitLabel="Kartani ochish"
+                        onSubmit={(event) => {
+                          event.preventDefault();
+                          router.post(item.createEditionUrl, new FormData(event.currentTarget), { forceFormData: true, preserveScroll: true });
+                        }}
+                      >
+                        <EditionFields values={{ isbn: item.isbn }} options={formOptions} />
+                      </FormAction>
+                    ) : null}
                     {pending ? (
                       <>
                         <button type="button" className="btn btn-light-danger btn-sm" onClick={() => setRejectTarget(item)}><i className="ti ti-x me-1"></i>Rad etish</button>
-                        <button type="button" className="btn btn-success btn-sm" onClick={() => router.post(item.approveUrl, {}, { preserveScroll: true })}><i className="ti ti-check me-1"></i>{corrections ? 'Qabul qilindi' : 'Tasdiqlash'}</button>
+                        {corrections || item.editionId ? (
+                          <button type="button" className="btn btn-success btn-sm" onClick={() => router.post(item.approveUrl, {}, { preserveScroll: true })}><i className="ti ti-check me-1"></i>{corrections ? 'Qabul qilindi' : 'Tasdiqlash'}</button>
+                        ) : null}
                       </>
                     ) : null}
                   </div>

@@ -331,6 +331,7 @@ class CatalogController extends Controller
                 ->mapWithKeys(fn ($s) => [$s => BookEditionSubmission::query()->where('type', $type)->where('status', $s)->count()])
                 ->put('all', BookEditionSubmission::query()->where('type', $type)->count())
                 ->all(),
+            'formOptions' => $this->formOptions(),
             'typeCounts' => [
                 BookEditionSubmission::TYPE_NEW => BookEditionSubmission::query()->where('type', BookEditionSubmission::TYPE_NEW)->where('status', BookEditionSubmission::STATUS_PENDING)->count(),
                 BookEditionSubmission::TYPE_CORRECTION => BookEditionSubmission::query()->where('type', BookEditionSubmission::TYPE_CORRECTION)->where('status', BookEditionSubmission::STATUS_PENDING)->count(),
@@ -340,14 +341,18 @@ class CatalogController extends Controller
 
     public function approveSubmission(BookEditionSubmission $submission): RedirectResponse
     {
-        if ($submission->status !== BookEditionSubmission::STATUS_PENDING || ! $submission->edition_id) {
+        if ($submission->status !== BookEditionSubmission::STATUS_PENDING) {
             return back()->with('error', "Ariza allaqachon ko'rib chiqilgan.");
+        }
+        if (! $submission->edition_id) {
+            return back()->with('error', "Bu so'rovda karta yo'q — avval \"Karta ochish\" orqali kitobni katalogga qo'shing.");
         }
 
         $edition = BookEdition::withTrashed()->find($submission->edition_id);
         if (! $edition || $edition->trashed() || in_array($edition->status, [BookEdition::STATUS_MERGED, BookEdition::STATUS_REJECTED], true)) {
             return back()->with('error', "Bu arizaning kartasi o'chirilgan yoki birlashtirilgan — arizani rad eting.");
         }
+
 
         // Tuzatish taklifi: karta tasdiqlanmaydi (u allaqachon faol) — admin
         // kartani o'zi tahrirlaydi, bu yerda ariza yopiladi.
@@ -362,6 +367,71 @@ class CatalogController extends Controller
         }
 
         return $this->verify((int) $submission->edition_id);
+    }
+
+    /**
+     * Do'kon "katalogga qo'shishni so'radi" (ISBN + ikki muqova rasmi, kitob
+     * ma'lumotisiz) — admin shu yerdan kartani ochadi. Rasm va ISBN arizadan
+     * olinadi, qolganini admin to'ldiradi. Karta ochilgach ariza unga
+     * bog'lanadi va do'kon narx/qoldiq kirita oladi.
+     */
+    public function createEditionFromSubmission(
+        Request $request,
+        BookEditionSubmission $submission,
+        AuthorDirectoryService $authors
+    ): RedirectResponse {
+        if ($submission->status !== BookEditionSubmission::STATUS_PENDING) {
+            return back()->with('error', "Ariza allaqachon ko'rib chiqilgan.");
+        }
+        if ($submission->edition_id) {
+            return back()->with('error', 'Bu arizada karta allaqachon bor.');
+        }
+
+        $data = $this->withAuthor($this->validateEdition($request, null), $authors);
+        // Admin ISBN maydonini bo'sh qoldirsa — arizadagi (skanerlangan) ISBN
+        // ishlatiladi. `$data + [...]` bu yerda ishlamaydi: kalit allaqachon
+        // bor (null), massiv qo'shuvi esa chapdagini saqlaydi.
+        if (blank($data['isbn13']) && filled($submission->isbn13)) {
+            $data['isbn13'] = $submission->isbn13;
+            $data['isbn10'] = Isbn::toIsbn10($submission->isbn13);
+        }
+        $uploaded = $this->storeImages($request);
+
+        // Rasm yuklanmasa — arizaning o'zidagi muqovalar ishlatiladi
+        $front = $uploaded['front'] ?? $submission->front_image;
+        $back = $uploaded['back'] ?? $submission->back_image;
+        $images = array_values(array_unique(array_filter(array_merge(
+            [$front, $back],
+            $uploaded['extra'],
+            array_filter((array) ($submission->payload['images'] ?? []), 'is_string')
+        ))));
+
+        $edition = DB::transaction(function () use ($data, $front, $back, $images, $submission) {
+            $edition = BookEdition::create($data + [
+                'front_image' => $front,
+                'back_image' => $back,
+                'images' => $images,
+                'status' => BookEdition::STATUS_ACTIVE,
+                'source' => 'seller',
+                'created_by_type' => 'seller',
+                'created_by_id' => $submission->seller_id,
+                'verified_at' => now(),
+            ]);
+
+            $submission->forceFill([
+                'edition_id' => $edition->id,
+                'status' => BookEditionSubmission::STATUS_APPROVED,
+                'reviewer_id' => Auth::guard('panel')->id(),
+                'reviewed_at' => now(),
+            ])->save();
+
+            return $edition;
+        });
+
+        $this->buyBox->touch((int) $edition->id);
+
+        return redirect()->route('boshqaruv.catalog.show', $edition->id)
+            ->with('success', "Karta ochildi. Do'kon endi narx va qoldiqni kirita oladi.");
     }
 
     public function rejectSubmission(Request $request, BookEditionSubmission $submission): RedirectResponse
@@ -772,6 +842,8 @@ class CatalogController extends Controller
             'message' => $s->payload['message'] ?? null,
             'field' => $s->payload['field'] ?? null,
             'suggested' => $s->payload['suggested'] ?? null,
+            // Qisqa so'rovda do'kon ko'rsatgan muqova (boshqa nashr holati)
+            'requestedCover' => $s->payload['coverType'] ?? null,
             'proofUrls' => collect((array) ($s->payload['images'] ?? []))
                 ->filter('is_string')
                 ->map(fn ($path) => ProductImageUrls::originalUrl($path))
@@ -782,6 +854,7 @@ class CatalogController extends Controller
             'rejectReason' => $s->reject_reason,
             'createdAt' => optional($s->created_at)->format('Y-m-d H:i'),
             'reviewedAt' => optional($s->reviewed_at)->format('Y-m-d H:i'),
+            'createEditionUrl' => route('boshqaruv.catalog.submissions.edition', $s->id),
             'approveUrl' => route('boshqaruv.catalog.submissions.approve', $s->id),
             'rejectUrl' => route('boshqaruv.catalog.submissions.reject', $s->id),
             'mergeUrl' => route('boshqaruv.catalog.submissions.merge', $s->id),

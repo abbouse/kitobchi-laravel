@@ -55,6 +55,8 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
             Route::get('/catalog/search', [\App\Http\Controllers\Boshqaruv\CatalogController::class, 'search'])->name('catalog.search');
             Route::get('/catalog/submissions', [\App\Http\Controllers\Boshqaruv\CatalogController::class, 'submissions'])->name('catalog.submissions');
             Route::post('/catalog/submissions/{submission}/approve', [\App\Http\Controllers\Boshqaruv\CatalogController::class, 'approveSubmission'])->name('catalog.submissions.approve');
+            // Kartasiz so'rovdan (ISBN + muqova rasmlari) karta ochish
+            Route::post('/catalog/submissions/{submission}/edition', [\App\Http\Controllers\Boshqaruv\CatalogController::class, 'createEditionFromSubmission'])->name('catalog.submissions.edition');
             Route::post('/catalog/submissions/{submission}/reject', [\App\Http\Controllers\Boshqaruv\CatalogController::class, 'rejectSubmission'])->name('catalog.submissions.reject');
             Route::post('/catalog/submissions/{submission}/merge', [\App\Http\Controllers\Boshqaruv\CatalogController::class, 'mergeSubmission'])->name('catalog.submissions.merge');
             Route::post('/catalog', [\App\Http\Controllers\Boshqaruv\CatalogController::class, 'store'])->name('catalog.store');

@@ -47,7 +47,15 @@ php artisan catalog:buybox
 ## 3. Nima o'zgardi
 
 **Do'kon ilovasi (kitobchibusiness)**
-- Kitob qo'shish: ISBN skan → karta topilsa faqat narx/qoldiq; topilmasa old+orqa muqova bilan ariza.
+- Kitob qo'shish: ISBN skan → karta topilsa faqat narx/qoldiq.
+- **Do'kon endi kitob ma'lumotini umuman kiritmaydi.** To'liq forma (nom,
+  muallif, tavsif, kategoriya…) olib tashlandi. Katalogda yo'q kitob uchun
+  do'kon faqat **qisqa so'rov** yuboradi: ISBN + old/orqa muqova rasmi.
+  Kartani admin ochadi (Boshqaruv → Katalog → Arizalar → "Karta ochish"),
+  so'ng do'kon "So'rovlarim" ro'yxatidan narx va qoldiqni kiritadi.
+- "ISBN'siz kitob qo'shish" yo'li butunlay olib tashlandi — ISBN majburiy.
+- Eski ilova versiyalari to'liq forma yuborsa ham ishlashda davom etadi
+  (server ikkala shaklni ham qabul qiladi).
 - Kitobni tahrirlash: kartaga ulangan bo'lsa forma faqat **narx, chegirma, qoldiq** ko'rsatadi; kitob ma'lumoti o'qish uchun.
 - Yangi: **"Tuzatish taklif qilish"** — `POST catalog/editions/{id}/correction`
   (`field`, `message`, `suggested`, 3 tagacha rasm). Bir kartaga bir do'kondan
