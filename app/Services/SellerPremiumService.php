@@ -99,8 +99,12 @@ class SellerPremiumService
                 return $this->snapshot($seller, $subscription->fresh());
             }
 
-            $seller->balance -= (int) $subscription->price_uzs;
-            $seller->save();
+            \App\Models\SellerBalanceEntry::record(
+                $seller, -(int) $subscription->price_uzs,
+                \App\Models\SellerBalanceEntry::TYPE_PREMIUM_RENEWAL,
+                'seller_premium_subscription', (int) $subscription->id,
+                'Premium obuna avto-uzaytirish'
+            );
 
             $base = $subscription->expires_at && $subscription->expires_at->isFuture()
                 ? $subscription->expires_at->copy()
@@ -141,8 +145,12 @@ class SellerPremiumService
                 ];
             }
 
-            $seller->balance -= (int) $plan['price'];
-            $seller->save();
+            \App\Models\SellerBalanceEntry::record(
+                $seller, -(int) $plan['price'],
+                \App\Models\SellerBalanceEntry::TYPE_PREMIUM,
+                'seller_premium_plan', null,
+                'Premium obuna: ' . $plan['label']
+            );
 
             if ($subscription && $subscription->status === SellerPremiumSubscription::STATUS_ACTIVE && $subscription->expires_at && $subscription->expires_at->isFuture()) {
                 $newExpiry = $subscription->expires_at->copy()->addMonths((int) $plan['months']);

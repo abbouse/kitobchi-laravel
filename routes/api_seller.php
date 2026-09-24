@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\Seller\BanLogController;
 use App\Http\Controllers\Api\Seller\CatalogController;
+use App\Http\Controllers\Api\Seller\CatalogSlotController;
 use App\Http\Controllers\Api\Seller\ConversationController;
 use App\Http\Controllers\Api\Seller\GiftController;
 use App\Http\Controllers\Api\Seller\HisobotController;
@@ -66,6 +67,13 @@ Route::middleware('auth:seller')->group(function () {
     // Kartadagi xatoni do'kon o'zi tuzatolmaydi — faqat taklif yuboradi
     Route::post('catalog/editions/{id}/correction', [CatalogController::class, 'storeCorrection'])
         ->whereNumber('id')->middleware('throttle:20,60');
+    // KATALOG JOYI: kitob kartasida birinchi/tanlangan do'kon bo'lish (pullik)
+    Route::get('catalog-slots/info', [CatalogSlotController::class, 'info']);
+    Route::get('catalog-slots/books', [CatalogSlotController::class, 'books']);
+    Route::get('catalog-slots/quote', [CatalogSlotController::class, 'quote']);
+    Route::post('catalog-slots', [CatalogSlotController::class, 'store'])->middleware('throttle:20,60');
+    Route::delete('catalog-slots/{id}', [CatalogSlotController::class, 'destroy'])->whereNumber('id');
+
     Route::get('products/stationery/by-barcode/{barcode}', [ProductController::class, 'lookupStationeryByBarcode']);
     Route::post('products/stock/by-code', [ProductController::class, 'updateStockByCode']);
     Route::get('products/categories', [ProductController::class, 'getCategories']);

@@ -51,6 +51,13 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
             Route::post('/books', [\App\Http\Controllers\Boshqaruv\CatalogController::class, 'storeBook'])->name('books.store');
             Route::delete('/books/{book}', [\App\Http\Controllers\Boshqaruv\CatalogController::class, 'archiveBook'])->name('books.archive');
             Route::patch('/books/{book}/restore', [\App\Http\Controllers\Boshqaruv\CatalogController::class, 'restoreBook'])->name('books.restore');
+            // KATALOG JOYI (pullik buy box): moderatsiya navbati va narx
+            Route::get('/catalog-slots', [\App\Http\Controllers\Boshqaruv\CatalogSlotController::class, 'index'])->name('catalog-slots');
+            Route::post('/catalog-slots/settings', [\App\Http\Controllers\Boshqaruv\CatalogSlotController::class, 'saveSettings'])->name('catalog-slots.settings');
+            Route::post('/catalog-slots/{slot}/approve', [\App\Http\Controllers\Boshqaruv\CatalogSlotController::class, 'approve'])->whereNumber('slot')->name('catalog-slots.approve');
+            Route::post('/catalog-slots/{slot}/reject', [\App\Http\Controllers\Boshqaruv\CatalogSlotController::class, 'reject'])->whereNumber('slot')->name('catalog-slots.reject');
+            Route::post('/catalog-slots/{slot}/stop', [\App\Http\Controllers\Boshqaruv\CatalogSlotController::class, 'stop'])->whereNumber('slot')->name('catalog-slots.stop');
+
             Route::get('/catalog', [\App\Http\Controllers\Boshqaruv\CatalogController::class, 'index'])->name('catalog');
             Route::get('/catalog/search', [\App\Http\Controllers\Boshqaruv\CatalogController::class, 'search'])->name('catalog.search');
             Route::get('/catalog/submissions', [\App\Http\Controllers\Boshqaruv\CatalogController::class, 'submissions'])->name('catalog.submissions');

@@ -58,7 +58,7 @@ class ExternalAndShopApiTest extends TestCase
         $missing->assertStatus(401);
         $missing->assertJson([
             'status' => 'error',
-            'message' => 'API credentials missing',
+            'message' => 'Kalit yuborilmagan.',
         ]);
 
         // 2. Invalid credentials -> 403
@@ -70,7 +70,7 @@ class ExternalAndShopApiTest extends TestCase
         $invalid->assertStatus(403);
         $invalid->assertJson([
             'status' => 'error',
-            'message' => 'Invalid or inactive API credentials',
+            'message' => "Kalit noto'g'ri yoki o'chirilgan.",
         ]);
     }
 
@@ -120,7 +120,7 @@ class ExternalAndShopApiTest extends TestCase
         $response->assertStatus(403);
         $response->assertJson([
             'status' => 'error',
-            'message' => 'Missing ability: stock:write',
+            'message' => 'Ruxsat yetarli emas: stock:write',
         ]);
     }
 

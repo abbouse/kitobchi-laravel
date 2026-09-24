@@ -27,8 +27,17 @@ final class CatalogOffers
             ->limit($limit)
             ->get();
 
-        return self::sort($offers)
+        // Kartada pullik joy bo'lsa — g'olib o'sha, va mijozga "homiy" deb belgilanadi.
+        // Migratsiya hali yurgizilmagan bo'lsa kitob sahifasi buzilmasin.
+        try {
+            $sponsoredId = \App\Services\Catalog\CatalogSlotService::runningBookId($editionId);
+        } catch (\Throwable $e) {
+            $sponsoredId = null;
+        }
+
+        return self::sort($offers, $currentBookId)
             ->map(fn (Books $offer) => [
+                'is_sponsored' => $sponsoredId !== null && (int) $offer->id === $sponsoredId,
                 'id' => (int) $offer->id,
                 'artikul' => $offer->artikul,
                 'price' => (int) $offer->price,
@@ -56,18 +65,28 @@ final class CatalogOffers
             ->all();
     }
 
-    /** @param Collection<int, Books> $offers */
-    public static function sort(Collection $offers): Collection
+    /**
+     * Do'kon tanlash ro'yxatining tartibi.
+     *
+     * 1. Mijoz aynan shu do'kon orqali kirgan bo'lsa (masalan do'kon
+     *    profilidan) — o'sha taklif birinchi va tanlangan bo'ladi;
+     * 2. keyin karta g'olibi (`catalog_featured`) — bu pullik joy egasi yoki
+     *    buy box qoidasi bo'yicha eng yaxshi taklif;
+     * 3. so'ng sotuvda borlari, arzonlari, oxirida id (barqaror tartib).
+     *
+     * @param  Collection<int, Books>  $offers
+     */
+    public static function sort(Collection $offers, ?int $currentBookId = null): Collection
     {
-        return $offers->sort(fn (Books $a, Books $b) => [
-            $b->count > 0 ? 1 : 0,
-            BuyBoxService::effectivePrice($a),
-            (int) $a->id,
-        ] <=> [
-            $a->count > 0 ? 1 : 0,
-            BuyBoxService::effectivePrice($b),
-            (int) $b->id,
-        ])->values();
+        $key = fn (Books $o) => [
+            $currentBookId !== null && (int) $o->id === $currentBookId ? 0 : 1,
+            (bool) $o->catalog_featured ? 0 : 1,
+            $o->count > 0 ? 0 : 1,
+            BuyBoxService::effectivePrice($o),
+            (int) $o->id,
+        ];
+
+        return $offers->sort(fn (Books $a, Books $b) => $key($a) <=> $key($b))->values();
     }
 
     /**

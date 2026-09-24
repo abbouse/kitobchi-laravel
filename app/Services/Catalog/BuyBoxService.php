@@ -111,6 +111,14 @@ class BuyBoxService
         $featuredId = $ranked->first()?->id
             ?? $offers->sortBy(fn (Books $b) => [(int) $b->is_approved === 1 ? 0 : 1, $b->archived_at ? 1 : 0, -(int) $b->id])->first()?->id;
         $inStock = $eligible->filter(fn (Books $b) => $b->totalAvailableStock() > 0);
+
+        // PULLIK JOY eng yuqori ustunlikka ega, lekin faqat sotuvga yaroqli bo'lsa.
+        // Qoldig'i tugagan do'kon joyni vaqtincha boy beradi (muddat baribir ketadi) —
+        // aks holda mijozga sotib bo'lmaydigan taklif birinchi bo'lib ko'rinardi.
+        $paidId = $this->paidFeaturedId($editionId, $eligible, $inStock);
+        if ($paidId !== null) {
+            $featuredId = $paidId;
+        }
         $priced = $inStock->isNotEmpty() ? $inStock : $eligible;
 
         $changed = [];
@@ -177,6 +185,41 @@ class BuyBoxService
         }
 
         return $price;
+    }
+
+    /**
+     * Pullik joy egasi g'olib bo'la oladimi?
+     *
+     * Shartlar: joy kuchda, taklif ko'rinadigan holatda, va qoldig'i bor.
+     * Qoldig'i yo'q bo'lsa — boshqa do'konlarda ham qoldiq bo'lmasagina qoladi
+     * (hech kim sotolmasa, joyni boy berishning ma'nosi yo'q).
+     *
+     * @param  \Illuminate\Support\Collection<int, Books>  $eligible
+     * @param  \Illuminate\Support\Collection<int, Books>  $inStock
+     */
+    private function paidFeaturedId(int $editionId, $eligible, $inStock): ?int
+    {
+        try {
+            $paidId = CatalogSlotService::runningBookId($editionId);
+        } catch (\Throwable $e) {
+            // Jadval hali migratsiya qilinmagan bo'lsa buy box ishlashdan to'xtamasin.
+            return null;
+        }
+
+        if ($paidId === null) {
+            return null;
+        }
+
+        $offer = $eligible->first(fn (Books $b) => (int) $b->id === $paidId);
+        if (! $offer) {
+            return null;
+        }
+
+        if ($offer->totalAvailableStock() > 0 || $inStock->isEmpty()) {
+            return $paidId;
+        }
+
+        return null;
     }
 
     private function isEligible(Books $book, ?Seller $seller): bool

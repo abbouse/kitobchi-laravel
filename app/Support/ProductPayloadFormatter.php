@@ -109,7 +109,67 @@ class ProductPayloadFormatter
             $payload['seller'] = array_merge($payload['seller'] ?? [], $options['seller_extra']);
         }
 
+        // Ulashish/deeplink havolalari — hamma javobda (qo'shimcha maydon,
+        // eski mijozlar e'tiborsiz qoldiradi).
+        $payload['deeplink'] = ProductDeeplink::forProduct($type, (string) $product->id, $product->artikul ?? null);
+
+        // HAMKOR API: do'konga kitob kartasining ma'lumoti berilmaydi
+        if (self::isPartnerRequest()) {
+            $payload = self::partnerProjection($payload);
+        }
+
         return $payload;
+    }
+
+    /**
+     * Hamkor API so'rovimi? `VerifyApiClient` kalitni tekshirgach so'rovga
+     * `api_client` atributini qo'yadi.
+     */
+    private static function isPartnerRequest(): bool
+    {
+        try {
+            return (bool) request()?->attributes?->get('api_client');
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
+    /**
+     * HAMKOR API PROYEKSIYASI.
+     *
+     * Do'kon o'z tizimini bizga ulaganda unga kitobning nomi, ISBN'i va O'ZI
+     * kiritgan maydonlari (narx, chegirma, qoldiq, artikul) kerak — kitob
+     * kartasining qolgan ma'lumoti (muallif, tavsif, rasmlar, nashriyot, til,
+     * muqova, kategoriya, teglar) bizniki va berilmaydi.
+     *
+     * Eng muhimi: `offers` va `min_price` RAQOBATCHI do'konlarning narxi va
+     * qoldig'i edi — ular ham olib tashlanadi.
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private static function partnerProjection(array $payload): array
+    {
+        $allowed = [
+            'id', 'artikul', 'type', 'product_type', 'name', 'isbn', 'edition_id',
+            'price', 'discountPrice', 'count', 'stock', 'stock_display',
+            'sales', 'weekly_sales',
+            'ugc_aggregate_score', 'ugc_reviews_count', 'ugc_last_scored_at',
+            'deeplink',
+        ];
+
+        $projected = array_intersect_key($payload, array_flip($allowed));
+        $projected['in_stock'] = (int) ($payload['stock'] ?? 0) > 0;
+
+        // Do'kon nomi ommaviy ma'lumot — qolgan do'kon maydonlari kerak emas
+        if (isset($payload['seller']) && is_array($payload['seller'])) {
+            $projected['seller'] = [
+                'seller_id' => $payload['seller']['seller_id'] ?? null,
+                'shop_name' => $payload['seller']['shop_name'] ?? null,
+            ];
+        }
+
+        return $projected;
     }
 
     /**

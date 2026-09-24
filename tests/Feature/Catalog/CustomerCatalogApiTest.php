@@ -41,7 +41,9 @@ class CustomerCatalogApiTest extends TestCase
         // Sotuvda yo'q, lekin eng arzon taklif sahifasi ham ochiladi
         $detail = $this->getJson(self::API . "share/product/{$a->id}?type=book")->assertOk();
         $offers = collect($detail->json('data.offers'));
-        $this->assertSame([$b->id, $a->id, $c->id], $offers->pluck('id')->all());
+        // Mijoz qaysi do'kon orqali kirgan bo'lsa (`$a`) — o'sha birinchi va
+        // tanlangan turadi; keyin karta g'olibi (`$b`), so'ng qolganlari.
+        $this->assertSame([$a->id, $b->id, $c->id], $offers->pluck('id')->all());
         $this->assertTrue($offers->firstWhere('id', $a->id)['is_current']);
         $this->assertTrue($offers->firstWhere('id', $b->id)['is_featured']);
         $this->assertFalse($offers->firstWhere('id', $c->id)['in_stock']);

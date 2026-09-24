@@ -639,9 +639,48 @@ class ApiDocsController extends Controller
                     'response' => [
                         'status' => 'success',
                         'data' => [
-                            ['id' => 128, 'type' => 'book', 'name' => 'Atomic Habits', 'code' => '9781847941831', 'price' => 89000, 'stock' => 25, 'in_stock' => true],
+                            [
+                                'id' => 128, 'type' => 'book', 'name' => 'Atomic Habits',
+                                'code' => '9781847941831', 'artikul' => '10000128',
+                                'price' => 89000, 'stock' => 25, 'in_stock' => true,
+                                'rating' => 4.6, 'reviews_count' => 87,
+                                'deeplink' => [
+                                    'web_url' => 'https://kitobchi.com/book/128',
+                                    'app_scheme_url' => 'kitobchi://book/128',
+                                    'smart_redirect_url' => 'https://kitobchi.com/r/book/128',
+                                    'short_url' => 'https://kitobchi.com/art/10000128',
+                                ],
+                            ],
                         ],
                         'meta' => ['page' => 1, 'per_page' => 50, 'total' => 240],
+                    ],
+                ],
+                [
+                    'id' => 'seller-my-reviews',
+                    'method' => 'GET',
+                    'path' => '/products/mine/reviews',
+                    'title' => 'Mening kitoblarim sharhlari',
+                    'summary' => 'Do‘kon o‘z kitoblariga yozilgan sharhlarni o‘qiydi. Sharh va baho kitob kartasiga tegishli, shuning uchun bir xil kitobni sotayotgan do‘konlar bir xil sharhlarni ko‘radi. Mijoz ismi berilmaydi.',
+                    'ability' => 'stock:write',
+                    'cache' => false,
+                    'path_params' => [],
+                    'query_params' => [
+                        ['name' => 'code', 'type' => 'string', 'required' => false, 'desc' => 'Bitta mahsulot uchun: ISBN yoki 8 xonali artikul.', 'example' => '9781847941831'],
+                        ['name' => 'per_page', 'type' => 'integer', 'required' => false, 'desc' => 'Sahifadagi soni (1–100).', 'example' => 20],
+                        ['name' => 'page', 'type' => 'integer', 'required' => false, 'desc' => 'Sahifa raqami.', 'example' => 1],
+                    ],
+                    'response' => [
+                        'status' => 'success',
+                        'data' => [
+                            [
+                                'id' => 9012, 'product_id' => 128, 'name' => 'Atomic Habits',
+                                'code' => '9781847941831', 'artikul' => '10000128',
+                                'text' => 'Juda foydali kitob.', 'score' => 4.8,
+                                'likes_count' => 12, 'comments_count' => 3,
+                                'created_at' => '2026-09-01T10:00:00+05:00',
+                            ],
+                        ],
+                        'meta' => ['page' => 1, 'per_page' => 20, 'total' => 87],
                     ],
                 ],
             ],

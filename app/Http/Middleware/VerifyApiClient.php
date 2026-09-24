@@ -42,7 +42,7 @@ class VerifyApiClient
         if (!$appId || !$appSecret) {
             return response()->json([
                 'status'  => 'error',
-                'message' => 'API credentials missing',
+                'message' => "Kalit yuborilmagan.",
             ], 401);
         }
 
@@ -54,7 +54,7 @@ class VerifyApiClient
         if (!$client || !hash_equals((string) $client->app_secret, (string) $appSecret)) {
             return response()->json([
                 'status'  => 'error',
-                'message' => 'Invalid or inactive API credentials',
+                'message' => "Kalit noto'g'ri yoki o'chirilgan.",
             ], 403);
         }
 
@@ -64,7 +64,7 @@ class VerifyApiClient
 
             return response()->json([
                 'status'  => 'error',
-                'message' => 'IP address not allowed for this API key',
+                'message' => "Bu IP manzilga ruxsat yo'q.",
             ], 403);
         }
 
@@ -88,7 +88,7 @@ class VerifyApiClient
                 if (!in_array('*', $clientAbilities, true) && !in_array($ability, $clientAbilities, true)) {
                     return response()->json([
                         'status'  => 'error',
-                        'message' => "Missing ability: {$ability}",
+                        'message' => "Ruxsat yetarli emas: {$ability}",
                     ], 403);
                 }
             }
@@ -133,7 +133,7 @@ class VerifyApiClient
 
             return response()->json([
                 'status' => 'error',
-                'message' => 'Rate limit oshib ketdi. Keyinroq urinib ko‘ring.',
+                'message' => "So'rovlar chegarasi oshdi. Keyinroq urinib ko'ring.",
                 'retry_after' => $retryAfter,
             ], 429, [
                 'Retry-After' => (string) $retryAfter,

@@ -6,8 +6,11 @@ namespace App\Http\Controllers\Api\Client;
 
 use App\Http\Controllers\Controller;
 use App\Models\ApiClient;
+use App\Models\Books;
 use App\Models\Seller;
 use App\Models\Stationery;
+use App\Support\CatalogOffers;
+use App\Support\ProductDeeplink;
 use App\Support\StockCodeLookup;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -25,7 +28,7 @@ class SellerApiController extends Controller
     {
         $sellerId = $this->sellerId($request);
         if ($sellerId === null) {
-            return response()->json(['status' => 'error', 'message' => 'This API key is not scoped to a seller.'], 403);
+            return response()->json(['status' => 'error', 'message' => "Bu kalit do'konga bog'lanmagan."], 403);
         }
 
         $data = $request->validate([
@@ -38,7 +41,7 @@ class SellerApiController extends Controller
         $hasStock = array_key_exists('stock', $data) && $data['stock'] !== null;
         $hasDelta = array_key_exists('delta', $data) && $data['delta'] !== null;
         if (! $hasStock && ! $hasDelta) {
-            return response()->json(['status' => 'error', 'message' => 'Provide "stock" or "delta".'], 422);
+            return response()->json(['status' => 'error', 'message' => '"stock" yoki "delta" yuboring.'], 422);
         }
 
         // Idempotentlik: bir xil Idempotency-Key bilan takroriy so'rov 2x qo'llanmaydi.
@@ -64,12 +67,12 @@ class SellerApiController extends Controller
     {
         $sellerId = $this->sellerId($request);
         if ($sellerId === null) {
-            return response()->json(['status' => 'error', 'message' => 'This API key is not scoped to a seller.'], 403);
+            return response()->json(['status' => 'error', 'message' => "Bu kalit do'konga bog'lanmagan."], 403);
         }
 
         $seller = Seller::find($sellerId);
         if (! $seller) {
-            return response()->json(['status' => 'error', 'message' => 'Seller not found.'], 404);
+            return response()->json(['status' => 'error', 'message' => "Do'kon topilmadi."], 404);
         }
 
         $type = $request->query('type', 'book') === 'stationery' ? 'stationery' : 'book';
@@ -91,6 +94,10 @@ class SellerApiController extends Controller
                 'price' => (int) ($b->price ?? 0),
                 'stock' => (int) ($b->count ?? 0),
                 'in_stock' => (int) ($b->count ?? 0) > 0,
+                // Kitob bahosi — mijozlar sharhlaridan hisoblanadi
+                'rating' => (float) ($b->ugc_aggregate_score ?? 0),
+                'reviews_count' => (int) ($b->ugc_reviews_count ?? 0),
+                'deeplink' => ProductDeeplink::forProduct('book', (int) $b->id, $b->artikul),
             ])->all();
         } else {
             $page = $seller->stationeries()->where('is_hidden', false)->orderByDesc('updated_at')->paginate($per);
@@ -102,8 +109,91 @@ class SellerApiController extends Controller
                 'price' => (int) ($s->price ?? 0),
                 'stock' => (int) ($s->stock ?? 0),
                 'in_stock' => (int) ($s->stock ?? 0) > 0,
+                'rating' => (float) ($s->ugc_aggregate_score ?? 0),
+                'reviews_count' => (int) ($s->ugc_reviews_count ?? 0),
+                'deeplink' => ProductDeeplink::forProduct('stationery', (int) $s->id, $s->artikul ?? null),
             ])->all();
         }
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $data,
+            'meta' => [
+                'page' => $page->currentPage(),
+                'per_page' => $page->perPage(),
+                'total' => $page->total(),
+            ],
+        ]);
+    }
+
+    /**
+     * GET products/mine/reviews — do'kon O'Z kitoblariga yozilgan sharhlarni
+     * o'qiydi.
+     *
+     * Sharh va baho kitob KARTASIGA tegishli (bitta jismoniy kitob — bitta
+     * baho), shuning uchun bir xil kitobni sotayotgan do'konlar bir xil
+     * sharhlarni ko'radi. Sharh muallifining ismi berilmaydi — faqat matn,
+     * sana va baho.
+     */
+    public function myReviews(Request $request): JsonResponse
+    {
+        $sellerId = $this->sellerId($request);
+        if ($sellerId === null) {
+            return response()->json(['status' => 'error', 'message' => "Bu kalit do'konga bog'lanmagan."], 403);
+        }
+
+        $per = min(100, max(1, (int) $request->query('per_page', 20)));
+        $code = trim((string) $request->query('code', ''));
+
+        $books = Books::query()
+            ->where('seller_id', $sellerId)
+            ->where('is_hidden', false)
+            ->whereNull('archived_at')
+            ->when($code !== '', function ($q) use ($sellerId, $code) {
+                $lookup = StockCodeLookup::findSellerBook($sellerId, $code);
+                $q->whereKey($lookup['book']?->id ?? 0);
+            })
+            ->get(['id', 'name', 'isbn', 'artikul', 'edition_id']);
+
+        if ($books->isEmpty()) {
+            return response()->json(['status' => 'success', 'data' => [], 'meta' => ['page' => 1, 'per_page' => $per, 'total' => 0]]);
+        }
+
+        // Sharhlar kartaga yozilgani uchun do'konning har kitobi bo'yicha
+        // "qardosh" takliflar ham hisobga olinadi.
+        $byProductId = [];
+        $productIds = [];
+        foreach ($books as $book) {
+            foreach (CatalogOffers::siblingIds($book->edition_id ? (int) $book->edition_id : null, (int) $book->id) as $siblingId) {
+                $byProductId[$siblingId] = $book;
+                $productIds[] = $siblingId;
+            }
+        }
+
+        $page = \App\Models\BookClub::query()
+            ->whereIn('product_id', array_values(array_unique($productIds)))
+            ->where('product_type', 'book')
+            ->where('is_deleted', false)
+            ->withCount(['likes', 'comments'])
+            ->latest('id')
+            ->paginate($per);
+
+        $data = collect($page->items())->map(function ($post) use ($byProductId) {
+            $book = $byProductId[(int) $post->product_id] ?? null;
+
+            return [
+                'id' => (int) $post->id,
+                'product_id' => $book?->id,
+                'name' => $book?->name,
+                'code' => $book?->isbn,
+                'artikul' => $book?->artikul,
+                'text' => $post->text,
+                'score' => $post->ai_post_score !== null ? (float) $post->ai_post_score : null,
+                'likes_count' => (int) ($post->likes_count ?? 0),
+                'comments_count' => (int) ($post->comments_count ?? 0),
+                'created_at' => optional($post->created_at)?->toIso8601String(),
+            ];
+        })->all();
 
         return response()->json([
             'status' => 'success',
@@ -123,7 +213,7 @@ class SellerApiController extends Controller
     {
         $seller = Seller::find($sellerId);
         if (! $seller) {
-            return [['status' => 'error', 'success' => false, 'message' => 'Seller not found.'], 404];
+            return [['status' => 'error', 'success' => false, 'message' => "Do'kon topilmadi."], 404];
         }
 
         $code = trim($data['code']);
@@ -149,14 +239,14 @@ class SellerApiController extends Controller
                     'status' => 'error',
                     'success' => false,
                     'code' => 'ambiguous_code',
-                    'message' => 'Several editions share this ISBN in your store. Send "code" as the 8-digit artikul instead.',
+                    'message' => "Bu ISBN bilan bir nechta nashr bor. \"code\" sifatida 8 xonali artikul yuboring.",
                     'candidates' => StockCodeLookup::candidates($lookup['matches']),
                 ], 409];
             }
             if ($type === 'book') {
                 return $lookup['reason'] === 'invalid_isbn'
-                    ? [['status' => 'error', 'success' => false, 'message' => 'Invalid ISBN format.'], 422]
-                    : [['status' => 'error', 'success' => false, 'message' => 'Code not found in your store.'], 404];
+                    ? [['status' => 'error', 'success' => false, 'message' => "ISBN formati noto'g'ri."], 422]
+                    : [['status' => 'error', 'success' => false, 'message' => "Bu kod do'koningizda topilmadi."], 404];
             }
         }
 
@@ -177,7 +267,7 @@ class SellerApiController extends Controller
             }
         }
 
-        return [['status' => 'error', 'success' => false, 'message' => 'No product with this code in your store.'], 404];
+        return [['status' => 'error', 'success' => false, 'message' => "Bu kod bo'yicha mahsulot yo'q."], 404];
     }
 
     private function ok(string $type, int $id, ?string $name, int $stock): array

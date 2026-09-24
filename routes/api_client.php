@@ -10,6 +10,8 @@ use App\Http\Controllers\Api\Client\SellerApiController;
 Route::middleware('api.client:stock:write')->group(function () {
     Route::post('products/stock/by-code', [SellerApiController::class, 'updateStockByCode']);
     Route::get('products/mine', [SellerApiController::class, 'myProducts']);
+    // Do'kon o'z kitoblariga yozilgan sharhlarni o'qiydi
+    Route::get('products/mine/reviews', [SellerApiController::class, 'myReviews']);
 });
 
 // ── Public READ API ──────────────────────────────────────────────────────
@@ -42,6 +44,8 @@ Route::middleware('api.client:read')->group(function () {
         Route::get('suggestions', [SearchController::class, 'suggestions']);
         Route::get('trending', [SearchController::class, 'trendingSearches']);
         Route::get('categories', [SearchController::class, 'allCategories']);
-        Route::get('category/{cat_id}/{type}', [SearchController::class, 'category']);
+        // `category` metodi hech qachon mavjud bo'lmagan — bu yo'l har chaqiruvda
+        // 500 qaytarardi. Mavjud metodga yo'naltirildi.
+        Route::get('category/{cat_id}/{type}', [SearchController::class, 'categoryBySellers']);
     });
 });

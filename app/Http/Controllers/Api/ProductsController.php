@@ -1312,6 +1312,17 @@ class ProductsController extends Controller
 
     public function sellerProductByCode(Request $request, $sellerId, string $code)
     {
+        // XAVFSIZLIK: hamkor API kaliti bitta do'konga bog'langan. `{sellerId}`
+        // URLdan kelgani uchun ilgari do'kon o'z kaliti bilan RAQOBATCHISINING
+        // butun assortimentini ISBN bo'yicha o'qiy olardi. Endi faqat o'zini.
+        $apiSellerId = $request->attributes->get('api_seller_id');
+        if ($apiSellerId !== null && (int) $apiSellerId !== (int) $sellerId) {
+            return response()->json([
+                'status' => 'error',
+                'message' => "Bu do'kon ma'lumotiga ruxsat yo'q.",
+            ], 403);
+        }
+
         $normalizedCode = $this->normalizeScannedProductCode($code);
         if ($normalizedCode === null) {
             return response()->json([
@@ -1843,26 +1854,13 @@ class ProductsController extends Controller
         $type = strtolower((string) $request->input('type', 'book'));
         $id = (int) $request->input('id', 1);
 
-        $path = match ($type) {
-            'stationery' => "stationery/{$id}",
-            'seller'     => "seller/{$id}",
-            default      => "book/{$id}",
-        };
-
-        $baseUrl = config('app.url', 'https://kitobchi.com');
-        $baseUrl = rtrim($baseUrl, '/');
-
         return response()->json([
             'status' => 'success',
-            'data'   => [
-                'type'               => $type,
-                'id'                 => $id,
-                'web_url'            => "{$baseUrl}/{$path}",
-                'app_scheme_url'     => "kitobchi://{$path}",
-                'play_store_url'     => 'https://play.google.com/store/apps/details?id=com.kitobchi.app',
-                'app_store_url'      => 'https://apps.apple.com/app/kitobchi/id6470000000',
-                'smart_redirect_url' => "{$baseUrl}/r/{$path}",
-            ],
+            'data'   => array_merge(
+                ['type' => $type, 'id' => $id],
+                \App\Support\ProductDeeplink::forProduct($type, $id),
+                \App\Support\ProductDeeplink::stores(),
+            ),
         ]);
     }
 }

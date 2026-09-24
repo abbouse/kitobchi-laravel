@@ -721,7 +721,7 @@
           </div>
           <pre>{
   "status": "error",
-  "message": "Invalid or inactive API credentials"
+  "message": "Kalit noto'g'ri yoki o'chirilgan."
 }</pre>
         </div>
 
@@ -1016,28 +1016,31 @@ if (! hash_equals($expected, $signature)) {
         <h2 class="doc-h2" id="statuses">HTTP status kodlar</h2>
         <div class="status-table">
           <div class="status-row">
-            <span class="status-code">200</span><span class="status-label">OK</span><span class="status-desc">So'rov muvaffaqiyatli bajarildi</span>
+            <span class="status-code">200</span><span class="status-label">OK</span><span class="status-desc">Muvaffaqiyatli</span>
           </div>
           <div class="status-row">
-            <span class="status-code">304</span><span class="status-label">Not Modified</span><span class="status-desc">Ma'lumot o'zgarmagan (ETag + <span class="ic">If-None-Match</span>)</span>
+            <span class="status-code">304</span><span class="status-label">Not Modified</span><span class="status-desc">O'zgarmagan</span>
           </div>
           <div class="status-row">
-            <span class="status-code">401</span><span class="status-label">Unauthorized</span><span class="status-desc">Credential headerlar yo'q yoki noto'g'ri</span>
+            <span class="status-code">401</span><span class="status-label">Unauthorized</span><span class="status-desc">Kalit yuborilmagan</span>
           </div>
           <div class="status-row">
-            <span class="status-code">403</span><span class="status-label">Forbidden</span><span class="status-desc">Kalit nofaol, ability yetarli emas, yoki IP ruxsatsiz</span>
+            <span class="status-code">403</span><span class="status-label">Forbidden</span><span class="status-desc">Ruxsat yo'q</span>
           </div>
           <div class="status-row">
-            <span class="status-code">404</span><span class="status-label">Not Found</span><span class="status-desc">Endpoint yo'q yoki ma'lumot topilmadi</span>
+            <span class="status-code">404</span><span class="status-label">Not Found</span><span class="status-desc">Topilmadi</span>
           </div>
           <div class="status-row">
-            <span class="status-code">422</span><span class="status-label">Unprocessable</span><span class="status-desc">Majburiy parametr yo'q yoki noto'g'ri qiymat</span>
+            <span class="status-code">422</span><span class="status-label">Unprocessable</span><span class="status-desc">Parametr noto'g'ri</span>
           </div>
           <div class="status-row">
-            <span class="status-code">429</span><span class="status-label">Too Many Requests</span><span class="status-desc">Rate limit oshdi — <span class="ic">Retry-After</span> soniya kuting</span>
+            <span class="status-code">409</span><span class="status-label">Conflict</span><span class="status-desc">Kod bir nechta mahsulotga mos keldi</span>
           </div>
           <div class="status-row">
-            <span class="status-code">5xx</span><span class="status-label">Server Error</span><span class="status-desc">Server ichki xatosi — exponential backoff bilan qayta urinib ko'ring</span>
+            <span class="status-code">429</span><span class="status-label">Too Many Requests</span><span class="status-desc">So'rov ko'p — <span class="ic">Retry-After</span> kuting</span>
+          </div>
+          <div class="status-row">
+            <span class="status-code">5xx</span><span class="status-label">Server Error</span><span class="status-desc">Server xatosi</span>
           </div>
         </div>
 
@@ -1049,7 +1052,7 @@ if (! hash_equals($expected, $signature)) {
           </div>
           <pre>{
   "status": "error",
-  "message": "Invalid or inactive API credentials"
+  "message": "Kalit noto'g'ri yoki o'chirilgan."
 }</pre>
         </div>
 
@@ -1058,12 +1061,13 @@ if (! hash_equals($expected, $signature)) {
         <table class="doc-table">
           <thead><tr><th>Xato xabari</th><th>Sabab va yechim</th></tr></thead>
           <tbody>
-            <tr><td><span class="ic">API credentials missing</span></td><td>Headerlar umuman yuborilmagan — ikkala headerni ham qo'shing</td></tr>
-            <tr><td><span class="ic">Invalid or inactive API credentials</span></td><td>Secret noto'g'ri yoki kalit o'chirilgan — Telegram guruhga murojaat qiling</td></tr>
-            <tr><td><span class="ic">IP address not allowed for this API key</span></td><td>Server IP allowlistda yo'q — kerakli IP ni bildiring</td></tr>
-            <tr><td><span class="ic">Missing ability: stock:write</span></td><td>Kalit faqat <span class="ic">read</span> — <span class="ic">stock:write</span> kalit so'rang</td></tr>
-            <tr><td><span class="ic">This API key is not scoped to a seller</span></td><td>Seller API uchun do'koningizga bog'langan alohida kalit kerak</td></tr>
-            <tr><td><span class="ic">ISBN not found in your store</span></td><td>Bu ISBN siz boshqaradigan do'konda ro'yxatdan o'tmagan</td></tr>
+            <tr><td><span class="ic">Kalit yuborilmagan.</span></td><td>Headerlar umuman yuborilmagan — ikkala headerni ham qo'shing</td></tr>
+            <tr><td><span class="ic">Kalit noto'g'ri yoki o'chirilgan.</span></td><td>Secret noto'g'ri yoki kalit o'chirilgan — Telegram guruhga murojaat qiling</td></tr>
+            <tr><td><span class="ic">Bu IP manzilga ruxsat yo'q.</span></td><td>Server IP allowlistda yo'q — kerakli IP ni bildiring</td></tr>
+            <tr><td><span class="ic">Ruxsat yetarli emas: stock:write</span></td><td>Kalit faqat <span class="ic">read</span> — <span class="ic">stock:write</span> kalit so'rang</td></tr>
+            <tr><td><span class="ic">Bu kalit do'konga bog'lanmagan.</span></td><td>Seller API uchun do'koningizga bog'langan alohida kalit kerak</td></tr>
+            <tr><td><span class="ic">Bu kod do'koningizda topilmadi.</span></td><td>Bu ISBN yoki artikul siz boshqaradigan do'konda yo'q</td></tr>
+            <tr><td><span class="ic">Bu ISBN bilan bir nechta nashr bor.</span></td><td>Bir xil ISBN turli nashrlarga tegishli — <span class="ic">code</span> sifatida 8 xonali artikul yuboring</td></tr>
           </tbody>
         </table>
 

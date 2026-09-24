@@ -125,6 +125,12 @@ return Application::configure(basePath: dirname(__DIR__))
             ->withoutOverlapping()
             ->runInBackground();
 
+        // GLOBAL KATALOG: muddati tugagan pullik joylar (buy box slot) yopiladi
+        $schedule->command('catalog:slots-expire')
+            ->hourly()
+            ->withoutOverlapping()
+            ->runInBackground();
+
         // GLOBAL KATALOG: taklifdagi kitob ma'lumoti kartadan chetga chiqmasin
         // (eski yozuvlar, import, qo'lda SQL) — kechasi tenglashtiriladi
         $schedule->command('catalog:sync-offers')
