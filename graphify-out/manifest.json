@@ -948,15 +948,15 @@
     "semantic_hash": "6ad2c4e353c276eb04d226b849082a2f"
   },
   "app/Http/Controllers/Api/Seller/SellerAuthController.php": {
-    "mtime": 1790104674.7493577,
-    "seen": 1790356883.4228458,
-    "ast_hash": "9d9d06cb8bd2e7c4a922654d6fa217aa",
+    "mtime": 1790360238.7591832,
+    "seen": 1790360329.185905,
+    "ast_hash": "11da4d28151280146e83b5dc40038053",
     "semantic_hash": ""
   },
   "app/Http/Controllers/Api/Seller/SellerController.php": {
-    "mtime": 1790104674.7502534,
-    "seen": 1790356883.422847,
-    "ast_hash": "c81c37d511158a7dc6b3ad42cbda860b",
+    "mtime": 1790360273.9535031,
+    "seen": 1790360329.185906,
+    "ast_hash": "9f6c20ff6b54941b3076b88a5f6e830b",
     "semantic_hash": ""
   },
   "app/Http/Controllers/Api/Seller/SellerCourierController.php": {
@@ -1044,9 +1044,9 @@
     "semantic_hash": "25ad84eb7154236e8f2415a9c416ac4c"
   },
   "app/Http/Controllers/Boshqaruv/AdminController.php": {
-    "mtime": 1790198669.8531528,
-    "seen": 1790356883.422855,
-    "ast_hash": "129b0e77ad686c0fde2ece72300c469b",
+    "mtime": 1790360162.519611,
+    "seen": 1790360329.185914,
+    "ast_hash": "4465dfee584c670bf9289915d1fe2322",
     "semantic_hash": ""
   },
   "app/Http/Controllers/CareersController.php": {
@@ -1926,10 +1926,10 @@
     "semantic_hash": "a4e4f172e9c631a983d83011d40ec115"
   },
   "app/Models/Seller.php": {
-    "mtime": 1786221009.7062166,
-    "seen": 1787659299.02034,
-    "ast_hash": "87473f12898274b7c70288deda4cc565",
-    "semantic_hash": "87473f12898274b7c70288deda4cc565"
+    "mtime": 1790359495.5910156,
+    "seen": 1790360329.186002,
+    "ast_hash": "2f3fab305a56f062eb6e08145d7c2440",
+    "semantic_hash": ""
   },
   "app/Models/SellerAd.php": {
     "mtime": 1776430075.0155683,
@@ -3000,8 +3000,8 @@
     "semantic_hash": "b7b09d68f8893547a7e5fbd5207fc8fa"
   },
   "config/fcm.php": {
-    "mtime": 1790356385.1023602,
-    "seen": 1790356883.423061,
+    "mtime": 1790360007.0073414,
+    "seen": 1790360329.186112,
     "ast_hash": "5ba2ac32c04d161d99057e23212f34b1",
     "semantic_hash": "5ba2ac32c04d161d99057e23212f34b1"
   },
@@ -4560,9 +4560,9 @@
     "semantic_hash": "78f909acc19aea4717eddca5a87c1ba3"
   },
   "resources/js/boshqaruv/Layout.tsx": {
-    "mtime": 1790355193.6874626,
-    "seen": 1790356883.42324,
-    "ast_hash": "bf63309516c18497d5aaa6b67264367e",
+    "mtime": 1790359958.315593,
+    "seen": 1790360329.186269,
+    "ast_hash": "a7f7876837ea6e0972b48b52361e3da7",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/components/ImageGalleryEditor.tsx": {
@@ -4686,15 +4686,15 @@
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/CourierOrders.tsx": {
-    "mtime": 1790017977.5488932,
-    "seen": 1790356883.4232588,
-    "ast_hash": "f94aefaf83902203b2480172b4855b19",
+    "mtime": 1790359865.9711277,
+    "seen": 1790360329.186286,
+    "ast_hash": "ca0645951e2118fc87ede1b3bbec9d41",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/Dashboard.tsx": {
-    "mtime": 1790356132.3618352,
-    "seen": 1790356883.4232588,
-    "ast_hash": "2c2344ca19ef99314fe095beda6c0465",
+    "mtime": 1790357433.3788762,
+    "seen": 1790360329.1862872,
+    "ast_hash": "8e60ad1c2307838892a6247afb189d4e",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/Expenses.tsx": {
@@ -4764,9 +4764,9 @@
     "semantic_hash": "3158722839141e6391d442d5d1c75558"
   },
   "resources/js/boshqaruv/pages/Orders.tsx": {
-    "mtime": 1790017977.5563297,
-    "seen": 1790356883.423268,
-    "ast_hash": "2fe11d2177c20233b30568718b8d8ce3",
+    "mtime": 1790359456.758231,
+    "seen": 1790360329.186296,
+    "ast_hash": "64eb4f4ba69370596f9f2aced76bc658",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/Products.tsx": {
@@ -4830,9 +4830,9 @@
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/SellerOrders.tsx": {
-    "mtime": 1790016457.5495884,
-    "seen": 1790356883.423276,
-    "ast_hash": "293c47704997a132e34e76ff1df6af52",
+    "mtime": 1790359722.8442852,
+    "seen": 1790360329.186303,
+    "ast_hash": "d335ff7dabeecbd9482857614c39225e",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/Settings.tsx": {
@@ -5364,9 +5364,9 @@
     "semantic_hash": ""
   },
   "routes/boshqaruv.php": {
-    "mtime": 1790356263.0880747,
-    "seen": 1790356883.423334,
-    "ast_hash": "f7c1a2e12176edee8b9e9dae306b5a5c",
+    "mtime": 1790359631.5898352,
+    "seen": 1790360329.186357,
+    "ast_hash": "640e1e31f1b52269396834098085691e",
     "semantic_hash": ""
   },
   "routes/channels.php": {
@@ -6972,9 +6972,9 @@
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/SecurityDashboard.tsx": {
-    "mtime": 1790356754.557906,
-    "seen": 1790356883.4232728,
-    "ast_hash": "9449437060a39c8d8ee60f70f03f233a",
+    "mtime": 1790357906.746085,
+    "seen": 1790360329.1862998,
+    "ast_hash": "cc28d37c2d22e020551539257a02124d",
     "semantic_hash": ""
   },
   "tests/Feature/ApiSmokeTest.php": {
@@ -7065,6 +7065,36 @@
     "mtime": 1790228598.577164,
     "seen": 1790356883.423412,
     "ast_hash": "36bec72286877880e81e7c37eadee34e",
+    "semantic_hash": ""
+  },
+  "app/Http/Controllers/Boshqaruv/DemandAnalyticsController.php": {
+    "mtime": 1790360091.2192998,
+    "seen": 1790360329.185917,
+    "ast_hash": "93e5c01dd4d722d83ea8f03b912e7e56",
+    "semantic_hash": ""
+  },
+  "database/migrations/2026_09_25_231000_add_business_role_to_sellers_table.php": {
+    "mtime": 1790359471.7708998,
+    "seen": 1790360329.186235,
+    "ast_hash": "602cbe12126c69423eb53dc32b7d20b9",
+    "semantic_hash": ""
+  },
+  "resources/js/boshqaruv/pages/Couriers.tsx": {
+    "mtime": 1790359746.7090163,
+    "seen": 1790360329.1862872,
+    "ast_hash": "6d06c9fd053dca729332266d5c15bddb",
+    "semantic_hash": ""
+  },
+  "resources/js/boshqaruv/pages/DemandAnalytics.tsx": {
+    "mtime": 1790360122.1710463,
+    "seen": 1790360329.186288,
+    "ast_hash": "6551eb33209b850a78970aba67c66c99",
+    "semantic_hash": ""
+  },
+  "resources/js/boshqaruv/pages/Sellers.tsx": {
+    "mtime": 1790359704.2645445,
+    "seen": 1790360329.186303,
+    "ast_hash": "bd8d0861f6bb2b9b829dacce35f86d3c",
     "semantic_hash": ""
   }
 }

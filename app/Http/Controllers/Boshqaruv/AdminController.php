@@ -21,6 +21,7 @@ use App\Models\BookCategories;
 use App\Models\BookClub;
 use App\Models\BookClubComment;
 use App\Models\Books;
+use App\Models\BranchStock;
 use App\Models\BotTicket;
 use App\Models\CareerApplication;
 use App\Models\CashbackSetting;
@@ -12036,7 +12037,7 @@ PROMPT;
             }
         }
         if (Schema::hasTable('my_carts') && Schema::hasTable('branch_stocks') && Schema::hasTable('books')) {
-            $bookStockSql = BranchStock::availableSql('book', 'books.id');
+            $bookStockSql = \App\Models\BranchStock::availableSql('book', 'books.id');
             $outOfStockInCarts = DB::table('my_carts')
                 ->join('books', 'my_carts.product_id', '=', 'books.id')
                 ->where('my_carts.product_type', 'book')
