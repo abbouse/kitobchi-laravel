@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Boshqaruv\AdminController;
+use App\Http\Controllers\Boshqaruv\SecurityController;
 use App\Http\Controllers\A122\CareerApplicationController;
 use App\Http\Controllers\A122\GiftCertificateController;
 use App\Http\Controllers\A122\MysteryBoxController;
@@ -403,6 +404,14 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
             Route::post('/settings/cashback', [\App\Http\Controllers\A122\SettingsController::class, 'storeCashback'])->name('settings.cashback.store');
             Route::put('/settings/cashback/{cashbackSetting}', [\App\Http\Controllers\A122\SettingsController::class, 'updateCashback'])->name('settings.cashback.update');
             Route::delete('/settings/cashback/{cashbackSetting}', [\App\Http\Controllers\A122\SettingsController::class, 'destroyCashback'])->name('settings.cashback.destroy');
+
+            // Kiberxavfsizlik va Server monitoring
+            Route::get('/security', [SecurityController::class, 'index'])->name('security');
+            Route::post('/security/clear-cache', [SecurityController::class, 'clearCache'])->name('security.clear-cache');
+            Route::post('/security/fix-storage', [SecurityController::class, 'fixStorage'])->name('security.fix-storage');
+            Route::post('/security/truncate-logs', [SecurityController::class, 'truncateLogs'])->name('security.truncate-logs');
+            Route::post('/security/block-ip', [SecurityController::class, 'blockIp'])->name('security.block-ip');
+            Route::post('/security/unblock-ip', [SecurityController::class, 'unblockIp'])->name('security.unblock-ip');
         });
     });
 });

@@ -37,6 +37,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->appendToGroup('web', \App\Http\Middleware\HandleInertiaRequests::class);
         $middleware->appendToGroup('api', \App\Http\Middleware\SecurityHeaders::class);
 
+        // Real-vaqtli xavfsizlik devori (Firewall): bloklangan IP va skanerlarni darhol 403 bilan to'xtatadi
+        $middleware->prependToGroup('web', \App\Http\Middleware\FirewallMiddleware::class);
+        $middleware->prependToGroup('api', \App\Http\Middleware\FirewallMiddleware::class);
+
         // API javoblarini lokalizatsiya: `lang=` query, `X-App-Locale` yoki
         // `Accept-Language` headerini hisobga oladi. Default — uz.
         $middleware->prependToGroup('api', \App\Http\Middleware\SetApiLocale::class);

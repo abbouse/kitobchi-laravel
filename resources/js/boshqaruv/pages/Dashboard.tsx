@@ -322,6 +322,15 @@ export default function Dashboard() {
 </div>
       ) : null}
 
+      {/* ── 1. Axelit Asosiy eCommerce Marquee Vidjetlari (Daromad, Orderlar, Chek, Userlar) ── */}
+      <div className="row mb-1">
+        <PeriodCard index={0} label="Daromad" value={money(current.revenue)} delta={previous ? change(current.revenue, previous.revenue) : null} icon="ti-coins" help={periodHelps.revenue} />
+        <PeriodCard index={1} label="Yakuniy savdolar" value={fmt(current.orders)} delta={previous ? change(current.orders, previous.orders) : null} icon="ti-shopping-bag" help={periodHelps.orders} />
+        <PeriodCard index={2} label="O'rtacha chek" value={money(current.aov)} delta={previous ? change(current.aov, previous.aov) : null} icon="ti-receipt" help={periodHelps.aov} />
+        <PeriodCard index={3} label="Yangi userlar" value={fmt(current.users)} delta={previous ? change(current.users, previous.users) : null} icon="ti-user-plus" help={periodHelps.users} />
+      </div>
+
+      {/* ── 2. Operatsion Ko'rsatkichlar (12 ta Metric vidjeti) ── */}
       <div className="row">
         <Metric index={0} label="Buyurtmalar" value={dashboard.metrics.orders} icon="ti-receipt" href="/boshqaruv/orders" help={metricHelps.orders} />
         <Metric index={1} label="Yakuniy savdo" value={dashboard.metrics.paidOrders} icon="ti-credit-card" href="/boshqaruv/orders" help={metricHelps.paidOrders} />
@@ -335,13 +344,6 @@ export default function Dashboard() {
         <Metric index={9} label="Pending seller" value={dashboard.metrics.pendingSellers} icon="ti-hourglass" href="/boshqaruv/sellers" help={metricHelps.pendingSellers} />
         <Metric index={10} label="Support ticket" value={dashboard.metrics.tickets} icon="ti-headset" href="/boshqaruv/tickets" help={metricHelps.tickets} />
         <Metric index={11} label="Shikoyatlar" value={dashboard.metrics.complaints} icon="ti-alert-triangle" href="/boshqaruv/shikoyatlar" help={metricHelps.complaints} />
-      </div>
-
-      <div className="row">
-        <PeriodCard index={0} label="Daromad" value={money(current.revenue)} delta={previous ? change(current.revenue, previous.revenue) : null} icon="ti-coins" help={periodHelps.revenue} />
-        <PeriodCard index={1} label="Yakuniy savdolar" value={fmt(current.orders)} delta={previous ? change(current.orders, previous.orders) : null} icon="ti-shopping-bag" help={periodHelps.orders} />
-        <PeriodCard index={2} label="O'rtacha chek" value={money(current.aov)} delta={previous ? change(current.aov, previous.aov) : null} icon="ti-receipt" help={periodHelps.aov} />
-        <PeriodCard index={3} label="Yangi userlar" value={fmt(current.users)} delta={previous ? change(current.users, previous.users) : null} icon="ti-user-plus" help={periodHelps.users} />
       </div>
 
       <UnitEconomics data={dashboard.unitEconomics} monthly={dashboard.unitEconomicsMonthly} />
