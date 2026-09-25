@@ -235,8 +235,15 @@ export default function Dashboard() {
   return (
     <div>
       <div className="d-flex align-items-end justify-content-between flex-wrap gap-3 mx-1 mb-3">
-        <div>
+        <div className="d-flex align-items-center gap-2">
           <h4 className="main-title mb-0">Boshqaruv dashboard</h4>
+          <Link
+            href="/boshqaruv/security"
+            className="badge bg-light-primary text-primary text-decoration-none d-inline-flex align-items-center"
+            title="Kiberxavfsizlik va Server monitoringi"
+          >
+            <i className="ti ti-shield-check me-1"></i>Server & Xavfsizlik
+          </Link>
         </div>
         <div className="d-flex gap-2 align-items-center flex-wrap justify-content-end">
           <span className="badge text-light-info"><i className="ti ti-calendar me-1"></i>{dashboard.range.label}</span>

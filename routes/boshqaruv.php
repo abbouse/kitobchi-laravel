@@ -150,9 +150,14 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
             Route::get('/search-history', fn (AdminController $controller) => $controller->page('SearchHistory'))->name('search-history');
         });
 
+        // ══════════════════════════ TALAB VA SAVAT ANALITIKASI ══════════════════════════
+        Route::middleware('panel.permission:catalog,orders')->group(function () {
+            Route::get('/demand-analytics', [\App\Http\Controllers\Boshqaruv\DemandAnalyticsController::class, 'index'])->name('demand-analytics');
+        });
+
         // ══════════════════════════ SOTUVCHILAR / SELLER BUYURTMALARI ══════════════════════════
         Route::middleware('panel.permission:sellers')->group(function () {
-            Route::get('/sellers', fn (AdminController $controller) => $controller->page('SellerOrders'))->name('sellers');
+            Route::get('/sellers', fn (AdminController $controller) => $controller->page('Sellers'))->name('sellers');
             Route::get('/sellers/{seller}/edit', [AdminController::class, 'sellerEdit'])->name('sellers.edit');
             Route::get('/sellers/{seller}', [AdminController::class, 'sellerDetail'])->name('sellers.detail');
             Route::get('/seller-orders', fn (AdminController $controller) => $controller->page('SellerOrders'))->name('seller-orders');
@@ -181,7 +186,7 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
 
         // ══════════════════════════ KURYERLAR ══════════════════════════
         Route::middleware('panel.permission:couriers')->group(function () {
-            Route::get('/couriers', fn (AdminController $controller) => $controller->page('CourierOrders'))->name('couriers');
+            Route::get('/couriers', fn (AdminController $controller) => $controller->page('Couriers'))->name('couriers');
             Route::get('/courier-orders', fn (AdminController $controller) => $controller->page('CourierOrders'))->name('courier-orders');
             Route::patch('/couriers/{courier}/approve', [\App\Http\Controllers\A122\CourierController::class, 'approve'])->name('couriers.approve');
             Route::put('/couriers/{courier}', [AdminController::class, 'updateCourier'])->name('couriers.update');

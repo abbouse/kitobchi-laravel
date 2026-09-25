@@ -1,59 +1,18 @@
-import { toneOf, toneBadge } from '../utils/tone';
-import { PageCrumbs } from '../Layout';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Button } from 'react-bootstrap';
+import { PageCrumbs } from '../Layout';
 import Modal from '../components/AppModal';
 import PaginationControls from '../components/PaginationControls';
-
 import { StatWidget } from '../components/Axelit';
-import { ProfileCard, AboutList, Avatar as PAvatar } from '../components/Profile';
+import { ProfileCard, AboutList } from '../components/Profile';
 import FormAction, { ActionRow } from '../components/FormAction';
 
 const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n || 0);
+
 type Counts = Record<string, number>;
 type StatusMeta = { label: string; badge?: string };
-type AnyRow = Record<string, string | number | boolean | null | undefined | Record<string, string>>;
 type PenaltyRule = { key: string; label: string; description: string; amount: number };
-
-interface Courier {
-  id: number;
-  name: string;
-  firstName?: string;
-  lastName?: string;
-  phone?: string;
-  photo?: string;
-  region?: string;
-  status?: string;
-  isOnline?: boolean;
-  availabilityUpdatedAt?: string;
-  verificationStatus?: string;
-  verificationLabel?: string;
-  verificationNotes?: string;
-  verifiedAt?: string;
-  transport?: string;
-  transportLabel?: string;
-  vehicle?: string;
-  vehicleBrand?: string;
-  vehicleModel?: string;
-  vehicleColor?: string;
-  plate?: string;
-  balance?: number;
-  reserved?: number;
-  totalWithdrawal?: number;
-  totalEarned?: number;
-  orders?: number;
-  warningCount?: number;
-  joined?: string;
-  location?: AnyRow & { mapLinks?: Record<string, string> };
-  identity?: AnyRow;
-  payment?: AnyRow;
-  recentOrders?: AnyRow[];
-  transactions?: AnyRow[];
-  banLogs?: AnyRow[];
-  documents?: AnyRow[];
-  actions?: Record<string, string>;
-}
 
 interface CourierOrder {
   id: number;
@@ -92,270 +51,625 @@ interface CourierOrder {
   penaltyRules?: PenaltyRule[];
 }
 
-const courierTabs = [
-  { key: 'pending', label: 'Kutilmoqda' },
-  { key: 'approved', label: 'Faol' },
-  { key: 'rejected', label: 'Rad etilgan' },
-  { key: 'blocked', label: 'Bloklangan' },
-  { key: 'all', label: 'Barchasi' },
-];
-
-const courierLabel = (status?: string) => ({
-  approved: 'Faol', pending: 'Kutilmoqda', rejected: 'Rad etilgan', blocked: 'Bloklangan',
-}[String(status || '')] || status || '—');
-
-const chip = (status?: string, badge?: string) => {
-  if (badge === 'badge-success' || status === 'approved' || status === 'delivered' || status === 'customer_received') return 'text-light-success';
-  if (badge === 'badge-danger' || status === 'rejected' || status === 'blocked' || status === 'cancelled' || status === 'returned') return 'text-light-danger';
-  if (badge === 'badge-info' || status === 'pending') return 'text-light-info';
-  if (badge === 'badge-warning' || status === 'in_delivery') return 'text-light-warning';
+const statusChip = (status?: string) => {
+  if (status === 'delivered' || status === 'customer_received') return 'text-light-success';
+  if (status === 'cancelled' || status === 'returned') return 'text-light-danger';
+  if (status === 'in_delivery') return 'text-light-warning';
+  if (status === 'pending') return 'text-light-info';
   return 'text-light-secondary';
 };
 
 export default function CourierOrders() {
   const {
-    couriers = [], courierCounts = {}, courierOrders = [], courierOrderCounts = {}, courierOrderStatuses = {},
-    courierPagination = { page: 1, totalPages: 1, from: 0, to: 0, total: 0 }, courierOrderPagination = { page: 1, totalPages: 1, from: 0, to: 0, total: 0 },
-    courierFilters = {}, courierOrderFilters = {},
+    courierOrders = [],
+    courierOrderCounts = {},
+    courierOrderStatuses = {},
+    courierOrderPagination = { page: 1, totalPages: 1, from: 0, to: 0, total: 0 },
+    courierOrderFilters = {},
   } = usePage<{
-    couriers?: Courier[]; courierCounts?: Counts; courierOrders?: CourierOrder[];
-    courierOrderCounts?: Counts; courierOrderStatuses?: Record<string, StatusMeta>;
-    courierPagination?: { page: number; totalPages: number; from: number; to: number; total: number };
+    courierOrders?: CourierOrder[];
+    courierOrderCounts?: Counts;
+    courierOrderStatuses?: Record<string, StatusMeta>;
     courierOrderPagination?: { page: number; totalPages: number; from: number; to: number; total: number };
-    courierFilters?: { tab?: string; search?: string }; courierOrderFilters?: { tab?: string; search?: string };
+    courierOrderFilters?: { tab?: string; search?: string };
   }>().props;
 
-  const [courierTab, setCourierTab] = useState(courierFilters.tab || 'pending');
   const [orderTab, setOrderTab] = useState(courierOrderFilters.tab || 'all');
-  const [courierSearch, setCourierSearch] = useState(courierFilters.search || '');
   const [orderSearch, setOrderSearch] = useState(courierOrderFilters.search || '');
-  const [selectedCourier, setSelectedCourier] = useState<Courier | null>(null);
-  const [editingCourier, setEditingCourier] = useState<Courier | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<CourierOrder | null>(null);
 
-  const totalBalance = useMemo(() => couriers.reduce((sum, courier) => sum + (courier.balance || 0), 0), [couriers]);
-  const onlineCount = useMemo(() => couriers.filter((courier) => courier.isOnline).length, [couriers]);
-  const orderTabs = [{ key: 'all', label: 'Barchasi' }, ...Object.entries(courierOrderStatuses).map(([key, meta]) => ({ key, label: meta.label }))];
-  const isOrderPage = typeof window !== 'undefined' && window.location.pathname.includes('/courier-orders');
-  const pageUrl = isOrderPage ? '/boshqaruv/courier-orders' : '/boshqaruv/couriers';
-  const load = (extra: Record<string, string | number> = {}) => router.get(pageUrl, { couriers_page: courierPagination.page, couriers_tab: courierTab, couriers_search: courierSearch, courier_orders_page: courierOrderPagination.page, courier_orders_tab: orderTab, courier_orders_search: orderSearch, ...extra }, { preserveState: true, preserveScroll: true, replace: true });
+  const orderTabs = [
+    { key: 'all', label: 'Barchasi' },
+    ...Object.entries(courierOrderStatuses).map(([key, meta]) => ({ key, label: meta.label })),
+  ];
+
+  const load = (extra: Record<string, string | number> = {}) => {
+    router.get(
+      '/boshqaruv/courier-orders',
+      {
+        courier_orders_page: courierOrderPagination.page,
+        courier_orders_tab: orderTab,
+        courier_orders_search: orderSearch,
+        ...extra,
+      },
+      { preserveState: true, preserveScroll: true, replace: true }
+    );
+  };
 
   const patch = (url?: string, data: Record<string, string> = {}, confirmation?: string) => {
     if (!url || (confirmation && !confirm(confirmation))) return;
     router.patch(url, data, { preserveScroll: true });
   };
-  const warn = (courier: Courier) => {
-    const title = prompt('Ogohlantirish sarlavhasi', 'Admin ogohlantirishi');
-    if (!title) return;
-    const message = prompt('Ogohlantirish matni', 'Iltimos, yetkazib berish qoidalariga amal qiling.');
-    if (!message || !courier.actions?.warnUrl) return;
-    router.post(courier.actions.warnUrl, { title, message }, { preserveScroll: true });
-  };
-  const resetPassword = (courier: Courier) => {
-    if (!courier.actions?.resetPasswordUrl || !confirm(`${courier.name} uchun yangi parol SMS orqali yuborilsinmi?`)) return;
-    router.post(courier.actions.resetPasswordUrl, {}, { preserveScroll: true });
-  };
+
+  const inDeliveryCount = (courierOrderCounts['pending'] || 0) + (courierOrderCounts['in_delivery'] || 0);
+  const deliveredCount = (courierOrderCounts['delivered'] || 0) + (courierOrderCounts['customer_received'] || 0);
+  const problemCount = (courierOrderCounts['cancelled'] || 0) + (courierOrderCounts['returned'] || 0);
 
   return (
-    <div>
-      <div className="d-flex align-items-end justify-content-between flex-wrap gap-3 mx-1 mb-3"><div><h4 className="main-title mb-0">{isOrderPage ? 'Kuryer buyurtmalari' : 'Kuryerlar'}</h4><PageCrumbs /><p className="mb-0 text-secondary">{isOrderPage ? 'Kuryer orderlari, statuslar, mijoz qidiruvi va jarimalar' : 'Kuryer profillari, online holat, lokatsiya, verifikatsiya va balans'}</p></div></div>
-      <div className="row">
-        {(isOrderPage ? [
-          ['Jami order', courierOrderCounts.all || 0, 'ti-truck', 'rgba(var(--primary), 1)'],
-          ["Yo'lda", courierOrderCounts.in_delivery || 0, 'ti-directions', 'rgba(var(--info), 1)'],
-          ['Yetkazildi', courierOrderCounts.delivered || 0, 'ti-circle-check', 'rgba(var(--success), 1)'],
-          ['Mijoz qabul qildi', courierOrderCounts.customer_received || 0, 'ti-shopping-bag', 'rgba(var(--primary), 1)'],
-        ] : [
-          ['Kutilmoqda', courierCounts.pending || 0, 'ti-hourglass', 'rgba(var(--warning-dark), 1)'],
-          ['Faol kuryer', courierCounts.approved || 0, 'ti-bike', 'rgba(var(--success), 1)'],
-          ['Online', onlineCount, 'ti-broadcast', 'rgba(var(--info), 1)'],
-          ['Kuryer balansi', `${fmt(totalBalance)} so'm`, 'ti-wallet', 'rgba(var(--primary), 1)'],
-        ]).map(([label, value, icon, color], kpiIndex) => <div className="col-xl-3 col-md-6" key={String(label)}><StatWidget index={kpiIndex} label={label} value={value} /></div>)}
+    <div className="container-fluid py-3">
+      <PageCrumbs
+        title="Kuryer buyurtmalari (Logistika va yetkazmalar)"
+        crumbs={[
+          { label: 'Boshqaruv', href: '/boshqaruv' },
+          { label: 'Kuryerlar floti', href: '/boshqaruv/couriers' },
+          { label: 'Kuryer buyurtmalari' },
+        ]}
+      />
+
+      {/* Axelit Top KPI Stat Widgets */}
+      <div className="row g-3 mb-4">
+        <div className="col-12 col-sm-6 col-xl-3">
+          <StatWidget
+            title="Jami topshiriqlar"
+            value={fmt(courierOrderCounts['all'] || courierOrderPagination.total)}
+            badge="Hammasi"
+            tone="primary"
+            icon="ti ti-truck-delivery"
+          />
+        </div>
+        <div className="col-12 col-sm-6 col-xl-3">
+          <StatWidget
+            title="Faol jarayonda"
+            value={fmt(inDeliveryCount)}
+            badge="Yo'lda / Kutilmoqda"
+            tone="warning"
+            icon="ti ti-route"
+          />
+        </div>
+        <div className="col-12 col-sm-6 col-xl-3">
+          <StatWidget
+            title="Topshirildi"
+            value={fmt(deliveredCount)}
+            badge="Muvaffaqiyatli"
+            tone="success"
+            icon="ti ti-circle-check"
+          />
+        </div>
+        <div className="col-12 col-sm-6 col-xl-3">
+          <StatWidget
+            title="Bekor / Qaytarilgan"
+            value={fmt(problemCount)}
+            badge="Muammoli"
+            tone="danger"
+            icon="ti ti-alert-triangle"
+          />
+        </div>
       </div>
 
-      {!isOrderPage ? <div className="card">
-        <div className="card-header d-flex align-items-center justify-content-between gap-2 flex-wrap"><div><h5 className="f-w-600">Kuryerlar jadvali</h5><small className="text-muted">{courierPagination.total} ta kuryer topildi</small></div><input className="form-control form-control-sm" style={{ maxWidth: 280 }} value={courierSearch} onChange={(e) => setCourierSearch(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && load({ couriers_page: 1 })} placeholder="Ism, telefon, hudud yoki raqam" /></div>
-        <div className="card-body">
-
-          <div className="nav kc-segment mb-3">{courierTabs.map((tab) => <div key={tab.key} className="nav-item"><button
-              className={`nav-link ${courierTab === tab.key ? 'active' : ''}`}
-              onClick={() => { setCourierTab(tab.key); load({ couriers_page: 1, couriers_tab: tab.key }); }}>{tab.label}<span className="badge text-light-secondary ms-2">{fmt(courierCounts[tab.key] || 0)}</span></button></div>)}</div>
-          <div className="table-responsive app-scroll"><table className="table table-bottom-border align-middle"><thead><tr><th>ID</th><th>Kuryer</th><th>Ish holati</th><th>Hudud</th><th>Transport</th><th className="text-end">Buyurtma</th><th className="text-end">Balans</th><th>Ogohlantirish</th><th>Holat</th><th>Amallar</th></tr></thead><tbody>
-            {couriers.map((courier) => <tr key={courier.id}>
-              <td className="f-w-600 text-nowrap">#{courier.id}</td>
-              <td><div className="d-flex align-items-center gap-2"><Avatar row={courier} /><div><div className="f-w-600">{courier.name}</div><small className="text-muted">{courier.phone || '—'}</small></div></div></td>
-              <td><span className={`badge ${courier.isOnline ? 'text-light-success' : 'text-light-secondary'}`}>{courier.isOnline ? 'Online' : 'Offline'}</span><small className="d-block text-muted">{courier.availabilityUpdatedAt || courier.location?.updatedAt || '—'}</small></td>
-              <td>{courier.region || '—'}</td><td><div>{courier.transportLabel || courier.transport || '—'}</div><small className="text-muted">{courier.plate || courier.vehicle}</small></td>
-              <td className="text-end f-w-600 text-nowrap">{courier.orders || 0}</td><td>{fmt(courier.balance || 0)} so'm</td>
-              <td><span className={`badge ${(courier.warningCount || 0) > 0 ? 'text-light-warning' : 'text-light-secondary'}`}>{courier.warningCount || 0}/3</span></td>
-              <td><span className={`badge text-uppercase ${toneBadge(toneOf(chip(courier.status)))}`}>{courierLabel(courier.status)}</span></td>
-              <td><button className="btn btn-light-primary icon-btn w-30 h-30 b-r-22 me-1" onClick={() => setSelectedCourier(courier)}><i className="ti ti-eye"></i></button>{courier.status !== 'approved' ? <button className="btn btn-light-success icon-btn w-30 h-30 b-r-22 me-1" onClick={() => patch(courier.actions?.approveUrl, {}, 'Kuryer tasdiqlansinmi?')}><i className="ti ti-circle-check"></i></button> : null}<button className="btn btn-light-warning icon-btn w-30 h-30 b-r-22" onClick={() => warn(courier)}><i className="ti ti-alert-triangle"></i></button></td>
-            </tr>)}{courierPagination.total === 0 ? <tr><td colSpan={10} className="text-center py-5 text-secondary"><i className="iconoir-archive d-flex justify-content-center mb-2 f-s-30 text-primary"></i>Kuryer topilmadi</td></tr> : null}
-          </tbody></table></div><PaginationControls {...courierPagination} onPageChange={(page) => load({ couriers_page: page })} />
+      {/* Main Order List Card */}
+      <div className="card">
+        <div className="card-header d-flex align-items-center justify-content-between gap-2 flex-wrap pb-0">
+          <div>
+            <h5 className="f-w-600 mb-1">Kuryer yetkazib berish topshiriqlari</h5>
+            <p className="text-muted f-s-13 mb-0">
+              {courierOrderPagination.total} ta yetkazma yozuvi mavjud
+            </p>
+          </div>
+          <div className="d-flex align-items-center gap-2">
+            <input
+              className="form-control form-control-sm"
+              style={{ minWidth: 260, maxWidth: 360 }}
+              value={orderSearch}
+              onChange={(e) => setOrderSearch(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && load({ courier_orders_page: 1 })}
+              placeholder="Topshiriq ID, Order ID, mijoz yoki kuryer..."
+            />
+            {orderSearch && (
+              <button
+                className="btn btn-sm btn-light-secondary"
+                onClick={() => {
+                  setOrderSearch('');
+                  load({ courier_orders_page: 1, courier_orders_search: '' });
+                }}
+              >
+                Tozalash
+              </button>
+            )}
+            <button
+              className="btn btn-sm btn-primary"
+              onClick={() => load({ courier_orders_page: 1 })}
+            >
+              <i className="ti ti-search me-1"></i>Qidirish
+            </button>
+          </div>
         </div>
-      </div> : null}
 
-      {isOrderPage ? <div className="card">
-        <div className="card-header d-flex align-items-center justify-content-between gap-2 flex-wrap"><div><h5 className="f-w-600">Kuryer buyurtmalari</h5><small className="text-muted">{courierOrderPagination.total} ta yozuv topildi</small></div><input className="form-control form-control-sm" style={{ maxWidth: 360 }} value={orderSearch} onChange={(e) => setOrderSearch(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && load({ courier_orders_page: 1 })} placeholder="Order ID, mijoz raqami/ismi yoki kuryer" /></div>
         <div className="card-body">
+          {/* Status Tabs */}
+          <div className="nav kc-segment mb-3">
+            {orderTabs.map((tab) => (
+              <div key={tab.key} className="nav-item">
+                <button
+                  className={`nav-link ${orderTab === tab.key ? 'active' : ''}`}
+                  onClick={() => {
+                    setOrderTab(tab.key);
+                    load({ courier_orders_page: 1, courier_orders_tab: tab.key });
+                  }}
+                >
+                  {tab.label}
+                  <span className="badge text-light-secondary ms-2">
+                    {fmt(courierOrderCounts[tab.key] || 0)}
+                  </span>
+                </button>
+              </div>
+            ))}
+          </div>
 
-          <div className="nav kc-segment mb-3">{orderTabs.map((tab) => <div key={tab.key} className="nav-item"><button
-              className={`nav-link ${orderTab === tab.key ? 'active' : ''}`}
-              onClick={() => { setOrderTab(tab.key); load({ courier_orders_page: 1, courier_orders_tab: tab.key }); }}>{tab.label}<span className="badge text-light-secondary ms-2">{fmt(courierOrderCounts[tab.key] || 0)}</span></button></div>)}</div>
-          <div className="table-responsive app-scroll"><table className="table table-bottom-border align-middle"><thead><tr><th>ID</th><th>Kuryer</th><th>Mijoz</th><th>Summa</th><th>To'lov</th><th>Holat</th><th>Sana</th><th>Amallar</th></tr></thead><tbody>
-            {courierOrders.map((order) => <tr key={order.id}><td><strong>#{order.id}</strong><small className="d-block text-muted">ORD #{order.orderId || '—'}</small></td><td><div className="f-w-600">{order.courier}</div><small className="text-muted">{order.courierPhone || '—'}</small></td><td><div>{order.customer}</div><small className="text-muted">{order.customerPhone || '—'}</small></td><td><strong>{fmt(order.amount)} so'm</strong><small className="d-block text-muted">Ulush: {fmt((order.courierPrice || 0) + (order.bonus || 0))}</small></td><td>{order.paymentStatus || '—'}</td><td><select className={`form-select form-select-sm ${chip(order.status, order.statusBadge)}`} value={order.status} onChange={(e) => patch(order.statusUrl, { status: e.target.value })}>{Object.entries(courierOrderStatuses).map(([value, meta]) => <option key={value} value={value}>{meta.label}</option>)}</select></td><td className="text-muted">{order.date || '—'}</td><td><button className="btn btn-light-primary icon-btn w-30 h-30 b-r-22" onClick={() => setSelectedOrder(order)}><i className="ti ti-eye"></i></button></td></tr>)}
-            {courierOrderPagination.total === 0 ? <tr><td colSpan={8} className="text-center py-5 text-secondary"><i className="iconoir-archive d-flex justify-content-center mb-2 f-s-30 text-primary"></i>Buyurtma topilmadi</td></tr> : null}
-          </tbody></table></div><PaginationControls {...courierOrderPagination} onPageChange={(page) => load({ courier_orders_page: page })} />
+          {/* Table */}
+          <div className="table-responsive app-scroll">
+            <table className="table table-bottom-border align-middle">
+              <thead>
+                <tr>
+                  <th>Topshiriq</th>
+                  <th>Kuryer</th>
+                  <th>Mijoz</th>
+                  <th>Yetkazish manzili</th>
+                  <th>Summa & Ulush</th>
+                  <th>To'lov</th>
+                  <th>Holat</th>
+                  <th>Sana</th>
+                  <th className="text-center">Amallar</th>
+                </tr>
+              </thead>
+              <tbody>
+                {courierOrders.map((order) => (
+                  <tr key={order.id}>
+                    <td>
+                      <strong className="text-primary">#{order.id}</strong>
+                      <small className="d-block text-muted">
+                        Asosiy: #{order.orderId || '—'}
+                      </small>
+                    </td>
+                    <td>
+                      <div className="f-w-600">{order.courier}</div>
+                      <small className="text-muted">{order.courierPhone || '—'}</small>
+                      {order.courierRegion ? (
+                        <small className="d-block text-muted">{order.courierRegion}</small>
+                      ) : null}
+                    </td>
+                    <td>
+                      <div className="f-w-500">{order.customer}</div>
+                      <small className="text-muted">{order.customerPhone || '—'}</small>
+                    </td>
+                    <td>
+                      <div className="f-s-13 text-truncate" style={{ maxWidth: 220 }}>
+                        {[order.address?.region, order.address?.district, order.address?.street]
+                          .filter(Boolean)
+                          .join(', ') || 'Manzil ko‘rsatilmagan'}
+                      </div>
+                      {order.taskDistanceKm ? (
+                        <small className="text-muted">
+                          <i className="ti ti-map-pin me-1"></i>
+                          {Number(order.taskDistanceKm).toFixed(1)} km
+                        </small>
+                      ) : null}
+                    </td>
+                    <td>
+                      <div>
+                        <strong>{fmt(order.amount)} so'm</strong>
+                      </div>
+                      <small className="text-muted">
+                        Haqi: {fmt((order.courierPrice || 0) + (order.bonus || 0))} so'm
+                      </small>
+                    </td>
+                    <td>
+                      <span className="badge text-light-secondary">
+                        {order.paymentStatus || '—'}
+                      </span>
+                    </td>
+                    <td>
+                      <select
+                        className={`form-select form-select-sm ${statusChip(order.status)}`}
+                        style={{ minWidth: 140 }}
+                        value={order.status}
+                        onChange={(e) => patch(order.statusUrl, { status: e.target.value })}
+                      >
+                        {Object.entries(courierOrderStatuses).map(([value, meta]) => (
+                          <option key={value} value={value}>
+                            {meta.label}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="text-muted f-s-13 text-nowrap">{order.date || '—'}</td>
+                    <td className="text-center">
+                      <button
+                        className="btn btn-light-primary icon-btn w-30 h-30 b-r-22"
+                        title="Batafsil ko'rish"
+                        onClick={() => setSelectedOrder(order)}
+                      >
+                        <i className="ti ti-eye"></i>
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {courierOrderPagination.total === 0 && (
+                  <tr>
+                    <td colSpan={9} className="text-center py-5 text-secondary">
+                      <i className="ti ti-package-off d-flex justify-content-center mb-2 f-s-30 text-primary"></i>
+                      Hech qanday kuryer topshirig'i topilmadi
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <PaginationControls
+            {...courierOrderPagination}
+            onPageChange={(page) => load({ courier_orders_page: page })}
+          />
         </div>
-      </div> : null}
-      <CourierModal courier={selectedCourier} onHide={() => setSelectedCourier(null)} onPatch={patch} onWarn={warn} onResetPassword={resetPassword} onEdit={(courier) => setEditingCourier(courier)} />
-      <CourierEditModal courier={editingCourier} onHide={() => setEditingCourier(null)} />
-      <OrderModal order={selectedOrder} statuses={courierOrderStatuses} onHide={() => setSelectedOrder(null)} onPatch={patch} />
+      </div>
+
+      {/* Axelit Order Detail Modal */}
+      <OrderModal
+        order={selectedOrder}
+        statuses={courierOrderStatuses}
+        onHide={() => setSelectedOrder(null)}
+        onPatch={patch}
+      />
     </div>
   );
 }
 
-function CourierModal({ courier, onHide, onPatch, onWarn, onResetPassword, onEdit }: { courier: Courier | null; onHide: () => void; onPatch: (url?: string, data?: Record<string, string>, confirmation?: string) => void; onWarn: (courier: Courier) => void; onResetPassword: (courier: Courier) => void; onEdit: (courier: Courier) => void }) {
-  const uploadDocument = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!courier?.actions?.uploadDocumentUrl) return;
-    router.post(courier.actions.uploadDocumentUrl, new FormData(event.currentTarget), { preserveScroll: true });
-  };
-  return (
-    <Modal show={!!courier} onHide={onHide} size="xl" centered><Modal.Header closeButton><Modal.Title className="f-s-20 f-w-600">{courier?.name}</Modal.Title></Modal.Header><Modal.Body>{!courier ? null : <div className="row">
-<div className="col-lg-4 col-xxl-3"><ProfileCard
-            image={courier.photo || null}
-            name={courier.name}
-            subtitle={[courier.phone, courier.region].filter(Boolean).join(' · ') || undefined}
-            badges={<><span className={`badge text-uppercase ${courier.status === 'approved' ? 'text-light-success' : courier.status === 'blocked' || courier.status === 'rejected' ? 'text-light-danger' : 'text-light-warning'}`}>{courierLabel(courier.status)}</span><span className={`badge ${courier.isOnline ? 'text-light-success' : 'text-light-secondary'}`}>{courier.isOnline ? 'Online' : 'Offline'}</span></>}
-            stats={[{ label: 'Buyurtma', value: fmt(courier.orders || 0) }, { label: 'Balans', value: fmt(courier.balance || 0) }, { label: 'Ogohl.', value: `${courier.warningCount || 0}/3` }]}
-          /></div>
-<div className="col-lg-8 col-xxl-9"><div className="row">
-          <Info title="Asosiy ma'lumotlar" rows={[['Telefon', courier.phone || '—'], ['Hudud', courier.region || '—'], ['Ish faoliyati', courier.isOnline ? 'Online' : 'Offline'], ['Holat yangilangan', courier.availabilityUpdatedAt || '—'], ['Holat', courierLabel(courier.status)], ['Verifikatsiya', courier.verificationLabel || courier.verificationStatus || '—'], ['Ro‘yxatdan o‘tgan', courier.joined || '—'], ['Ogohlantirish', `${courier.warningCount || 0}/3`]]} />
-          <Info title="Moliya" rows={[['Balans', `${fmt(courier.balance || 0)} so'm`], ['Rezerv', `${fmt(courier.reserved || 0)} so'm`], ['Daromad', `${fmt(courier.totalEarned || 0)} so'm`], ['Yechilgan', `${fmt(courier.totalWithdrawal || 0)} so'm`], ['Buyurtmalar', String(courier.orders || 0)], ['Karta', String(courier.payment?.card || '—')]]} />
-          <Info title="Transport va shaxs" rows={[['Transport', courier.transportLabel || courier.transport || '—'], ['Avtomobil', [courier.vehicle, courier.vehicleColor].filter(Boolean).join(', ') || '—'], ['Raqam', courier.plate || '—'], ['INN', String(courier.identity?.inn || '—')], ['Tug‘ilgan sana', String(courier.identity?.birthdate || '—')], ['Pasport', String(courier.identity?.passport || '—')], ['Pasport berilgan', String(courier.identity?.passportIssuedAt || '—')], ['Guvohnoma', String(courier.identity?.license || '—')], ['Guvohnoma tugaydi', String(courier.identity?.licenseExpiresAt || '—')], ['Qolgan kun', String(courier.identity?.licenseDaysRemaining ?? '—')]]} />
-          <Info title="Lokatsiya va manzil" rows={[['Uy manzili', String(courier.payment?.homeAddress || '—')], ['Karta egasi', String(courier.payment?.cardHolder || '—')], ['Latitude', String(courier.location?.lat || '—')], ['Longitude', String(courier.location?.lon || '—')], ['Lokatsiya yangilangan', String(courier.location?.updatedAt || '—')], ['Tasdiqlangan sana', courier.verifiedAt || '—'], ['Verifikatsiya izohi', courier.verificationNotes || '—']]} />
-          <div className="col-xl-6"><div className="card h-100"><div className="card-header"><h5 className="mb-0">Joriy lokatsiya xaritasi</h5></div><div className="card-body"><div className="f-s-13 text-muted mb-2">Kuryerning oxirgi yuborgan koordinatasi asosida ochiladi.</div><MapButtons mapLinks={(courier.location?.mapLinks || {}) as Record<string, string>} /></div></div></div>
-          <ListBlock title="Oxirgi buyurtmalar" items={courier.recentOrders || []} render={(item) => <><strong>#{item.id} / ORD #{item.orderId} · {fmt(Number(item.amount || 0))} so'm</strong><span>{String(item.customer || 'Mijoz')} · {String(item.status || '—')} · {String(item.date || '—')}</span></>} />
-          <ListBlock title="Tranzaksiyalar" items={courier.transactions || []} render={(item) => {
-            const isExpense = item.type === 'expense' || item.category === 'penalty' || item.category === 'withdrawal' || item.category === 'reversal';
-            return <><strong className={isExpense ? 'text-danger' : 'text-success'}>{isExpense ? '-' : '+'}{fmt(Number(item.net || item.amount || 0))} so'm · {String(item.status || '—')}</strong><span>{String(item.description || item.category || 'Tranzaksiya')} · {String(item.date || '—')}</span></>;
-          }} />
-          <div className="col-12"><div className="card"><div className="card-header d-flex align-items-center justify-content-between"><h5 className="mb-0">Hujjatlar</h5><FormAction label="Hujjat yuklash" icon="ti ti-upload" title="Hujjat yuklash" submitLabel="Yuklash" disabled={!courier.actions?.uploadDocumentUrl} onSubmit={uploadDocument}><label className="form-label">Hujjat turi</label><select name="type" className="form-select mb-3" required><option value="passport">Pasport</option><option value="driver_license">Haydovchi guvohnomasi</option><option value="vehicle_reg">Transport guvohnomasi</option><option value="vehicle_insurance">Sug'urta polisi</option><option value="inn_certificate">STIR guvohnomasi</option><option value="medical_cert">Tibbiy ma'lumotnoma</option><option value="photo_with_passport">Pasport bilan selfi</option><option value="other">Boshqa</option></select><label className="form-label">Fayl</label><input type="file" name="file" className="form-control mb-3" accept=".pdf,image/*" required /><label className="form-label">Izoh</label><input name="description" className="form-control" placeholder="Izoh" /></FormAction></div><div className="card-body">{(courier.documents || []).map((item) => <div className="d-flex justify-content-between align-items-center b-t-1-light py-2 gap-2" key={String(item.id)}><div><strong>{String(item.typeLabel || item.type || 'Hujjat')}</strong><div className="f-s-13 text-muted">{String(item.name || '—')} · {String(item.date || '—')}</div><div className="f-s-13">{String(item.description || '')}</div></div><div className="d-flex gap-2">{item.url ? <a href={String(item.url)} target="_blank" rel="noreferrer" className="btn btn-sm btn-light-secondary">Ko'rish</a> : null}{item.deleteUrl ? <button type="button" className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => confirm("Hujjat o'chirilsinmi?") && router.delete(String(item.deleteUrl), { preserveScroll: true })}><i className="ti ti-trash"></i></button> : null}</div></div>)}{(courier.documents || []).length === 0 ? <div className="text-muted f-s-13">Hujjat topilmadi</div> : null}</div></div></div>
-          <ListBlock title={`Ogohlantirishlar (${courier.warningCount || 0}/3)`} items={courier.banLogs || []} render={(item) => <><strong>{String(item.title || '—')}</strong><span>{String(item.message || '')} · {String(item.date || '—')}</span></>} />
-        </div></div>
-</div>}</Modal.Body><Modal.Footer>{courier ? <Button variant="outline-warning" onClick={() => onWarn(courier)}>Ogohlantirish</Button> : null}{courier ? <Button variant="outline-primary" onClick={() => onEdit(courier)}>Tahrirlash</Button> : null}{courier ? <Button variant="outline-secondary" onClick={() => onResetPassword(courier)}>Parol reset</Button> : null}{courier?.status !== 'approved' ? <Button variant="outline-success" onClick={() => onPatch(courier?.actions?.approveUrl, {}, 'Kuryer tasdiqlansinmi?')}>Tasdiqlash</Button> : null}<Button variant="outline-danger" onClick={() => onPatch(courier?.actions?.rejectUrl, {}, 'Kuryer rad etilsinmi?')}>Rad etish</Button>{courier?.status === 'blocked' ? <Button variant="outline-primary" onClick={() => onPatch(courier?.actions?.unblockUrl, { message: 'Admin tomonidan blokdan chiqarildi.' }, 'Kuryer blokdan chiqarilsinmi?')}>Blokdan chiqarish</Button> : null}<Button variant="light-secondary" onClick={onHide}>Yopish</Button></Modal.Footer></Modal>
-  );
-}
-
-function OrderModal({ order, statuses, onHide, onPatch }: { order: CourierOrder | null; statuses: Record<string, StatusMeta>; onHide: () => void; onPatch: (url?: string, data?: Record<string, string>) => void }) {
+function OrderModal({
+  order,
+  statuses,
+  onHide,
+  onPatch,
+}: {
+  order: CourierOrder | null;
+  statuses: Record<string, StatusMeta>;
+  onHide: () => void;
+  onPatch: (url?: string, data?: Record<string, string>) => void;
+}) {
   const [penaltyReason, setPenaltyReason] = useState('late_delivery');
-  const activePenalty = (order?.penaltyRules || []).find((rule) => rule.key === penaltyReason) || order?.penaltyRules?.[0];
+  const activePenalty =
+    (order?.penaltyRules || []).find((rule) => rule.key === penaltyReason) ||
+    order?.penaltyRules?.[0];
+
   const submitPenalty = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!order?.penaltyUrl || !activePenalty) return;
-    if (!confirm(`${order.courier} balansidan ${fmt(activePenalty.amount)} so'm jarima yechilsinmi?`)) return;
+    if (!confirm(`${order.courier} balansidan ${fmt(activePenalty.amount)} so'm jarima yechilsinmi?`))
+      return;
     router.post(order.penaltyUrl, new FormData(event.currentTarget), { preserveScroll: true });
   };
 
   return (
-    <Modal show={!!order} onHide={onHide} size="xl" centered><Modal.Header closeButton><Modal.Title className="f-s-20 f-w-600">Kuryer order #{order?.id}</Modal.Title></Modal.Header><Modal.Body>{!order ? null : <div className="row">
-<div className="col-lg-4 col-xxl-3"><ProfileCard
-            icon="ti ti-truck-delivery"
-            name={`Kuryer order #${order.id}`}
-            subtitle={`Asosiy order #${order.orderId || '—'}`}
-            badges={<><span className="badge text-light-primary">{order.statusLabel || order.status}</span>{order.paymentStatus ? <span className="badge text-light-secondary">{order.paymentStatus}</span> : null}</>}
-            stats={[{ label: 'Summa', value: fmt(order.amount) }, { label: 'Payout', value: fmt((order.courierPrice || 0) + (order.bonus || 0)) }]}
-          />
-          <AboutList title="Ishtirokchilar" rows={[
-            { icon: 'ti-bike', label: 'Kuryer', value: order.courier },
-            { icon: 'ti-phone', label: 'Kuryer tel.', value: order.courierPhone },
-            { icon: 'ti-user', label: 'Mijoz', value: order.customer },
-            { icon: 'ti-phone', label: 'Mijoz tel.', value: order.customerPhone },
-          ]} /></div>
-<div className="col-lg-8 col-xxl-9"><div className="row">
-            <Info title="Yetkazma" rows={[['Asosiy order', `#${order.orderId || '—'}`], ['Kuryer', order.courier], ['Kuryer telefoni', order.courierPhone || '—'], ['Hudud', order.courierRegion || '—'], ['Mijoz', order.customer], ['Mijoz telefoni', order.customerPhone || '—']]} />
-            <Info title="Hisob-kitob" rows={[['Yetkazma summasi', `${fmt(order.amount)} so'm`], ['Order summasi', `${fmt(order.mainOrderAmount || 0)} so'm`], ['Kuryer ulushi', `${fmt(order.courierPrice || 0)} so'm`], ['Bonus', `${fmt(order.bonus || 0)} so'm`], ['Jami payout', `${fmt((order.courierPrice || 0) + (order.bonus || 0))} so'm`], ['Settled', `${fmt(order.settledAmount || 0)} so'm`]]} />
-            <Info title="Km payout breakdown" rows={[['Masofa', `${Number(order.taskDistanceKm || 0).toFixed(2)} km`], ['Leg', order.taskLeg || '—'], ['Bazaviy haq', `${fmt(order.taskBaseFeeAmount || 0)} so'm`], ['Km haqi', `${fmt(order.taskDistanceFeeAmount || 0)} so'm`], ['Masofa bonusi', `${fmt(order.taskBonusAmount || 0)} so'm`], ['Task jami', `${fmt(order.taskFeeAmount || 0)} so'm`]]} />
-            <Info title="Jarayon" rows={[['Holat', order.statusLabel || order.status], ['To‘lov', order.paymentStatus || '—'], ['Yetkazish turi', order.deliveryType || '—'], ['Olingan vaqt', order.pickedUpAt || '—'], ['Kutish rejimi', 'O‘chirilgan'], ['Kechikish', 'Hisoblanmaydi']]} />
-            <Info title="Manzil" rows={[['Qabul qiluvchi', order.address?.fullName || '—'], ['Telefon', order.address?.phone || '—'], ['Viloyat', order.address?.region || '—'], ['Tuman', order.address?.district || '—'], ['Ko‘cha', order.address?.street || '—'], ['Uy', order.address?.home || '—']]} />
-            <div className="col-12"><div className="card"><div className="card-header"><h5 className="mb-0">Xaritada ochish</h5></div><div className="card-body"><MapButtons mapLinks={(order.address?.mapLinks || {}) as Record<string, string>} /></div></div></div>
-            <div className="col-12"><div className="card"><div className="card-header"><h5 className="mb-0">Mahsulotlar</h5></div><div className="card-body">{(order.items || []).map((item, index) => <div className="d-flex justify-content-between b-b-1-light py-2" key={`${item.name}-${index}`}><div><strong>{item.name}</strong><div className="f-s-13 text-muted">{item.author || item.type || '—'}</div></div><div className="text-end">{item.quantity} x {fmt(item.price)}<div className="f-w-600">{fmt(item.quantity * item.price)} so'm</div></div></div>)}{(order.items || []).length === 0 ? <div className="text-muted">Mahsulot topilmadi</div> : null}</div></div></div>
-            <div className="col-12"><div className="card"><div className="card-body"><ActionRow icon="ti ti-shield-x" tone="danger" title="Kuryerga jarima qo‘llash" value={activePenalty ? `${fmt(activePenalty.amount)} so'm · ${activePenalty.label}` : undefined} meta="Jarima mijoz shikoyati va order holatiga qarab hisoblanadi, tasdiqlansa kuryer balansidan yechiladi" action={<FormAction label="Jarima qo‘llash" icon="ti ti-coins" variant="light-danger" title="Kuryerga jarima qo‘llash" submitLabel="Jarimani qo‘llash" submitVariant="danger" disabled={!order.penaltyUrl || !(order.penaltyRules || []).length} onSubmit={submitPenalty}><div className="row g-3"><div className="col-12"><label className="form-label">Shikoyat sababi</label><select name="reason" className="form-select" value={activePenalty?.key || penaltyReason} onChange={(event) => setPenaltyReason(event.target.value)}>{(order.penaltyRules || []).map((rule) => <option key={rule.key} value={rule.key}>{rule.label} · {fmt(rule.amount)} so'm</option>)}</select></div><div className="col-12"><label className="form-label">Admin izohi</label><input name="note" className="form-control" placeholder="Mijoz shikoyati, dalil yoki operator izohi" /></div>{activePenalty ? <div className="col-12"><div className="f-s-13 text-muted">{activePenalty.description}</div></div> : null}</div></FormAction>} /></div></div></div>
-          </div></div>
-</div>}</Modal.Body><Modal.Footer>{order ? <select className="form-select" style={{ maxWidth: 280 }} value={order.status} onChange={(e) => onPatch(order.statusUrl, { status: e.target.value })}>{Object.entries(statuses).map(([value, meta]) => <option key={value} value={value}>{meta.label}</option>)}</select> : null}<Button variant="light-secondary" onClick={onHide}>Yopish</Button></Modal.Footer></Modal>
+    <Modal show={!!order} onHide={onHide} size="xl" centered>
+      <Modal.Header closeButton>
+        <Modal.Title className="f-s-20 f-w-600">
+          Topshiriq #{order?.id} — Yetkazma tafsilotlari
+        </Modal.Title>
+      </Modal.Header>
+      <Modal.Body>
+        {!order ? null : (
+          <div className="row g-3">
+            {/* Left sidebar profile summary */}
+            <div className="col-lg-4 col-xxl-3">
+              <ProfileCard
+                icon="ti ti-truck-delivery"
+                name={`Yetkazma #${order.id}`}
+                subtitle={`Asosiy buyurtma: #${order.orderId || '—'}`}
+                badges={
+                  <>
+                    <span className={`badge ${statusChip(order.status)}`}>
+                      {order.statusLabel || order.status}
+                    </span>
+                    {order.paymentStatus ? (
+                      <span className="badge text-light-secondary">{order.paymentStatus}</span>
+                    ) : null}
+                  </>
+                }
+                stats={[
+                  { label: 'Buyurtma summasi', value: `${fmt(order.amount)} so'm` },
+                  {
+                    label: 'Kuryer daromadi',
+                    value: `${fmt((order.courierPrice || 0) + (order.bonus || 0))} so'm`,
+                  },
+                ]}
+              />
+
+              <AboutList
+                title="Ishtirokchilar aloqasi"
+                rows={[
+                  { icon: 'ti-bike', label: 'Kuryer', value: order.courier },
+                  { icon: 'ti-phone', label: 'Kuryer tel.', value: order.courierPhone },
+                  { icon: 'ti-user', label: 'Mijoz', value: order.customer },
+                  { icon: 'ti-phone', label: 'Mijoz tel.', value: order.customerPhone },
+                ]}
+              />
+            </div>
+
+            {/* Right content details */}
+            <div className="col-lg-8 col-xxl-9">
+              <div className="row g-3">
+                <Info
+                  title="Yetkazma ma'lumotlari"
+                  rows={[
+                    ['Asosiy buyurtma', `#${order.orderId || '—'}`],
+                    ['Kuryer', order.courier],
+                    ['Kuryer telefoni', order.courierPhone || '—'],
+                    ['Hudud', order.courierRegion || '—'],
+                    ['Mijoz', order.customer],
+                    ['Mijoz telefoni', order.customerPhone || '—'],
+                  ]}
+                />
+
+                <Info
+                  title="Moliyaviy taqsimot"
+                  rows={[
+                    ['Yetkazma summasi', `${fmt(order.amount)} so'm`],
+                    ['Buyurtma summasi', `${fmt(order.mainOrderAmount || 0)} so'm`],
+                    ['Kuryer ulushi', `${fmt(order.courierPrice || 0)} so'm`],
+                    ['Bonus', `${fmt(order.bonus || 0)} so'm`],
+                    [
+                      'Jami payout',
+                      `${fmt((order.courierPrice || 0) + (order.bonus || 0))} so'm`,
+                    ],
+                    ['Settled summa', `${fmt(order.settledAmount || 0)} so'm`],
+                  ]}
+                />
+
+                <Info
+                  title="Masofa va tarif hisobi"
+                  rows={[
+                    ['Masofa', `${Number(order.taskDistanceKm || 0).toFixed(2)} km`],
+                    ['Marshrut qismi (Leg)', order.taskLeg || '—'],
+                    ['Bazaviy tarif', `${fmt(order.taskBaseFeeAmount || 0)} so'm`],
+                    ['Masofa tarifi', `${fmt(order.taskDistanceFeeAmount || 0)} so'm`],
+                    ['Masofa bonusi', `${fmt(order.taskBonusAmount || 0)} so'm`],
+                    ['Jami topshiriq tarifi', `${fmt(order.taskFeeAmount || 0)} so'm`],
+                  ]}
+                />
+
+                <Info
+                  title="Jarayon va vaqtlar"
+                  rows={[
+                    ['Holat', order.statusLabel || order.status],
+                    ['To‘lov holati', order.paymentStatus || '—'],
+                    ['Yetkazish turi', order.deliveryType || '—'],
+                    ['Olingan vaqt', order.pickedUpAt || '—'],
+                    ['Topshirilgan vaqt', order.settledAt || '—'],
+                    ['Yaratilgan sana', order.date || '—'],
+                  ]}
+                />
+
+                <div className="col-12">
+                  <div className="card h-100">
+                    <div className="card-header pb-2">
+                      <h6 className="mb-0 f-w-600">Yetkazish manzili va xarita</h6>
+                    </div>
+                    <div className="card-body">
+                      <div className="row g-2 mb-2">
+                        <div className="col-sm-6">
+                          <small className="text-muted d-block">Qabul qiluvchi</small>
+                          <span className="f-w-600">{order.address?.fullName || '—'}</span>
+                        </div>
+                        <div className="col-sm-6">
+                          <small className="text-muted d-block">Bog'lanish telefoni</small>
+                          <span className="f-w-600">{order.address?.phone || '—'}</span>
+                        </div>
+                        <div className="col-12">
+                          <small className="text-muted d-block">To'liq manzil</small>
+                          <span className="f-w-600">
+                            {[
+                              order.address?.region,
+                              order.address?.district,
+                              order.address?.street,
+                              order.address?.home,
+                            ]
+                              .filter(Boolean)
+                              .join(', ') || 'Ko‘rsatilmagan'}
+                          </span>
+                        </div>
+                      </div>
+                      <MapButtons
+                        mapLinks={(order.address?.mapLinks || {}) as Record<string, string>}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="col-12">
+                  <div className="card h-100">
+                    <div className="card-header pb-2">
+                      <h6 className="mb-0 f-w-600">Buyurtmadagi tovarlar</h6>
+                    </div>
+                    <div className="card-body">
+                      {(order.items || []).map((item, index) => (
+                        <div
+                          className="d-flex justify-content-between align-items-center b-b-1-light py-2"
+                          key={`${item.name}-${index}`}
+                        >
+                          <div>
+                            <strong>{item.name}</strong>
+                            <div className="f-s-13 text-muted">
+                              {item.author || item.type || '—'}
+                            </div>
+                          </div>
+                          <div className="text-end">
+                            <span className="text-muted me-2">
+                              {item.quantity} x {fmt(item.price)}
+                            </span>
+                            <span className="f-w-600">{fmt(item.quantity * item.price)} so'm</span>
+                          </div>
+                        </div>
+                      ))}
+                      {(order.items || []).length === 0 && (
+                        <div className="text-muted f-s-13">Mahsulotlar topilmadi</div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Jarima qo'llash */}
+                <div className="col-12">
+                  <div className="card">
+                    <div className="card-body">
+                      <ActionRow
+                        icon="ti ti-shield-x"
+                        tone="danger"
+                        title="Kuryerga jarima qo‘llash"
+                        value={
+                          activePenalty
+                            ? `${fmt(activePenalty.amount)} so'm · ${activePenalty.label}`
+                            : undefined
+                        }
+                        meta="Jarima mijoz shikoyati yoki kechikish holatiga qarab hisoblanadi, tasdiqlansa kuryer balansidan yechiladi"
+                        action={
+                          <FormAction
+                            label="Jarima qo‘llash"
+                            icon="ti ti-coins"
+                            variant="light-danger"
+                            title="Kuryerga jarima qo‘llash"
+                            submitLabel="Jarimani qo‘llash"
+                            submitVariant="danger"
+                            disabled={!order.penaltyUrl || !(order.penaltyRules || []).length}
+                            onSubmit={submitPenalty}
+                          >
+                            <div className="row g-3">
+                              <div className="col-12">
+                                <label className="form-label">Shikoyat sababi</label>
+                                <select
+                                  name="reason"
+                                  className="form-select"
+                                  value={activePenalty?.key || penaltyReason}
+                                  onChange={(event) => setPenaltyReason(event.target.value)}
+                                >
+                                  {(order.penaltyRules || []).map((rule) => (
+                                    <option key={rule.key} value={rule.key}>
+                                      {rule.label} · {fmt(rule.amount)} so'm
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div className="col-12">
+                                <label className="form-label">Admin izohi</label>
+                                <input
+                                  name="note"
+                                  className="form-control"
+                                  placeholder="Mijoz shikoyati, dalil yoki operator izohi"
+                                />
+                              </div>
+                              {activePenalty ? (
+                                <div className="col-12">
+                                  <div className="f-s-13 text-muted">
+                                    {activePenalty.description}
+                                  </div>
+                                </div>
+                              ) : null}
+                            </div>
+                          </FormAction>
+                        }
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal.Body>
+      <Modal.Footer className="d-flex justify-content-between align-items-center">
+        <div>
+          {order && (
+            <div className="d-flex align-items-center gap-2">
+              <span className="text-muted f-s-13">Holatni yangilash:</span>
+              <select
+                className="form-select form-select-sm"
+                style={{ maxWidth: 220 }}
+                value={order.status}
+                onChange={(e) => onPatch(order.statusUrl, { status: e.target.value })}
+              >
+                {Object.entries(statuses).map(([value, meta]) => (
+                  <option key={value} value={value}>
+                    {meta.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+        <Button variant="light-secondary" onClick={onHide}>
+          Yopish
+        </Button>
+      </Modal.Footer>
+    </Modal>
   );
 }
 
-function Avatar({ row }: { row: Courier }) {
-  return <PAvatar src={row.photo} name={row.name} size="lg" />;
-}
 function Info({ title, rows }: { title: string; rows: Array<[string, string]> }) {
-  return <div className="col-xl-6"><div className="card h-100"><div className="card-header"><h5 className="mb-0">{title}</h5></div><div className="card-body"><div className="row g-2">{rows.map(([label, value]) => <div className="col-sm-6" key={label}><small className="text-muted d-block">{label}</small><span className="f-w-600">{value}</span></div>)}</div></div></div></div>;
-}
-function ListBlock({ title, items, render }: { title: string; items: AnyRow[]; render: (item: AnyRow) => JSX.Element }) {
-  return <div className="col-xl-6"><div className="card h-100"><div className="card-header"><h5 className="mb-0">{title}</h5></div><div className="card-body">{items.map((item, index) => <div className="b-b-1-light py-2 d-flex flex-column" key={String(item.id || index)}>{render(item)}</div>)}{items.length === 0 ? <div className="text-muted f-s-13">Ma'lumot topilmadi</div> : null}</div></div></div>;
-}
-
-function CourierEditModal({ courier, onHide }: { courier: Courier | null; onHide: () => void }) {
-  const submit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!courier?.actions?.updateUrl) return;
-    const form = new FormData(event.currentTarget);
-    form.append('_method', 'put');
-    router.post(courier.actions.updateUrl, form, { preserveScroll: true, onSuccess: onHide });
-  };
-
-  return <Modal show={!!courier} onHide={onHide} centered size="xl"><form onSubmit={submit}><Modal.Header closeButton><Modal.Title className="f-s-20 f-w-600">Kuryer tahrirlash</Modal.Title></Modal.Header><Modal.Body><div className="row g-3">
-    <SectionTitle title="Asosiy ma'lumotlar" />
-    <FormInput name="first_name" label="Ism" defaultValue={courier?.firstName || courier?.name?.split(' ')[0]} required />
-    <FormInput name="last_name" label="Familiya" defaultValue={courier?.lastName || courier?.name?.split(' ').slice(1).join(' ')} required />
-    <FormInput name="phone_number" label="Telefon" defaultValue={courier?.phone} required />
-    <FormInput name="region" label="Hudud" defaultValue={courier?.region} required />
-    <div className="col-md-6"><label className="form-label">Status</label><select name="status" defaultValue={courier?.status || 'pending'} className="form-select"><option value="pending">Kutilmoqda</option><option value="approved">Faol</option><option value="rejected">Rad etilgan</option><option value="blocked">Bloklangan</option></select></div>
-    <FormInput name="balance" label="Balans" type="number" defaultValue={courier?.balance} />
-    <FormInput name="password" label="Yangi parol" type="password" />
-    <FormInput name="photo" label="Profil rasmi" type="file" />
-    <FormInput name="birthdate" label="Tug'ilgan sana" type="date" defaultValue={String(courier?.identity?.birthdate || '')} />
-    <FormInput name="home_address" label="Uy manzili" defaultValue={String(courier?.payment?.homeAddress || '')} />
-    <SectionTitle title="Transport va to'lov" />
-    <div className="col-md-6"><label className="form-label">Transport</label><select name="transport_type" defaultValue={courier?.transport || ''} className="form-select"><option value="">Tanlanmagan</option><option value="foot">Piyoda</option><option value="bicycle">Velosiped</option><option value="motorcycle">Mototsikl</option><option value="car">Avto</option></select></div>
-    <FormInput name="vehicle_brand" label="Brend" defaultValue={courier?.vehicleBrand} />
-    <FormInput name="vehicle_model" label="Model" defaultValue={courier?.vehicleModel} />
-    <FormInput name="vehicle_color" label="Rang" defaultValue={courier?.vehicleColor} />
-    <FormInput name="vehicle_plate_number" label="Raqam" defaultValue={courier?.plate} />
-    <FormInput name="inn" label="INN" defaultValue={String(courier?.identity?.inn || '')} />
-    <FormInput name="payment_card" label="Karta" defaultValue={String(courier?.payment?.rawCard || '')} />
-    <FormInput name="card_holder" label="Karta egasi" defaultValue={String(courier?.payment?.cardHolder || '')} />
-    <SectionTitle title="Pasport va haydovchilik guvohnomasi" />
-    <FormInput name="passport_series" label="Pasport seriyasi" defaultValue={String(courier?.identity?.passport || '').split(' ')[0]} />
-    <FormInput name="passport_number" label="Pasport raqami" defaultValue={String(courier?.identity?.passport || '').split(' ').slice(1).join(' ')} />
-    <FormInput name="passport_issued_by" label="Pasport kim tomonidan berilgan" defaultValue={String(courier?.identity?.passportIssuedBy || '')} />
-    <FormInput name="passport_issued_at" label="Pasport berilgan sana" type="date" defaultValue={String(courier?.identity?.passportIssuedAt || '')} />
-    <FormInput name="driver_license_number" label="Guvohnoma raqami" defaultValue={String(courier?.identity?.license || '')} />
-    <FormInput name="driver_license_issued_at" label="Guvohnoma berilgan sana" type="date" defaultValue={String(courier?.identity?.licenseIssuedAt || '')} />
-    <FormInput name="driver_license_expires_at" label="Guvohnoma tugash sanasi" type="date" defaultValue={String(courier?.identity?.licenseExpiresAt || '')} />
-    <SectionTitle title="Verifikatsiya" />
-    <div className="col-md-6"><label className="form-label">Verifikatsiya</label><select name="verification_status" defaultValue={courier?.verificationStatus || 'unverified'} className="form-select"><option value="unverified">Unverified</option><option value="pending">Pending</option><option value="verified">Verified</option><option value="rejected">Rejected</option></select></div>
-    <div className="col-12"><label className="form-label">Verifikatsiya izohi</label><textarea name="verification_notes" defaultValue={courier?.verificationNotes || ''} className="form-control" rows={2}></textarea></div>
-  </div></Modal.Body><Modal.Footer><Button variant="light-secondary" onClick={onHide}>Bekor</Button><Button type="submit" variant="primary">Saqlash</Button></Modal.Footer></form></Modal>;
-}
-
-function FormInput({ name, label, defaultValue, required, type = 'text' }: { name: string; label: string; defaultValue?: string | number | null; required?: boolean; type?: string }) {
-  return <div className="col-md-6"><label className="form-label">{label}</label><input name={name} type={type} defaultValue={defaultValue ?? ''} required={required} className="form-control" /></div>;
-}
-
-function SectionTitle({ title }: { title: string }) {
-  return <div className="col-12 mt-4"><h6 className="f-w-600 mb-0">{title}</h6></div>;
+  return (
+    <div className="col-xl-6">
+      <div className="card h-100">
+        <div className="card-header pb-2">
+          <h6 className="mb-0 f-w-600">{title}</h6>
+        </div>
+        <div className="card-body">
+          <div className="row g-2">
+            {rows.map(([label, value]) => (
+              <div className="col-sm-6" key={label}>
+                <small className="text-muted d-block">{label}</small>
+                <span className="f-w-600 f-s-13">{value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function MapButtons({ mapLinks }: { mapLinks?: Record<string, string> }) {
-  if (!mapLinks?.google && !mapLinks?.yandex) return <span className="text-muted f-s-13">Xarita linki yo'q</span>;
+  if (!mapLinks?.google && !mapLinks?.yandex) {
+    return <span className="text-muted f-s-13">Xarita linki mavjud emas</span>;
+  }
 
   return (
     <div className="d-flex gap-2 flex-wrap mt-2">
-      {mapLinks.google ? <a className="btn btn-sm btn-light-secondary" href={mapLinks.google} target="_blank" rel="noreferrer"><i className="ti ti-map-pin me-1"></i>Google Map</a> : null}
-      {mapLinks.yandex ? <a className="btn btn-sm btn-light-secondary" href={mapLinks.yandex} target="_blank" rel="noreferrer"><i className="ti ti-map me-1"></i>Yandex Map</a> : null}
+      {mapLinks.google && (
+        <a
+          className="btn btn-sm btn-light-secondary"
+          href={mapLinks.google}
+          target="_blank"
+          rel="noreferrer"
+        >
+          <i className="ti ti-map-pin me-1 text-primary"></i>Google Xarita
+        </a>
+      )}
+      {mapLinks.yandex && (
+        <a
+          className="btn btn-sm btn-light-secondary"
+          href={mapLinks.yandex}
+          target="_blank"
+          rel="noreferrer"
+        >
+          <i className="ti ti-map-pin me-1 text-warning"></i>Yandex Xarita
+        </a>
+      )}
     </div>
   );
 }

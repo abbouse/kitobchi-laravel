@@ -43,8 +43,12 @@ class SellerAuthController extends Controller
         $shop_name = $request->input('shop_name');
         $region = $request->input('region');
         $activity_types = $request->input('activity_types');
-        $cleaned_phone = preg_replace('/[\s\(\)-]/', '', $phone_number);
-        $sellerCheck = Seller::where('phone_number', $cleaned_phone)->first();
+        $business_role = (string) $request->input('business_role', 'seller');
+        if (! in_array($business_role, ['seller', 'author'], true)) {
+            $business_role = 'seller';
+        }
+
+        $cleaned_phone = preg_replace('/[\s\(\)-]/', '', (string) $phone_number);
 
         $error = '';
         if (empty($phone_number)) {
@@ -54,14 +58,18 @@ class SellerAuthController extends Controller
             $error = 'Bu telefon raqami allaqachon ro‘yxatdan o‘tgan';
         }
         if (empty($shop_name)) {
-            $error = 'Do‘kon nomi bo‘sh bo‘lmasligi kerak';
+            $error = $business_role === 'author' ? 'Muallif / Brend nomi bo‘sh bo‘lmasligi kerak' : 'Do‘kon nomi bo‘sh bo‘lmasligi kerak';
         } elseif (strlen($shop_name) > 55) {
-            $error = 'Do‘kon nomi 55 belgidan oshmasligi kerak';
+            $error = $business_role === 'author' ? 'Muallif nomi 55 belgidan oshmasligi kerak' : 'Do‘kon nomi 55 belgidan oshmasligi kerak';
         }
         if (empty($region)) {
             $error = 'Viloyat bo‘sh bo‘lmasligi kerak';
         }
-        if (empty($activity_types)) {
+
+        // Mualliflar uchun faoliyat turi standart holda 'Kitob' bo'ladi
+        if ($business_role === 'author' && empty($activity_types)) {
+            $activity_types = ['Kitob'];
+        } elseif (empty($activity_types)) {
             $error = 'Faoliyat turlari bo‘sh bo‘lmasligi kerak';
         } elseif (! is_array($activity_types)) {
             $error = 'Faoliyat turlarida xatolik';
@@ -86,20 +94,22 @@ class SellerAuthController extends Controller
             ], 422);
         }
 
-        // ✅ OWNER yaratiladi (parent_id = NULL)
+        // OWNER yaratiladi (parent_id = NULL)
         $seller = Seller::create([
             'phone_number' => $cleaned_phone,
             'shop_name' => $shop_name,
+            'business_role' => $business_role,
             'region' => $region,
             'activity_types' => json_encode($activity_types),
             'status' => 'pending',
-            'role' => 1, // ✅ OWNER = Admin role
-            'parent_id' => 0, // ✅ OWNER
+            'role' => 1, // OWNER = Admin role
+            'parent_id' => 0, // OWNER
             'password' => (string) Str::random(10),
         ]);
 
         return response()->json([
             'status' => 'success',
+            'business_role' => $seller->business_role,
             'seller' => 'Biz siz bilan aloqaga chiqamiz',
         ], 201);
     }
@@ -187,6 +197,9 @@ class SellerAuthController extends Controller
                 'id' => $seller->id,
                 'phone_number' => $seller->phone_number,
                 'shop_name' => $storeSeller->shop_name,
+                'business_role' => $storeSeller->business_role ?? 'seller',
+                'business_role_label' => $storeSeller->business_role_label ?? (($storeSeller->business_role ?? 'seller') === 'author' ? 'Muallif' : 'Do\'kon'),
+                'is_author' => ($storeSeller->business_role ?? 'seller') === 'author',
                 'region' => $storeSeller->region,
                 'activity_types' => $storeSeller->activity_types,
                 'photo' => $storeSeller->photo,

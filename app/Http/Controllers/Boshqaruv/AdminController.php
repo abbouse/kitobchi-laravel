@@ -3334,6 +3334,7 @@ class AdminController extends Controller
             'activity_types' => ['nullable', 'array'],
             'activity_types.*' => ['string', Rule::in(['Kitob', 'Kanstovar', 'book', 'books', 'stationery', 'stationary', 'kitob', 'kanselyariya', 'Книги', 'Канцелярия'])],
             'status' => ['required', Rule::in(['pending', 'approved', 'rejected', 'blocked'])],
+            'business_role' => ['nullable', 'string', Rule::in(['seller', 'author'])],
             'balance' => ['nullable', 'numeric', 'min:0'],
             'commission_mode' => ['nullable', Rule::in(['global', 'individual'])],
             'commission_percent' => ['nullable', 'integer', 'min:1', 'max:100'],
@@ -4298,22 +4299,23 @@ PROMPT;
                     ? $this->reassignableSellersPayload()
                     : [],
             ],
-            'SellerOrders' => [
+            'Sellers' => [
                 ...$this->sellersPagePayload(),
                 'sellerCounts' => $this->sellerStatusCounts(),
+            ],
+            'SellerOrders' => [
                 ...$this->sellerOrdersPagePayload(),
                 'sellerOrderCounts' => $this->sellerOrderStatusCounts(),
                 'sellerOrderStatuses' => AdminOrderStatusSyncService::SELLER_STATUSES,
-                // Do'kon-egalik almashtirish uchun tanlov ro'yxati — faqat
-                // superadminga (Layout/HandleInertiaRequests orqali kelgan
-                // admin.isSuperAdmin shu tugmani frontendda ko'rsatadi).
                 'reassignSellers' => Auth::guard('panel')->user()?->isSuperAdmin()
                     ? $this->reassignableSellersPayload()
                     : [],
             ],
-            'CourierOrders' => [
+            'Couriers' => [
                 ...$this->couriersPagePayload(),
                 'courierCounts' => $this->courierStatusCounts(),
+            ],
+            'CourierOrders' => [
                 ...$this->courierOrdersPagePayload(),
                 'courierOrderCounts' => $this->courierOrderStatusCounts(),
                 'courierOrderStatuses' => AdminOrderStatusSyncService::COURIER_STATUSES,
@@ -6544,12 +6546,22 @@ PROMPT;
         }
 
         $tab = (string) request('sellers_tab', 'pending');
+        $role = (string) request('sellers_role', 'all');
         $search = trim((string) request('sellers_search', ''));
         $query = Seller::query()
             ->withCount(['books', 'stationeries', 'orders', 'premiumSubscriptions'])
             ->with(['locations' => fn ($builder) => $builder->orderByDesc('is_main')->orderBy('id')->take(12)])
             ->where(fn ($builder) => $builder->whereNull('parent_id')->orWhere('parent_id', 0))
             ->when($tab !== 'all', fn ($builder) => $builder->where('status', $tab))
+            ->when($role !== 'all', function ($builder) use ($role) {
+                if (Schema::hasColumn('sellers', 'business_role')) {
+                    if ($role === 'seller') {
+                        $builder->where(fn ($b) => $b->whereNull('business_role')->orWhere('business_role', 'seller'));
+                    } else {
+                        $builder->where('business_role', $role);
+                    }
+                }
+            })
             ->when($search !== '', fn ($builder) => $builder->where(fn ($nested) => $nested
                 ->where('shop_name', 'like', "%{$search}%")
                 ->orWhere('firstname', 'like', "%{$search}%")
@@ -6558,10 +6570,22 @@ PROMPT;
                 ->orWhere('region', 'like', "%{$search}%")));
         $sellers = $query->latest()->paginate(12, ['*'], 'sellers_page')->withQueryString();
 
+        $baseCountQuery = fn () => Seller::query()->where(fn ($b) => $b->whereNull('parent_id')->orWhere('parent_id', 0));
+        $partnerRoleCounts = [
+            'all' => $baseCountQuery()->count(),
+            'seller' => Schema::hasColumn('sellers', 'business_role')
+                ? $baseCountQuery()->where(fn ($b) => $b->whereNull('business_role')->orWhere('business_role', 'seller'))->count()
+                : $baseCountQuery()->count(),
+            'author' => Schema::hasColumn('sellers', 'business_role')
+                ? $baseCountQuery()->where('business_role', 'author')->count()
+                : 0,
+        ];
+
         return [
             'sellers' => $sellers->getCollection()->map(fn (Seller $seller) => $this->sellerPayload($seller))->values()->all(),
             'sellerPagination' => $this->paginationMeta($sellers),
-            'sellerFilters' => ['tab' => $tab, 'search' => $search],
+            'sellerFilters' => ['tab' => $tab, 'search' => $search, 'role' => $role],
+            'partnerRoleCounts' => $partnerRoleCounts,
         ];
     }
 
@@ -6709,6 +6733,9 @@ PROMPT;
             'id' => $seller->id,
             'name' => $seller->shop_name ?: trim(($seller->firstname ?? '').' '.($seller->lastname ?? '')) ?: 'Seller',
             'shopName' => $seller->shop_name,
+            'businessRole' => $seller->business_role ?? 'seller',
+            'businessRoleLabel' => $seller->business_role_label ?? ($seller->business_role === 'author' ? 'Muallif' : 'Do\'kon'),
+            'isAuthor' => ($seller->business_role ?? 'seller') === 'author',
             'firstName' => $seller->firstname,
             'lastName' => $seller->lastname,
             'ownerName' => trim(($seller->firstname ?? '').' '.($seller->lastname ?? '')) ?: '—',
@@ -12008,6 +12035,25 @@ PROMPT;
                 $alerts[] = ['level' => 'danger', 'icon' => 'bi-headset', 'title' => 'Support navbati', 'text' => $queued.' ta murojaat javob kutmoqda', 'url' => route('boshqaruv.tickets')];
             }
         }
+        if (Schema::hasTable('my_carts') && Schema::hasTable('branch_stocks') && Schema::hasTable('books')) {
+            $bookStockSql = BranchStock::availableSql('book', 'books.id');
+            $outOfStockInCarts = DB::table('my_carts')
+                ->join('books', 'my_carts.product_id', '=', 'books.id')
+                ->where('my_carts.product_type', 'book')
+                ->whereRaw("{$bookStockSql} <= 0")
+                ->distinct('books.id')
+                ->count('books.id');
+
+            if ($outOfStockInCarts > 0) {
+                $alerts[] = [
+                    'level' => 'danger',
+                    'icon' => 'bi-cart-x',
+                    'title' => 'Talab & Savat: Tugagan kitoblar',
+                    'text' => $outOfStockInCarts . ' ta kitob mijozlar savatida bor, lekin omborda tugagan!',
+                    'url' => route('boshqaruv.demand-analytics'),
+                ];
+            }
+        }
 
         return array_slice($alerts, 0, 6);
     }
@@ -13930,12 +13976,10 @@ PROMPT;
             'Publishers' => route('boshqaruv.publishers'),
             'Users' => route('boshqaruv.users'),
             'Orders' => route('boshqaruv.orders'),
-            'SellerOrders' => request()->is('boshqaruv/sellers*')
-                ? route('boshqaruv.sellers')
-                : route('boshqaruv.seller-orders'),
-            'CourierOrders' => request()->is('boshqaruv/couriers*')
-                ? route('boshqaruv.couriers')
-                : route('boshqaruv.courier-orders'),
+            'Sellers' => route('boshqaruv.sellers'),
+            'SellerOrders' => route('boshqaruv.seller-orders'),
+            'Couriers' => route('boshqaruv.couriers'),
+            'CourierOrders' => route('boshqaruv.courier-orders'),
             'Hubs' => route('boshqaruv.hubs'),
             'Transaksiyalar' => route('boshqaruv.transactions'),
             'SellerAiActions' => route('boshqaruv.seller-ai-actions'),

@@ -84,6 +84,9 @@ class SellerController extends Controller
             'data' => [
                 'activity_types' => $storeSeller->activity_types,
                 'shop_name' => $storeSeller->shop_name,
+                'business_role' => $storeSeller->business_role ?? 'seller',
+                'business_role_label' => $storeSeller->business_role_label ?? (($storeSeller->business_role ?? 'seller') === 'author' ? 'Muallif' : 'Do\'kon'),
+                'is_author' => ($storeSeller->business_role ?? 'seller') === 'author',
                 'photo' => $storeSeller->photo,
                 'is_verified' => (bool) $storeSeller->isVerified,
             ],

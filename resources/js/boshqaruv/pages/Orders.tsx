@@ -1290,71 +1290,384 @@ export default function Orders() {
                       </div></div>
                   </div>
                   <div className="col-lg-6">
-                    <div className="card h-100"><div className="card-header"><h5 className="mb-0">To'lov va kuryer</h5></div><div className="card-body">
+                    <div className="card h-100">
+                      <div className="card-header d-flex justify-content-between align-items-center">
+                        <h5 className="mb-0">
+                          <i className="ti ti-bike text-primary me-2"></i>Kuryer va yetkazib berish
+                        </h5>
+                        {selectedOrd.courierOrder?.status && (
+                          <span className="badge text-light-primary border-0">{selectedOrd.courierOrder.status}</span>
+                        )}
+                      </div>
+                      <div className="card-body">
                         <div className="row g-3">
-                          <Detail label="Payment provider" value={selectedOrd.paymentTransaction?.provider} />
-                          <Detail label="Payment status" value={selectedOrd.paymentTransaction?.status} />
-                          <Detail label="Provider card ID" value={selectedOrd.paymentCard?.providerCardId || selectedOrd.paymentTransaction?.providerCardId} />
-                          <Detail label="Karta" value={[selectedOrd.paymentCard?.maskedNumber, selectedOrd.paymentCard?.vendor, selectedOrd.paymentCard?.cardName].filter(Boolean).join(' / ')} />
-                          <Detail label="Karta telefoni" value={selectedOrd.paymentCard?.phone} />
-                          <div className="col-md-6">
-                            <div className="text-muted f-s-13">Fiskal chek (OFD)</div>
-                            <div className="f-w-600">
-                              {selectedOrd.fiscalReceipt?.status === 'registered' && (
-                                <>
-                                  <span className="badge text-light-success border-0 me-2">Berilgan</span>
-                                  {selectedOrd.fiscalReceipt?.receiptUrl && (
-                                    <a href={selectedOrd.fiscalReceipt.receiptUrl} target="_blank" rel="noreferrer">Chekni ochish</a>
-                                  )}
-                                </>
-                              )}
-                              {selectedOrd.fiscalReceipt?.status === 'refunded' && (
-                                <>
-                                  <span className="badge text-light-secondary border-0 me-2">Qaytarilgan</span>
-                                  {selectedOrd.fiscalReceipt?.refundReceiptUrl && (
-                                    <a href={selectedOrd.fiscalReceipt.refundReceiptUrl} target="_blank" rel="noreferrer">Refund chek</a>
-                                  )}
-                                </>
-                              )}
-                              {selectedOrd.fiscalReceipt?.status === 'pending' && (
-                                <span className="badge text-light-warning border-0">Kutilmoqda</span>
-                              )}
-                              {selectedOrd.fiscalReceipt?.status === 'failed' && (
-                                <span className="badge text-light-danger border-0">Xatolik</span>
-                              )}
-                              {selectedOrd.fiscalReceipt?.status === 'none' && <span className="text-muted">—</span>}
-                              {(!selectedOrd.fiscalReceipt || selectedOrd.fiscalReceipt.status === 'disabled') && (
-                                <span className="text-muted">O'chirilgan</span>
-                              )}
-                            </div>
-                            {selectedOrd.fiscalReceipt?.fiscalSign && (
-                              <div className="text-muted f-s-13">Fiskal belgi: {selectedOrd.fiscalReceipt.fiscalSign}</div>
-                            )}
-                            {selectedOrd.fiscalReceipt?.error && (
-                              <div className="text-danger f-s-13 mt-1">{selectedOrd.fiscalReceipt.error}</div>
-                            )}
-                            {selectedOrd.fiscalReceipt && ['pending', 'failed'].includes(selectedOrd.fiscalReceipt.status) && (
-                              <div className="d-flex gap-1 mt-2">
-                                {selectedOrd.fiscalReceipt.syncUrl ? <button className="btn btn-sm btn-light-secondary" onClick={() => router.post(selectedOrd.fiscalReceipt!.syncUrl!, {}, { preserveScroll: true })}><i className="ti ti-cloud-download me-1"></i>Tekshirish</button> : null}
-                                {selectedOrd.fiscalReceipt.registerUrl ? <button className="btn btn-sm btn-outline-primary" onClick={() => router.post(selectedOrd.fiscalReceipt!.registerUrl!, {}, { preserveScroll: true })}><i className="ti ti-send me-1"></i>Qayta yuborish</button> : null}
-                              </div>
-                            )}
-                          </div>
-                          <Detail label="Kuryer" value={selectedOrd.courierOrder?.courier || selectedOrd.courierName} />
-                          <Detail label="Kuryer telefoni" value={selectedOrd.courierOrder?.phone} />
-                          <Detail label="Kuryer narxi" value={`${fmt(selectedOrd.courierOrder?.courierPrice || 0)} so'm`} />
+                          <Detail label="Kuryer" value={selectedOrd.courierOrder?.courier || selectedOrd.courierName || '—'} />
+                          <Detail label="Kuryer telefoni" value={selectedOrd.courierOrder?.phone || '—'} />
+                          <Detail label="Hudud" value={selectedOrd.courierOrder?.region || '—'} />
+                          <Detail label="Kuryer tarifi" value={`${fmt(selectedOrd.courierOrder?.courierPrice || 0)} so'm`} />
                           <Detail label="Masofa" value={`${Number(selectedOrd.courierOrder?.taskDistanceKm || 0).toFixed(2)} km`} />
                           <Detail label="Km haqi" value={`${fmt(selectedOrd.courierOrder?.taskDistanceFeeAmount || 0)} so'm`} />
                           <Detail label="Kuryer bonuslari" value={`${fmt(selectedOrd.courierOrder?.courierBonus ?? 0)} so'm`} />
                           <Detail label="Task jami" value={`${fmt(selectedOrd.courierOrder?.taskFeeAmount || 0)} so'm`} />
-                          <Detail label="Settled" value={selectedOrd.courierOrder?.settledAt ? `${fmt(selectedOrd.courierOrder?.settledAmount || 0)} so'm · ${selectedOrd.courierOrder.settledAt}` : '—'} />
-                          <Detail label="Kutish rejimi" value="O'chirilgan" />
+                          <Detail label="Hisob-kitob (Settled)" value={selectedOrd.courierOrder?.settledAt ? `${fmt(selectedOrd.courierOrder?.settledAmount || 0)} so'm · ${selectedOrd.courierOrder.settledAt}` : 'Kutilmoqda'} />
+                          <Detail label="Topshirilgan vaqti" value={selectedOrd.courierOrder?.pickedUpAt || '—'} />
                         </div>
-
-                      </div></div>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
+                {/* ── Axelit E-commerce: To'lov muvaffaqiyati va Kvitansiya (Payment Success / Receipt) ── */}
+                <div className="card border mt-3">
+                  <div className="card-header bg-transparent d-flex flex-wrap justify-content-between align-items-center gap-2 border-bottom">
+                    <div className="d-flex align-items-center gap-3">
+                      {(() => {
+                        const isCash = selectedOrd.fulfillment?.isCod || ['cash', 'cod', 'naqd'].includes(String(selectedOrd.payment).toLowerCase());
+                        const isSplit = !!selectedOrd.split || ['split', 'nasiya'].includes(String(selectedOrd.payment).toLowerCase());
+                        if (isCash) {
+                          return (
+                            <div className="h-45 w-45 d-flex-center b-r-50 bg-light-warning text-warning flex-shrink-0">
+                              <i className="ti ti-cash f-s-24"></i>
+                            </div>
+                          );
+                        }
+                        if (isSplit) {
+                          return (
+                            <div className="h-45 w-45 d-flex-center b-r-50 bg-light-info text-info flex-shrink-0">
+                              <i className="ti ti-wallet f-s-24"></i>
+                            </div>
+                          );
+                        }
+                        return (
+                          <div className="h-45 w-45 d-flex-center b-r-50 bg-light-success text-success flex-shrink-0">
+                            <i className="ti ti-circle-check f-s-24"></i>
+                          </div>
+                        );
+                      })()}
+                      <div>
+                        {(() => {
+                          const isCash = selectedOrd.fulfillment?.isCod || ['cash', 'cod', 'naqd'].includes(String(selectedOrd.payment).toLowerCase());
+                          const isSplit = !!selectedOrd.split || ['split', 'nasiya'].includes(String(selectedOrd.payment).toLowerCase());
+                          if (isCash) {
+                            return (
+                              <>
+                                <h5 className="mb-0 text-dark f-w-600">Naqd to'lov (Yetkazib berishda to'lanadi)</h5>
+                                <p className="mb-0 text-muted f-s-13">Buyurtma topshirilish vaqtida kuryer tomonidan mijozdan undiriladi</p>
+                              </>
+                            );
+                          }
+                          if (isSplit) {
+                            return (
+                              <>
+                                <h5 className="mb-0 text-dark f-w-600">Muddatli to'lov (Kitobchi Split)</h5>
+                                <p className="mb-0 text-muted f-s-13">Shartnoma asosida avtomatik jadval bo'yicha to'lanadi</p>
+                              </>
+                            );
+                          }
+                          return (
+                            <>
+                              <h5 className="mb-0 text-success f-w-600">To'lov muvaffaqiyatli qabul qilingan</h5>
+                              <p className="mb-0 text-muted f-s-13">Tranzaksiya to'lov shlyuzida tasdiqlangan va qayd etilgan</p>
+                            </>
+                          );
+                        })()}
+                      </div>
+                    </div>
+
+                    <div className="d-flex align-items-center gap-2">
+                      {selectedOrd.paymentTransaction?.provider && (
+                        <span className="badge text-light-primary border-0 text-uppercase px-3 py-2 f-s-12">
+                          <i className="ti ti-building-bank me-1"></i>{selectedOrd.paymentTransaction.provider}
+                        </span>
+                      )}
+                      <span className={`badge border-0 px-3 py-2 f-s-12 ${
+                        ['PAID', 'paid', 'approved', 'success'].includes(String(selectedOrd.paymentStatus || selectedOrd.payment))
+                          ? 'text-light-success'
+                          : ['cash', 'cod'].includes(String(selectedOrd.payment).toLowerCase())
+                            ? 'text-light-warning'
+                            : 'text-light-secondary'
+                      }`}>
+                        {selectedOrd.paymentStatus || selectedOrd.payment || 'Holat mavjud emas'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="card-body">
+                    {(() => {
+                      const isCash = selectedOrd.fulfillment?.isCod || ['cash', 'cod', 'naqd'].includes(String(selectedOrd.payment).toLowerCase());
+                      const isSplit = !!selectedOrd.split || ['split', 'nasiya'].includes(String(selectedOrd.payment).toLowerCase());
+
+                      if (isCash) {
+                        return (
+                          <div className="row g-4 align-items-stretch">
+                            <div className="col-lg-5">
+                              <div className="p-3 b-r-12 bg-light-warning border border-warning border-opacity-25 h-100 d-flex flex-column justify-content-between">
+                                <div>
+                                  <span className="text-secondary f-s-12 text-uppercase f-w-600">Undiriladigan naqd summa</span>
+                                  <div className="f-s-24 f-w-700 text-dark mt-1">
+                                    {fmt(selectedOrd.fulfillment?.cashCollectAmount || selectedOrd.total)} so'm
+                                  </div>
+                                  <div className="text-muted f-s-12 mt-2">
+                                    <i className="ti ti-shield-alert text-warning me-1"></i>
+                                    Kuryerga topshirilgan chek va naqd pul kassa yopilishida hisobga olinadi.
+                                  </div>
+                                </div>
+                                <div className="mt-3 pt-3 border-top border-warning border-opacity-25">
+                                  <div className="d-flex justify-content-between f-s-13">
+                                    <span className="text-muted">Kassa topshiruvi:</span>
+                                    <span className="f-w-600 text-dark">
+                                      {selectedOrd.courierOrder?.settledAt ? `Topshirildi (${fmt(selectedOrd.courierOrder?.settledAmount || 0)} so'm)` : 'Kutilmoqda'}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="col-lg-7">
+                              <div className="row g-3">
+                                <div className="col-sm-6">
+                                  <div className="text-muted f-s-12">Mijozning COD ishonch reytingi</div>
+                                  <div className="f-w-600 text-dark mt-1 d-flex align-items-center gap-2">
+                                    <span className="badge text-light-info border-0">
+                                      ★ {selectedOrd.userReputation?.score ?? 100} ball
+                                    </span>
+                                    {selectedOrd.userReputation?.cashOnDeliveryAllowed ? (
+                                      <span className="badge text-light-success border-0">Ishonchli</span>
+                                    ) : (
+                                      <span className="badge text-light-danger border-0">Cheklov bor</span>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="col-sm-6">
+                                  <div className="text-muted f-s-12">Qaytgan naqd buyurtmalar (Strikes)</div>
+                                  <div className="f-w-600 text-dark mt-1">
+                                    {selectedOrd.userReputation?.codReturnStrikes || 0} ta
+                                  </div>
+                                </div>
+                                <div className="col-12">
+                                  <div className="text-muted f-s-12">Mijoz xohishi / Qaytim talabi (Buyer Wish)</div>
+                                  <div className="f-w-500 text-dark mt-1 p-2 b-r-8 bg-light">
+                                    {selectedOrd.buyerWish || "Maxsus qaytim yoki qo'shimcha so'rov kiritilmagan."}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      if (isSplit) {
+                        return (
+                          <div className="row g-4 align-items-stretch">
+                            <div className="col-lg-5">
+                              <div className="p-3 b-r-12 bg-light-info border border-info border-opacity-25 h-100 d-flex flex-column justify-content-between">
+                                <div>
+                                  <span className="text-secondary f-s-12 text-uppercase f-w-600">Split shartnomasi</span>
+                                  <div className="f-s-22 f-w-700 text-dark mt-1">
+                                    #{selectedOrd.split?.contractNumber || selectedOrd.rawId}
+                                  </div>
+                                  <div className="text-muted f-s-12 mt-1">
+                                    Reja: {selectedOrd.split?.planName || `${selectedOrd.split?.months || 3} oy`}
+                                  </div>
+                                </div>
+                                <div className="mt-3 pt-3 border-top border-info border-opacity-25">
+                                  <div className="d-flex justify-content-between f-s-13">
+                                    <span className="text-muted">To'langan:</span>
+                                    <span className="f-w-600 text-success">{fmt(selectedOrd.split?.paid || 0)} so'm</span>
+                                  </div>
+                                  <div className="d-flex justify-content-between f-s-13 mt-1">
+                                    <span className="text-muted">Qoldiq qarz:</span>
+                                    <span className="f-w-600 text-danger">{fmt(selectedOrd.split?.remaining || 0)} so'm</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="col-lg-7">
+                              <div className="row g-3">
+                                <div className="col-sm-6">
+                                  <div className="text-muted f-s-12">Bo'lib to'lash holati</div>
+                                  <div className="f-w-600 text-dark mt-1">
+                                    <span className="badge text-light-primary border-0">
+                                      {selectedOrd.split?.status || 'Faol'}
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="col-sm-6">
+                                  <div className="text-muted f-s-12">To'langan bosqichlar</div>
+                                  <div className="f-w-600 text-dark mt-1">
+                                    {selectedOrd.split?.installmentsPaid || 0} / {selectedOrd.split?.installmentsCount || 0} qism
+                                  </div>
+                                </div>
+                                {selectedOrd.split?.nextDueAt && (
+                                  <div className="col-sm-6">
+                                    <div className="text-muted f-s-12">Keyingi to'lov sanasi</div>
+                                    <div className="f-w-600 text-dark mt-1">{selectedOrd.split.nextDueAt}</div>
+                                  </div>
+                                )}
+                                {selectedOrd.split?.nextAmount ? (
+                                  <div className="col-sm-6">
+                                    <div className="text-muted f-s-12">Keyingi summa</div>
+                                    <div className="f-w-600 text-dark mt-1">{fmt(selectedOrd.split.nextAmount)} so'm</div>
+                                  </div>
+                                ) : null}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      // Karta orqali to'lov (Online Payment Success View)
+                      return (
+                        <div className="row g-4 align-items-stretch">
+                          <div className="col-lg-5">
+                            <div className="p-3 b-r-12 bg-light-success border border-success border-opacity-25 h-100 d-flex flex-column justify-content-between">
+                              <div>
+                                <span className="text-secondary f-s-12 text-uppercase f-w-600">Tasdiqlangan to'lov summasi</span>
+                                <div className="f-s-24 f-w-700 text-success mt-1">
+                                  {fmt(selectedOrd.paymentTransaction?.amount || selectedOrd.total)} so'm
+                                </div>
+                                <div className="text-muted f-s-12 mt-2 d-flex align-items-center gap-1">
+                                  <i className="ti ti-check text-success"></i>
+                                  Tranzaksiya muvaffaqiyatli yakunlandi
+                                </div>
+                              </div>
+                              <div className="mt-3 pt-3 border-top border-success border-opacity-25">
+                                <div className="d-flex justify-content-between f-s-13">
+                                  <span className="text-muted">Tranzaksiya ID:</span>
+                                  <span className="f-w-600 text-dark font-monospace">
+                                    #{selectedOrd.paymentTransaction?.id || selectedOrd.rawId}
+                                  </span>
+                                </div>
+                                {selectedOrd.paymentTransaction?.date && (
+                                  <div className="d-flex justify-content-between f-s-13 mt-1">
+                                    <span className="text-muted">To'langan vaqt:</span>
+                                    <span className="text-dark">{selectedOrd.paymentTransaction.date}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="col-lg-7">
+                            <div className="row g-3">
+                              <div className="col-sm-6">
+                                <div className="text-muted f-s-12">Karta rekviziti</div>
+                                <div className="f-w-600 text-dark mt-1 d-flex align-items-center gap-2">
+                                  <i className="ti ti-credit-card text-primary f-s-18"></i>
+                                  <span>{selectedOrd.paymentCard?.maskedNumber || 'Karta raqami saqlanmagan'}</span>
+                                  {selectedOrd.paymentCard?.vendor && (
+                                    <span className="badge text-light-secondary border-0 f-s-11">
+                                      {selectedOrd.paymentCard.vendor}
+                                    </span>
+                                  )}
+                                </div>
+                                {selectedOrd.paymentCard?.cardName && (
+                                  <div className="text-muted f-s-12 mt-1">{selectedOrd.paymentCard.cardName}</div>
+                                )}
+                              </div>
+
+                              <div className="col-sm-6">
+                                <div className="text-muted f-s-12">To'lov provayderi va karta ID</div>
+                                <div className="f-w-600 text-dark mt-1 font-monospace f-s-13">
+                                  {selectedOrd.paymentCard?.providerCardId || selectedOrd.paymentTransaction?.providerCardId || '—'}
+                                </div>
+                                {selectedOrd.paymentCard?.phone && (
+                                  <div className="text-muted f-s-12 mt-1">
+                                    <i className="ti ti-phone me-1"></i>{selectedOrd.paymentCard.phone}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* OFD Fiskal chek */}
+                              <div className="col-12 pt-2 border-top">
+                                <div className="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                                  <div>
+                                    <div className="text-muted f-s-12">Fiskal chek (OFD kvitansiyasi)</div>
+                                    <div className="mt-1 d-flex align-items-center gap-2">
+                                      {selectedOrd.fiscalReceipt?.status === 'registered' && (
+                                        <>
+                                          <span className="badge text-light-success border-0">
+                                            <i className="ti ti-check me-1"></i>OFD cheki berilgan
+                                          </span>
+                                          {selectedOrd.fiscalReceipt?.receiptUrl && (
+                                            <a
+                                              href={selectedOrd.fiscalReceipt.receiptUrl}
+                                              target="_blank"
+                                              rel="noreferrer"
+                                              className="btn btn-xs btn-outline-success"
+                                            >
+                                              <i className="ti ti-receipt me-1"></i>Chekni ko'rish
+                                            </a>
+                                          )}
+                                        </>
+                                      )}
+                                      {selectedOrd.fiscalReceipt?.status === 'refunded' && (
+                                        <>
+                                          <span className="badge text-light-secondary border-0">Qaytarilgan chek</span>
+                                          {selectedOrd.fiscalReceipt?.refundReceiptUrl && (
+                                            <a
+                                              href={selectedOrd.fiscalReceipt.refundReceiptUrl}
+                                              target="_blank"
+                                              rel="noreferrer"
+                                              className="btn btn-xs btn-light"
+                                            >
+                                              Refund chek
+                                            </a>
+                                          )}
+                                        </>
+                                      )}
+                                      {selectedOrd.fiscalReceipt?.status === 'pending' && (
+                                        <span className="badge text-light-warning border-0">Kutilmoqda</span>
+                                      )}
+                                      {selectedOrd.fiscalReceipt?.status === 'failed' && (
+                                        <span className="badge text-light-danger border-0">OFD Xatosi</span>
+                                      )}
+                                      {(!selectedOrd.fiscalReceipt || selectedOrd.fiscalReceipt.status === 'none') && (
+                                        <span className="text-muted f-s-13">—</span>
+                                      )}
+                                      {selectedOrd.fiscalReceipt?.fiscalSign && (
+                                        <span className="text-muted f-s-12 ms-2 font-monospace">
+                                          Belgi: {selectedOrd.fiscalReceipt.fiscalSign}
+                                        </span>
+                                      )}
+                                    </div>
+                                    {selectedOrd.fiscalReceipt?.error && (
+                                      <div className="text-danger f-s-12 mt-1">
+                                        {selectedOrd.fiscalReceipt.error}
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {selectedOrd.fiscalReceipt && ['pending', 'failed'].includes(selectedOrd.fiscalReceipt.status) && (
+                                    <div className="d-flex gap-1">
+                                      {selectedOrd.fiscalReceipt.syncUrl ? (
+                                        <button
+                                          className="btn btn-sm btn-light-secondary"
+                                          onClick={() => router.post(selectedOrd.fiscalReceipt!.syncUrl!, {}, { preserveScroll: true })}
+                                        >
+                                          <i className="ti ti-cloud-download me-1"></i>Tekshirish
+                                        </button>
+                                      ) : null}
+                                      {selectedOrd.fiscalReceipt.registerUrl ? (
+                                        <button
+                                          className="btn btn-sm btn-outline-primary"
+                                          onClick={() => router.post(selectedOrd.fiscalReceipt!.registerUrl!, {}, { preserveScroll: true })}
+                                        >
+                                          <i className="ti ti-send me-1"></i>Qayta yuborish
+                                        </button>
+                                      ) : null}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
               </div>
             </div>
           ) : null}

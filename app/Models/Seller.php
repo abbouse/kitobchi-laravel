@@ -14,6 +14,24 @@ class Seller extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
+    public const ROLE_SELLER = 'seller';
+    public const ROLE_AUTHOR = 'author';
+
+    public function isAuthor(): bool
+    {
+        return ($this->business_role ?? self::ROLE_SELLER) === self::ROLE_AUTHOR;
+    }
+
+    public function isSeller(): bool
+    {
+        return ($this->business_role ?? self::ROLE_SELLER) === self::ROLE_SELLER;
+    }
+
+    public function getBusinessRoleLabelAttribute(): string
+    {
+        return $this->isAuthor() ? 'Muallif' : 'Do\'kon';
+    }
+
     protected $fillable = [
         // ── Asosiy ────────────────────────────────────────────────
         'shop_name', 'firstname', 'lastname',
@@ -22,7 +40,7 @@ class Seller extends Authenticatable
         'region', 'balance', 'rating', 'rating_reviews_count', 'reputation_score', 'reputation_last_calculated_at',
         'status', 'is_hidden', 'isVerified', 'isPremiumShop', 'isPremiumExpiresAt',
         'activity_types', 'successful_orders',
-        'parent_id', 'seller_location_id', 'role', 'staff_status', 'can_withdraw_balance',
+        'parent_id', 'seller_location_id', 'role', 'business_role', 'staff_status', 'can_withdraw_balance',
         'commission_percent', 'fcm_token',
         'response_time_hours',
         // Do'kon kuryeri tanlansa mijoz to'laydigan flat yetkazish narxi (null/0 = bepul).

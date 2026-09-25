@@ -18,6 +18,13 @@ const nav = [
     { to: '/boshqaruv', match: '/boshqaruv', label: 'Dashboard', icon: 'ti-gauge', ax: 'iconoir-home-alt', perm: null as string | null },
     { to: '/boshqaruv/live', match: '/boshqaruv/live', label: 'Live Dashboard', icon: 'ti-broadcast', ax: 'iconoir-antenna-signal', badge: 'LIVE', perm: null as string | null },
   ]},
+  { group: 'Buyurtmalar', section: 'Savdo', icon: 'ti-receipt', ax: 'iconoir-shopping-bag', items: [
+    { to: '/boshqaruv/orders', match: '/boshqaruv/orders', label: 'Buyurtmalar', icon: 'ti-receipt', perm: 'orders' },
+    { to: '/boshqaruv/demand-analytics', match: '/boshqaruv/demand-analytics', label: 'Talab & Savat Analitikasi', icon: 'ti-chart-pie', ax: 'iconoir-graph-up', badge: 'NEW', perm: 'orders' },
+    { to: '/boshqaruv/users', match: '/boshqaruv/users', label: 'Foydalanuvchilar', icon: 'ti-users', perm: 'users' },
+    { to: '/boshqaruv/split', match: '/boshqaruv/split', label: 'Split nazorati', icon: 'ti-wallet', perm: 'split' },
+    { to: '/boshqaruv/search-history', match: '/boshqaruv/search-history', label: 'Qidiruv tarixi', icon: 'ti-history', perm: 'search-history' },
+  ]},
   { group: 'Katalog', section: 'Savdo', icon: 'ti-book', ax: 'iconoir-book-stack', items: [
     { to: '/boshqaruv/books', match: '/boshqaruv/books', label: 'Kitoblar', icon: 'ti-book', perm: 'catalog' },
     { to: '/boshqaruv/catalog', match: '/boshqaruv/catalog', label: 'Global katalog', icon: 'ti-stack-2', perm: 'catalog' },
@@ -29,25 +36,24 @@ const nav = [
     { to: '/boshqaruv/authors', match: '/boshqaruv/authors', label: 'Mualliflar', icon: 'ti-id', perm: 'catalog' },
     { to: '/boshqaruv/publishers', match: '/boshqaruv/publishers', label: 'Nashriyotlar', icon: 'ti-building', perm: 'catalog' },
   ]},
-  { group: 'Buyurtmalar', section: 'Savdo', icon: 'ti-receipt', ax: 'iconoir-shopping-bag', items: [
-    { to: '/boshqaruv/orders', match: '/boshqaruv/orders', label: 'Buyurtmalar', icon: 'ti-receipt', perm: 'orders' },
-    { to: '/boshqaruv/users', match: '/boshqaruv/users', label: 'Foydalanuvchilar', icon: 'ti-users', perm: 'users' },
-    { to: '/boshqaruv/split', match: '/boshqaruv/split', label: 'Split nazorati', icon: 'ti-wallet', perm: 'split' },
-    { to: '/boshqaruv/search-history', match: '/boshqaruv/search-history', label: 'Qidiruv tarixi', icon: 'ti-history', perm: 'search-history' },
+  { group: 'Biznes Hamkorlar', section: 'Hamkorlar va logistika', icon: 'ti-building-store', ax: 'iconoir-shop', items: [
+    { to: '/boshqaruv/sellers', match: '/boshqaruv/sellers', label: 'Sotuvchilar & Mualliflar', icon: 'ti-building-store', perm: 'sellers' },
+    { to: '/boshqaruv/seller-orders', match: '/boshqaruv/seller-orders', label: 'Seller buyurtmalari', icon: 'ti-shopping-bag-check', perm: 'sellers' },
+    { to: '/boshqaruv/seller-ai-actions', match: '/boshqaruv/seller-ai-actions', label: 'Seller AI audit', icon: 'ti-robot', perm: 'seller-ai' },
   ]},
-  { group: 'Savdo va logistika', section: 'Savdo', icon: 'ti-truck', ax: 'iconoir-delivery-truck', items: [
-    { to: '/boshqaruv/sellers', match: '/boshqaruv/sellers', label: 'Sotuvchilar', icon: 'ti-building-store', perm: 'sellers' },
-    { to: '/boshqaruv/seller-orders', match: '/boshqaruv/seller-orders', label: 'Seller buyurtmalari', icon: 'ti-building-store', perm: 'sellers' },
-    { to: '/boshqaruv/couriers', match: '/boshqaruv/couriers', label: 'Kuryerlar', icon: 'ti-bike', perm: 'couriers' },
-    { to: '/boshqaruv/courier-orders', match: '/boshqaruv/courier-orders', label: 'Kuryer buyurtmalari', icon: 'ti-truck', perm: 'couriers' },
+  { group: 'Yetkazib berish', section: 'Hamkorlar va logistika', icon: 'ti-truck', ax: 'iconoir-delivery-truck', items: [
+    { to: '/boshqaruv/couriers', match: '/boshqaruv/couriers', label: 'Kuryerlar floti', icon: 'ti-bike', perm: 'couriers' },
+    { to: '/boshqaruv/courier-orders', match: '/boshqaruv/courier-orders', label: 'Kuryer buyurtmalari', icon: 'ti-truck-delivery', perm: 'couriers' },
     { to: '/boshqaruv/hubs', match: '/boshqaruv/hubs', label: 'Hub fulfillment', icon: 'ti-building', perm: 'hubs' },
+    { to: '/boshqaruv/hub-arizalari', match: '/boshqaruv/hub-arizalari', label: 'Hub arizalari', icon: 'ti-home-plus', perm: 'hubs' },
+    { to: '/boshqaruv/logistika', match: '/boshqaruv/logistika', label: 'Logistika zonalari', icon: 'ti-map-pin', perm: 'logistika' },
+  ]},
+  { group: 'Moliya va audit', section: 'Moliya', icon: 'ti-wallet', ax: 'iconoir-wallet', items: [
     { to: '/boshqaruv/transactions', match: '/boshqaruv/transactions', label: 'Tranzaksiyalar', icon: 'ti-coins', perm: 'finance' },
     { to: '/boshqaruv/fiscalization', match: '/boshqaruv/fiscalization', label: 'Fiskalizatsiya', icon: 'ti-qrcode', perm: 'finance' },
     { to: '/boshqaruv/commission-audit', match: '/boshqaruv/commission-audit', label: 'Komissiya audit', icon: 'ti-percentage', perm: 'finance' },
-    { to: '/boshqaruv/audit-logs', match: '/boshqaruv/audit-logs', label: 'Audit log', icon: 'ti-clipboard-data', perm: 'audit-logs' },
-    { to: '/boshqaruv/seller-ai-actions', match: '/boshqaruv/seller-ai-actions', label: 'Seller AI audit', icon: 'ti-robot', perm: 'seller-ai' },
     { to: '/boshqaruv/expenses', match: '/boshqaruv/expenses', label: 'Chiqimlar', icon: 'ti-wallet', perm: 'finance' },
-    { to: '/boshqaruv/logistika', match: '/boshqaruv/logistika', label: 'Logistika', icon: 'ti-map-pin', perm: 'logistika' },
+    { to: '/boshqaruv/audit-logs', match: '/boshqaruv/audit-logs', label: 'Audit log', icon: 'ti-clipboard-data', perm: 'audit-logs' },
   ]},
   { group: 'Marketing', section: "O'sish", icon: 'ti-speakerphone', ax: 'iconoir-megaphone', items: [
     { to: '/boshqaruv/reklamalar', match: '/boshqaruv/reklamalar', label: 'Reklamalar', icon: 'ti-speakerphone', perm: 'marketing' },
@@ -66,17 +72,16 @@ const nav = [
     { to: '/boshqaruv/chat', match: '/boshqaruv/chat', label: 'Chat kuzatuv', icon: 'ti-message-dots', perm: 'support' },
     { to: '/boshqaruv/push', match: '/boshqaruv/push', label: 'Push bildirishnomalar', icon: 'ti-bell', perm: 'push' },
   ]},
-  { group: 'HR va tashkilot', section: 'Jamoa va tizim', icon: 'ti-users', ax: 'iconoir-community', items: [
+  { group: 'HR va boshqaruv', section: 'Jamoa va tizim', icon: 'ti-users', ax: 'iconoir-community', items: [
     { to: '/boshqaruv/vakansiyalar', match: '/boshqaruv/vakansiyalar', label: 'Vakansiyalar', icon: 'ti-id-badge', perm: 'hr' },
     { to: '/boshqaruv/karyera-arizalari', match: '/boshqaruv/karyera-arizalari', label: 'Karyera arizalari', icon: 'ti-file-certificate', perm: 'hr' },
-    { to: '/boshqaruv/hub-arizalari', match: '/boshqaruv/hub-arizalari', label: 'Hub arizalari', icon: 'ti-home-plus', perm: 'hubs' },
     { to: '/boshqaruv/adminlar', match: '/boshqaruv/adminlar', label: 'Adminlar', icon: 'ti-shield-lock', perm: 'admins' },
   ]},
   { group: 'Premium', section: "O'sish", icon: 'ti-diamond', ax: 'iconoir-crown', items: [
     { to: '/boshqaruv/mystery-box', match: '/boshqaruv/mystery-box', label: 'Mystery Box', icon: 'ti-package', perm: 'premium' },
     { to: '/boshqaruv/sovgalar', match: '/boshqaruv/sovgalar', label: "Sovg'alar", icon: 'ti-gift', perm: 'premium' },
   ]},
-  { group: 'Tizim', section: 'Jamoa va tizim', icon: 'ti-settings', ax: 'iconoir-settings', items: [
+  { group: 'Tizim va xavfsizlik', section: 'Jamoa va tizim', icon: 'ti-settings', ax: 'iconoir-settings', items: [
     { to: '/boshqaruv/security', match: '/boshqaruv/security', label: 'Kiberxavfsizlik & Server', icon: 'ti-shield-check', ax: 'iconoir-security-pass', perm: 'settings' },
     { to: '/boshqaruv/siyosatlar', match: '/boshqaruv/siyosatlar', label: 'Siyosatlar', icon: 'ti-file-text', perm: 'settings' },
     { to: '/boshqaruv/api-clients', match: '/boshqaruv/api-clients', label: 'API mijozlar', icon: 'ti-code', perm: 'settings' },
@@ -108,6 +113,8 @@ function navMatches(url: string, match: string) {
   if (match.includes('?')) return url.startsWith(match);
   if (match === '/boshqaruv/tickets' && url.includes('tickets_source=seller')) return false;
   if (match === '/boshqaruv/catalog' && url.startsWith('/boshqaruv/catalog/submissions')) return false;
+  if (match === '/boshqaruv/sellers' && url.startsWith('/boshqaruv/seller-orders')) return false;
+  if (match === '/boshqaruv/couriers' && url.startsWith('/boshqaruv/courier-orders')) return false;
   return url.startsWith(match);
 }
 
@@ -142,14 +149,15 @@ export function PageCrumbs() {
 }
 
 // Sidebar bo'limlari (Axelit'dagi "menu-title" sarlavhalari) — tartib shu yerda
-const SECTIONS = ['Savdo', "O'sish", 'Jamoa va tizim'];
+const SECTIONS = ['Savdo', 'Hamkorlar va logistika', 'Moliya', "O'sish", 'Jamoa va tizim'];
 
 // ── Global qidiruv: bo'lim nomi bo'yicha sakrash + asosiy ro'yxatlarda qidirish ──
 const searchTargets = [
   { label: 'Buyurtmalardan qidirish', path: '/boshqaruv/orders', icon: 'ti-receipt', tone: 'primary' },
-  { label: 'Foydalanuvchilardan qidirish', path: '/boshqaruv/users', icon: 'ti-users', tone: 'success' },
+  { label: 'Talab analitikasidan qidirish', path: '/boshqaruv/demand-analytics', icon: 'ti-chart-pie', tone: 'success' },
+  { label: 'Foydalanuvchilardan qidirish', path: '/boshqaruv/users', icon: 'ti-users', tone: 'info' },
   { label: 'Kitoblardan qidirish', path: '/boshqaruv/books', icon: 'ti-book', tone: 'warning' },
-  { label: 'Kanselyariyadan qidirish', path: '/boshqaruv/stationeries', icon: 'ti-edit', tone: 'info' },
+  { label: 'Sotuvchi va Mualliflardan qidirish', path: '/boshqaruv/sellers', icon: 'ti-building-store', tone: 'primary' },
   { label: 'Tranzaksiyalardan qidirish', path: '/boshqaruv/transactions', icon: 'ti-coins', tone: 'danger' },
 ];
 
@@ -420,6 +428,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     : null);
 
   const canSettings = visibleNav.some((g) => g.items.some((it) => it.to === '/boshqaruv/settings'));
+  const canSecurity = visibleNav.some((g) => g.items.some((it) => it.to === '/boshqaruv/security'));
   const overlayOpen = profileOpen || searchOpen;
 
   return (
@@ -527,6 +536,19 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                       <SearchCanvas visibleNav={visibleNav} open={searchOpen} onClose={() => setSearchOpen(false)} />
                     </li>
 
+                    {canSecurity ? (
+                      <li>
+                        <Link
+                          className="d-block head-icon"
+                          href="/boshqaruv/security"
+                          title="Kiberxavfsizlik & Server monitoringi"
+                          aria-label="Kiberxavfsizlik & Server"
+                        >
+                          <i className="iconoir-security-pass"></i>
+                        </Link>
+                      </li>
+                    ) : null}
+
                     <li
                       className="header-dark"
                       role="button"
@@ -568,6 +590,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                                 <span className="badge text-light-primary mt-1">{admin?.role || 'Administrator'}{admin?.isReadOnly ? " · faqat ko'rish" : ''}</span>
                               </div>
                             </li>
+                            {canSecurity ? (
+                              <li>
+                                <Link className="f-w-500" href="/boshqaruv/security" onClick={() => setProfileOpen(false)}>
+                                  <i className="iconoir-security-pass pe-1 f-s-20"></i> Kiberxavfsizlik & Server
+                                </Link>
+                              </li>
+                            ) : null}
                             {canSettings ? (
                               <li>
                                 <Link className="f-w-500" href="/boshqaruv/settings">
