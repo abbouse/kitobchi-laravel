@@ -90,7 +90,7 @@ export default function SellerOrders() {
             className="btn btn-sm btn-outline-secondary"
             onClick={() => router.reload({ preserveScroll: true })}
           >
-            <i className="ti ti-refresh me-1"></i>Yangilash
+            <i className="ti ti-rotate me-1"></i>Yangilash
           </button>
         </div>
       </div>
@@ -100,7 +100,7 @@ export default function SellerOrders() {
         {[
           { label: 'Jami buyurtmalar', value: sellerOrderPagination.total || 0, icon: 'ti-package' },
           { label: 'Yangi / Kutilmoqda', value: sellerOrderCounts.pending || 0, icon: 'ti-clock' },
-          { label: 'Tayyorlanmoqda', value: sellerOrderCounts.accepted || 0, icon: 'ti-progress' },
+          { label: 'Tayyorlanmoqda', value: sellerOrderCounts.accepted || 0, icon: 'ti-rotate' },
           { label: 'Yetkazilmoqda', value: sellerOrderCounts.on_delivery || 0, icon: 'ti-truck' },
           { label: 'Yakunlangan', value: sellerOrderCounts.delivered || 0, icon: 'ti-circle-check' },
         ].map((item, kpiIndex) => (

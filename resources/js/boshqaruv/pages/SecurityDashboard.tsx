@@ -195,7 +195,7 @@ export default function SecurityDashboard({
   const overallStatus = hasConfigError || isDiskCritical
     ? { tone: 'danger', label: 'Kritik holat', icon: 'ti-alert-triangle' }
     : threatAnalysis.threat_level === 'high'
-    ? { tone: 'warning', label: 'Diqqat talab', icon: 'ti-alert-circle' }
+    ? { tone: 'warning', label: 'Diqqat talab', icon: 'ti-alert-triangle' }
     : { tone: 'success', label: 'Tizim barqaror', icon: 'ti-shield-check' };
 
   // Xizmatlar sanasi: nechta sog'lom
@@ -237,10 +237,10 @@ export default function SecurityDashboard({
                 </p>
                 <div className="d-flex gap-2 align-items-center flex-wrap">
                   <span className={`badge bg-white-300 text-${overallStatus.tone}-dark`}>
-                    <i className="ti ti-user-check me-1"></i>IP: <code className="text-inherit">{currentAdminIp}</code>
+                    <i className="ti ti-user me-1"></i>IP: <code className="text-inherit">{currentAdminIp}</code>
                   </span>
                   <span className={`badge bg-white-300 text-${overallStatus.tone}-dark`}>
-                    <i className="ti ti-server me-1"></i>{serverHealth.system.server_ip}
+                    <i className="ti ti-database me-1"></i>{serverHealth.system.server_ip}
                   </span>
                   <span className={`badge bg-white-300 text-${overallStatus.tone}-dark`}>
                     <i className="ti ti-clock me-1"></i>Uptime: {serverHealth.system.uptime}
@@ -262,7 +262,7 @@ export default function SecurityDashboard({
             <div className="card-body d-flex flex-column gap-2 py-3">
               <button type="button" className="btn btn-light-secondary btn-sm text-start d-flex align-items-center gap-2"
                 disabled={isProcessing} onClick={() => router.reload()}>
-                <span className="h-28 w-28 d-flex-center b-r-8 bg-light-info flex-shrink-0"><i className="ti ti-refresh text-info"></i></span>
+                <span className="h-28 w-28 d-flex-center b-r-8 bg-light-info flex-shrink-0"><i className="ti ti-rotate text-info"></i></span>
                 <span>Yangilash</span>
               </button>
               <button type="button" className="btn btn-light-secondary btn-sm text-start d-flex align-items-center gap-2"
@@ -272,12 +272,12 @@ export default function SecurityDashboard({
               </button>
               <button type="button" className="btn btn-light-secondary btn-sm text-start d-flex align-items-center gap-2"
                 disabled={isProcessing} onClick={handleFixStorage}>
-                <span className="h-28 w-28 d-flex-center b-r-8 bg-light-success flex-shrink-0"><i className="ti ti-folder-check text-success"></i></span>
+                <span className="h-28 w-28 d-flex-center b-r-8 bg-light-success flex-shrink-0"><i className="ti ti-folder text-success"></i></span>
                 <span>Storage tiklash</span>
               </button>
               <button type="button" className="btn btn-light-secondary btn-sm text-start d-flex align-items-center gap-2"
                 disabled={isProcessing} onClick={handleTruncateLogs}>
-                <span className="h-28 w-28 d-flex-center b-r-8 bg-light-danger flex-shrink-0"><i className="ti ti-eraser text-danger"></i></span>
+                <span className="h-28 w-28 d-flex-center b-r-8 bg-light-danger flex-shrink-0"><i className="ti ti-trash text-danger"></i></span>
                 <span>Log tozalash <span className="text-secondary f-s-12">({logFileSize})</span></span>
               </button>
             </div>
@@ -308,7 +308,7 @@ export default function SecurityDashboard({
       )}
       {isDiskCritical && (
         <div className="alert alert-light-danger d-flex align-items-center gap-3 mb-4" role="alert">
-          <i className="ti ti-database-x f-s-24 text-danger flex-shrink-0"></i>
+          <i className="ti ti-database f-s-24 text-danger flex-shrink-0"></i>
           <div className="flex-grow-1">
             <h6 className="alert-heading text-danger f-w-600 mb-0">
               Server diski to'lish xavfi ostida ({serverHealth.disk.used_percent}%)!
@@ -459,10 +459,10 @@ export default function SecurityDashboard({
          ═══════════════════════════════════════════════════════════════════ */}
       <div className="row mb-2">
         {([
-          { key: 'sql_injection', label: 'SQL Injection', desc: "Ma'lumotlar bazasiga hujum", icon: 'ti-database-x', tone: 'danger' },
-          { key: 'path_traversal', label: 'Path Traversal', desc: '/etc/passwd va tizim skani', icon: 'ti-folder-search', tone: 'warning' },
+          { key: 'sql_injection', label: 'SQL Injection', desc: "Ma'lumotlar bazasiga hujum", icon: 'ti-database', tone: 'danger' },
+          { key: 'path_traversal', label: 'Path Traversal', desc: '/etc/passwd va tizim skani', icon: 'ti-search', tone: 'warning' },
           { key: 'sensitive_files', label: 'Maxfiy Fayllar', desc: '.env, .git va admin probes', icon: 'ti-file-text', tone: 'info' },
-          { key: 'xss_attempt', label: 'XSS Hujumlar', desc: 'Zararli script kiritish', icon: 'ti-shield-code', tone: 'primary' },
+          { key: 'xss_attempt', label: 'XSS Hujumlar', desc: 'Zararli script kiritish', icon: 'ti-shield-lock', tone: 'primary' },
           { key: 'auth_bruteforce', label: 'Bruteforce', desc: "Noto'g'ri parol urinishlari", icon: 'ti-lock-access', tone: 'secondary' },
         ] as const).map((v) => (
           <div className="col-6 col-md-4 col-xxl mb-3" key={v.key}>
@@ -492,7 +492,7 @@ export default function SecurityDashboard({
           <div className="card h-100">
             <div className="card-header d-flex justify-content-between align-items-center">
               <h5 className="f-w-600 mb-0">
-                <i className="ti ti-server me-2 text-primary"></i>Server Holati
+                <i className="ti ti-database me-2 text-primary"></i>Server Holati
               </h5>
               <span className="badge bg-light-primary text-primary">
                 PHP {serverHealth.system.php_version}
@@ -509,7 +509,7 @@ export default function SecurityDashboard({
                           {sslStatus.is_https ? 'HTTPS Faol' : 'HTTP'} ({sslStatus.issuer})
                         </span>
                       },
-                      { icon: 'ti-cpu', tone: 'info', label: 'CPU Load',
+                      { icon: 'ti-settings', tone: 'info', label: 'CPU Load',
                         value: <><span className="f-w-600">{serverHealth.system.load_average.join(' · ')}</span><small className="text-secondary ms-2">(1m, 5m, 15m)</small></>
                       },
                       { icon: 'ti-database', tone: 'success', label: 'MySQL',
@@ -524,7 +524,7 @@ export default function SecurityDashboard({
                             : <span className="badge bg-light-danger text-danger">{servicesStatus.cache.error}</span>
                           }</>
                       },
-                      { icon: 'ti-clock-pause', tone: 'secondary', label: 'Queue',
+                      { icon: 'ti-hourglass', tone: 'secondary', label: 'Queue',
                         value: servicesStatus.queue.failed_jobs > 0
                           ? <span className="badge bg-light-warning text-warning">{servicesStatus.queue.failed_jobs} ta qolib ketgan</span>
                           : <span className="badge bg-light-success text-success">0 ta xatolik</span>
@@ -546,7 +546,7 @@ export default function SecurityDashboard({
                 {!hasConfigError ? (
                   <div className="p-3 b-r-10 bg-light-success d-flex align-items-center justify-content-between">
                     <div className="d-flex align-items-center gap-2">
-                      <i className="ti ti-check-double f-s-20 text-success"></i>
+                      <i className="ti ti-checks f-s-20 text-success"></i>
                       <div>
                         <span className="text-success f-w-600 f-s-13">
                           {servicesStatus.config_integrity.scanned_count} ta config sog'lom
@@ -558,7 +558,7 @@ export default function SecurityDashboard({
                 ) : null}
                 <div className="p-3 b-r-10 bg-light-primary d-flex align-items-center justify-content-between">
                   <div className="d-flex align-items-center gap-2">
-                    <i className="ti ti-file-shield f-s-20 text-primary"></i>
+                    <i className="ti ti-file-certificate f-s-20 text-primary"></i>
                     <span className="text-primary f-w-600 f-s-13">.env & .git himoyalangan</span>
                   </div>
                   <span className="badge bg-primary text-white">Xavfsiz</span>
@@ -585,7 +585,7 @@ export default function SecurityDashboard({
                   <button type="button" role="tab" aria-selected={activeTab === 'threats'}
                     className={`nav-link ${activeTab === 'threats' ? 'active' : ''}`}
                     onClick={() => setActiveTab('threats')}>
-                    <i className="ti ti-activity me-1"></i>Xurujlar radari
+                    <i className="ti ti-chart-line me-1"></i>Xurujlar radari
                     <span className="badge bg-light-info text-info ms-2">{threatAnalysis.recent_threats.length}</span>
                   </button>
                 </div>
@@ -614,7 +614,7 @@ export default function SecurityDashboard({
                       {threatAnalysis.top_ips.map((item) => (
                         <li className="customer-list-item" key={item.ip}>
                           <span className={`h-35 w-35 d-flex-center b-r-50 customer-list-avtar ${item.is_blocked ? 'text-light-danger' : item.risk_level === 'Yuqori' ? 'text-light-warning' : 'text-light-info'}`}>
-                            <i className={`f-s-18 ${item.is_blocked ? 'ti ti-ban' : 'ti ti-shield'}`}></i>
+                            <i className={`f-s-18 ${item.is_blocked ? 'ti ti-ban' : 'ti ti-shield-check'}`}></i>
                           </span>
                           <div className="customer-list-content">
                             <h6 className="mb-0 font-monospace">{item.ip}</h6>
@@ -656,7 +656,7 @@ export default function SecurityDashboard({
                           <li className={`bg-${tone}-300`} key={index}>
                             <div className="d-flex align-items-center justify-content-between">
                               <h6 className={`text-${tone}-dark f-w-600 mb-0 font-monospace`}>
-                                <i className="ti ti-shield-alert me-1"></i>{threat.type} · {threat.ip}
+                                <i className="ti ti-shield-x me-1"></i>{threat.type} · {threat.ip}
                               </h6>
                               <span className={`badge text-light-${tone}`}>{threat.time}</span>
                             </div>
@@ -688,7 +688,7 @@ export default function SecurityDashboard({
           <div className="card h-100">
             <div className="card-header d-flex justify-content-between align-items-center">
               <h5 className="f-w-600 mb-0">
-                <i className="ti ti-folder-check me-2 text-success"></i>Fayl Tizimi
+                <i className="ti ti-folder me-2 text-success"></i>Fayl Tizimi
               </h5>
               <span className={`badge ${hasConfigError ? 'bg-light-danger text-danger' : 'bg-light-success text-success'}`}>
                 {Object.keys(servicesStatus.storage || {}).length} papka
@@ -722,7 +722,7 @@ export default function SecurityDashboard({
           <div className="card h-100">
             <div className="card-header d-flex justify-content-between align-items-center">
               <h5 className="f-w-600 mb-0">
-                <i className="ti ti-bug me-2 text-danger"></i>So'nggi Jiddiy Xatoliklar
+                <i className="ti ti-alert-triangle me-2 text-danger"></i>So'nggi Jiddiy Xatoliklar
               </h5>
               <span className="badge bg-light-secondary text-secondary">
                 {systemLogs.length} ta log

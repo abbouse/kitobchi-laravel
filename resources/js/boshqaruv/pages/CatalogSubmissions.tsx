@@ -86,7 +86,7 @@ export default function CatalogSubmissions() {
 
       <ul className="nav nav-pills mb-3 gap-2">
         {[
-          { key: 'new_book', label: 'Yangi kitob', icon: 'ti-book-upload' },
+          { key: 'new_book', label: 'Yangi kitob', icon: 'ti-upload' },
           { key: 'correction', label: 'Tuzatish takliflari', icon: 'ti-edit' },
         ].map((item) => (
           <li className="nav-item" key={item.key}>
@@ -128,7 +128,7 @@ export default function CatalogSubmissions() {
                 {corrections
                   ? <span className="badge text-light-primary"><i className="ti ti-edit me-1"></i>{FIELD[item.field || 'other'] || item.field}</span>
                   : <>
-                      {!item.editionId ? <span className="badge text-light-warning"><i className="ti ti-help-circle me-1"></i>Karta yo'q</span> : null}
+                      {!item.editionId ? <span className="badge text-light-warning"><i className="ti ti-help me-1"></i>Karta yo'q</span> : null}
                       <span className={`badge ${checkChip}`}><i className={`${checkIcon} me-1`}></i>{checkLabel}</span>
                     </>}
                 <span className={`badge ${statusChip}`}>{statusLabel}</span>

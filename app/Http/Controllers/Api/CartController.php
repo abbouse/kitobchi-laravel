@@ -64,7 +64,8 @@ class CartController extends Controller
       ? [
           'id' => $item->variant->id,
           'color_name' => $item->variant->color_name,
-          'image' => $item->variant->image_path,
+          'image' => ProductImageUrls::originalUrl($item->variant->image_path),
+          'image_url' => ProductImageUrls::originalUrl($item->variant->image_path),
           'stock' => $item->variant->stock,
         ]
       : null,

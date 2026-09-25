@@ -306,7 +306,7 @@ export default function CourierOrders() {
                 {courierOrderPagination.total === 0 && (
                   <tr>
                     <td colSpan={9} className="text-center py-5 text-secondary">
-                      <i className="ti ti-package-off d-flex justify-content-center mb-2 f-s-30 text-primary"></i>
+                      <i className="ti ti-package d-flex justify-content-center mb-2 f-s-30 text-primary"></i>
                       Hech qanday kuryer topshirig'i topilmadi
                     </td>
                   </tr>

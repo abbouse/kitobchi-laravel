@@ -111,14 +111,14 @@ export default function DemandAnalytics({
         </div>
         <div className="d-flex align-items-center gap-2">
           <span className="badge text-light-primary border-0 p-2 f-s-12">
-            <i className="ti ti-chart-dots me-1"></i>Jonli talab va zaxira tahlili
+            <i className="ti ti-chart-bar me-1"></i>Jonli talab va zaxira tahlili
           </span>
           <button
             className="btn btn-sm btn-outline-secondary"
             onClick={() => router.reload({ preserveScroll: true })}
             title="Yangilash"
           >
-            <i className="ti ti-refresh me-1"></i>Yangilash
+            <i className="ti ti-rotate me-1"></i>Yangilash
           </button>
         </div>
       </div>
@@ -170,7 +170,7 @@ export default function DemandAnalytics({
                   </h3>
                 </div>
                 <div className="h-50 w-50 d-flex-center b-r-50 bg-light-warning text-warning flex-shrink-0">
-                  <i className="ti ti-heart-x f-s-24"></i>
+                  <i className="ti ti-ban f-s-24"></i>
                 </div>
               </div>
               <div className="mt-3 pt-2 border-top d-flex justify-content-between f-s-12">
@@ -200,7 +200,7 @@ export default function DemandAnalytics({
                   </h3>
                 </div>
                 <div className="h-50 w-50 d-flex-center b-r-50 bg-light-info text-info flex-shrink-0">
-                  <i className="ti ti-bell-ringing f-s-24"></i>
+                  <i className="ti ti-bell-filled f-s-24"></i>
                 </div>
               </div>
               <div className="mt-3 pt-2 border-top d-flex justify-content-between f-s-12">
@@ -230,7 +230,7 @@ export default function DemandAnalytics({
                   </h3>
                 </div>
                 <div className="h-50 w-50 d-flex-center b-r-50 bg-light-success text-success flex-shrink-0">
-                  <i className="ti ti-heart-handshake f-s-24"></i>
+                  <i className="ti ti-heart-filled f-s-24"></i>
                 </div>
               </div>
               <div className="mt-3 pt-2 border-top d-flex justify-content-between f-s-12">
@@ -248,96 +248,62 @@ export default function DemandAnalytics({
 
       {/* ── Asosiy Tahlil Doskasi ── */}
       <div className="card border-0 shadow-sm">
-        <div className="card-header bg-transparent border-bottom pb-0">
-          {/* Axelit Nav Tabs */}
-          <ul className="nav nav-tabs border-bottom-0 gap-2 flex-nowrap app-scroll pb-1" role="tablist">
-            {tabs.map((tab) => {
-              const isActive = filters.tab === tab.key;
-              return (
-                <li className="nav-item" key={tab.key}>
-                  <button
-                    className={`nav-link pb-3 px-3 d-flex align-items-center gap-2 border-0 text-nowrap ${
-                      isActive
-                        ? 'active f-w-600 text-primary border-bottom border-primary border-2'
-                        : 'text-secondary'
-                    }`}
-                    onClick={() => applyFilters({ tab: tab.key })}
-                  >
-                    <i className={`${tab.icon} f-s-16`}></i>
-                    <span>{tab.label}</span>
-                    <span
-                      className={`badge rounded-pill ms-1 ${
-                        isActive
-                          ? tab.key.includes('out_of_stock')
-                            ? 'bg-danger text-white'
-                            : tab.key === 'stock_alerts'
-                            ? 'bg-info text-white'
-                            : 'bg-primary text-white'
-                          : 'bg-light text-secondary'
-                      }`}
-                    >
-                      {tab.badge}
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-
-        {/* Filter Toolbar */}
-        <div className="card-body border-bottom bg-light bg-opacity-25 py-3">
-          <form className="row g-2 align-items-center" onSubmit={handleSearchSubmit}>
-            <div className="col-md-5">
-              <div className="position-relative">
-                <input
-                  type="text"
-                  className="form-control ps-5"
-                  placeholder="Kitob nomi, muallif, ISBN yoki hamkor do'kon..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-                <i className="ti ti-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
-                {search && (
-                  <button
-                    type="button"
-                    className="btn btn-sm position-absolute top-50 end-0 translate-middle-y me-2 border-0 text-muted"
-                    onClick={() => {
-                      setSearch('');
-                      applyFilters({ search: '' });
-                    }}
-                  >
-                    <i className="ti ti-x"></i>
-                  </button>
-                )}
+        <div className="card-body">
+          {/* Segment tabs — kc-segment (iOS/Axelit uslubi) */}
+          <div className="nav kc-segment kc-segment-wrap mb-3" role="tablist" aria-label="Tahlil bo'limlari">
+            {tabs.map((tab) => (
+              <div key={tab.key} className="nav-item">
+                <button
+                  className={`nav-link${filters.tab === tab.key ? ' active' : ''}`}
+                  onClick={() => applyFilters({ tab: tab.key })}
+                >
+                  <i className={`${tab.icon}`}></i>
+                  {tab.label}
+                  <span className="badge">{tab.badge}</span>
+                </button>
               </div>
-            </div>
+            ))}
+          </div>
 
-            <div className="col-md-3">
-              <select
-                className="form-select"
-                value={filters.type}
-                onChange={(e) => applyFilters({ type: e.target.value })}
+          {/* Filter Toolbar */}
+          <form className="d-flex align-items-center gap-2 flex-wrap mb-3" onSubmit={handleSearchSubmit}>
+            <div className="app-form app-icon-form position-relative" style={{ width: 'min(320px, 100%)' }}>
+              <i className="ti ti-search"></i>
+              <input
+                type="text"
+                className="form-control form-control-sm"
+                placeholder="Kitob nomi, muallif, ISBN yoki do'kon..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <select
+              className="form-select form-select-sm"
+              style={{ width: 'min(200px, 100%)' }}
+              value={filters.type}
+              onChange={(e) => applyFilters({ type: e.target.value })}
+            >
+              <option value="all">Barcha mahsulotlar</option>
+              <option value="book">Faqat kitoblar</option>
+              <option value="stationery">Kanselyariya mollari</option>
+            </select>
+            <button type="submit" className="btn btn-sm btn-light-secondary">
+              <i className="ti ti-filter me-1"></i>Qidirish
+            </button>
+            {search && (
+              <button
+                type="button"
+                className="btn btn-sm btn-light-secondary"
+                onClick={() => { setSearch(''); applyFilters({ search: '' }); }}
               >
-                <option value="all">Barcha mahsulotlar</option>
-                <option value="book">Faqat kitoblar</option>
-                <option value="stationery">Kanselyariya mollari</option>
-              </select>
-            </div>
-
-            <div className="col-auto">
-              <button type="submit" className="btn btn-primary">
-                <i className="ti ti-filter me-1"></i>Qidirish
+                Tozalash
               </button>
-            </div>
+            )}
           </form>
-        </div>
 
-        {/* Ma'lumotlar jadvali */}
-        <div className="card-body p-0">
           <div className="table-responsive app-scroll">
-            <table className="table table-hover align-middle mb-0">
-              <thead className="bg-light">
+            <table className="table table-bottom-border align-middle">
+              <thead>
                 <tr>
                   <th className="ps-3 py-3 text-secondary f-s-12 text-uppercase">Kitob / Mahsulot</th>
                   <th className="py-3 text-secondary f-s-12 text-uppercase">Narxi</th>
@@ -510,7 +476,7 @@ export default function DemandAnalytics({
                               className="btn btn-sm btn-outline-primary"
                               title="Kitob ma'lumotlarini ko'rish va zaxirani boshqarish"
                             >
-                              <i className="ti ti-box-seam me-1"></i>
+                              <i className="ti ti-package me-1"></i>
                               {item.availableStock <= 0 ? "Zaxirani to'ldirish" : "Katalogda ko'rish"}
                             </Link>
                           </div>

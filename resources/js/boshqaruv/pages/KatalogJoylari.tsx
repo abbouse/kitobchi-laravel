@@ -166,7 +166,7 @@ export default function KatalogJoylari() {
                     <tr key={item.id}>
                       <td>
                         <span className="f-w-600">{item.seller || '—'}</span>
-                        {item.sellerVerified ? <i className="ti ti-rosette-discount-check text-primary ms-1"></i> : null}
+                        {item.sellerVerified ? <i className="ti ti-discount-check-filled text-primary ms-1"></i> : null}
                         <small className="d-block text-secondary">#{item.id} · reyting {item.sellerRating.toFixed(1)}</small>
                       </td>
                       <td>
@@ -208,7 +208,7 @@ export default function KatalogJoylari() {
                                   router.post(item.stopUrl, {}, { preserveScroll: true });
                                 }
                               }}>
-                              <i className="ti ti-player-stop me-1"></i>To'xtatish
+                              <i className="ti ti-player-pause me-1"></i>To'xtatish
                             </button>
                           ) : null}
                         </div>

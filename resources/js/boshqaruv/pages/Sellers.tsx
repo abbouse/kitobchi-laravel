@@ -88,7 +88,7 @@ export default function Sellers() {
             className="btn btn-sm btn-outline-secondary"
             onClick={() => router.reload({ preserveScroll: true })}
           >
-            <i className="ti ti-refresh me-1"></i>Yangilash
+            <i className="ti ti-rotate me-1"></i>Yangilash
           </button>
         </div>
       </div>

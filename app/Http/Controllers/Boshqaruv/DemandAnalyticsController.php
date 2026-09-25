@@ -11,6 +11,7 @@ use App\Models\FavouriteProducts;
 use App\Models\MyCart;
 use App\Models\ProductStockAlert;
 use App\Models\Stationery;
+use App\Support\ProductImageUrls;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -53,12 +54,12 @@ class DemandAnalyticsController extends Controller
                 'search' => $search,
             ],
             'tabs' => [
-                ['key' => 'all_wishes', 'label' => 'Mijozlar xohishlari (barchasi)', 'icon' => 'ti-heart-handshake', 'badge' => $kpi['totalWishesProducts']],
+                ['key' => 'all_wishes', 'label' => 'Mijozlar xohishlari (barchasi)', 'icon' => 'ti-heart-filled', 'badge' => $kpi['totalWishesProducts']],
                 ['key' => 'cart_out_of_stock', 'label' => 'Savatda bor lekin tugagan', 'icon' => 'ti-shopping-cart-x', 'badge' => $kpi['cartOutOfStockProducts']],
-                ['key' => 'wishlist_out_of_stock', 'label' => 'Sevimli lekin tugagan', 'icon' => 'ti-heart-x', 'badge' => $kpi['wishlistOutOfStockProducts']],
-                ['key' => 'stock_alerts', 'label' => 'Qayta sotuvni kutayotganlar', 'icon' => 'ti-bell-ringing', 'badge' => $kpi['stockAlertProducts']],
+                ['key' => 'wishlist_out_of_stock', 'label' => 'Sevimli lekin tugagan', 'icon' => 'ti-ban', 'badge' => $kpi['wishlistOutOfStockProducts']],
+                ['key' => 'stock_alerts', 'label' => 'Qayta sotuvni kutayotganlar', 'icon' => 'ti-bell-filled', 'badge' => $kpi['stockAlertProducts']],
                 ['key' => 'top_cart_items', 'label' => 'Savatdagi eng ko\'p saqlangan', 'icon' => 'ti-shopping-cart', 'badge' => $kpi['topCartProductsCount']],
-                ['key' => 'top_wishlist_items', 'label' => 'Sevimlidagi eng ko\'p saqlangan', 'icon' => 'ti-heart', 'badge' => $kpi['totalWishlistItems']],
+                ['key' => 'top_wishlist_items', 'label' => 'Sevimlidagi eng ko\'p saqlangan', 'icon' => 'ti-heart-filled', 'badge' => $kpi['totalWishlistItems']],
             ],
         ]);
     }
@@ -198,8 +199,8 @@ class DemandAnalyticsController extends Controller
         $rows = $query->skip($offset)->take($perPage)->get();
 
         $items = $rows->map(function ($row) {
-            $images = json_decode((string) $row->images, true);
-            $firstImage = is_array($images) && count($images) > 0 ? $images[0] : null;
+            $imageUrls = ProductImageUrls::build($row->images);
+            $firstImage = $imageUrls['original'][0] ?? null;
 
             $stock = (int) $row->available_stock;
             $urgency = $stock <= 0 ? 'high' : ($stock < 5 ? 'medium' : 'normal');
@@ -305,8 +306,8 @@ class DemandAnalyticsController extends Controller
         $rows = $query->skip($offset)->take($perPage)->get();
 
         $items = $rows->map(function ($row) {
-            $images = json_decode((string) $row->images, true);
-            $firstImage = is_array($images) && count($images) > 0 ? $images[0] : null;
+            $imageUrls = ProductImageUrls::build($row->images);
+            $firstImage = $imageUrls['original'][0] ?? null;
 
             return [
                 'id' => $row->id,
@@ -409,8 +410,8 @@ class DemandAnalyticsController extends Controller
         $rows = $query->skip($offset)->take($perPage)->get();
 
         $items = $rows->map(function ($row) {
-            $images = json_decode((string) $row->images, true);
-            $firstImage = is_array($images) && count($images) > 0 ? $images[0] : null;
+            $imageUrls = ProductImageUrls::build($row->images);
+            $firstImage = $imageUrls['original'][0] ?? null;
 
             return [
                 'id' => $row->id,
@@ -514,8 +515,8 @@ class DemandAnalyticsController extends Controller
         $rows = $query->skip($offset)->take($perPage)->get();
 
         $items = $rows->map(function ($row) {
-            $images = json_decode((string) $row->images, true);
-            $firstImage = is_array($images) && count($images) > 0 ? $images[0] : null;
+            $imageUrls = ProductImageUrls::build($row->images);
+            $firstImage = $imageUrls['original'][0] ?? null;
 
             return [
                 'id' => $row->id,
@@ -617,8 +618,8 @@ class DemandAnalyticsController extends Controller
         $rows = $query->skip($offset)->take($perPage)->get();
 
         $items = $rows->map(function ($row) {
-            $images = json_decode((string) $row->images, true);
-            $firstImage = is_array($images) && count($images) > 0 ? $images[0] : null;
+            $imageUrls = ProductImageUrls::build($row->images);
+            $firstImage = $imageUrls['original'][0] ?? null;
 
             return [
                 'id' => $row->id,
@@ -720,8 +721,8 @@ class DemandAnalyticsController extends Controller
         $rows = $query->skip($offset)->take($perPage)->get();
 
         $items = $rows->map(function ($row) {
-            $images = json_decode((string) $row->images, true);
-            $firstImage = is_array($images) && count($images) > 0 ? $images[0] : null;
+            $imageUrls = ProductImageUrls::build($row->images);
+            $firstImage = $imageUrls['original'][0] ?? null;
 
             return [
                 'id' => $row->id,

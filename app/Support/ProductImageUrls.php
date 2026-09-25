@@ -45,7 +45,12 @@ class ProductImageUrls
             return $path;
         }
 
-        return asset('storage/' . ltrim($path, '/'));
+        $clean = self::normalizeStoragePath($path);
+        if ($clean === '') {
+            return null;
+        }
+
+        return asset('storage/' . $clean);
     }
 
     public static function variantUrl(?string $path, string $variant): ?string
@@ -59,13 +64,30 @@ class ProductImageUrls
             return $path;
         }
 
-        foreach (self::candidateVariantPaths($path, $variant) as $candidate) {
+        $clean = self::normalizeStoragePath($path);
+        foreach (self::candidateVariantPaths($clean, $variant) as $candidate) {
             if (Storage::disk('public')->exists($candidate)) {
                 return asset('storage/' . ltrim($candidate, '/'));
             }
         }
 
-        return self::originalUrl($path);
+        return self::originalUrl($clean);
+    }
+
+    public static function normalizeStoragePath(string $path): string
+    {
+        $path = trim($path);
+        $path = str_replace('\\', '/', $path);
+        if (str_starts_with($path, '/storage/')) {
+            $path = substr($path, 9);
+        } elseif (str_starts_with($path, 'storage/')) {
+            $path = substr($path, 8);
+        } elseif (str_starts_with($path, '/public/')) {
+            $path = substr($path, 8);
+        } elseif (str_starts_with($path, 'public/')) {
+            $path = substr($path, 7);
+        }
+        return ltrim($path, '/');
     }
 
     private static function candidateVariantPaths(string $path, string $variant): array
@@ -77,8 +99,7 @@ class ProductImageUrls
     {
         return str_starts_with($path, 'http://')
             || str_starts_with($path, 'https://')
-            || str_starts_with($path, 'data:')
-            || str_starts_with($path, '/storage/')
-            || str_starts_with($path, '/');
+            || str_starts_with($path, '//')
+            || str_starts_with($path, 'data:');
     }
 }

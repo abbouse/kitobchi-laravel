@@ -1408,7 +1408,7 @@ export default function Orders() {
                                     {fmt(selectedOrd.fulfillment?.cashCollectAmount || selectedOrd.total)} so'm
                                   </div>
                                   <div className="text-muted f-s-12 mt-2">
-                                    <i className="ti ti-shield-alert text-warning me-1"></i>
+                                    <i className="ti ti-alert-triangle text-warning me-1"></i>
                                     Kuryerga topshirilgan chek va naqd pul kassa yopilishida hisobga olinadi.
                                   </div>
                                 </div>

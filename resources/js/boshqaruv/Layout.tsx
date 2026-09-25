@@ -20,7 +20,7 @@ const nav = [
   ]},
   { group: 'Buyurtmalar', section: 'Savdo', icon: 'ti-receipt', ax: 'iconoir-shopping-bag', items: [
     { to: '/boshqaruv/orders', match: '/boshqaruv/orders', label: 'Buyurtmalar', icon: 'ti-receipt', perm: 'orders' },
-    { to: '/boshqaruv/demand-analytics', match: '/boshqaruv/demand-analytics', label: 'Talab & Savat Analitikasi', icon: 'ti-chart-pie', ax: 'iconoir-graph-up', badge: 'NEW', perm: 'orders' },
+    { to: '/boshqaruv/demand-analytics', match: '/boshqaruv/demand-analytics', label: 'Talab & Savat Analitikasi', icon: 'ti-chart-bar', ax: 'iconoir-graph-up', badge: 'NEW', perm: 'orders' },
     { to: '/boshqaruv/users', match: '/boshqaruv/users', label: 'Foydalanuvchilar', icon: 'ti-users', perm: 'users' },
     { to: '/boshqaruv/split', match: '/boshqaruv/split', label: 'Split nazorati', icon: 'ti-wallet', perm: 'split' },
     { to: '/boshqaruv/search-history', match: '/boshqaruv/search-history', label: 'Qidiruv tarixi', icon: 'ti-history', perm: 'search-history' },
@@ -38,7 +38,7 @@ const nav = [
   ]},
   { group: 'Biznes Hamkorlar', section: 'Hamkorlar va logistika', icon: 'ti-building-store', ax: 'iconoir-shop', items: [
     { to: '/boshqaruv/sellers', match: '/boshqaruv/sellers', label: 'Sotuvchilar & Mualliflar', icon: 'ti-building-store', perm: 'sellers' },
-    { to: '/boshqaruv/seller-orders', match: '/boshqaruv/seller-orders', label: 'Seller buyurtmalari', icon: 'ti-shopping-bag-check', perm: 'sellers' },
+    { to: '/boshqaruv/seller-orders', match: '/boshqaruv/seller-orders', label: 'Seller buyurtmalari', icon: 'ti-shopping-bag', perm: 'sellers' },
     { to: '/boshqaruv/seller-ai-actions', match: '/boshqaruv/seller-ai-actions', label: 'Seller AI audit', icon: 'ti-robot', perm: 'seller-ai' },
   ]},
   { group: 'Yetkazib berish', section: 'Hamkorlar va logistika', icon: 'ti-truck', ax: 'iconoir-delivery-truck', items: [
@@ -154,7 +154,7 @@ const SECTIONS = ['Savdo', 'Hamkorlar va logistika', 'Moliya', "O'sish", 'Jamoa 
 // ── Global qidiruv: bo'lim nomi bo'yicha sakrash + asosiy ro'yxatlarda qidirish ──
 const searchTargets = [
   { label: 'Buyurtmalardan qidirish', path: '/boshqaruv/orders', icon: 'ti-receipt', tone: 'primary' },
-  { label: 'Talab analitikasidan qidirish', path: '/boshqaruv/demand-analytics', icon: 'ti-chart-pie', tone: 'success' },
+  { label: 'Talab analitikasidan qidirish', path: '/boshqaruv/demand-analytics', icon: 'ti-chart-bar', tone: 'success' },
   { label: 'Foydalanuvchilardan qidirish', path: '/boshqaruv/users', icon: 'ti-users', tone: 'info' },
   { label: 'Kitoblardan qidirish', path: '/boshqaruv/books', icon: 'ti-book', tone: 'warning' },
   { label: 'Sotuvchi va Mualliflardan qidirish', path: '/boshqaruv/sellers', icon: 'ti-building-store', tone: 'primary' },

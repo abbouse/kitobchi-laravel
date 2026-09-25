@@ -8,6 +8,7 @@ use App\Models\CatalogSlotPurchase;
 use App\Models\Seller;
 use App\Models\SellerStaffLog;
 use App\Services\Catalog\CatalogSlotService;
+use App\Support\ProductImageUrls;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -118,7 +119,7 @@ class CatalogSlotController extends Controller
                 return [
                     'id' => (int) $book->id,
                     'name' => $book->name,
-                    'image' => $book->first_image,
+                    'image' => ProductImageUrls::originalUrl($book->first_image),
                     'edition_id' => (int) $book->edition_id,
                     'offers_count' => (int) ($book->edition->offers_count ?? 0),
                     'available' => $slot === null,
@@ -278,7 +279,7 @@ class CatalogSlotController extends Controller
             'id' => (int) $purchase->id,
             'book_id' => (int) $purchase->book_id,
             'book_name' => $purchase->book?->name,
-            'image' => $purchase->book?->first_image,
+            'image' => ProductImageUrls::originalUrl($purchase->book?->first_image),
             'status' => $purchase->status,
             'status_label' => match ($purchase->status) {
                 CatalogSlotPurchase::STATUS_PENDING => 'Tasdiq kutilmoqda',

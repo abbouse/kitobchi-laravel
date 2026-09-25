@@ -403,19 +403,22 @@ class OrderController extends Controller
             return null;
         }
 
+        $firstImage = null;
         if (property_exists($product, 'first_image') || isset($product->first_image)) {
-            $firstImage = $product->first_image;
-            if (is_string($firstImage) && $firstImage !== '') {
-                return $firstImage;
+            $val = $product->first_image;
+            if (is_string($val) && $val !== '') {
+                $firstImage = $val;
             }
         }
 
-        $images = $product->images ?? null;
-        if (is_array($images) && ! empty($images[0]) && is_string($images[0])) {
-            return $images[0];
+        if (! $firstImage) {
+            $images = $product->images ?? null;
+            if (is_array($images) && ! empty($images[0]) && is_string($images[0])) {
+                $firstImage = $images[0];
+            }
         }
 
-        return null;
+        return \App\Support\ProductImageUrls::originalUrl($firstImage);
     }
 
     public function updateStatus(Request $request, Sold $order)
