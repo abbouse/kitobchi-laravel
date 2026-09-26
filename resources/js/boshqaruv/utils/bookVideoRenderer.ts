@@ -39,6 +39,7 @@ const FONT = "Inter, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif";
 const INK = '#0B1220';
 const BLUE = '#2178D7';
 const MUTED = '#6B7280';
+const RED = '#F0144B';
 
 const INTRO = 2.2;
 const OUTRO = 3.4;
@@ -180,6 +181,23 @@ export function drawBookCard(ctx: CanvasRenderingContext2D, book: VideoBook, img
   if (img) drawCover(ctx, img, x + pad, y + pad, iw, ih);
   ctx.restore();
 
+  // chegirma belgisi ("-9%") — rasmning chap yuqori burchagida
+  if (book.oldPrice && book.oldPrice > book.price) {
+    const pct = Math.floor(((book.oldPrice - book.price) / book.oldPrice) * 100);
+    if (pct > 0) {
+      const label = `-${pct}%`;
+      ctx.font = `700 ${56 * s}px ${FONT}`;
+      const bw = ctx.measureText(label).width + 64 * s;
+      roundRect(ctx, x + pad + 60 * s, y + pad + 40 * s, bw, 110 * s, 28 * s);
+      ctx.fillStyle = '#2E9BF0';
+      ctx.fill();
+      ctx.fillStyle = '#FFFFFF';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(label, x + pad + 60 * s + 32 * s, y + pad + 97 * s);
+      ctx.textBaseline = 'alphabetic';
+    }
+  }
+
   // nom (2 qator)
   ctx.fillStyle = INK;
   ctx.font = `600 ${58 * s}px ${FONT}`;
@@ -192,9 +210,28 @@ export function drawBookCard(ctx: CanvasRenderingContext2D, book: VideoBook, img
   roundRect(ctx, x + pad + 18 * s, py, iw - 36 * s, 190 * s, 56 * s);
   ctx.fillStyle = '#F1F2F4';
   ctx.fill();
-  ctx.fillStyle = INK;
-  ctx.font = `700 ${62 * s}px ${FONT}`;
-  ctx.fillText(money(book.price), x + pad + 70 * s, py + 118 * s);
+  const discounted = !!book.oldPrice && book.oldPrice > book.price;
+  if (discounted) {
+    // ilovadagidek: eski narx chizilgan (qizil chiziq), yangi narx qizil
+    const ox = x + pad + 70 * s;
+    ctx.fillStyle = '#374151';
+    ctx.font = `500 ${46 * s}px ${FONT}`;
+    const oldText = money(book.oldPrice!);
+    ctx.fillText(oldText, ox, py + 78 * s);
+    ctx.strokeStyle = RED;
+    ctx.lineWidth = 5 * s;
+    ctx.beginPath();
+    ctx.moveTo(ox - 4 * s, py + 62 * s);
+    ctx.lineTo(ox + ctx.measureText(oldText).width + 4 * s, py + 62 * s);
+    ctx.stroke();
+    ctx.fillStyle = RED;
+    ctx.font = `700 ${62 * s}px ${FONT}`;
+    ctx.fillText(money(book.price), ox, py + 150 * s);
+  } else {
+    ctx.fillStyle = INK;
+    ctx.font = `700 ${62 * s}px ${FONT}`;
+    ctx.fillText(money(book.price), x + pad + 70 * s, py + 118 * s);
+  }
   // yurakcha tugmasi
   const bx = x + w - pad - 18 * s - 30 * s - 140 * s;
   roundRect(ctx, bx, py + 25 * s, 140 * s, 140 * s, 36 * s);
