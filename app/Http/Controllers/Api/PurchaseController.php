@@ -1943,11 +1943,18 @@ class PurchaseController extends Controller
 
             $freshPurchase = Sold::find($purchase->id);
             $freshCourierOrder = CourierOrder::where('order_id', $purchase->id)->first();
-            $this->orderRealtimeService->broadcastSoldCreated(
-                $freshPurchase,
-                array_keys($groupedBySeller),
-                $freshCourierOrder,
-            );
+            try {
+                $this->orderRealtimeService->broadcastSoldCreated(
+                    $freshPurchase,
+                    array_keys($groupedBySeller),
+                    $freshCourierOrder,
+                );
+            } catch (\Throwable $broadcastEx) {
+                Log::warning('Broadcast failed after successful order', [
+                    'order_id' => $purchase->id,
+                    'error'    => $broadcastEx->getMessage(),
+                ]);
+            }
 
             if ((int) $request->paymentStatus === 0 && $freshPurchase) {
                 try {
