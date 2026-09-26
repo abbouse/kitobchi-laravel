@@ -847,15 +847,9 @@ function gridScene(ctx: CanvasRenderingContext2D, s: VideoScene, t: number) {
   decor(ctx, th, 3, t, prog(t, 0.3, 1.2), 0, 0, true);
 }
 
-// ── outro: oq-pastel fon, ikonka soyasiz ──────────────────────────
-function outroBg(ctx: CanvasRenderingContext2D, t = 0) {
-  fill(ctx, '#F7F9FC');
-  const blobs: [number, number, number, string][] = [
-    [150 + 120 * Math.sin(t * 0.4), 380, 700, 'rgba(160,205,255,0.75)'],
-    [960 - 100 * Math.sin(t * 0.35), 1050, 650, 'rgba(214,200,255,0.65)'],
-    [300 + 140 * Math.cos(t * 0.3), 1720, 700, 'rgba(255,214,190,0.7)'],
-  ];
-  for (const [x, y, r, c] of blobs) glow(ctx, x, y, r, c);
+// ── outro: toza oq fon, ikonka soyasiz ────────────────────────────
+function outroBg(ctx: CanvasRenderingContext2D) {
+  fill(ctx, '#FFFFFF');
 }
 
 function fill(ctx: CanvasRenderingContext2D, color: string) {
@@ -873,7 +867,7 @@ function drawIcon(ctx: CanvasRenderingContext2D, icon: HTMLImageElement, cx: num
 }
 
 function outro(ctx: CanvasRenderingContext2D, scene: VideoScene, t: number) {
-  outroBg(ctx, t);
+  outroBg(ctx);
   const icon = scene.assets.icon;
   const p = prog(t, 0, 0.9);
   if (icon && p > 0) {
@@ -926,7 +920,7 @@ export function drawFrame(ctx: CanvasRenderingContext2D, scene: VideoScene, t: n
     drawScene(ctx, scene, t);
     return;
   }
-  outroBg(ctx, 0);
+  outroBg(ctx);
   const z = 1 - 0.8 * Math.pow(endP, 2.2);
   ctx.save();
   ctx.globalAlpha = 1 - Math.pow(endP, 1.6);
