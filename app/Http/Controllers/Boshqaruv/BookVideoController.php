@@ -76,8 +76,21 @@ class BookVideoController extends Controller
                 'icon' => asset('favicon.svg'),
                 'appStore' => asset('images/icons/app-store-badge.svg'),
                 'googlePlay' => asset('images/icons/google-play-badge.svg'),
+                'brandFont' => $this->brandFontUrl(),
             ],
         ]);
+    }
+
+    /** Video oxiridagi "Kitobchi" yozuvi uchun Satoshi shrifti (public/fonts ga qo'yilgan bo'lsa). */
+    private function brandFontUrl(): ?string
+    {
+        foreach (['Satoshi-Bold.woff2', 'Satoshi-Bold.woff', 'Satoshi-Bold.ttf', 'Satoshi-Bold.otf', 'Satoshi-Variable.ttf', 'Satoshi-Variable.woff2'] as $file) {
+            if (is_file(public_path("fonts/{$file}"))) {
+                return asset("fonts/{$file}");
+            }
+        }
+
+        return null;
     }
 
     public function update(Request $request, BookVideoSet $set): RedirectResponse

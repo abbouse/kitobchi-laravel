@@ -78,10 +78,24 @@ export function loadImage(src: string): Promise<HTMLImageElement | undefined> {
 }
 
 let fontPromise: Promise<void> | null = null;
-/** Inter shriftini bir marta yuklaydi (bo'lmasa tizim shrifti ishlatiladi). */
-export function ensureFont(): Promise<void> {
+/** Oxirgi qismdagi "Kitobchi" yozuvi shrifti: Satoshi yuklansa — u, bo'lmasa Inter. */
+let brandFamily = FONT;
+/**
+ * Inter shriftini (va berilgan bo'lsa Satoshi faylini) bir marta yuklaydi;
+ * yuklanmasa tizim shrifti ishlatiladi.
+ */
+export function ensureFont(brandFontUrl?: string | null): Promise<void> {
   if (fontPromise) return fontPromise;
   fontPromise = (async () => {
+    if (brandFontUrl && typeof FontFace !== 'undefined') {
+      try {
+        const face = new FontFace('Satoshi', `url(${brandFontUrl})`, { weight: '700' });
+        document.fonts.add(await face.load());
+        brandFamily = `Satoshi, ${FONT}`;
+      } catch {
+        /* fayl topilmasa — Inter */
+      }
+    }
     if (!document.querySelector('link[data-book-video-font]')) {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
@@ -303,16 +317,16 @@ function glow(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, co
   ctx.fillRect(0, 0, W, H);
 }
 
-function setFont(ctx: CanvasRenderingContext2D, size: number, weight: number, spacing = 0) {
-  ctx.font = `${weight} ${size}px ${FONT}`;
+function setFont(ctx: CanvasRenderingContext2D, size: number, weight: number, spacing = 0, family = FONT) {
+  ctx.font = `${weight} ${size}px ${family}`;
   if ('letterSpacing' in ctx) (ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = `${spacing}px`;
 }
 
 /** Harfma-harf chiqish: har harf 28 ms kechikib, pastdan ko'tariladi. */
-function charReveal(ctx: CanvasRenderingContext2D, str: string, x: number, y: number, size: number, weight: number, color: string, t: number, start: number, align: 'left' | 'center' = 'left') {
+function charReveal(ctx: CanvasRenderingContext2D, str: string, x: number, y: number, size: number, weight: number, color: string, t: number, start: number, align: 'left' | 'center' = 'left', family = FONT) {
   if (!str || t < start) return;
   ctx.save();
-  setFont(ctx, size, weight, -size * 0.035);
+  setFont(ctx, size, weight, -size * 0.035, family);
   ctx.fillStyle = color;
   ctx.textAlign = 'left';
   const total = ctx.measureText(str).width;
@@ -714,7 +728,6 @@ function carouselScene(ctx: CanvasRenderingContext2D, s: VideoScene, t: number) 
   const moveOut = cur < n - 1 ? prog(t, stepStart(cur + 1), 0.45) : 0;
   if (t >= INTRO - 0.2) decor(ctx, th, cur + 1, t, prog(lt, 0.1, 1.0), moveOut, -(Math.max(0, P) - cur) * 260, false);
 
-  chip(ctx, s.periodLabel, 80, 200, 'rgba(17,17,17,0.9)', '#FFFFFF', prog(t, 0.05, 0.5));
   introTitle(ctx, s, t, thIntro, false);
 
   // kartalar: markaziy — to'liq, yondagilar kichik va burilgan (qoraytirilmaydi)
@@ -729,7 +742,6 @@ function carouselScene(ctx: CanvasRenderingContext2D, s: VideoScene, t: number) 
   if (t >= INTRO - 0.2) decor(ctx, th, cur + 1, t, prog(lt, 0.1, 1.0), moveOut, -(Math.max(0, P) - cur) * 420, true);
 
   if (t >= INTRO - 0.3) {
-    chip(ctx, `${String(cur + 1).padStart(2, '0')} / ${String(n).padStart(2, '0')}`, W - 80, 200, 'rgba(255,255,255,0.92)', '#111111', prog(t, INTRO - 0.3, 0.5), 'right');
     const hs = prog(lt + (cur === 0 ? 0.2 : 0), 0.35, 1);
     const tag = TAGLINES[cur % TAGLINES.length];
     charReveal(ctx, tag, 80, 400, fitSize(ctx, tag, 104, 800, W - 160), 800, th.ink, lt, cur === 0 ? -0.1 : 0.35);
@@ -756,7 +768,6 @@ function countdownScene(ctx: CanvasRenderingContext2D, s: VideoScene, t: number)
   if (t < INTRO) decor(ctx, theme(0), 0, t, prog(t, 0.3, 1.2), prog(t, INTRO - 0.7, 0.5), 0, false);
   else decor(ctx, th, cur + 2, t, prog(lt, 0.1, 1.0), moveOut, 0, false);
 
-  chip(ctx, `TOP ${n} · ${s.periodLabel}`, 80, 200, 'rgba(17,17,17,0.9)', '#FFFFFF', prog(t, 0.05, 0.5));
   introTitle(ctx, s, t, theme(0), false);
 
   // #N — qalin 3D raqam, har qadamda aylanib kamayadi
@@ -856,7 +867,6 @@ function gridScene(ctx: CanvasRenderingContext2D, s: VideoScene, t: number) {
   const th = theme(3);
   freshBg(ctx, 3);
   decor(ctx, th, 3, t, prog(t, 0.3, 1.2), 0, 0, false);
-  chip(ctx, s.periodLabel, 80, 200, 'rgba(17,17,17,0.9)', '#FFFFFF', prog(t, 0.05, 0.5));
   introTitle(ctx, s, t, th, true);
   const books = s.books.slice(0, GRID_MAX);
   const { cw, pos } = gridLayout(books.length);
@@ -904,7 +914,7 @@ function outro(ctx: CanvasRenderingContext2D, scene: VideoScene, t: number) {
     drawIcon(ctx, icon, W / 2, 655, 190 * lerp(0.2, 1, backOut(p) * 0.35 + expoOut(p) * 0.65));
     ctx.restore();
   }
-  charReveal(ctx, 'Kitobchi', W / 2, 900, 118, 700, INK, t, 0.3, 'center');
+  charReveal(ctx, 'Kitobchi', W / 2, 900, 118, 700, INK, t, 0.3, 'center', brandFamily);
   fadeText(ctx, 'Ilovani yuklab oling', W / 2, 1010, 50, 600, '#4B5563', prog(t, 0.75, 0.6), 'center');
   [scene.assets.appStore, scene.assets.googlePlay].forEach((b, i) => {
     if (!b) return;
@@ -963,19 +973,6 @@ export function drawFrame(ctx: CanvasRenderingContext2D, scene: VideoScene, t: n
 
 // ── cover (Instagram muqova rasmi) ───────────────────────────────
 // Asosiy mazmun profil to'ridagi 3:4 kesimga (y ≈ 240…1680) sig'adi.
-function posterBrand(ctx: CanvasRenderingContext2D, scene: VideoScene, y: number, color: string) {
-  ctx.save();
-  setFont(ctx, 40, 700, -1);
-  const tw = ctx.measureText('Kitobchi').width;
-  const iw = 64, gap = 18;
-  const x0 = W / 2 - (iw + gap + tw) / 2;
-  if (scene.assets.icon) drawIcon(ctx, scene.assets.icon, x0 + iw / 2, y - 16, iw);
-  ctx.fillStyle = color;
-  ctx.textAlign = 'left';
-  ctx.fillText('Kitobchi', x0 + iw + gap, y);
-  ctx.restore();
-}
-
 function tiltedCard(ctx: CanvasRenderingContext2D, s: VideoScene, b: VideoBook, cx: number, cy: number, w: number, deg: number) {
   ctx.save();
   ctx.translate(cx, cy);
@@ -1028,7 +1025,6 @@ export function drawPoster(ctx: CanvasRenderingContext2D, s: VideoScene) {
     tape(ctx, s.template === 'countdown' ? "#1 — ENG KO'P SOTILGAN" : '#1', W / 2 + 170, 1490, -0.1, th.tape, th.tapeInk, 1, 44);
   }
   decor(ctx, th, idx, 5, 1, 0, 0, true, 90);
-  posterBrand(ctx, s, 1640, th.ink);
 }
 
 // ── recording ────────────────────────────────────────────────────
