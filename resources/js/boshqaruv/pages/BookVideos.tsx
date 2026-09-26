@@ -3,7 +3,7 @@ import { router, usePage } from '@inertiajs/react';
 import { PageCrumbs } from '../Layout';
 import {
   VideoBook, VideoScene, VideoTemplate, W, H,
-  drawFrame, durationOf, ensureFont, previewTime, isInstagramReady, loadImage, money, pickMimeType, recordVideo,
+  drawFrame, drawPoster, durationOf, ensureFont, previewTime, isInstagramReady, loadImage, money, pickMimeType, recordVideo,
 } from '../utils/bookVideoRenderer';
 
 type Props = {
@@ -43,6 +43,7 @@ export default function BookVideos() {
   const [playing, setPlaying] = useState(true);
   const [recording, setRecording] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showCover, setShowCover] = useState(false);
   const [images, setImages] = useState<Map<number, HTMLImageElement>>(new Map());
   const [loadedAssets, setLoadedAssets] = useState<VideoScene['assets']>({});
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -83,6 +84,7 @@ export default function BookVideos() {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
     if (!canvas || !ctx || recording !== null || !books.length) return;
+    if (showCover) { drawPoster(ctx, scene); return; }
     let raf = 0;
     const start = performance.now();
     const loop = () => {
@@ -92,7 +94,7 @@ export default function BookVideos() {
     };
     loop();
     return () => cancelAnimationFrame(raf);
-  }, [scene, playing, recording, total, books.length, template]);
+  }, [scene, playing, recording, total, books.length, template, showCover]);
 
   // Qidiruv (debounce)
   useEffect(() => {
@@ -125,7 +127,29 @@ export default function BookVideos() {
     }
   };
 
+  const fileBase = `kitobchi-${period === 'monthly' ? 'oylik' : 'haftalik'}-${set.periodLabel.replace(/[^0-9]+/g, '-')}`;
+
+  /** Instagram uchun cover (JPG, 1080×1920) — shablonga mos. */
+  const downloadCover = () => {
+    const c = document.createElement('canvas');
+    c.width = W;
+    c.height = H;
+    const ctx = c.getContext('2d');
+    if (!ctx) return;
+    drawPoster(ctx, scene);
+    c.toBlob((blob) => {
+      if (!blob) { setError("Coverni saqlab bo'lmadi."); return; }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${fileBase}-cover.jpg`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    }, 'image/jpeg', 0.92);
+  };
+
   const download = async () => {
+    setShowCover(false);
     const canvas = canvasRef.current;
     if (!canvas) return;
     setError(null);
@@ -149,7 +173,7 @@ export default function BookVideos() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `kitobchi-${period === 'monthly' ? 'oylik' : 'haftalik'}-${set.periodLabel.replace(/[^0-9]+/g, '-')}.${ext}`;
+      a.download = `${fileBase}.${ext}`;
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 5000);
       if (!isInstagramReady(mime)) setError("Serverda MP4 (H.264) ga o'girib bo'lmadi — fayl Instagram'ga yuklanmasligi mumkin. Google Chrome'ning yangi versiyasidan foydalaning.");
@@ -275,7 +299,10 @@ export default function BookVideos() {
                 style={{ width: 300, maxWidth: '100%', aspectRatio: '9 / 16', borderRadius: 18, boxShadow: '0 10px 30px rgba(0,0,0,.15)', background: '#F3F6FB' }} />
               <div className="small text-secondary mt-2">{Math.round(total)} soniya · 1080×1920 · musiqasiz</div>
               <div className="d-flex justify-content-center gap-2 mt-3">
-                <button type="button" className="btn btn-light-secondary btn-sm" disabled={recording !== null} onClick={() => setPlaying((p) => !p)}>
+                <button type="button" className={`btn btn-sm ${showCover ? 'btn-light-primary' : 'btn-light-secondary'}`} disabled={recording !== null} onClick={() => setShowCover((v) => !v)}>
+                  <i className="ti ti-photo me-1"></i>{showCover ? 'Video' : 'Cover'}
+                </button>
+                <button type="button" className="btn btn-light-secondary btn-sm" disabled={recording !== null || showCover} onClick={() => setPlaying((p) => !p)}>
                   <i className={`ti ${playing ? 'ti-player-pause' : 'ti-player-play'} me-1`}></i>{playing ? "To'xtatish" : "Ko'rish"}
                 </button>
                 <button type="button" className="btn btn-primary btn-sm" disabled={recording !== null || !books.length || !mime} onClick={download}>
@@ -283,6 +310,9 @@ export default function BookVideos() {
                   {recording === null ? 'Videoni yuklab olish' : recording >= 1 ? "MP4 ga o'girilmoqda…" : `Yozilmoqda… ${Math.round(recording * 100)}%`}
                 </button>
               </div>
+              <button type="button" className="btn btn-light-primary btn-sm mt-2" disabled={recording !== null || !books.length} onClick={downloadCover}>
+                <i className="ti ti-photo-down me-1"></i>Coverni yuklab olish (JPG)
+              </button>
               {recording !== null && (
                 <div className="progress mt-2" style={{ height: 6 }}><div className="progress-bar" style={{ width: `${recording * 100}%` }}></div></div>
               )}

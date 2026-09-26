@@ -526,6 +526,111 @@ export function drawFrame(ctx: CanvasRenderingContext2D, scene: VideoScene, t: n
   ctx.restore();
 }
 
+// ── cover (Instagram muqova rasmi) ───────────────────────────────
+// Asosiy mazmun profil to'ridagi 3:4 kesimga (y ≈ 240…1680) sig'adigan qilib joylanadi.
+function posterBrand(ctx: CanvasRenderingContext2D, scene: VideoScene, y: number, color: string) {
+  ctx.save();
+  setFont(ctx, 40, 700, -1);
+  const tw = ctx.measureText('Kitobchi').width;
+  const iw = 64, gap = 18;
+  const x0 = W / 2 - (iw + gap + tw) / 2;
+  if (scene.assets.icon) ctx.drawImage(scene.assets.icon, x0, y - 48, iw, iw);
+  ctx.fillStyle = color;
+  ctx.textAlign = 'left';
+  ctx.fillText('Kitobchi', x0 + iw + gap, y);
+  ctx.restore();
+}
+
+function posterTitle(ctx: CanvasRenderingContext2D, s: VideoScene, y: number, light: boolean, over: string) {
+  const [l1, l2] = splitTitle(s.title);
+  const size2 = fitSize(ctx, l2, 116, 800, W - 170);
+  label(ctx, over, 84, y, light ? SKY : BLUE, 1);
+  reveal(ctx, l1, 84, y + 100, 66, 700, light ? 'rgba(255,255,255,0.9)' : INK, 1);
+  reveal(ctx, l2, 80, y + 100 + size2 * 1.05, size2, 800, light ? '#FFFFFF' : BLUE, 1);
+  return y + 100 + size2 * 1.05;
+}
+
+function tiltedCard(ctx: CanvasRenderingContext2D, s: VideoScene, b: VideoBook, cx: number, top: number, cw: number, deg: number) {
+  const ch = cw * CARD_RATIO;
+  ctx.save();
+  ctx.translate(cx, top + ch / 2);
+  ctx.rotate(deg * Math.PI / 180);
+  drawBookCard(ctx, b, s.images.get(b.id), -cw / 2, -ch / 2, cw);
+  ctx.restore();
+}
+
+/** Video uchun cover: shablonga mos, 1080×1920. */
+export function drawPoster(ctx: CanvasRenderingContext2D, s: VideoScene) {
+  const books = s.books;
+  if (s.template === 'grid') {
+    fill(ctx, PAPER);
+    glow(ctx, W / 2, 1150, 900, 'rgba(33,120,215,0.10)');
+    const bottom = posterTitle(ctx, s, 330, false, s.periodLabel);
+    const covers = books.filter((b) => s.images.get(b.id)).slice(0, 6);
+    const cols = covers.length > 4 ? 3 : 2;
+    const gap = 26;
+    const cw = cols === 3 ? 285 : 360;
+    const ch = cw * 1.42;
+    const rows = Math.ceil(covers.length / cols);
+    const gridH = rows * ch + (rows - 1) * gap;
+    const y0 = bottom + 70 + Math.max(0, (1560 - bottom - 70 - gridH) / 2);
+    covers.forEach((b, i) => {
+      const r = Math.floor(i / cols), c = i % cols;
+      const inRow = r === rows - 1 ? covers.length - r * cols : cols;
+      const x = W / 2 - (inRow * cw + (inRow - 1) * gap) / 2 + c * (cw + gap);
+      const y = y0 + r * (ch + gap);
+      ctx.save();
+      ctx.shadowColor = 'rgba(15,42,79,0.22)';
+      ctx.shadowBlur = 40;
+      ctx.shadowOffsetY = 18;
+      roundRect(ctx, x, y, cw, ch, 22);
+      ctx.fillStyle = '#fff';
+      ctx.fill();
+      ctx.shadowColor = 'transparent';
+      ctx.clip();
+      drawCover(ctx, s.images.get(b.id)!, x, y, cw, ch);
+      ctx.restore();
+    });
+    posterBrand(ctx, s, 1640, INK);
+    return;
+  }
+
+  fill(ctx, NIGHT);
+  glow(ctx, W / 2, 1150, 900, 'rgba(33,120,215,0.32)');
+  if (s.template === 'countdown') {
+    posterTitle(ctx, s, 330, true, `Top ${books.length} · ${s.periodLabel}`);
+    const b = books[0];
+    if (b) {
+      if (books[1]) { ctx.globalAlpha = 0.55; tiltedCard(ctx, s, books[1], W / 2 - 250, 820, 380, -9); ctx.globalAlpha = 1; }
+      if (books[2]) { ctx.globalAlpha = 0.55; tiltedCard(ctx, s, books[2], W / 2 + 250, 820, 380, 9); ctx.globalAlpha = 1; }
+      tiltedCard(ctx, s, b, W / 2, 720, 480, 0);
+      // "#1" belgisi
+      ctx.save();
+      ctx.translate(W / 2 + 220, 730);
+      ctx.beginPath();
+      ctx.arc(0, 0, 78, 0, Math.PI * 2);
+      ctx.fillStyle = BLUE;
+      ctx.shadowColor = 'rgba(0,0,0,0.35)';
+      ctx.shadowBlur = 30;
+      ctx.fill();
+      ctx.shadowColor = 'transparent';
+      setFont(ctx, 62, 800, -2);
+      ctx.fillStyle = '#fff';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('#1', 0, 4);
+      ctx.restore();
+    }
+  } else {
+    posterTitle(ctx, s, 330, true, s.periodLabel);
+    const [a, b, c] = books;
+    if (b) tiltedCard(ctx, s, b, W / 2 - 260, 840, 390, -10);
+    if (c) tiltedCard(ctx, s, c, W / 2 + 260, 840, 390, 10);
+    if (a) tiltedCard(ctx, s, a, W / 2, 740, 470, 0);
+  }
+  posterBrand(ctx, s, 1600, '#FFFFFF');
+}
+
 // ── recording ────────────────────────────────────────────────────
 // H.264 1080×1920 uchun kamida 4.0-daraja kerak (…1F = 3.1 — faqat 720p gacha).
 // VP9 sekin kompyuterlarda 1080×1920 da bo'sh fayl berishi mumkin, shuning uchun VP8.
