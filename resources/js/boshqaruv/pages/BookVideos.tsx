@@ -5,7 +5,7 @@ import {
   VideoBook, VideoScene, VideoTemplate, W, H,
   drawFrame, drawPoster, durationOf, ensureFont, previewTime, isInstagramReady, loadImage, money, pickMimeType, recordVideo,
 } from '../utils/bookVideoRenderer';
-import { MusicMode, decodeMusicFile, renderSoundtrack } from '../utils/bookVideoAudio';
+import { MusicMode, TRACKS, autoTrack, decodeMusicFile, renderSoundtrack } from '../utils/bookVideoAudio';
 
 type Props = {
   period: 'weekly' | 'monthly';
@@ -45,7 +45,7 @@ export default function BookVideos() {
   const [recording, setRecording] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showCover, setShowCover] = useState(false);
-  const [music, setMusic] = useState<MusicMode>('fresh');
+  const [music, setMusic] = useState<MusicMode>('auto');
   const [sfx, setSfx] = useState(true);
   const [custom, setCustom] = useState<{ name: string; buffer: AudioBuffer } | null>(null);
   const [soundOn, setSoundOn] = useState(false);
@@ -329,15 +329,16 @@ export default function BookVideos() {
               <canvas ref={canvasRef} width={W} height={H}
                 style={{ width: 300, maxWidth: '100%', aspectRatio: '9 / 16', borderRadius: 18, boxShadow: '0 10px 30px rgba(0,0,0,.15)', background: '#F3F6FB' }} />
               <div className="small text-secondary mt-2">
-                {Math.round(total)} soniya · 1080×1920 · {music === 'fresh' ? 'quvnoq trek' : music === 'custom' ? (custom?.name ?? 'fayl tanlanmagan') : 'musiqasiz'}{sfx ? ' + effektlar' : ''}
+                {Math.round(total)} soniya · 1080×1920 · {music === 'custom' ? (custom?.name ?? 'fayl tanlanmagan') : music === 'none' ? 'musiqasiz' : TRACKS.find((x) => x.id === (music === 'auto' ? autoTrack(scene) : music))?.name}{sfx ? ' + effektlar' : ''}
               </div>
               <div className="border rounded-3 p-2 mt-3 text-start">
                 <div className="small fw-semibold mb-2"><i className="ti ti-music me-1"></i>Ovoz</div>
-                <div className="btn-group btn-group-sm w-100 mb-2" role="group">
-                  {([['fresh', 'Quvnoq trek'], ['custom', "O'z musiqam"], ['none', 'Musiqasiz']] as [MusicMode, string][]).map(([m, l]) => (
-                    <button key={m} type="button" className={`btn ${music === m ? 'btn-primary' : 'btn-light-secondary'}`} disabled={recording !== null} onClick={() => setMusic(m)}>{l}</button>
-                  ))}
-                </div>
+                <select className="form-select form-select-sm mb-2" value={music} disabled={recording !== null} onChange={(e) => setMusic(e.target.value as MusicMode)}>
+                  <option value="auto">Avto — har hafta boshqa trek ({TRACKS.find((x) => x.id === autoTrack(scene))?.name})</option>
+                  {TRACKS.map((tr) => <option key={tr.id} value={tr.id}>{tr.name}</option>)}
+                  <option value="custom">O'z musiqam (fayl yuklash)</option>
+                  <option value="none">Musiqasiz</option>
+                </select>
                 {music === 'custom' && (
                   <input type="file" accept="audio/*" className="form-control form-control-sm mb-2" disabled={recording !== null}
                     onChange={async (e) => {

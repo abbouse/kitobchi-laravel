@@ -1,11 +1,26 @@
 /**
- * KITOB VIDEOLARI — ovoz: brauzerning o'zida sintez qilinadigan quvnoq trek
- * (110 BPM, C–G–Am–F) + sahna kesimlariga mos ovoz effektlari, yoki admin
- * yuklagan musiqa fayli. Natija — AudioBuffer, video bilan birga yoziladi.
+ * KITOB VIDEOLARI — ovoz: brauzerning o'zida sintez qilinadigan 4 xil trek
+ * (pop, funk, chill, energiya — hammasi 110 BPM, kesimlarga mos) + sahna
+ * effektlari, yoki admin yuklagan musiqa fayli. Natija — AudioBuffer, video bilan birga yoziladi.
  */
 import { BEAT, TIMING, durationOf, type VideoScene } from './bookVideoRenderer';
 
-export type MusicMode = 'fresh' | 'custom' | 'none';
+export type TrackStyle = 'pop' | 'funk' | 'chill' | 'energy';
+export type MusicMode = 'auto' | TrackStyle | 'custom' | 'none';
+
+export const TRACKS: { id: TrackStyle; name: string }[] = [
+  { id: 'pop', name: 'Quvnoq pop' },
+  { id: 'funk', name: 'Funk' },
+  { id: 'chill', name: 'Chill' },
+  { id: 'energy', name: 'Energiya' },
+];
+
+/** "Avto": davr va shablonga qarab trek tanlanadi — har hafta boshqacha, lekin bir video uchun doim bir xil. */
+export function autoTrack(scene: VideoScene): TrackStyle {
+  let h = 7;
+  for (const ch of `${scene.periodLabel}|${scene.template}`) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return TRACKS[h % TRACKS.length].id;
+}
 
 export interface SoundOptions {
   music: MusicMode;
@@ -107,6 +122,22 @@ export async function renderSoundtrack(scene: VideoScene, opts: SoundOptions): P
     const g = ac.createGain(); g.connect(musicBus); env(g, t, v, 0.003, 0.32);
     osc('triangle', midi(note), t, 0.4, g); osc('sine', midi(note + 12), t, 0.25, g);
   };
+  const lead = (t: number, note: number, v = 0.1) => {
+    const g = ac.createGain(); g.connect(filter('lowpass', 2600, musicBus)); env(g, t, v, 0.004, 0.16);
+    osc('square', midi(note), t, 0.2, g);
+  };
+  const bell = (t: number, note: number, v = 0.16) => {
+    const g = ac.createGain(); g.connect(musicBus); env(g, t, v, 0.003, 0.9);
+    osc('sine', midi(note), t, 1, g); osc('sine', midi(note) * 2.76, t, 0.4, g);
+  };
+  const stab = (t: number, notes: number[], v = 0.07) => {
+    const g = ac.createGain(); g.connect(filter('lowpass', 2400, musicBus)); env(g, t, v, 0.004, 0.14);
+    notes.forEach((n) => { osc('sawtooth', midi(n) * 1.004, t, 0.18, g); osc('sawtooth', midi(n) * 0.996, t, 0.18, g); });
+  };
+  const subBass = (t: number, note: number, dur: number) => {
+    const g = ac.createGain(); g.connect(musicBus); env(g, t, 0.55, 0.01, dur);
+    osc('sine', midi(note), t, dur, g);
+  };
 
   // ── SFX ──
   const whoosh = (t: number, dur = 0.45) => {
@@ -133,36 +164,93 @@ export async function renderSoundtrack(scene: VideoScene, opts: SoundOptions): P
     const g = ac.createGain(); g.gain.value = 0.9; g.connect(master);
     src.connect(g);
     src.start(0);
-  } else if (opts.music === 'fresh') {
-    const prog: [number, number[]][] = [[48, [60, 64, 67]], [43, [59, 62, 67]], [45, [60, 64, 69]], [41, [60, 65, 69]]]; // C G Am F
-    const hook = [76, 79, 81, 79, 76, 74, 72, 74, 76, 79, 84, 81, 79, 76, 79, 81];
+  } else if (opts.music !== 'none' && opts.music !== 'custom') {
+    const style: TrackStyle = opts.music === 'auto' ? autoTrack(scene) : opts.music;
+    // [ildiz, akkord] — har akkord 1 takt (4 zarb)
+    const progs: Record<TrackStyle, [number, number[]][]> = {
+      pop: [[48, [60, 64, 67]], [43, [59, 62, 67]], [45, [60, 64, 69]], [41, [60, 65, 69]]], // C G Am F
+      funk: [[50, [60, 65, 69, 72]], [43, [59, 62, 65, 67]], [48, [59, 64, 67, 71]], [45, [60, 64, 67, 69]]], // Dm7 G7 Cmaj7 Am7
+      chill: [[41, [64, 67, 69, 72]], [40, [62, 64, 67, 71]], [38, [60, 62, 65, 69]], [36, [59, 60, 64, 67]]], // Fmaj7 Em7 Dm7 Cmaj7
+      energy: [[45, [57, 60, 64]], [41, [57, 60, 65]], [48, [55, 60, 64]], [43, [55, 59, 62]]], // Am F C G
+    };
+    const hooks: Record<TrackStyle, number[]> = {
+      pop: [76, 79, 81, 79, 76, 74, 72, 74, 76, 79, 84, 81, 79, 76, 79, 81],
+      funk: [74, 0, 77, 74, 0, 72, 74, 0, 79, 77, 0, 74, 72, 0, 69, 72],
+      chill: [76, 0, 0, 79, 0, 0, 74, 0, 72, 0, 0, 76, 0, 0, 71, 0],
+      energy: [81, 81, 84, 81, 79, 79, 76, 79, 81, 81, 88, 86, 84, 81, 79, 76],
+    };
+    const prog = progs[style], hook = hooks[style];
     const beats = Math.ceil(total / BEAT);
     const drop = Math.round(INTRO / BEAT); // birinchi kitob bilan ritm to'liq kiradi
     const stop = Math.floor(outroAt / BEAT);
+    const e8 = BEAT / 2, e16 = BEAT / 4;
     for (let k = 0; k < beats; k++) {
       const t = k * BEAT;
       const [root, chord] = prog[Math.floor(k / 4) % 4];
-      if (k % 4 === 0 && t < total) pad(t, chord, Math.min(BEAT * 4, total - t));
-      if (k < stop) {
-        hat(t + BEAT / 2, k % 4 === 3);
-        if (k >= drop - 2 || k % 2 === 0) hat(t, false);
-        if (k >= drop) {
+      const bar4 = k % 4;
+      if (k % 4 === 0 && t < total && style !== 'energy') pad(t, chord, Math.min(BEAT * 4, total - t));
+      if (k >= stop) continue;
+      const on = k >= drop;
+      if (k === drop - 1) whoosh(t, BEAT);
+      if (style === 'pop') {
+        hat(t + e8, bar4 === 3);
+        if (on || k % 2 === 0) hat(t, false);
+        if (on) {
           kick(t);
           if (k % 2 === 1) clap(t);
           bass(t, root - 12, BEAT * 0.45);
-          bass(t + BEAT / 2, root, BEAT * 0.4);
+          bass(t + e8, root, BEAT * 0.4);
           pluck(t, hook[(k * 2) % hook.length]);
-          if (k % 2 === 0) pluck(t + BEAT / 2, hook[(k * 2 + 1) % hook.length], 0.16);
-        } else if (k === drop - 1) {
-          whoosh(t, BEAT); // zarb oldidan "ko'tarilish"
+          if (k % 2 === 0) pluck(t + e8, hook[(k * 2 + 1) % hook.length], 0.16);
+        }
+      } else if (style === 'funk') {
+        for (let q = 0; q < 4; q++) if (on || q % 2 === 0) hat(t + q * e16, false);
+        if (on) {
+          if (bar4 === 0 || bar4 === 2) kick(t);
+          if (bar4 === 2) kick(t + e8 + e16);
+          if (k % 2 === 1) clap(t);
+          // sinkopali bas: 1, "e", "&a"
+          bass(t, root - 12, e16 * 1.6);
+          if (bar4 % 2 === 0) bass(t + e16 * 3, root - 12 + 12, e16 * 0.9);
+          bass(t + e8 + e16, root - 12 + 7, e16 * 0.9);
+          const a = hook[(k * 2) % hook.length], b = hook[(k * 2 + 1) % hook.length];
+          if (a) lead(t, a);
+          if (b) lead(t + e8, b, 0.08);
+        }
+      } else if (style === 'chill') {
+        hat(t + e8, false);
+        if (on) {
+          if (bar4 === 0) kick(t);
+          if (bar4 === 1) kick(t + e8);
+          if (bar4 === 2) clap(t);
+          if (bar4 === 0) subBass(t, root - 12 + 12, BEAT * 3.6);
+          const a = hook[(k * 2) % hook.length];
+          if (a) bell(t, a);
+        } else if (k % 2 === 0) {
+          bell(t, chord[chord.length - 1] + 12, 0.08);
+        }
+      } else {
+        // energiya: 4/4, "offbeat" bas va akkord zarbalari
+        if (bar4 === 0 && t < total) pad(t, chord, Math.min(BEAT * 4, total - t));
+        hat(t + e8, true);
+        if (on) {
+          kick(t);
+          if (k % 2 === 1) clap(t);
+          bass(t + e8, root, BEAT * 0.4);
+          stab(t + e8, chord.map((n) => n + 12));
+          pluck(t, hook[(k * 2) % hook.length], 0.18);
+          pluck(t + e8, hook[(k * 2 + 1) % hook.length], 0.12);
+        } else {
+          if (k % 2 === 0) hat(t, false);
         }
       }
     }
     // yakuniy akkord
     const fin = stop * BEAT;
+    const [, lastChord] = prog[0];
     kick(fin);
-    pad(fin, [60, 64, 67, 72], Math.max(0.5, total - fin));
-    bass(fin, 36, Math.max(0.5, total - fin - 0.1));
+    pad(fin, [...lastChord, lastChord[0] + 12], Math.max(0.5, total - fin));
+    bass(fin, prog[0][0] - 12, Math.max(0.5, total - fin - 0.1));
   }
 
   // ── sahna effektlari ──
