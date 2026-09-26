@@ -3,7 +3,7 @@ import { router, usePage } from '@inertiajs/react';
 import { PageCrumbs } from '../Layout';
 import {
   VideoBook, VideoScene, VideoTemplate, W, H,
-  drawFrame, durationOf, ensureFont, isInstagramReady, loadImage, money, pickMimeType, recordVideo,
+  drawFrame, durationOf, ensureFont, previewTime, isInstagramReady, loadImage, money, pickMimeType, recordVideo,
 } from '../utils/bookVideoRenderer';
 
 type Props = {
@@ -27,9 +27,9 @@ type Props = {
 };
 
 const TEMPLATE_INFO: Record<VideoTemplate, { name: string; desc: string; icon: string }> = {
-  carousel: { name: 'Karusel', desc: "Kitoblar birin-ketin o'ngdan kirib, chapga chiqib ketadi", icon: 'ti-arrows-horizontal' },
-  countdown: { name: 'Top reyting', desc: '#N dan #1 gacha — eng ko\'p sotilgani oxirida', icon: 'ti-trophy' },
-  grid: { name: "To'r (grid)", desc: "Kitoblar 2 ustunli to'rga ketma-ket tushadi (6 tagacha)", icon: 'ti-layout-grid' },
+  carousel: { name: 'Karusel', desc: "Har zarbda yangi kitob: muqovadan xira fon, stories chiziqlari", icon: 'ti-arrows-horizontal' },
+  countdown: { name: 'Top reyting', desc: '#N dan #1 gacha, katta raqam zarbi — #1 oltin rangda', icon: 'ti-trophy' },
+  grid: { name: "To'r (grid)", desc: "Ko'k fonda kitoblar zarbga mos to'rga tushadi (6 tagacha)", icon: 'ti-layout-grid' },
 };
 
 export default function BookVideos() {
@@ -86,13 +86,13 @@ export default function BookVideos() {
     let raf = 0;
     const start = performance.now();
     const loop = () => {
-      const t = playing ? ((performance.now() - start) / 1000) % total : 3;
+      const t = playing ? ((performance.now() - start) / 1000) % total : previewTime(template, books.length);
       drawFrame(ctx, scene, t);
       if (playing) raf = requestAnimationFrame(loop);
     };
     loop();
     return () => cancelAnimationFrame(raf);
-  }, [scene, playing, recording, total, books.length]);
+  }, [scene, playing, recording, total, books.length, template]);
 
   // Qidiruv (debounce)
   useEffect(() => {
