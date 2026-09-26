@@ -260,6 +260,13 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
         // ══════════════════════════ MARKETING VA HAMJAMIYAT ══════════════════════════
         Route::middleware('panel.permission:marketing')->group(function () {
             Route::get('/reklamalar', fn (AdminController $controller) => $controller->page('Reklamalar'))->name('reklamalar');
+            // KITOB VIDEOLARI: haftalik / oylik e'lon videolari (avto tanlov + admin tahriri)
+            Route::get('/book-videos', [\App\Http\Controllers\Boshqaruv\BookVideoController::class, 'index'])->name('book-videos');
+            Route::get('/book-videos/search', [\App\Http\Controllers\Boshqaruv\BookVideoController::class, 'search'])->name('book-videos.search');
+            Route::get('/book-videos/image/{book}', [\App\Http\Controllers\Boshqaruv\BookVideoController::class, 'image'])->whereNumber('book')->name('book-videos.image');
+            Route::put('/book-videos/{set}', [\App\Http\Controllers\Boshqaruv\BookVideoController::class, 'update'])->whereNumber('set')->name('book-videos.update');
+            Route::post('/book-videos/convert', [\App\Http\Controllers\Boshqaruv\BookVideoController::class, 'convert'])->name('book-videos.convert');
+            Route::post('/book-videos/{set}/auto', [\App\Http\Controllers\Boshqaruv\BookVideoController::class, 'autoPick'])->whereNumber('set')->name('book-videos.auto');
             Route::get('/promokodlar', fn (AdminController $controller) => $controller->page('Promokodlar'))->name('promokodlar');
             Route::post('/promokodlar', [AdminController::class, 'storePromocode'])->name('promokodlar.store');
             Route::get('/promokodlar/generate', [AdminController::class, 'generatePromocode'])->name('promokodlar.generate');
