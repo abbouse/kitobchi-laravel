@@ -396,7 +396,7 @@ class ProductPersonalizationService
             ->all();
 
         return [
-            'summary' => $this->profileSummary($dominantType, $topBookCategories, $topStationeryCategories, $topAuthors),
+            'summary' => $this->profileSummary($dominantType, $topBookCategories->all(), $topStationeryCategories->all(), $topAuthors),
             'dominant_product_type' => $dominantType,
             'book_views' => $bookViews,
             'stationery_views' => $stationeryViews,
