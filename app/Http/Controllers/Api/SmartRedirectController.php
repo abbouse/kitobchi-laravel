@@ -3,10 +3,31 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Support\ProductDeeplink;
 use Illuminate\Http\Request;
 
 class SmartRedirectController extends Controller
 {
+    /**
+     * Ilovani yuklab olish uchun yagona havola (Instagram bio, QR kod va h.k.):
+     * Android → Google Play, iPhone/iPad → App Store, kompyuter → sayt.
+     */
+    public function app(Request $request)
+    {
+        $userAgent = strtolower((string) $request->userAgent());
+        $stores = ProductDeeplink::stores();
+
+        if (str_contains($userAgent, 'android')) {
+            return redirect()->away($stores['play_store_url']);
+        }
+
+        if (str_contains($userAgent, 'iphone') || str_contains($userAgent, 'ipad')) {
+            return redirect()->away($stores['app_store_url']);
+        }
+
+        return redirect()->away(rtrim((string) (config('app.url') ?: 'https://kitobchi.com'), '/'));
+    }
+
     public function redirect(Request $request, string $type, int|string $id)
     {
         $type = strtolower(trim((string) $type));
@@ -33,8 +54,7 @@ class SmartRedirectController extends Controller
 
         $webUrl = "{$baseUrl}/{$path}{$querySuffix}";
         $appScheme = "kitobchi://{$path}{$querySuffix}";
-        $playStore = 'https://play.google.com/store/apps/details?id=com.kitobchi.app';
-        $appStore = 'https://apps.apple.com/app/kitobchi/id6470000000';
+        ['play_store_url' => $playStore, 'app_store_url' => $appStore] = ProductDeeplink::stores();
 
         if ($isAndroid || $isIos) {
             $fallbackUrl = $isAndroid ? $playStore : $appStore;
