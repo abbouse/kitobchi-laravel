@@ -24,7 +24,7 @@ type Props = {
   maxBooks: number;
   searchUrl: string;
   convertUrl: string;
-  assets: { icon: string; appStore: string; googlePlay: string };
+  assets: { icon: string; appStore: string; googlePlay: string; brandFont?: string | null };
 };
 
 const TEMPLATE_INFO: Record<VideoTemplate, { name: string; desc: string; icon: string }> = {
@@ -62,7 +62,7 @@ export default function BookVideos() {
 
   // Shrift, ikonka va store tugmalari
   useEffect(() => {
-    void ensureFont();
+    void ensureFont(assets.brandFont);
     void Promise.all([loadImage(assets.icon), loadImage(assets.appStore), loadImage(assets.googlePlay)])
       .then(([icon, appStore, googlePlay]) => setLoadedAssets({ icon, appStore, googlePlay }));
   }, [assets.icon, assets.appStore, assets.googlePlay]);
