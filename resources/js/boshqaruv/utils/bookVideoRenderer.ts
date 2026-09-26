@@ -2,8 +2,8 @@
  * KITOB VIDEOLARI — 1080×1920 Reels videosini canvas'da chizish va yozib olish.
  *
  * Kitoblar ilovadagi kitob kartasi ko'rinishida chiziladi (oq karta, rasm,
- * nom, kulrang narx plashkasi + yurakcha). Uslub — kinematografik: zarbga
- * mos kesimlar, flash + punch-in, kinetik matn, muqovadan xira fon, grain.
+ * nom, kulrang narx plashkasi + yurakcha). Uslub — toza "editorial": tekis
+ * ranglar, kuchli tipografiya, bitta ko'k aksent, zarbga mos crossfade.
  * Uch xil shablon: carousel, countdown, grid. Video ovozsiz yoziladi.
  */
 
@@ -254,108 +254,26 @@ export function drawBookCard(ctx: CanvasRenderingContext2D, book: VideoBook, img
 
 export const CARD_RATIO = 1250 / 800;
 
-// ── cinematic layer: backdrops, grain, flashes ───────────────────
-const blurCache = new WeakMap<HTMLImageElement, HTMLCanvasElement>();
-/** Muqovaning xira, past o'lchamli nusxasi — to'liq ekranga cho'zilganda yumshoq fon beradi. */
-function blurredOf(img: HTMLImageElement): HTMLCanvasElement {
-  let c = blurCache.get(img);
-  if (c) return c;
-  c = document.createElement('canvas');
-  c.width = 180;
-  c.height = 320;
-  const x = c.getContext('2d')!;
-  x.filter = 'blur(7px) saturate(1.3)';
-  drawCover(x, img, -24, -24, 228, 368);
-  blurCache.set(img, c);
-  return c;
-}
+// ── editorial style: flat colours, strong type, one accent ───────
+const PAPER = '#F4F6FA';
+const NIGHT = '#0B1220';
+const SKY = '#6FB6FF';
+const XF = 0.35; // sahnalar orasidagi crossfade
 
-/** Kitob muqovasidan kinematografik fon: xira, sekin kattalashadi, qoraytirilgan. */
-function coverBackdrop(ctx: CanvasRenderingContext2D, img: HTMLImageElement | undefined, zoom: number, dark: number) {
-  ctx.fillStyle = '#07090F';
-  ctx.fillRect(0, 0, W, H);
-  if (img) {
-    ctx.save();
-    ctx.translate(W / 2, H / 2);
-    ctx.scale(zoom, zoom);
-    ctx.imageSmoothingQuality = 'low'; // manba allaqachon xira — bilinear yetarli va tez
-    ctx.drawImage(blurredOf(img), -W / 2, -H / 2, W, H);
-    ctx.restore();
-  }
-  ctx.fillStyle = `rgba(7,9,16,${dark})`;
-  ctx.fillRect(0, 0, W, H);
-  const g = ctx.createLinearGradient(0, H * 0.45, 0, H);
-  g.addColorStop(0, 'rgba(7,9,16,0)');
-  g.addColorStop(1, 'rgba(7,9,16,0.9)');
-  ctx.fillStyle = g;
+function fill(ctx: CanvasRenderingContext2D, color: string) {
+  ctx.fillStyle = color;
   ctx.fillRect(0, 0, W, H);
 }
 
-function radialBg(ctx: CanvasRenderingContext2D, stops: [number, string][], cy = 0.45) {
-  const g = ctx.createRadialGradient(W / 2, H * cy, 0, W / 2, H * cy, H * 0.75);
-  stops.forEach(([o, c]) => g.addColorStop(o, c));
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, W, H);
-}
-
-function rays(ctx: CanvasRenderingContext2D, cx: number, cy: number, rot: number, color: string, alpha: number) {
-  ctx.save();
-  ctx.globalAlpha = alpha;
-  ctx.translate(cx, cy);
-  ctx.rotate(rot);
-  const g = ctx.createRadialGradient(0, 0, 60, 0, 0, 1000);
+/** Juda yumshoq nur dog'i — tekis fonga chuqurlik beradi. */
+function glow(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, color: string) {
+  const g = ctx.createRadialGradient(x, y, 0, x, y, r);
   g.addColorStop(0, color);
-  g.addColorStop(1, 'rgba(255,255,255,0)');
-  ctx.fillStyle = g;
-  for (let i = 0; i < 20; i++) {
-    const a = (i / 20) * Math.PI * 2;
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.arc(0, 0, 1400, a, a + Math.PI / 40);
-    ctx.closePath();
-    ctx.fill();
-  }
-  ctx.restore();
-}
-
-let grainTile: HTMLCanvasElement | null = null;
-const GRAIN_OFFSETS = [[0, 0], [-61, 37], [43, -79], [-87, -21], [29, 88], [-38, -57], [79, 31], [-19, 68]];
-function grain(ctx: CanvasRenderingContext2D, t: number) {
-  if (!grainTile) {
-    grainTile = document.createElement('canvas');
-    grainTile.width = grainTile.height = 256;
-    const x = grainTile.getContext('2d')!;
-    const d = x.createImageData(256, 256);
-    let seed = 7;
-    for (let i = 0; i < d.data.length; i += 4) {
-      seed = (seed * 16807) % 2147483647;
-      const v = (seed / 2147483647) * 255;
-      d.data[i] = d.data[i + 1] = d.data[i + 2] = v;
-      d.data[i + 3] = 255;
-    }
-    x.putImageData(d, 0, 0);
-  }
-  const pat = ctx.createPattern(grainTile, 'repeat');
-  if (!pat) return;
-  const [ox, oy] = GRAIN_OFFSETS[Math.floor(t * 30) % GRAIN_OFFSETS.length];
-  ctx.save();
-  // oddiy (source-over) aralashtirish — overlay dasturiy renderda juda sekin
-  ctx.globalAlpha = 0.035;
-  ctx.translate(ox, oy);
-  ctx.fillStyle = pat;
-  ctx.fillRect(-ox, -oy, W, H);
-  ctx.restore();
-}
-
-function vignette(ctx: CanvasRenderingContext2D) {
-  const g = ctx.createRadialGradient(W / 2, H / 2, H * 0.32, W / 2, H / 2, H * 0.62);
-  g.addColorStop(0, 'rgba(0,0,0,0)');
-  g.addColorStop(1, 'rgba(0,0,0,0.24)');
+  g.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, W, H);
 }
 
-// ── kinetic type ─────────────────────────────────────────────────
 function setFont(ctx: CanvasRenderingContext2D, size: number, weight: number, spacing = 0) {
   ctx.font = `${weight} ${size}px ${FONT}`;
   if ('letterSpacing' in ctx) (ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = `${spacing}px`;
@@ -394,206 +312,118 @@ function splitTitle(title: string): [string, string] {
   return [words.slice(0, cut).join(' '), words.slice(cut).join(' ')];
 }
 
-function pill(ctx: CanvasRenderingContext2D, str: string, x: number, y: number, a: number, align: 'left' | 'center' = 'left', bg = 'rgba(255,255,255,0.14)', fg = 'rgba(255,255,255,0.9)') {
-  if (a <= 0 || !str) return;
-  ctx.save();
-  ctx.globalAlpha = a;
-  setFont(ctx, 30, 700, 3);
-  const tw = ctx.measureText(str).width + 52;
-  const px = align === 'center' ? x - tw / 2 : x;
-  roundRect(ctx, px, y + (1 - a) * 20, tw, 62, 31);
-  ctx.fillStyle = bg;
-  ctx.fill();
-  ctx.fillStyle = fg;
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(str, px + 26, y + 32 + (1 - a) * 20);
-  ctx.restore();
-}
-
-function fadeText(ctx: CanvasRenderingContext2D, str: string, x: number, y: number, size: number, weight: number, color: string, a: number, align: CanvasTextAlign = 'center') {
+function fadeText(ctx: CanvasRenderingContext2D, str: string, x: number, y: number, size: number, weight: number, color: string, a: number, align: CanvasTextAlign = 'left', spacing = -size * 0.02) {
   if (a <= 0 || !str) return;
   ctx.save();
   ctx.globalAlpha = clamp(a);
-  setFont(ctx, size, weight, -size * 0.02);
+  setFont(ctx, size, weight, spacing);
   ctx.fillStyle = color;
   ctx.textAlign = align;
-  ctx.fillText(str, x, y + (1 - easeOut(a)) * 30);
+  ctx.fillText(str, x, y + (1 - easeOut(a)) * 24);
   ctx.restore();
 }
 
-function sparkles(ctx: CanvasRenderingContext2D, t: number, color: string) {
-  for (let i = 0; i < 14; i++) {
-    const x = 120 + ((i * 373) % 840);
-    const y = 380 + ((i * 541) % 1100);
-    const tw = Math.max(0, Math.sin(t * 3.2 + i * 1.7));
-    const s = 10 + (i % 3) * 8;
-    ctx.save();
-    ctx.globalAlpha = tw * 0.9;
-    ctx.translate(x, y);
-    ctx.rotate(t * 0.6 + i);
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.moveTo(0, -s);
-    ctx.quadraticCurveTo(0, 0, s, 0);
-    ctx.quadraticCurveTo(0, 0, 0, s);
-    ctx.quadraticCurveTo(0, 0, -s, 0);
-    ctx.quadraticCurveTo(0, 0, 0, -s);
-    ctx.fill();
-    ctx.restore();
-  }
+/** Kichik, keng harf oralig'idagi yorliq (overline). */
+const label = (ctx: CanvasRenderingContext2D, str: string, x: number, y: number, color: string, a: number, align: CanvasTextAlign = 'left') =>
+  fadeText(ctx, str.toUpperCase(), x, y, 28, 700, color, a, align, 5);
+
+function line(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, p: number, track: string, color: string) {
+  ctx.fillStyle = track;
+  ctx.fillRect(x, y, w, 4);
+  ctx.fillStyle = color;
+  ctx.fillRect(x, y, w * clamp(p), 4);
 }
 
-// ── scenes ───────────────────────────────────────────────────────
-const heroBook = (s: VideoScene) => s.books.find((b) => s.images.get(b.id)) ?? s.books[0];
-
-/** Kirish: muqova foni, kitob "posteri" va sarlavha zarbga mos chiqadi. */
-function intro(ctx: CanvasRenderingContext2D, s: VideoScene, t: number) {
-  const hero = heroBook(s);
-  const img = hero ? s.images.get(hero.id) : undefined;
-  coverBackdrop(ctx, img, 1.12 + 0.1 * (t / INTRO), s.template === 'countdown' ? 0.62 : 0.45);
-
-  // poster: katta muqova, sekin yaqinlashadi (countdown'da #1 sir saqlanadi — faqat fon)
-  if (img && s.template !== 'countdown') {
-    const pw = 560, ph = 760;
-    const z = 1 + 0.08 * easeInOut(t / INTRO);
-    const a = easeOut(prog(t, 0, 0.5));
-    ctx.save();
-    ctx.globalAlpha = a;
-    ctx.translate(W / 2, 250 + ph / 2 + (1 - a) * 60);
-    ctx.scale(z, z);
-    ctx.rotate(-0.025 + 0.02 * (t / INTRO));
-    ctx.shadowColor = 'rgba(0,0,0,0.55)';
-    ctx.shadowBlur = 90;
-    ctx.shadowOffsetY = 40;
-    roundRect(ctx, -pw / 2, -ph / 2, pw, ph, 26);
-    ctx.fillStyle = '#111';
-    ctx.fill();
-    ctx.shadowColor = 'transparent';
-    ctx.clip();
-    drawCover(ctx, img, -pw / 2, -ph / 2, pw, ph);
-    ctx.restore();
-  }
-  if (s.template === 'countdown') {
-    const z = 1 + 0.06 * (t / INTRO);
-    ctx.save();
-    ctx.translate(W / 2, 700);
-    ctx.scale(z, z);
-    ctx.globalAlpha = 0.9 * easeOut(prog(t, 0.1, 0.5));
-    setFont(ctx, 420, 800, -20);
-    ctx.textAlign = 'center';
-    ctx.strokeStyle = 'rgba(255,196,64,0.8)';
-    ctx.lineWidth = 5;
-    ctx.strokeText(`TOP ${s.books.length}`, 0, 150);
-    ctx.restore();
-  }
-
-  const [l1, l2] = splitTitle(s.title);
-  const x = 84;
-  const size2 = fitSize(ctx, l2, 96, 800, W - 150);
-  pill(ctx, s.periodLabel.toUpperCase(), x, 1180, easeOut(prog(t, 0.15, 0.4)));
-  reveal(ctx, l1, x, 1345, 64, 700, 'rgba(255,255,255,0.88)', prog(t, BEAT, 0.5));
-  reveal(ctx, l2, x, 1345 + size2 * 1.1, size2, 800, s.template === 'countdown' ? '#FFC440' : '#4EA3FF', prog(t, BEAT * 2, 0.5));
-  fadeText(ctx, `${s.books.length} ta kitob · Kitobchi`, x, 1345 + size2 * 1.1 + 90, 34, 600, 'rgba(255,255,255,0.6)', prog(t, BEAT * 3, 0.4), 'left');
-}
-
-function storiesBars(ctx: CanvasRenderingContext2D, n: number, i: number, p: number) {
-  const gap = 10, x0 = 70, w = (W - 140 - gap * (n - 1)) / n;
-  for (let k = 0; k < n; k++) {
-    roundRect(ctx, x0 + k * (w + gap), 210, w, 8, 4);
-    ctx.fillStyle = 'rgba(255,255,255,0.25)';
-    ctx.fill();
-    const f = k < i ? 1 : k === i ? p : 0;
-    if (f > 0) {
-      roundRect(ctx, x0 + k * (w + gap), 210, w * f, 8, 4);
-      ctx.fillStyle = '#FFFFFF';
-      ctx.fill();
-    }
-  }
-}
-
-/** Karta: kirishda kattalikdan tushadi, so'ng sekin yaqinlashadi. */
-function heroCard(ctx: CanvasRenderingContext2D, s: VideoScene, b: VideoBook, cx: number, top: number, cw: number, l: number, tilt: number) {
+/** Karta sahnaga ko'tarilib kiradi, keyin juda sekin yaqinlashadi. */
+function card(ctx: CanvasRenderingContext2D, s: VideoScene, b: VideoBook, cx: number, top: number, cw: number, l: number, dur: number, fromX = 0) {
   const ch = cw * CARD_RATIO;
-  const inP = backOut(prog(l, 0, 0.5));
-  const z = (0.86 + 0.14 * inP) * (1 + 0.035 * (l / PER_BOOK));
+  const e = easeOut(prog(l, 0.05, 0.6));
+  const z = 1 + 0.025 * (l / dur);
   ctx.save();
-  ctx.globalAlpha = clamp(prog(l, 0, 0.18));
-  ctx.translate(cx, top + ch / 2 + (1 - clamp(inP)) * 90);
-  ctx.rotate(tilt * (1 - clamp(inP)) * Math.PI / 180);
+  ctx.globalAlpha = clamp(prog(l, 0.05, 0.25));
+  ctx.translate(cx + (1 - e) * fromX, top + ch / 2 + (1 - e) * (fromX ? 0 : 90));
   ctx.scale(z, z);
   drawBookCard(ctx, b, s.images.get(b.id), -cw / 2, -ch / 2, cw);
   ctx.restore();
 }
 
+// ── scenes ───────────────────────────────────────────────────────
+/** Kirish: tungi fon, sarlavha zarbma-zarb, pastda muqovalar lentasi sekin suzadi. */
+function intro(ctx: CanvasRenderingContext2D, s: VideoScene, t: number) {
+  fill(ctx, NIGHT);
+  glow(ctx, 200, 420, 900, 'rgba(33,120,215,0.28)');
+  const x = 84;
+  const [l1, l2] = splitTitle(s.title);
+  const size2 = fitSize(ctx, l2, 104, 800, W - 170);
+  label(ctx, s.periodLabel, x, 640, SKY, prog(t, 0.1, 0.45));
+  reveal(ctx, l1, x, 760, 66, 700, 'rgba(255,255,255,0.92)', prog(t, BEAT, 0.55));
+  reveal(ctx, l2, x, 760 + size2 * 1.08, size2, 800, '#FFFFFF', prog(t, BEAT * 2, 0.55));
+
+  // muqovalar lentasi
+  const covers = s.books.filter((b) => s.images.get(b.id));
+  const cw = 176, ch = 250, gap = 22, y = 1040;
+  const drift = -t * 36;
+  covers.forEach((b, i) => {
+    const a = easeOut(prog(t, BEAT * 3 + i * 0.07, 0.5));
+    if (a <= 0) return;
+    const cx = x + i * (cw + gap) + drift;
+    if (cx > W) return;
+    ctx.save();
+    ctx.globalAlpha = a;
+    roundRect(ctx, cx, y + (1 - a) * 40, cw, ch, 16);
+    ctx.clip();
+    drawCover(ctx, s.images.get(b.id)!, cx, y + (1 - a) * 40, cw, ch);
+    ctx.restore();
+  });
+  fadeText(ctx, `${s.books.length} ta kitob`, x, 1390, 34, 600, 'rgba(255,255,255,0.55)', prog(t, BEAT * 3.5, 0.45));
+}
+
 function carouselScene(ctx: CanvasRenderingContext2D, s: VideoScene, i: number, l: number) {
+  const n = s.books.length;
+  fill(ctx, PAPER);
+  glow(ctx, W / 2, 900, 800, 'rgba(33,120,215,0.07)');
+  label(ctx, s.title, 84, 300, MUTED, 1);
+  fadeText(ctx, `${String(i + 1).padStart(2, '0')} / ${String(n).padStart(2, '0')}`, W - 84, 300, 28, 700, INK, 1, 'right', 2);
+  line(ctx, 84, 330, W - 168, (i + clamp(l / PER_BOOK)) / n, '#E3E8EF', BLUE);
+  card(ctx, s, s.books[i], W / 2, 410, 600, l, PER_BOOK, 160);
   const b = s.books[i];
-  coverBackdrop(ctx, s.images.get(b.id), 1.15 + 0.08 * (l / PER_BOOK), 0.5);
-  storiesBars(ctx, s.books.length, i, clamp(l / PER_BOOK));
-  fadeText(ctx, `${String(i + 1).padStart(2, '0')} / ${String(s.books.length).padStart(2, '0')}`, W - 70, 290, 32, 700, 'rgba(255,255,255,0.75)', 1, 'right');
-  heroCard(ctx, s, b, W / 2, 380, 560, l, i % 2 ? 4 : -4);
-  if (b.author) fadeText(ctx, b.author, W / 2, 1400, 40, 600, 'rgba(255,255,255,0.72)', prog(l, 0.3, 0.4));
+  if (b.author) fadeText(ctx, b.author, W / 2, 1450, 38, 500, MUTED, prog(l, 0.3, 0.4), 'center');
 }
 
 function countdownScene(ctx: CanvasRenderingContext2D, s: VideoScene, k: number, l: number) {
   const n = s.books.length;
   const idx = n - 1 - k;
-  const b = s.books[idx];
   const first = idx === 0;
-  if (first) radialBg(ctx, [[0, '#4A3208'], [0.45, '#1A1206'], [1, '#07090F']]);
-  else radialBg(ctx, [[0, '#10284A'], [0.55, '#0A1426'], [1, '#060B16']]);
-  rays(ctx, W / 2, 900, l * 0.12, first ? 'rgba(255,196,64,0.5)' : 'rgba(78,163,255,0.28)', first ? 0.55 : 0.35);
-  if (first) sparkles(ctx, l, '#FFD980');
-
-  // katta konturli raqam — zarb bilan "uriladi"
-  const slam = prog(l, 0, 0.28);
-  const sc = 1.6 - 0.6 * easeOut(slam);
-  const shake = slam < 1 && slam > 0.6 ? Math.sin(l * 90) * 10 * (1 - slam) : 0;
-  ctx.save();
-  ctx.globalAlpha = clamp(slam * 2);
-  ctx.translate(W / 2 + shake, 1010);
-  ctx.scale(sc, sc);
-  setFont(ctx, 640, 800, -30);
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.lineWidth = 6;
-  ctx.strokeStyle = first ? 'rgba(255,196,64,0.75)' : 'rgba(78,163,255,0.5)';
-  ctx.strokeText(`${idx + 1}`, 0, 0);
-  ctx.restore();
-
-  reveal(ctx, `#${idx + 1}`, W / 2, 330, 96, 800, first ? '#FFC440' : '#FFFFFF', prog(l, 0.05, 0.4), 'center');
-  pill(ctx, first ? 'ENG KO\'P SOTILGAN' : s.title.toUpperCase(), W / 2, 370, easeOut(prog(l, 0.2, 0.4)), 'center',
-    first ? 'rgba(255,196,64,0.18)' : 'rgba(255,255,255,0.1)', first ? '#FFD980' : 'rgba(255,255,255,0.75)');
-  heroCard(ctx, s, b, W / 2, 500, 500, l, idx % 2 ? 5 : -5);
-  if (b.author) fadeText(ctx, b.author, W / 2, 1400, 40, 600, 'rgba(255,255,255,0.72)', prog(l, 0.3, 0.4));
+  fill(ctx, NIGHT);
+  glow(ctx, W / 2, 1050, first ? 800 : 650, first ? 'rgba(33,120,215,0.42)' : 'rgba(33,120,215,0.2)');
+  label(ctx, first ? "Eng ko'p sotilgan" : `Top ${n}`, 84, 300, SKY, 1);
+  reveal(ctx, `#${idx + 1}`, 78, 500, 180, 800, first ? '#4EA3FF' : '#FFFFFF', prog(l, 0.02, 0.5), 'left', -8);
+  fadeText(ctx, s.title, W - 84, 300, 30, 600, 'rgba(255,255,255,0.5)', 1, 'right');
+  card(ctx, s, s.books[idx], W / 2, 580, 520, l, PER_BOOK);
+  const b = s.books[idx];
+  if (b.author) fadeText(ctx, b.author, W / 2, 1520, 38, 500, 'rgba(255,255,255,0.6)', prog(l, 0.3, 0.4), 'center');
 }
 
 function gridScene(ctx: CanvasRenderingContext2D, s: VideoScene, l: number) {
-  radialBg(ctx, [[0, '#3C95F2'], [0.5, '#2178D7'], [1, '#0F4A94']], 0.5);
-  rays(ctx, W / 2, 1000, l * 0.08, 'rgba(255,255,255,0.35)', 0.35);
+  fill(ctx, PAPER);
+  glow(ctx, W / 2, 1100, 900, 'rgba(33,120,215,0.08)');
   const [l1, l2] = splitTitle(s.title);
-  const size2 = fitSize(ctx, l2, 88, 800, W - 140);
-  reveal(ctx, l1, W / 2, 300, 58, 700, 'rgba(255,255,255,0.85)', prog(l, 0, 0.45), 'center');
-  reveal(ctx, l2, W / 2, 300 + size2 * 1.08, size2, 800, '#FFFFFF', prog(l, 0.12, 0.45), 'center');
-  pill(ctx, s.periodLabel.toUpperCase(), W / 2, 300 + size2 * 1.08 + 44, easeOut(prog(l, 0.3, 0.4)), 'center');
+  const size2 = fitSize(ctx, l2, 88, 800, W - 170);
+  label(ctx, s.periodLabel, 84, 250, MUTED, prog(l, 0, 0.4));
+  reveal(ctx, l1, 84, 345, 60, 700, INK, prog(l, 0.05, 0.5));
+  reveal(ctx, l2, 84, 345 + size2 * 1.05, size2, 800, BLUE, prog(l, 0.15, 0.5));
 
   const books = s.books.slice(0, GRID_MAX);
   const cols = books.length > 4 ? 3 : 2;
   const rows = Math.ceil(books.length / cols);
-  const gap = 30;
-  const top = 560;
-  const avail = 1650 - top;
-  const cw = Math.min(360, (W - 140 - (cols - 1) * gap) / cols, (avail - (rows - 1) * gap) / rows / CARD_RATIO);
+  const gap = 28;
+  const top = 540;
+  const avail = 1660 - top;
+  const cw = Math.min(380, (W - 168 - (cols - 1) * gap) / cols, (avail - (rows - 1) * gap) / rows / CARD_RATIO);
   const ch = cw * CARD_RATIO;
   const gridW = cols * cw + (cols - 1) * gap;
   const gridH = rows * ch + (rows - 1) * gap;
   const y0 = top + Math.max(0, (avail - gridH) / 2);
-  const hold = GRID_STEP * books.length + GRID_HOLD;
-  const cam = 1 + 0.04 * easeInOut(l / hold);
-  ctx.save();
-  ctx.translate(W / 2, y0 + gridH / 2);
-  ctx.scale(cam, cam);
-  ctx.translate(-W / 2, -(y0 + gridH / 2));
   books.forEach((b, i) => {
     const r = Math.floor(i / cols), c = i % cols;
     const inRow = r === rows - 1 ? books.length - r * cols : cols;
@@ -602,77 +432,56 @@ function gridScene(ctx: CanvasRenderingContext2D, s: VideoScene, l: number) {
     const y = y0 + r * (ch + gap);
     const lp = l - BEAT - i * GRID_STEP;
     if (lp <= 0) return;
-    const p = backOut(prog(lp, 0, 0.45));
-    const sc = 1.3 - 0.3 * p;
+    const e = easeOut(prog(lp, 0, 0.55));
     ctx.save();
-    ctx.globalAlpha = clamp(prog(lp, 0, 0.15));
-    ctx.translate(x + cw / 2, y + ch / 2 + Math.sin((l + i) * 1.6) * 5);
-    ctx.rotate((1 - clamp(p)) * (i % 2 ? 6 : -6) * Math.PI / 180);
-    ctx.scale(sc, sc);
+    ctx.globalAlpha = clamp(prog(lp, 0, 0.25));
+    ctx.translate(x + cw / 2, y + ch / 2 + (1 - e) * 70);
     drawBookCard(ctx, b, s.images.get(b.id), -cw / 2, -ch / 2, cw);
     ctx.restore();
   });
-  ctx.restore();
 }
 
 function outro(ctx: CanvasRenderingContext2D, scene: VideoScene, t: number) {
-  radialBg(ctx, [[0, '#2E88EA'], [0.45, '#1A62B8'], [1, '#0C3470']], 0.42);
-  rays(ctx, W / 2, 700, t * 0.13, 'rgba(255,255,255,0.4)', 0.3);
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, '#2B86E8');
+  g.addColorStop(1, '#1559AE');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+  glow(ctx, W / 2, 700, 700, 'rgba(255,255,255,0.14)');
   const icon = scene.assets.icon;
-  const p = backOut(prog(t, 0.1, 0.8));
+  const p = easeOut(prog(t, 0.1, 0.7));
   if (icon && p > 0) {
     ctx.save();
-    ctx.globalAlpha = clamp(p);
-    ctx.translate(W / 2, 655);
-    ctx.rotate((1 - clamp(p)) * -0.2);
-    ctx.scale(0.4 + 0.6 * p, 0.4 + 0.6 * p);
-    ctx.shadowColor = 'rgba(4,20,50,0.5)';
-    ctx.shadowBlur = 70;
-    ctx.shadowOffsetY = 30;
-    roundRect(ctx, -101, -101, 202, 202, 52);
-    ctx.fillStyle = 'rgba(255,255,255,0.18)';
-    ctx.fill();
-    ctx.shadowColor = 'transparent';
+    ctx.globalAlpha = p;
+    ctx.translate(W / 2, 655 + (1 - p) * 40);
+    ctx.shadowColor = 'rgba(4,20,50,0.35)';
+    ctx.shadowBlur = 60;
+    ctx.shadowOffsetY = 26;
     ctx.drawImage(icon, -95, -95, 190, 190);
     ctx.restore();
   }
-  reveal(ctx, 'Kitobchi', W / 2, 900, 118, 700, '#FFFFFF', prog(t, 0.45, 0.5), 'center', -4);
-  fadeText(ctx, 'Ilovani yuklab oling', W / 2, 1010, 50, 600, '#CFE3FA', prog(t, 0.8, 0.5));
+  reveal(ctx, 'Kitobchi', W / 2, 900, 118, 700, '#FFFFFF', prog(t, 0.4, 0.55), 'center', -4);
+  fadeText(ctx, 'Ilovani yuklab oling', W / 2, 1010, 50, 600, 'rgba(255,255,255,0.78)', prog(t, 0.75, 0.5), 'center');
   const badges = [scene.assets.appStore, scene.assets.googlePlay];
   badges.forEach((b, i) => {
     if (!b) return;
-    const a = easeOut(prog(t, 1.05 + i * 0.15, 0.5));
+    const a = easeOut(prog(t, 1.0 + i * 0.12, 0.5));
     if (a <= 0) return;
     const bw = 370, bh = 111;
     const bx = W / 2 - bw - 12 + i * (bw + 24);
-    const by = 1085 + (1 - a) * 40;
+    const by = 1085 + (1 - a) * 30;
     ctx.save();
     ctx.globalAlpha = a;
-    ctx.shadowColor = 'rgba(0,0,0,0.3)';
-    ctx.shadowBlur = 40;
-    ctx.shadowOffsetY = 18;
     roundRect(ctx, bx, by, bw, bh, 20);
     ctx.fillStyle = '#000';
     ctx.fill();
-    ctx.shadowColor = 'transparent';
     ctx.clip();
     ctx.drawImage(b, bx, by, bw, bh);
-    // yaltirash
-    const sh = prog(t, 1.9, 1.1);
-    if (sh > 0 && sh < 1) {
-      const sx = bx - bw + sh * bw * 3;
-      const g = ctx.createLinearGradient(sx - 120, 0, sx + 120, 0);
-      g.addColorStop(0, 'rgba(255,255,255,0)');
-      g.addColorStop(0.5, 'rgba(255,255,255,0.4)');
-      g.addColorStop(1, 'rgba(255,255,255,0)');
-      ctx.fillStyle = g;
-      ctx.fillRect(bx, by, bw, bh);
-    }
     ctx.restore();
   });
 }
 
-/** Sahna kesimlari (soniya) — flash va "punch-in" shu nuqtalarda. */
+/** Sahna kesimlari (soniya) — shu nuqtalarda crossfade bo'ladi. */
 function cutsOf(scene: VideoScene): number[] {
   const total = durationOf(scene.template, scene.books.length);
   const outroAt = total - OUTRO;
@@ -686,21 +495,8 @@ export function previewTime(template: VideoTemplate, count: number): number {
   return INTRO + PER_BOOK * 0.6;
 }
 
-/** Bitta kadrni chizadi: t — soniya. */
-export function drawFrame(ctx: CanvasRenderingContext2D, scene: VideoScene, t: number) {
-  const total = durationOf(scene.template, scene.books.length);
-  const outroAt = total - OUTRO;
-  const cuts = cutsOf(scene);
-  const last = [...cuts].reverse().find((c) => t >= c);
-  const since = last === undefined ? Infinity : t - last;
-
-  ctx.save();
-  if (since < 0.45) {
-    const z = 1 + 0.07 * (1 - easeOut(since / 0.45));
-    ctx.translate(W / 2, H / 2);
-    ctx.scale(z, z);
-    ctx.translate(-W / 2, -H / 2);
-  }
+function drawScene(ctx: CanvasRenderingContext2D, scene: VideoScene, t: number) {
+  const outroAt = durationOf(scene.template, scene.books.length) - OUTRO;
   if (t < INTRO) intro(ctx, scene, t);
   else if (t >= outroAt) outro(ctx, scene, t - outroAt);
   else if (scene.template === 'grid') gridScene(ctx, scene, t - INTRO);
@@ -710,14 +506,24 @@ export function drawFrame(ctx: CanvasRenderingContext2D, scene: VideoScene, t: n
     if (scene.template === 'countdown') countdownScene(ctx, scene, k, l);
     else carouselScene(ctx, scene, k, l);
   }
-  ctx.restore();
+}
 
-  vignette(ctx);
-  grain(ctx, t);
-  if (since < 0.3) {
-    ctx.fillStyle = `rgba(255,255,255,${0.7 * Math.pow(1 - since / 0.3, 2)})`;
-    ctx.fillRect(0, 0, W, H);
+/** Bitta kadrni chizadi: t — soniya. */
+export function drawFrame(ctx: CanvasRenderingContext2D, scene: VideoScene, t: number) {
+  const last = [...cutsOf(scene)].reverse().find((c) => t >= c);
+  const since = last === undefined ? Infinity : t - last;
+  if (since >= XF) {
+    drawScene(ctx, scene, t);
+    return;
   }
+  // oldingi sahnaning oxirgi kadri ustiga yangisi yumshoq chiqadi
+  const e = easeInOut(since / XF);
+  drawScene(ctx, scene, last! - 0.001);
+  ctx.save();
+  ctx.globalAlpha = e;
+  ctx.translate(0, (1 - e) * 60);
+  drawScene(ctx, scene, t);
+  ctx.restore();
 }
 
 // ── recording ────────────────────────────────────────────────────
