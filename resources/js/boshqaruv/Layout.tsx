@@ -63,6 +63,7 @@ const nav = [
     { to: '/boshqaruv/market-news', match: '/boshqaruv/market-news', label: 'Market yangiliklari', icon: 'ti-news', perm: 'marketing' },
     { to: '/boshqaruv/collections', match: '/boshqaruv/collections', label: "To'plamlar", icon: 'ti-stack-2', perm: 'marketing' },
     { to: '/boshqaruv/reels', match: '/boshqaruv/reels', label: 'Reels / Shorts', icon: 'ti-movie', perm: 'marketing' },
+    { to: '/boshqaruv/book-videos', match: '/boshqaruv/book-videos', label: 'Kitob videolari', icon: 'ti-video', badge: 'NEW', perm: 'marketing' },
     { to: '/boshqaruv/book-club', match: '/boshqaruv/book-club', label: 'Book Club', icon: 'ti-bookmark', perm: 'book-club' },
   ]},
   { group: 'Mijozlarga xizmat', section: 'Jamoa va tizim', icon: 'ti-headset', ax: 'iconoir-headset-help', items: [

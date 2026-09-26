@@ -64,7 +64,7 @@ class Admin extends Authenticatable
         'audit-logs'     => ['label' => 'Audit log', 'superOnly' => false],
         'seller-ai'      => ['label' => 'Seller AI audit', 'superOnly' => false],
         'logistika'      => ['label' => 'Logistika (yetkazib berish zonalari)', 'superOnly' => false],
-        'marketing'      => ['label' => "Marketing (reklama, promokod, bloger, sertifikat, yangilik, to'plam, reels)", 'superOnly' => false],
+        'marketing'      => ['label' => "Marketing (reklama, promokod, bloger, sertifikat, yangilik, to'plam, reels, kitob videolari)", 'superOnly' => false],
         'book-club'      => ['label' => 'Book Club moderatsiyasi', 'superOnly' => false],
         'support'        => ['label' => 'Support, shikoyat, chat kuzatuv', 'superOnly' => false],
         'push'           => ['label' => 'Push bildirishnomalar', 'superOnly' => false],
