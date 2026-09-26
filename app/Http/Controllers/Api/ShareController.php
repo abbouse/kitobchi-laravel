@@ -32,19 +32,21 @@ class ShareController extends Controller
 
     // ── GET /api/share/product/{id}?type=book ─────────────────────────
     // Autentifikatsiyasiz ham ishlaydi
-    public function product(Request $request, int $id)
+    public function product(Request $request, string $id)
     {
         $type = $request->query('type', 'book');
         $user = Auth::guard('user')->user(); // null bo'lishi mumkin
 
+        $numericId = (int) $id;
+
         if ($type === 'book') {
             $product = $this->publicBookScope()
                 ->with(['seller', 'category', 'tags'])
-                ->find($id);
+                ->find($numericId);
         } else {
             $product = $this->publicStationeryScope()
                 ->with(['seller', 'category', 'tags', 'variants'])
-                ->find($id);
+                ->find($numericId);
         }
 
         if (!$product) {
