@@ -162,16 +162,18 @@ function drawCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, x: numb
 }
 
 /** Ilovadagi kitob kartasi. (x, y) — chap-yuqori burchak, w — kenglik; balandlik = w × 1.56. */
-export function drawBookCard(ctx: CanvasRenderingContext2D, book: VideoBook, img: HTMLImageElement | undefined, x: number, y: number, w: number) {
+export function drawBookCard(ctx: CanvasRenderingContext2D, book: VideoBook, img: HTMLImageElement | undefined, x: number, y: number, w: number, withShadow = true) {
   const s = w / 800; // dizayn 800px kenglikda chizilgan
   const h = 1250 * s;
   ctx.save();
   setFont(ctx, 40, 600); // sarlavhalardagi harf oralig'i kartaga o'tmasin
   ctx.textAlign = 'left';
   ctx.save();
-  ctx.shadowColor = 'rgba(15,42,79,0.22)';
-  ctx.shadowBlur = 70 * s;
-  ctx.shadowOffsetY = 30 * s;
+  if (withShadow) {
+    ctx.shadowColor = 'rgba(15,42,79,0.22)';
+    ctx.shadowBlur = 70 * s;
+    ctx.shadowOffsetY = 30 * s;
+  }
   roundRect(ctx, x, y, w, h, 70 * s);
   ctx.fillStyle = '#FFFFFF';
   ctx.fill();
@@ -550,7 +552,8 @@ function cardBitmap(s: VideoScene, b: VideoBook, width = CARD_W): HTMLCanvasElem
   c.height = Math.round(cw * CARD_RATIO);
   const x = c.getContext('2d')!;
   x.imageSmoothingQuality = 'high';
-  drawBookCard(x, b, img, 0, 0, cw);
+  // soyasiz: aks holda soya to'rtburchak rasm ichida yumaloq burchaklar ortida dog' bo'lib qoladi
+  drawBookCard(x, b, img, 0, 0, cw, false);
   if (cardCache.size > 160) cardCache.clear();
   cardCache.set(key, c);
   return c;
@@ -585,7 +588,8 @@ function cardShadow(ctx: CanvasRenderingContext2D, cx: number, cy: number, w: nu
 let scratch: HTMLCanvasElement | null = null;
 /**
  * Kartani Y o'qi atrofida perspektivada chizadi (rotY — radian). Tasmalar
- * avval yordamchi canvas'ga chiziladi — ustma-ust joylari chiziq bo'lib ko'rinmasin.
+ * yordamchi canvas'ga to'liq shaffofsizlikda, butun piksel ustunlarida chiziladi va
+ * kartaning proyeksiyalangan konturi bo'yicha qirqiladi.
  */
 function card3D(ctx: CanvasRenderingContext2D, bmp: HTMLCanvasElement, cx: number, cy: number, w: number, rotY = 0, alpha = 1, shadow = 1) {
   if (alpha <= 0) return;
@@ -617,13 +621,37 @@ function card3D(ctx: CanvasRenderingContext2D, bmp: HTMLCanvasElement, cx: numbe
     }
     const sc = scratch.getContext('2d')!;
     sc.imageSmoothingQuality = 'high';
-    sc.clearRect(0, 0, bw, bh);
+    sc.clearRect(0, 0, scratch.width, scratch.height);
+    // Kartaning haqiqiy konturi (yumaloq burchaklari bilan) proyeksiya qilinib qirqiladi —
+    // tasmalarning pog'onali qirralari ko'rinmaydi, burchaklar silliq chiqadi.
+    const proj = (u: number, v: number): [number, number] => {
+      const f = D / (D + u * sin);
+      return [u * cos * f - minX + 3, bh / 2 + v * f];
+    };
+    const r = 70 * (w / 800), hw = w / 2, hh2 = h / 2;
+    sc.save();
+    sc.beginPath();
+    const corner = (cxl: number, cyl: number, a0: number) => {
+      for (let q = 0; q <= 8; q++) {
+        const a = a0 + (q / 8) * (Math.PI / 2);
+        const [px, py] = proj(cxl + Math.cos(a) * r, cyl + Math.sin(a) * r);
+        sc.lineTo(px, py);
+      }
+    };
+    corner(-hw + r, -hh2 + r, Math.PI);
+    corner(hw - r, -hh2 + r, -Math.PI / 2);
+    corner(hw - r, hh2 - r, 0);
+    corner(-hw + r, hh2 - r, Math.PI / 2);
+    sc.closePath();
+    sc.clip();
     for (let i = 0; i < N; i++) {
-      const hh = h * (fs[i] + fs[i + 1]) / 2;
-      const x0 = Math.min(xs[i], xs[i + 1]) - minX + 3;
-      sc.drawImage(bmp, i * sw, 0, sw, bmp.height, x0, (bh - hh) / 2, Math.abs(xs[i + 1] - xs[i]) + 0.6, hh);
+      const hh = h * Math.max(fs[i], fs[i + 1]) + 2;
+      const xa = Math.floor(Math.min(xs[i], xs[i + 1]) - minX + 3);
+      const xb = Math.ceil(Math.max(xs[i], xs[i + 1]) - minX + 3);
+      sc.drawImage(bmp, i * sw, 0, sw, bmp.height, xa, (bh - hh) / 2, xb - xa + 1, hh);
     }
-    ctx.drawImage(scratch, 0, 0, bw, bh, cx + minX - 3, cy - bh / 2, bw, bh);
+    sc.restore();
+    ctx.drawImage(scratch, 0, 0, bw, bh, Math.round(cx + minX - 3), Math.round(cy - bh / 2), bw, bh);
   }
   ctx.restore();
 }
@@ -1093,6 +1121,9 @@ export function recordVideo(
       const ext = mimeType.startsWith('video/mp4') ? 'mp4' : 'webm';
       resolve({ blob: new Blob(chunks, { type: mimeType.split(';')[0] }), ext, mime: mimeType });
     };
+    // Kesh (karta rasmlari, soya, shriftlar) yozuvdan oldin to'ldiriladi — yozuv
+    // paytida birinchi marta tayyorlanadigan kartalar kadr "qotishi"ga olib kelmasin.
+    for (let w = 0; w < total; w += 0.25) drawFrame(ctx, scene, w);
     drawFrame(ctx, scene, 0);
     void ac?.resume();
     recorder!.start(250);
