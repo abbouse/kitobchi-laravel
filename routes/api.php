@@ -37,6 +37,7 @@ Route::post('telegram/webhook', \App\Http\Controllers\TelegramWebhookController:
 Route::get('instagram/test', [\App\Http\Controllers\Api\InstagramWebhookController::class, 'test'])->middleware('throttle:30,1');
 Route::get('update_locale', [UserController::class, 'updateLocale']);
 Route::get('counts', [UserController::class, 'getGlobalCounts']);
+Route::get('r/app', [\App\Http\Controllers\Api\SmartRedirectController::class, 'app']);
 Route::get('r/{type}/{id}', [\App\Http\Controllers\Api\SmartRedirectController::class, 'redirect']);
 Route::get('sitemap.xml', [\App\Http\Controllers\Web\ProductCatalogController::class, 'sitemap']);
 Route::get('google-merchant.xml', [\App\Http\Controllers\Web\ProductCatalogController::class, 'googleMerchantFeed']);

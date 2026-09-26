@@ -56,8 +56,8 @@ final class ProductDeeplink
     public static function stores(): array
     {
         return [
-            'play_store_url' => 'https://play.google.com/store/apps/details?id=com.kitobchi.app',
-            'app_store_url' => 'https://apps.apple.com/app/kitobchi/id6470000000',
+            'play_store_url' => 'https://play.google.com/store/apps/details?id=com.kitobchi.kitobchi',
+            'app_store_url' => 'https://apps.apple.com/uz/app/kitobchi/id6753818078',
         ];
     }
 }

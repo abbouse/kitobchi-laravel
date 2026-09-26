@@ -12,8 +12,8 @@ export default defineEventHandler((event) => {
     : (type === 'seller' || type === 's' ? `/catalog?seller=${id}` : `/books/${id}`)
 
   const appScheme = `kitobchi://share/product/${id}`
-  const playStore = 'https://play.google.com/store/apps/details?id=com.kitobchi.app'
-  const appStore = 'https://apps.apple.com/app/kitobchi/id6470000000'
+  const playStore = 'https://play.google.com/store/apps/details?id=com.kitobchi.kitobchi'
+  const appStore = 'https://apps.apple.com/uz/app/kitobchi/id6753818078'
 
   if (isAndroid || isIos) {
     const fallbackUrl = isAndroid ? playStore : appStore
