@@ -25,7 +25,7 @@ use Symfony\Component\HttpFoundation\Response as HttpResponse;
  *
  * Tizim joriy davr uchun kitoblarni avtomatik tanlaydi, admin tarkibini,
  * tartibini, sarlavhasini va shablonini o'zgartiradi. Video brauzerda
- * (canvas + MediaRecorder) musiqasiz yig'iladi va yuklab olinadi.
+ * (canvas + MediaRecorder) musiqa va ovoz effektlari bilan yig'iladi va yuklab olinadi.
  */
 class BookVideoController extends Controller
 {
@@ -135,7 +135,7 @@ class BookVideoController extends Controller
 
     /**
      * Brauzer MP4 yozolmasa (H.264 yo'q), yozilgan WebM serverdagi ffmpeg bilan
-     * Instagram qabul qiladigan MP4 (H.264, yuv420p, faststart) ga o'giriladi.
+     * Instagram qabul qiladigan MP4 (H.264 + AAC, yuv420p, faststart) ga o'giriladi.
      */
     public function convert(Request $request): BinaryFileResponse|JsonResponse
     {
@@ -158,7 +158,7 @@ class BookVideoController extends Controller
         $result = Process::timeout(180)->run([
             $ffmpeg, '-y', '-loglevel', 'error', '-i', $in,
             '-c:v', 'libx264', '-preset', 'medium', '-crf', '18',
-            '-pix_fmt', 'yuv420p', '-r', '30', '-movflags', '+faststart', '-an', $out,
+            '-pix_fmt', 'yuv420p', '-r', '30', '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', $out,
         ]);
         @unlink($in);
 
