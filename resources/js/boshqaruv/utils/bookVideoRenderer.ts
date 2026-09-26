@@ -50,6 +50,8 @@ const PER_BOOK = BEAT * 4;
 const GRID_STEP = BEAT / 2;
 const GRID_HOLD = BEAT * 6;
 const GRID_MAX = 6;
+/** Musiqa/SFX sahna kesimlariga mos tushishi uchun. */
+export const TIMING = { INTRO, OUTRO, PER_BOOK } as const;
 
 // ── easing / helpers ─────────────────────────────────────────────
 const clamp = (v: number, a = 0, b = 1) => Math.min(b, Math.max(a, v));
@@ -253,19 +255,42 @@ export function drawBookCard(ctx: CanvasRenderingContext2D, book: VideoBook, img
 export const CARD_RATIO = 1250 / 800;
 
 // ── motion toolkit ───────────────────────────────────────────────
-// Professional product-promo tamoyillari: expo easing, 50–80 ms stagger,
-// shared-element o'tishlar (kesim yo'q), 3D chuqurlik, harakat ierarxiyasi.
-const PAPER = '#F4F6FA';
-const NIGHT = '#0A0F1C';
-const SKY = '#6FB6FF';
-
+// Uslub: yorqin, quvnoq ranglar (sariq, to'q sariq, binafsha, yalpiz, pushti,
+// brend ko'ki, laym), 3D ko'rinishdagi bezaklar va stiker-lentalar.
+// Motion: expo easing, harfma-harf matn, shared-element o'tishlar.
 const expoOut = (x: number) => { const t = clamp(x); return t === 1 ? 1 : 1 - Math.pow(2, -10 * t); };
 const quartInOut = (x: number) => { const t = clamp(x); return t < 0.5 ? 8 * t ** 4 : 1 - Math.pow(-2 * t + 2, 4) / 2; };
 const lerp = (a: number, b: number, p: number) => a + (b - a) * p;
 
-function fill(ctx: CanvasRenderingContext2D, color: string) {
-  ctx.fillStyle = color;
+type RGB = [number, number, number];
+const hex = (h: string): RGB => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+const css = (c: RGB, a = 1) => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`;
+const mix = (a: RGB, b: RGB, p: number): RGB => [lerp(a[0], b[0], p), lerp(a[1], b[1], p), lerp(a[2], b[2], p)];
+const shade = (h: string, k: number) => css(mix(hex(h), k < 0 ? [0, 0, 0] : [255, 255, 255], Math.abs(k)));
+
+interface Theme { bg: string; bg2: string; ink: string; sub: string; tape: string; tapeInk: string; decor: [string, string, string] }
+const THEMES: Theme[] = [
+  { bg: '#FFCB2F', bg2: '#FFAE00', ink: '#111111', sub: 'rgba(17,17,17,0.62)', tape: '#111111', tapeInk: '#FFCB2F', decor: ['#2E8BEF', '#FF6A2B', '#FFFFFF'] },
+  { bg: '#FF7A21', bg2: '#FF5200', ink: '#FFFFFF', sub: 'rgba(255,255,255,0.8)', tape: '#FFE14D', tapeInk: '#111111', decor: ['#FFE14D', '#FFFFFF', '#2E8BEF'] },
+  { bg: '#8E5CFF', bg2: '#6536EE', ink: '#FFFFFF', sub: 'rgba(255,255,255,0.8)', tape: '#FFE14D', tapeInk: '#111111', decor: ['#FFE14D', '#FF7AB0', '#FFFFFF'] },
+  { bg: '#2ACFB6', bg2: '#0FAE97', ink: '#0B1B19', sub: 'rgba(11,27,25,0.62)', tape: '#111111', tapeInk: '#FFFFFF', decor: ['#FFCB2F', '#FFFFFF', '#8E5CFF'] },
+  { bg: '#FF6FA5', bg2: '#FF4488', ink: '#FFFFFF', sub: 'rgba(255,255,255,0.82)', tape: '#FFE14D', tapeInk: '#111111', decor: ['#FFE14D', '#FFFFFF', '#8E5CFF'] },
+  { bg: '#3B93F5', bg2: '#1C6FDA', ink: '#FFFFFF', sub: 'rgba(255,255,255,0.82)', tape: '#FFE14D', tapeInk: '#111111', decor: ['#FFE14D', '#FF7A21', '#FFFFFF'] },
+  { bg: '#BDE64B', bg2: '#98C826', ink: '#111111', sub: 'rgba(17,17,17,0.62)', tape: '#111111', tapeInk: '#BDE64B', decor: ['#8E5CFF', '#FFFFFF', '#FF7A21'] },
+];
+const theme = (i: number) => THEMES[((Math.round(i) % THEMES.length) + THEMES.length) % THEMES.length];
+
+/** Fon: ikki mavzu orasida silliq o'tadi (pos — kasr indeks). */
+function freshBg(ctx: CanvasRenderingContext2D, pos: number) {
+  const i = Math.floor(pos), p = quartInOut(pos - i);
+  const a = theme(i), b = theme(i + 1);
+  const g = ctx.createLinearGradient(0, 0, W * 0.6, H);
+  g.addColorStop(0, css(mix(hex(a.bg), hex(b.bg), p)));
+  g.addColorStop(1, css(mix(hex(a.bg2), hex(b.bg2), p)));
+  ctx.fillStyle = g;
   ctx.fillRect(0, 0, W, H);
+  glow(ctx, 160, 260, 900, 'rgba(255,255,255,0.30)');
+  glow(ctx, W - 100, H - 200, 700, 'rgba(0,0,0,0.07)');
 }
 
 function glow(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, color: string) {
@@ -281,22 +306,6 @@ function setFont(ctx: CanvasRenderingContext2D, size: number, weight: number, sp
   if ('letterSpacing' in ctx) (ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = `${spacing}px`;
 }
 
-/** Matn niqob ostidan ko'tarilib chiqadi (p: 0 → 1). */
-function reveal(ctx: CanvasRenderingContext2D, str: string, x: number, y: number, size: number, weight: number, color: string, p: number, align: CanvasTextAlign = 'left', spacing = -size * 0.035) {
-  if (p <= 0 || !str) return;
-  ctx.save();
-  setFont(ctx, size, weight, spacing);
-  const w = ctx.measureText(str).width;
-  const left = align === 'center' ? x - w / 2 : align === 'right' ? x - w : x;
-  ctx.beginPath();
-  ctx.rect(left - 30, y - size * 1.05, w + 60, size * 1.4);
-  ctx.clip();
-  ctx.fillStyle = color;
-  ctx.textAlign = align;
-  ctx.fillText(str, x, y + (1 - expoOut(p)) * size * 1.3);
-  ctx.restore();
-}
-
 /** Harfma-harf chiqish: har harf 28 ms kechikib, pastdan ko'tariladi. */
 function charReveal(ctx: CanvasRenderingContext2D, str: string, x: number, y: number, size: number, weight: number, color: string, t: number, start: number, align: 'left' | 'center' = 'left') {
   if (!str || t < start) return;
@@ -306,8 +315,7 @@ function charReveal(ctx: CanvasRenderingContext2D, str: string, x: number, y: nu
   ctx.textAlign = 'left';
   const total = ctx.measureText(str).width;
   const x0 = align === 'center' ? x - total / 2 : x;
-  const done = t - start > 0.7 + str.length * 0.028;
-  if (done) {
+  if (t - start > 0.7 + str.length * 0.028) {
     ctx.fillText(str, x0, y);
   } else {
     for (let i = 0; i < str.length; i++) {
@@ -328,7 +336,7 @@ function fitSize(ctx: CanvasRenderingContext2D, str: string, size: number, weigh
   return w > maxW ? Math.floor(size * (maxW / w)) : size;
 }
 
-/** Sarlavhani 2 qatorga bo'ladi: [birinchi qator, urg'uli ikkinchi qator]. */
+/** Sarlavhani 2 qatorga bo'ladi. */
 function splitTitle(title: string): [string, string] {
   const words = title.trim().split(/\s+/).filter(Boolean);
   if (words.length < 2) return ['', words[0] ?? ''];
@@ -347,10 +355,65 @@ function fadeText(ctx: CanvasRenderingContext2D, str: string, x: number, y: numb
   ctx.restore();
 }
 
-const label = (ctx: CanvasRenderingContext2D, str: string, x: number, y: number, color: string, a: number, align: CanvasTextAlign = 'left') =>
-  fadeText(ctx, str.toUpperCase(), x, y, 28, 700, color, a, align, 5);
+/** Yumaloq "chip" (davr, hisoblagich). */
+function chip(ctx: CanvasRenderingContext2D, str: string, x: number, y: number, bg: string, fg: string, a: number, align: 'left' | 'right' = 'left') {
+  if (a <= 0 || !str) return;
+  ctx.save();
+  ctx.globalAlpha *= clamp(a);
+  setFont(ctx, 30, 700, 1);
+  const w = ctx.measureText(str).width + 48, h = 62;
+  const x0 = align === 'right' ? x - w : x;
+  const yy = y + (1 - expoOut(a)) * 20;
+  roundRect(ctx, x0, yy, w, h, h / 2);
+  ctx.fillStyle = bg;
+  ctx.fill();
+  ctx.fillStyle = fg;
+  ctx.textBaseline = 'middle';
+  ctx.fillText(str, x0 + 24, yy + h / 2 + 1);
+  ctx.restore();
+}
 
-/** Hisoblagich: raqamlar vertikal aylanib almashadi (value — kasr bo'lishi mumkin). */
+/** Qiya stiker-lenta ("PROMOKOD" uslubida) — sakrab chiqadi. */
+function tape(ctx: CanvasRenderingContext2D, str: string, cx: number, cy: number, rot: number, bg: string, fg: string, p: number, size = 46) {
+  if (p <= 0 || !str) return;
+  ctx.save();
+  setFont(ctx, size, 800, 0);
+  const w = ctx.measureText(str).width + size * 1.4, h = size * 1.75;
+  ctx.translate(cx, cy);
+  ctx.rotate(rot);
+  const sc = backOut(clamp(p));
+  ctx.scale(sc, sc);
+  ctx.globalAlpha *= clamp(p * 3);
+  roundRect(ctx, -w / 2 + 8, -h / 2 + 12, w, h, 18);
+  ctx.fillStyle = 'rgba(0,0,0,0.18)';
+  ctx.fill();
+  roundRect(ctx, -w / 2, -h / 2, w, h, 18);
+  ctx.fillStyle = bg;
+  ctx.fill();
+  ctx.fillStyle = fg;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(str, 0, 3);
+  ctx.restore();
+}
+
+/** Qalin "3D" matn: pastki qatlamlar chuqurlik beradi. */
+function text3D(ctx: CanvasRenderingContext2D, str: string, x: number, y: number, size: number, color: string, depth: string, p: number) {
+  if (p <= 0) return;
+  ctx.save();
+  setFont(ctx, size, 800, -size * 0.04);
+  const e = expoOut(p);
+  ctx.globalAlpha = clamp(p * 3);
+  const yy = y + (1 - e) * size * 0.5;
+  const d = Math.round(size * 0.07);
+  ctx.fillStyle = depth;
+  for (let i = d; i > 0; i--) ctx.fillText(str, x + i * 0.45, yy + i);
+  ctx.fillStyle = color;
+  ctx.fillText(str, x, yy);
+  ctx.restore();
+}
+
+/** Hisoblagich: raqamlar vertikal aylanib almashadi. */
 function rollNumber(ctx: CanvasRenderingContext2D, value: number, fmt: (v: number) => string, x: number, y: number, size: number, weight: number, color: string, align: CanvasTextAlign = 'left') {
   const lo = Math.floor(value + 1e-6), f = value - lo;
   ctx.save();
@@ -368,8 +431,110 @@ function rollNumber(ctx: CanvasRenderingContext2D, value: number, fmt: (v: numbe
   ctx.restore();
 }
 
+// ── 3D bezaklar: yaltiroq sharlar, halqalar, yulduzlar, kapsulalar ──
+function sphere(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, c: string) {
+  const g = ctx.createRadialGradient(x - r * 0.38, y - r * 0.42, r * 0.08, x, y, r);
+  g.addColorStop(0, 'rgba(255,255,255,0.95)');
+  g.addColorStop(0.28, c);
+  g.addColorStop(1, shade(c, -0.32));
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function ring(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, c: string, rot: number) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(rot);
+  ctx.scale(1, 0.62);
+  const g = ctx.createLinearGradient(-r, -r, r, r);
+  g.addColorStop(0, shade(c, 0.45));
+  g.addColorStop(0.5, c);
+  g.addColorStop(1, shade(c, -0.35));
+  ctx.strokeStyle = g;
+  ctx.lineWidth = r * 0.42;
+  ctx.beginPath();
+  ctx.arc(0, 0, r, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function starPath(ctx: CanvasRenderingContext2D, r: number) {
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const a = -Math.PI / 2 + (i * Math.PI) / 5;
+    const rr = i % 2 ? r * 0.48 : r;
+    ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr);
+  }
+  ctx.closePath();
+}
+
+function star(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, c: string, rot: number) {
+  ctx.save();
+  ctx.translate(x, y + r * 0.12);
+  ctx.rotate(rot);
+  ctx.lineJoin = 'round';
+  starPath(ctx, r);
+  ctx.fillStyle = shade(c, -0.3);
+  ctx.strokeStyle = shade(c, -0.3);
+  ctx.lineWidth = r * 0.22;
+  ctx.fill();
+  ctx.stroke();
+  ctx.translate(0, -r * 0.12);
+  starPath(ctx, r);
+  const g = ctx.createLinearGradient(-r, -r, r, r);
+  g.addColorStop(0, shade(c, 0.4));
+  g.addColorStop(1, c);
+  ctx.fillStyle = g;
+  ctx.strokeStyle = g;
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
+}
+
+function capsule(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, c: string, rot: number) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(rot);
+  const g = ctx.createLinearGradient(0, -r * 0.5, 0, r * 0.5);
+  g.addColorStop(0, shade(c, 0.45));
+  g.addColorStop(0.45, c);
+  g.addColorStop(1, shade(c, -0.3));
+  roundRect(ctx, -r, -r * 0.45, r * 2, r * 0.9, r * 0.45);
+  ctx.fillStyle = g;
+  ctx.fill();
+  ctx.restore();
+}
+
+const DECOR_SLOTS = [
+  { x: 120, y: 610, r: 54 }, { x: 975, y: 690, r: 46 }, { x: 985, y: 1540, r: 70 },
+  { x: 105, y: 1560, r: 44 }, { x: 70, y: 1000, r: 30 }, { x: 150, y: 1260, r: 26 },
+];
+/**
+ * Bezak qatlami: seed — sahna raqami (turi/rangi o'zgarib turadi), p — chiqish,
+ * out — ketish, front — karta oldida turadiganlari.
+ */
+function decor(ctx: CanvasRenderingContext2D, th: Theme, seed: number, t: number, p: number, out: number, drift: number, front: boolean, offY = 0) {
+  DECOR_SLOTS.forEach((s, j) => {
+    if ((j % 3 === 1) !== front) return;
+    const a = backOut(clamp((p - j * 0.07) / 0.6)) * (1 - expoOut(out));
+    if (a <= 0.01) return;
+    const kind = (seed + j) % 4;
+    const c = th.decor[(seed + j) % 3];
+    const x = s.x + drift * (j % 2 ? 1 : 0.6);
+    const y = s.y + offY + Math.sin(t * 1.3 + j * 1.7) * 12;
+    const r = s.r * a;
+    const rot = t * 0.4 * (j % 2 ? 1 : -1) + j;
+    if (kind === 0) sphere(ctx, x, y, r, c);
+    else if (kind === 1) ring(ctx, x, y, r, c, rot * 0.3);
+    else if (kind === 2) star(ctx, x, y, r, c, rot * 0.2);
+    else capsule(ctx, x, y, r, c, rot * 0.3);
+  });
+}
+
 // ── cards: cached bitmaps, soft shadow, real perspective ─────────
-const CARD_W = 600;
+const CARD_W = 640;
 const cardCache = new Map<string, HTMLCanvasElement>();
 function cardBitmap(s: VideoScene, b: VideoBook): HTMLCanvasElement {
   const img = s.images.get(b.id);
@@ -379,7 +544,9 @@ function cardBitmap(s: VideoScene, b: VideoBook): HTMLCanvasElement {
   c = document.createElement('canvas');
   c.width = CARD_W;
   c.height = Math.ceil(CARD_W * CARD_RATIO);
-  drawBookCard(c.getContext('2d')!, b, img, 0, 0, CARD_W);
+  const x = c.getContext('2d')!;
+  x.imageSmoothingQuality = 'high';
+  drawBookCard(x, b, img, 0, 0, CARD_W);
   if (cardCache.size > 80) cardCache.clear();
   cardCache.set(key, c);
   return c;
@@ -394,38 +561,39 @@ function cardShadow(ctx: CanvasRenderingContext2D, cx: number, cy: number, w: nu
     shadowBmp.width = CARD_W + SHADOW_M * 2;
     shadowBmp.height = Math.ceil(ch) + SHADOW_M * 2;
     const x = shadowBmp.getContext('2d')!;
-    x.shadowColor = 'rgba(0,0,0,0.6)';
-    x.shadowBlur = 80;
+    x.shadowColor = 'rgba(40,20,0,0.45)';
+    x.shadowBlur = 70;
     x.fillStyle = '#000';
-    roundRect(x, SHADOW_M, SHADOW_M, CARD_W, ch, 52);
+    roundRect(x, SHADOW_M, SHADOW_M, CARD_W, ch, 56);
     x.fill();
-    // faqat tashqi soya qoladi — karta aylanganda ostidan qora chiqmasin
     x.shadowColor = 'transparent';
     x.globalCompositeOperation = 'destination-out';
-    roundRect(x, SHADOW_M, SHADOW_M, CARD_W, ch, 52);
+    roundRect(x, SHADOW_M, SHADOW_M, CARD_W, ch, 56);
     x.fill();
   }
   const k = w / CARD_W, h = w * CARD_RATIO;
   ctx.save();
   ctx.globalAlpha *= a;
-  ctx.drawImage(shadowBmp, cx - w / 2 - SHADOW_M * k, cy - h / 2 - SHADOW_M * k + 26 * k, w + 2 * SHADOW_M * k, h + 2 * SHADOW_M * k);
+  ctx.drawImage(shadowBmp, cx - w / 2 - SHADOW_M * k, cy - h / 2 - SHADOW_M * k + 30 * k, w + 2 * SHADOW_M * k, h + 2 * SHADOW_M * k);
   ctx.restore();
 }
 
 let scratch: HTMLCanvasElement | null = null;
-/** Kartani Y o'qi atrofida perspektivada chizadi (rotY — radian). */
-function card3D(ctx: CanvasRenderingContext2D, bmp: HTMLCanvasElement, cx: number, cy: number, w: number, rotY = 0, alpha = 1, shadow = 1, dim = 0) {
+/**
+ * Kartani Y o'qi atrofida perspektivada chizadi (rotY — radian). Tasmalar
+ * avval yordamchi canvas'ga chiziladi — ustma-ust joylari chiziq bo'lib ko'rinmasin.
+ */
+function card3D(ctx: CanvasRenderingContext2D, bmp: HTMLCanvasElement, cx: number, cy: number, w: number, rotY = 0, alpha = 1, shadow = 1) {
   if (alpha <= 0) return;
   const h = w * CARD_RATIO;
   ctx.save();
   ctx.globalAlpha *= alpha;
-  if (shadow > 0) cardShadow(ctx, cx, cy, w * Math.max(0.5, Math.cos(rotY)), shadow * 0.85);
-  if (Math.abs(rotY) < 0.003 && dim <= 0) {
+  ctx.imageSmoothingQuality = 'high';
+  if (shadow > 0) cardShadow(ctx, cx, cy, w * Math.max(0.6, Math.cos(rotY)), shadow);
+  if (Math.abs(rotY) < 0.003) {
     ctx.drawImage(bmp, cx - w / 2, cy - h / 2, w, h);
   } else {
-    // tasmalar avval yordamchi canvas'ga to'liq shaffofsizlikda chiziladi —
-    // aks holda ustma-ust tushgan joylari shaffoflikda chiziq bo'lib ko'rinadi
-    const N = Math.abs(rotY) < 0.003 ? 1 : 30, D = 2000, sw = bmp.width / N;
+    const N = 36, D = 2400, sw = bmp.width / N;
     const cos = Math.cos(rotY), sin = Math.sin(rotY);
     const xs: number[] = [], fs: number[] = [];
     for (let i = 0; i <= N; i++) {
@@ -441,104 +609,19 @@ function card3D(ctx: CanvasRenderingContext2D, bmp: HTMLCanvasElement, cx: numbe
       scratch.height = Math.max(scratch.height, bh);
     }
     const sc = scratch.getContext('2d')!;
+    sc.imageSmoothingQuality = 'high';
     sc.clearRect(0, 0, bw, bh);
     for (let i = 0; i < N; i++) {
       const hh = h * (fs[i] + fs[i + 1]) / 2;
       const x0 = Math.min(xs[i], xs[i + 1]) - minX + 3;
       sc.drawImage(bmp, i * sw, 0, sw, bmp.height, x0, (bh - hh) / 2, Math.abs(xs[i + 1] - xs[i]) + 0.8, hh);
     }
-    if (dim > 0) {
-      // orqadagi kartalar shaffof emas, qoraytiriladi — bir-birining ustidan ko'rinmasin
-      sc.globalCompositeOperation = 'source-atop';
-      sc.fillStyle = `rgba(10,15,28,${dim})`;
-      sc.fillRect(0, 0, bw, bh);
-      sc.globalCompositeOperation = 'source-over';
-    }
     ctx.drawImage(scratch, 0, 0, bw, bh, cx + minX - 3, cy - bh / 2, bw, bh);
   }
   ctx.restore();
 }
 
-// ── mood colour: muqovaning asosiy rangidan chuqur fon ────────────
-type RGB = [number, number, number];
-const BRAND_MOOD: RGB = [14, 46, 94];
-const moodCache = new WeakMap<HTMLImageElement, RGB>();
-function hslToRgb(h: number, s: number, l: number): RGB {
-  const k = (n: number) => (n + h / 30) % 12;
-  const a = s * Math.min(l, 1 - l);
-  const f = (n: number) => l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1));
-  return [f(0) * 255, f(8) * 255, f(4) * 255];
-}
-function moodOf(img: HTMLImageElement | undefined): RGB {
-  if (!img) return BRAND_MOOD;
-  const hit = moodCache.get(img);
-  if (hit) return hit;
-  let out = BRAND_MOOD;
-  try {
-    const c = document.createElement('canvas');
-    c.width = c.height = 12;
-    const x = c.getContext('2d', { willReadFrequently: true })!;
-    x.drawImage(img, 0, 0, 12, 12);
-    const d = x.getImageData(0, 0, 12, 12).data;
-    // eng to'yingan piksellar og'irroq hisoblanadi — kulrang fon rangni "bo'yamasin"
-    let r = 0, g = 0, b = 0, wsum = 0;
-    for (let i = 0; i < d.length; i += 4) {
-      const mx = Math.max(d[i], d[i + 1], d[i + 2]), mn = Math.min(d[i], d[i + 1], d[i + 2]);
-      const wgt = 0.05 + (mx - mn) / 255;
-      r += d[i] * wgt; g += d[i + 1] * wgt; b += d[i + 2] * wgt; wsum += wgt;
-    }
-    r /= wsum; g /= wsum; b /= wsum;
-    const mx = Math.max(r, g, b) / 255, mn = Math.min(r, g, b) / 255, l = (mx + mn) / 2;
-    const s = mx === mn ? 0 : (mx - mn) / (1 - Math.abs(2 * l - 1));
-    if (s < 0.14) out = BRAND_MOOD;
-    else {
-      let hue = 0;
-      const R = r / 255, G = g / 255, B = b / 255, dlt = mx - mn;
-      if (mx === R) hue = 60 * (((G - B) / dlt) % 6);
-      else if (mx === G) hue = 60 * ((B - R) / dlt + 2);
-      else hue = 60 * ((R - G) / dlt + 4);
-      out = hslToRgb((hue + 360) % 360, Math.min(0.62, Math.max(0.4, s)), 0.2);
-    }
-  } catch {
-    /* rasm boshqa domendan bo'lsa (tainted) — brend rangi */
-  }
-  moodCache.set(img, out);
-  return out;
-}
-const mixRGB = (a: RGB, b: RGB, p: number): RGB => [lerp(a[0], b[0], p), lerp(a[1], b[1], p), lerp(a[2], b[2], p)];
-const css = (c: RGB, a = 1) => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`;
-
-function moodBg(ctx: CanvasRenderingContext2D, c: RGB) {
-  const g = ctx.createLinearGradient(0, 0, 0, H);
-  g.addColorStop(0, css(c));
-  g.addColorStop(0.62, css(mixRGB(c, [10, 15, 28], 0.7)));
-  g.addColorStop(1, NIGHT);
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, W, H);
-  glow(ctx, W / 2, 1000, 760, css(mixRGB(c, [255, 255, 255], 0.25), 0.35));
-}
-
-/** Kitoblar ro'yxatidagi kasr pozitsiya bo'yicha fon rangi (silliq o'tadi). */
-function moodAt(s: VideoScene, order: VideoBook[], pos: number): RGB {
-  const i = Math.max(0, Math.min(order.length - 1, Math.floor(pos)));
-  const j = Math.min(order.length - 1, i + 1);
-  const m = (b: VideoBook | undefined) => moodOf(b ? s.images.get(b.id) : undefined);
-  return mixRGB(m(order[i]), m(order[j]), quartInOut(clamp(pos - i)));
-}
-
-// ── shared: sarlavha katta holatdan tepaga "joylashadi" ────────────
-function titleBlock(ctx: CanvasRenderingContext2D, s: VideoScene, t: number) {
-  const [l1, l2] = splitTitle(s.title);
-  const e = quartInOut(prog(t, INTRO - 1.0, 0.9));
-  const x = 84;
-  const s1 = lerp(64, 40, e);
-  const s2 = fitSize(ctx, l2, lerp(112, 70, e), 800, W - 170);
-  const yO = lerp(700, 236, e), y1 = lerp(810, 306, e), y2 = y1 + s2 * 1.06;
-  label(ctx, s.periodLabel, x, yO, SKY, prog(t, 0.05, 0.5));
-  charReveal(ctx, l1, x, y1, s1, 700, 'rgba(255,255,255,0.86)', t, 0.15);
-  charReveal(ctx, l2, x, y2, s2, 800, '#FFFFFF', t, 0.15 + BEAT);
-}
-
+// ── scene timing helpers ─────────────────────────────────────────
 /** Kitoblar orasidagi "kamera" pozitsiyasi: har qadamda silliq siljiydi. */
 function stepPos(t: number, n: number): number {
   if (t < INTRO) return 0;
@@ -546,70 +629,115 @@ function stepPos(t: number, n: number): number {
   const l = t - INTRO - k * PER_BOOK;
   return k > 0 && l < 0.8 ? k - 1 + quartInOut(l / 0.8) : k;
 }
+const stepStart = (k: number) => INTRO + k * PER_BOOK;
 
-const CARD_CY = 1040;
+/** Kirish sarlavhasi: katta, harfma-harf; oxirida yuqoriga chiqib ketadi yoki "joylashadi". */
+function introTitle(ctx: CanvasRenderingContext2D, s: VideoScene, t: number, th: Theme, dock: boolean) {
+  const [l1, l2] = splitTitle(s.title);
+  const x = 80;
+  if (dock) {
+    const e = quartInOut(prog(t, INTRO - 1.0, 0.9));
+    const s1 = lerp(72, 46, e);
+    const s2 = fitSize(ctx, l2, lerp(124, 80, e), 800, W - 160);
+    const y1 = lerp(800, 350, e);
+    charReveal(ctx, l1, x, y1, s1, 800, th.ink, t, 0.2);
+    charReveal(ctx, l2, x, y1 + s2 * 1.02, s2, 800, th.ink, t, 0.2 + BEAT);
+    return;
+  }
+  const out = expoOut(prog(t, INTRO - 0.75, 0.6));
+  if (out >= 1) return;
+  ctx.save();
+  ctx.globalAlpha = 1 - out;
+  ctx.translate(0, -out * 260);
+  const s2 = fitSize(ctx, l2, 124, 800, W - 160);
+  charReveal(ctx, l1, x, 800, 72, 800, th.ink, t, 0.2);
+  charReveal(ctx, l2, x, 800 + s2 * 1.02, s2, 800, th.ink, t, 0.2 + BEAT);
+  ctx.restore();
+}
+
+const CARD_CY = 1080;
+const TAGLINES = ['Hafta hiti', 'Tavsiya qilamiz', "O'qib ko'ring", 'Sevimli tanlov', 'Yangi kashfiyot', 'Albatta o\'qing', 'Kitobxonlar tanlovi', 'Ajoyib tanlov', 'Top tanlov', 'Qiziqarli asar'];
+
+function discountOf(b: VideoBook) {
+  return b.oldPrice && b.oldPrice > b.price ? Math.floor(((b.oldPrice - b.price) / b.oldPrice) * 100) : 0;
+}
 
 // ── carousel → coverflow ─────────────────────────────────────────
 function carouselScene(ctx: CanvasRenderingContext2D, s: VideoScene, t: number) {
   const n = s.books.length;
   const enter = expoOut(prog(t, INTRO - 1.15, 1.5));
   const P = stepPos(t, n) - (1 - enter) * 2.2;
-  moodBg(ctx, moodAt(s, s.books, Math.max(0, P)));
-  titleBlock(ctx, s, t);
+  const bgPos = t < INTRO - 0.4 ? 0 : 1 + Math.max(0, stepPos(t, n)) - (1 - quartInOut(prog(t, INTRO - 0.4, 0.8)));
+  freshBg(ctx, bgPos);
+  const cur = Math.max(0, Math.round(Math.max(0, P)));
+  const th = theme(cur + 1);
+  const thIntro = theme(0);
 
-  const a = prog(t, INTRO - 0.4, 0.5);
-  ctx.save();
-  ctx.globalAlpha = a;
-  rollNumber(ctx, Math.max(0, P) + 1, (v) => String(v).padStart(2, '0'), W - 84 - 90, 306, 40, 700, '#FFFFFF', 'right');
-  ctx.restore();
-  fadeText(ctx, `/ ${String(n).padStart(2, '0')}`, W - 84, 306, 40, 500, 'rgba(255,255,255,0.45)', a, 'right');
-  // progress
-  ctx.fillStyle = 'rgba(255,255,255,0.14)';
-  ctx.fillRect(84, 440, (W - 168) * clamp(enter), 4);
-  ctx.fillStyle = '#FFFFFF';
-  ctx.fillRect(84, 440, (W - 168) * clamp((Math.max(0, P) + 1) / n) * clamp(enter), 4);
+  // bezaklar (orqa)
+  if (t < INTRO) decor(ctx, thIntro, 0, t, prog(t, 0.3, 1.2), prog(t, INTRO - 0.7, 0.5), 0, false);
+  const lt = t - stepStart(cur);
+  const moveOut = cur < n - 1 ? prog(t, stepStart(cur + 1), 0.45) : 0;
+  if (t >= INTRO - 0.2) decor(ctx, th, cur + 1, t, prog(lt, 0.1, 1.0), moveOut, -(Math.max(0, P) - cur) * 260, false);
 
-  const order = s.books.map((b, i) => ({ b, i, o: i - P })).filter((x) => Math.abs(x.o) < 2.4).sort((x, y) => Math.abs(y.o) - Math.abs(x.o));
+  chip(ctx, s.periodLabel, 80, 200, 'rgba(17,17,17,0.9)', '#FFFFFF', prog(t, 0.05, 0.5));
+  introTitle(ctx, s, t, thIntro, false);
+
+  // kartalar: markaziy — to'liq, yondagilar kichik va burilgan (qoraytirilmaydi)
+  const order = s.books.map((b, i) => ({ b, o: i - P })).filter((x) => Math.abs(x.o) < 2.4).sort((x, y) => Math.abs(y.o) - Math.abs(x.o));
   for (const { b, o } of order) {
     const ao = Math.min(Math.abs(o), 1.6);
-    const w = 560 * (1 - 0.15 * ao);
-    const cx = W / 2 + Math.sign(o) * (ao * 560 + Math.max(0, Math.abs(o) - 1.6) * 300);
-    const rot = Math.max(-1.6, Math.min(1.6, o)) * 0.5;
-    const bob = Math.sin(t * 1.5) * 6 * (1 - ao);
-    card3D(ctx, cardBitmap(s, b), cx, CARD_CY + bob, w, rot, 1 - clamp(ao - 1.4) * 2, 1 - 0.6 * Math.min(ao, 1), 0.5 * Math.min(ao, 1) + 0.2 * clamp(ao - 1));
+    const w = 580 * (1 - 0.16 * ao);
+    const cx = W / 2 + Math.sign(o) * (ao * 580 + Math.max(0, Math.abs(o) - 1.6) * 300);
+    const rot = Math.max(-1, Math.min(1, o)) * 0.38;
+    const bob = Math.sin(t * 1.5) * 7 * (1 - ao);
+    card3D(ctx, cardBitmap(s, b), cx, CARD_CY + bob, w, rot, 1 - clamp((ao - 1.3) * 2), 1 - 0.5 * Math.min(ao, 1));
   }
-  const cur = Math.round(Math.max(0, P));
-  const near = 1 - Math.min(1, Math.abs(Math.max(0, P) - cur) * 3);
-  const author = s.books[cur]?.author;
-  if (author) fadeText(ctx, author, W / 2, 1580, 38, 500, 'rgba(255,255,255,0.7)', near * enter, 'center');
+  if (t >= INTRO - 0.2) decor(ctx, th, cur + 1, t, prog(lt, 0.1, 1.0), moveOut, -(Math.max(0, P) - cur) * 420, true);
+
+  if (t >= INTRO - 0.3) {
+    chip(ctx, `${String(cur + 1).padStart(2, '0')} / ${String(n).padStart(2, '0')}`, W - 80, 200, 'rgba(255,255,255,0.92)', '#111111', prog(t, INTRO - 0.3, 0.5), 'right');
+    const hs = prog(lt + (cur === 0 ? 0.2 : 0), 0.35, 1);
+    const tag = TAGLINES[cur % TAGLINES.length];
+    charReveal(ctx, tag, 80, 400, fitSize(ctx, tag, 104, 800, W - 160), 800, th.ink, lt, cur === 0 ? -0.1 : 0.35);
+    const b = s.books[cur];
+    if (b?.author) fadeText(ctx, b.author, 80, 470, 40, 600, th.sub, hs);
+    const pct = discountOf(b);
+    tape(ctx, pct ? `-${pct}% CHEGIRMA` : `TOP ${cur + 1}`, 800, 1540, -0.12, th.tape, th.tapeInk, prog(lt, cur === 0 ? 0.3 : 0.75, 0.55));
+  }
 }
 
 // ── countdown → deck ─────────────────────────────────────────────
+const CONFETTI = Array.from({ length: 36 }, (_, i) => ({ x: (i * 197) % W, d: 0.6 + ((i * 37) % 10) / 12, w: 14 + (i % 3) * 6, r: i * 1.3, c: i % 4 }));
 function countdownScene(ctx: CanvasRenderingContext2D, s: VideoScene, t: number) {
   const n = s.books.length;
   const seq = [...s.books].reverse(); // #n … #1
   const P = stepPos(t, n);
   const enter = expoOut(prog(t, INTRO - 1.15, 1.4));
-  moodBg(ctx, mixRGB(moodAt(s, seq, P), [10, 15, 28], 0.35));
-  const final = P > n - 1.001;
-  const finalL = final ? t - INTRO - (n - 1) * PER_BOOK - 0.8 : -1;
-  if (final) glow(ctx, W / 2, CARD_CY, 700, `rgba(46,139,239,${0.45 * clamp(finalL / 0.5)})`);
-  titleBlock(ctx, s, t);
+  const bgPos = t < INTRO - 0.4 ? 0 : 1 + P - (1 - quartInOut(prog(t, INTRO - 0.4, 0.8)));
+  freshBg(ctx, bgPos);
+  const cur = Math.round(P);
+  const th = theme(cur + 1);
+  const lt = t - stepStart(cur);
+  const moveOut = cur < n - 1 ? prog(t, stepStart(cur + 1), 0.45) : 0;
+  if (t < INTRO) decor(ctx, theme(0), 0, t, prog(t, 0.3, 1.2), prog(t, INTRO - 0.7, 0.5), 0, false);
+  else decor(ctx, th, cur + 2, t, prog(lt, 0.1, 1.0), moveOut, 0, false);
 
-  // #N hisoblagich
-  ctx.save();
-  ctx.globalAlpha = prog(t, INTRO - 0.5, 0.5);
-  const rank = n - P;
-  const col = rank < 1.5 ? '#4EA3FF' : '#FFFFFF';
-  setFont(ctx, 130, 800, -5);
-  ctx.fillStyle = col;
-  ctx.fillText('#', 80, 600);
-  const hw = ctx.measureText('#').width;
-  ctx.restore();
+  chip(ctx, `TOP ${n} · ${s.periodLabel}`, 80, 200, 'rgba(17,17,17,0.9)', '#FFFFFF', prog(t, 0.05, 0.5));
+  introTitle(ctx, s, t, theme(0), false);
+
+  // #N — qalin 3D raqam, har qadamda aylanib kamayadi
   if (t > INTRO - 0.5) {
     ctx.save();
     ctx.globalAlpha = prog(t, INTRO - 0.5, 0.5);
-    rollNumber(ctx, n - P - 1, (v) => String(v + 1), 80 + hw + 4, 600, 130, 800, col, 'left');
+    setFont(ctx, 170, 800, -7);
+    const hw = ctx.measureText('#').width;
+    ctx.restore();
+    text3D(ctx, '#', 80, 520, 170, th.ink === '#FFFFFF' ? '#FFFFFF' : '#111111', shade(th.bg2, -0.25), prog(t, INTRO - 0.5, 0.6));
+    ctx.save();
+    ctx.globalAlpha = prog(t, INTRO - 0.5, 0.5);
+    const d = Math.round(170 * 0.07);
+    for (let i = d; i > 0; i -= 2) rollNumber(ctx, n - P - 1, (v) => String(v + 1), 80 + hw + 6 + i * 0.45, 520 + i, 170, 800, shade(th.bg2, -0.25));
+    rollNumber(ctx, n - P - 1, (v) => String(v + 1), 80 + hw + 6, 520, 170, 800, th.ink === '#FFFFFF' ? '#FFFFFF' : '#111111');
     ctx.restore();
   }
 
@@ -621,46 +749,62 @@ function countdownScene(ctx: CanvasRenderingContext2D, s: VideoScene, t: number)
       const q = -d;
       if (q >= 1) continue;
       ctx.save();
-      ctx.translate(W / 2 - q * 900, CARD_CY + q * 120);
-      ctx.rotate(-q * 0.35);
-      card3D(ctx, bmp, 0, 0, 520, q * 0.7, 1 - clamp((q - 0.35) / 0.65), 1 - q);
+      ctx.translate(W / 2 - q * 950, CARD_CY + q * 140);
+      ctx.rotate(-q * 0.4);
+      card3D(ctx, bmp, 0, 0, 540, q * 0.6, 1 - clamp((q - 0.4) / 0.6), 1 - q);
       ctx.restore();
       continue;
     }
     if (d > 3) continue;
-    const w = 520 * (1 - 0.08 * d);
-    const alpha = d <= 2 ? 1 : 3 - d;
-    card3D(ctx, bmp, W / 2, CARD_CY + d * 64 + dy + Math.sin(t * 1.5) * 5 * (d < 0.5 ? 1 : 0), w, 0, alpha, d < 1 ? 1 : 0.4, Math.min(0.75, 0.32 * d));
+    const w = 540 * (1 - 0.07 * d);
+    card3D(ctx, bmp, W / 2 + d * 26, CARD_CY + d * 50 + dy + Math.sin(t * 1.5) * 6 * (d < 0.5 ? 1 : 0), w, 0, d <= 2 ? 1 : 3 - d, d < 1 ? 1 : 0.5);
   }
+  if (t >= INTRO) decor(ctx, th, cur + 2, t, prog(lt, 0.1, 1.0), moveOut, 0, true);
 
-  // #1 — yaltirash
-  if (final && finalL > 0.2 && finalL < 1.4) {
-    const p = (finalL - 0.2) / 1.2;
-    const w = 520, h = w * CARD_RATIO, x = W / 2 - w / 2, y = CARD_CY - h / 2;
+  const final = P > n - 1.001;
+  const fl = final ? t - stepStart(n - 1) - 0.8 : -1;
+  if (final && fl > 0.2 && fl < 1.4) {
+    const p = (fl - 0.2) / 1.2, w = 540, h = w * CARD_RATIO, x = W / 2 - w / 2, y = CARD_CY - h / 2;
     ctx.save();
-    roundRect(ctx, x, y, w, h, 45);
+    roundRect(ctx, x, y, w, h, 47);
     ctx.clip();
     const sx = x - 300 + p * (w + 600);
     const g = ctx.createLinearGradient(sx - 160, y, sx + 160, y + 200);
     g.addColorStop(0, 'rgba(255,255,255,0)');
-    g.addColorStop(0.5, 'rgba(255,255,255,0.45)');
+    g.addColorStop(0.5, 'rgba(255,255,255,0.5)');
     g.addColorStop(1, 'rgba(255,255,255,0)');
     ctx.fillStyle = g;
     ctx.fillRect(x, y, w, h);
     ctx.restore();
   }
-  const front = seq[Math.min(n - 1, Math.round(P))];
-  const near = 1 - Math.min(1, Math.abs(P - Math.round(P)) * 3);
-  if (final) label(ctx, "Eng ko'p sotilgan", W / 2, 1640, SKY, clamp(finalL / 0.4), 'center');
-  else if (front?.author) fadeText(ctx, front.author, W / 2, 1640, 38, 500, 'rgba(255,255,255,0.7)', near * enter, 'center');
+  if (final && fl > 0) {
+    // konfetti
+    const cols = ['#FFE14D', '#FFFFFF', '#FF6FA5', '#2E8BEF'];
+    for (const c of CONFETTI) {
+      const y = -40 + (fl * 900 * c.d) % 2100;
+      ctx.save();
+      ctx.translate(c.x + Math.sin(fl * 3 + c.r) * 30, y);
+      ctx.rotate(c.r + fl * 4 * c.d);
+      ctx.globalAlpha = clamp(fl * 3);
+      ctx.fillStyle = cols[c.c];
+      ctx.fillRect(-c.w / 2, -c.w * 0.3, c.w, c.w * 0.6);
+      ctx.restore();
+    }
+    tape(ctx, "ENG KO'P SOTILGAN", W / 2, 1600, -0.08, th.tape, th.tapeInk, prog(fl, 0, 0.6), 48);
+  } else if (t >= INTRO) {
+    const b = seq[cur];
+    const pct = b ? discountOf(b) : 0;
+    if (pct) tape(ctx, `-${pct}% CHEGIRMA`, 810, 1580, -0.12, th.tape, th.tapeInk, prog(lt, cur === 0 ? 0.3 : 0.75, 0.55));
+    else if (b?.author) fadeText(ctx, b.author, W / 2, 1640, 40, 600, th.sub, prog(lt, cur === 0 ? 0.2 : 0.7, 0.5), 'center');
+  }
 }
 
 // ── grid → assemble ──────────────────────────────────────────────
 function gridLayout(count: number) {
   const cols = count > 4 ? 3 : 2;
   const rows = Math.ceil(count / cols);
-  const gap = 28, top = 500, avail = 1650 - top;
-  const cw = Math.min(390, (W - 168 - (cols - 1) * gap) / cols, (avail - (rows - 1) * gap) / rows / CARD_RATIO);
+  const gap = 28, top = 560, avail = 1640 - top;
+  const cw = Math.min(390, (W - 160 - (cols - 1) * gap) / cols, (avail - (rows - 1) * gap) / rows / CARD_RATIO);
   const ch = cw * CARD_RATIO;
   const gridW = cols * cw + (cols - 1) * gap;
   const gridH = rows * ch + (rows - 1) * gap;
@@ -671,81 +815,76 @@ function gridLayout(count: number) {
     const rowW = inRow * cw + (inRow - 1) * gap;
     return { x: W / 2 - (inRow === cols ? gridW : rowW) / 2 + c * (cw + gap) + cw / 2, y: y0 + r * (ch + gap) + ch / 2 };
   });
-  return { cw, pos, cy: y0 + gridH / 2 };
+  return { cw, pos, cy: y0 + gridH / 2, bottom: y0 + gridH };
 }
 
 function gridScene(ctx: CanvasRenderingContext2D, s: VideoScene, t: number) {
-  fill(ctx, NIGHT);
-  glow(ctx, W * 0.2, 300, 900, 'rgba(33,120,215,0.30)');
-  glow(ctx, W * 0.85, 1500, 800, 'rgba(33,120,215,0.18)');
-  titleBlock(ctx, s, t);
+  const th = theme(3);
+  freshBg(ctx, 3);
+  decor(ctx, th, 3, t, prog(t, 0.3, 1.2), 0, 0, false);
+  chip(ctx, s.periodLabel, 80, 200, 'rgba(17,17,17,0.9)', '#FFFFFF', prog(t, 0.05, 0.5));
+  introTitle(ctx, s, t, th, true);
   const books = s.books.slice(0, GRID_MAX);
-  const { cw, pos, cy } = gridLayout(books.length);
+  const { cw, pos, cy, bottom } = gridLayout(books.length);
   const enter = expoOut(prog(t, INTRO - 1.15, 1.3));
   const outroAt = durationOf('grid', s.books.length) - OUTRO;
-  const push = 1 + 0.04 * quartInOut(prog(t, INTRO + 1.2, outroAt - INTRO - 1.2));
+  const push = 1 + 0.035 * quartInOut(prog(t, INTRO + 1.2, outroAt - INTRO - 1.2));
   ctx.save();
   ctx.translate(W / 2, cy);
   ctx.scale(push, push);
   ctx.translate(-W / 2, -cy);
   for (let i = books.length - 1; i >= 0; i--) {
     const p = expoOut(prog(t, INTRO + 0.05 + i * 0.08, 0.95));
-    const sx = W / 2, sy = 1080 - i * 8 + (1 - enter) * 1300;
+    const sy = 1100 - i * 8 + (1 - enter) * 1300;
     const r0 = (i % 2 ? 1 : -1) * (2 + i * 1.6) * Math.PI / 180;
-    const x = lerp(sx, pos[i].x, p), y = lerp(sy, pos[i].y, p);
-    const w = lerp(440, cw, p);
     ctx.save();
-    ctx.translate(x, y);
+    ctx.translate(lerp(W / 2, pos[i].x, p), lerp(sy, pos[i].y, p));
     ctx.rotate(lerp(r0, 0, p));
-    card3D(ctx, cardBitmap(s, books[i]), 0, 0, w, 0, 1, 1);
+    card3D(ctx, cardBitmap(s, books[i]), 0, 0, lerp(460, cw, p), 0, 1, 1);
     ctx.restore();
   }
   ctx.restore();
+  decor(ctx, th, 3, t, prog(t, 0.3, 1.2), 0, 0, true);
+  tape(ctx, `${s.books.length} TA KITOB`, 830, Math.min(1620, bottom + 10), -0.12, th.tape, th.tapeInk, prog(t, INTRO + 0.9, 0.6));
 }
 
-// ── outro ────────────────────────────────────────────────────────
-function outroBg(ctx: CanvasRenderingContext2D) {
-  const g = ctx.createLinearGradient(0, 0, 0, H);
-  g.addColorStop(0, '#2B86E8');
-  g.addColorStop(1, '#134F9E');
-  ctx.fillStyle = g;
+// ── outro: oq-pastel fon, ikonka soyasiz ──────────────────────────
+function outroBg(ctx: CanvasRenderingContext2D, t = 0) {
+  fill(ctx, '#F7F9FC');
+  const blobs: [number, number, number, string][] = [
+    [150 + 120 * Math.sin(t * 0.4), 380, 700, 'rgba(160,205,255,0.75)'],
+    [960 - 100 * Math.sin(t * 0.35), 1050, 650, 'rgba(214,200,255,0.65)'],
+    [300 + 140 * Math.cos(t * 0.3), 1720, 700, 'rgba(255,214,190,0.7)'],
+  ];
+  for (const [x, y, r, c] of blobs) glow(ctx, x, y, r, c);
+}
+
+function fill(ctx: CanvasRenderingContext2D, color: string) {
+  ctx.fillStyle = color;
   ctx.fillRect(0, 0, W, H);
-  glow(ctx, W / 2, 660, 720, 'rgba(255,255,255,0.16)');
 }
 
 /** favicon.svg — burchaklari shaffof (rx 115/512); aniq shu shaklda qirqib chiziladi. */
-function drawIcon(ctx: CanvasRenderingContext2D, icon: HTMLImageElement, cx: number, cy: number, size: number, shadow = true) {
-  const r = size * (115 / 512);
+function drawIcon(ctx: CanvasRenderingContext2D, icon: HTMLImageElement, cx: number, cy: number, size: number) {
   ctx.save();
-  if (shadow) {
-    ctx.save();
-    ctx.shadowColor = 'rgba(4,20,50,0.35)';
-    ctx.shadowBlur = size * 0.3;
-    ctx.shadowOffsetY = size * 0.12;
-    roundRect(ctx, cx - size / 2 + 2, cy - size / 2 + 2, size - 4, size - 4, r);
-    ctx.fillStyle = '#2178D7';
-    ctx.fill();
-    ctx.restore();
-  }
-  roundRect(ctx, cx - size / 2, cy - size / 2, size, size, r);
+  roundRect(ctx, cx - size / 2, cy - size / 2, size, size, size * (115 / 512));
   ctx.clip();
   ctx.drawImage(icon, cx - size / 2, cy - size / 2, size, size);
   ctx.restore();
 }
 
 function outro(ctx: CanvasRenderingContext2D, scene: VideoScene, t: number) {
-  outroBg(ctx);
+  outroBg(ctx, t);
   const icon = scene.assets.icon;
   const p = prog(t, 0, 0.9);
   if (icon && p > 0) {
-    const sz = 190 * lerp(0.2, 1, backOut(p) * 0.35 + expoOut(p) * 0.65);
     ctx.save();
     ctx.globalAlpha = clamp(p * 4);
-    drawIcon(ctx, icon, W / 2, 655, sz);
+    drawIcon(ctx, icon, W / 2, 655, 190 * lerp(0.2, 1, backOut(p) * 0.35 + expoOut(p) * 0.65));
     ctx.restore();
   }
-  charReveal(ctx, 'Kitobchi', W / 2, 900, 118, 700, '#FFFFFF', t, 0.3, 'center');
-  fadeText(ctx, 'Ilovani yuklab oling', W / 2, 1010, 50, 600, 'rgba(255,255,255,0.8)', prog(t, 0.75, 0.6), 'center');
+  charReveal(ctx, 'Kitobchi', W / 2, 900, 118, 700, INK, t, 0.3, 'center');
+  fadeText(ctx, 'Ilovani yuklab oling', W / 2, 1010, 50, 600, '#4B5563', prog(t, 0.75, 0.6), 'center');
   [scene.assets.appStore, scene.assets.googlePlay].forEach((b, i) => {
     if (!b) return;
     const a = expoOut(prog(t, 0.95 + i * 0.1, 0.8));
@@ -766,8 +905,8 @@ function outro(ctx: CanvasRenderingContext2D, scene: VideoScene, t: number) {
 
 /** Admin panelda to'xtatilgan ko'rinish uchun chiroyli kadr vaqti. */
 export function previewTime(template: VideoTemplate, count: number): number {
-  if (template === 'grid') return INTRO + 0.05 + 0.08 * Math.min(count, GRID_MAX) + 1.4;
-  return INTRO + PER_BOOK * 0.6;
+  if (template === 'grid') return INTRO + 0.05 + 0.08 * Math.min(count, GRID_MAX) + 1.6;
+  return INTRO + PER_BOOK * 0.7;
 }
 
 function drawScene(ctx: CanvasRenderingContext2D, scene: VideoScene, t: number) {
@@ -788,7 +927,7 @@ export function drawFrame(ctx: CanvasRenderingContext2D, scene: VideoScene, t: n
     drawScene(ctx, scene, t);
     return;
   }
-  outroBg(ctx);
+  outroBg(ctx, 0);
   const z = 1 - 0.8 * Math.pow(endP, 2.2);
   ctx.save();
   ctx.globalAlpha = 1 - Math.pow(endP, 1.6);
@@ -802,60 +941,54 @@ export function drawFrame(ctx: CanvasRenderingContext2D, scene: VideoScene, t: n
 }
 
 // ── cover (Instagram muqova rasmi) ───────────────────────────────
-// Asosiy mazmun profil to'ridagi 3:4 kesimga (y ≈ 240…1680) sig'adigan qilib joylanadi.
+// Asosiy mazmun profil to'ridagi 3:4 kesimga (y ≈ 240…1680) sig'adi.
 function posterBrand(ctx: CanvasRenderingContext2D, scene: VideoScene, y: number, color: string) {
   ctx.save();
   setFont(ctx, 40, 700, -1);
   const tw = ctx.measureText('Kitobchi').width;
   const iw = 64, gap = 18;
   const x0 = W / 2 - (iw + gap + tw) / 2;
-  if (scene.assets.icon) drawIcon(ctx, scene.assets.icon, x0 + iw / 2, y - 16, iw, false);
+  if (scene.assets.icon) drawIcon(ctx, scene.assets.icon, x0 + iw / 2, y - 16, iw);
   ctx.fillStyle = color;
   ctx.textAlign = 'left';
   ctx.fillText('Kitobchi', x0 + iw + gap, y);
   ctx.restore();
 }
 
-function posterTitle(ctx: CanvasRenderingContext2D, s: VideoScene, y: number, light: boolean, over: string) {
-  const [l1, l2] = splitTitle(s.title);
-  const size2 = fitSize(ctx, l2, 116, 800, W - 170);
-  label(ctx, over, 84, y, light ? SKY : BLUE, 1);
-  reveal(ctx, l1, 84, y + 100, 66, 700, light ? 'rgba(255,255,255,0.9)' : INK, 1);
-  reveal(ctx, l2, 80, y + 100 + size2 * 1.05, size2, 800, light ? '#FFFFFF' : BLUE, 1);
-  return y + 100 + size2 * 1.05;
-}
-
-function tiltedCard(ctx: CanvasRenderingContext2D, s: VideoScene, b: VideoBook, cx: number, top: number, cw: number, deg: number) {
-  const ch = cw * CARD_RATIO;
+function tiltedCard(ctx: CanvasRenderingContext2D, s: VideoScene, b: VideoBook, cx: number, cy: number, w: number, deg: number) {
   ctx.save();
-  ctx.translate(cx, top + ch / 2);
+  ctx.translate(cx, cy);
   ctx.rotate(deg * Math.PI / 180);
-  drawBookCard(ctx, b, s.images.get(b.id), -cw / 2, -ch / 2, cw);
+  card3D(ctx, cardBitmap(s, b), 0, 0, w, 0, 1, 1);
   ctx.restore();
 }
 
 /** Video uchun cover: shablonga mos, 1080×1920. */
 export function drawPoster(ctx: CanvasRenderingContext2D, s: VideoScene) {
   const books = s.books;
+  const idx = s.template === 'grid' ? 3 : s.template === 'countdown' ? 2 : 0;
+  const th = theme(idx);
+  freshBg(ctx, idx);
+  decor(ctx, th, idx, 5, 1, 0, 0, false, 90);
+  chip(ctx, s.template === 'countdown' ? `TOP ${books.length} · ${s.periodLabel}` : s.periodLabel, 80, 290, 'rgba(17,17,17,0.9)', '#FFFFFF', 1);
+  const [l1, l2] = splitTitle(s.title);
+  const s2 = fitSize(ctx, l2, 124, 800, W - 160);
+  charReveal(ctx, l1, 80, 460, 72, 800, th.ink, 9, 0);
+  charReveal(ctx, l2, 80, 460 + s2 * 1.02, s2, 800, th.ink, 9, 0);
+
   if (s.template === 'grid') {
-    fill(ctx, PAPER);
-    glow(ctx, W / 2, 1150, 900, 'rgba(33,120,215,0.10)');
-    const bottom = posterTitle(ctx, s, 330, false, s.periodLabel);
     const covers = books.filter((b) => s.images.get(b.id)).slice(0, 6);
     const cols = covers.length > 4 ? 3 : 2;
-    const gap = 26;
-    const cw = cols === 3 ? 285 : 360;
-    const ch = cw * 1.42;
+    const gap = 26, cw = cols === 3 ? 270 : 340, ch = cw * 1.42;
     const rows = Math.ceil(covers.length / cols);
-    const gridH = rows * ch + (rows - 1) * gap;
-    const y0 = bottom + 70 + Math.max(0, (1560 - bottom - 70 - gridH) / 2);
+    const y0 = 700 + Math.max(0, (1500 - 700 - (rows * ch + (rows - 1) * gap)) / 2);
     covers.forEach((b, i) => {
       const r = Math.floor(i / cols), c = i % cols;
       const inRow = r === rows - 1 ? covers.length - r * cols : cols;
       const x = W / 2 - (inRow * cw + (inRow - 1) * gap) / 2 + c * (cw + gap);
       const y = y0 + r * (ch + gap);
       ctx.save();
-      ctx.shadowColor = 'rgba(15,42,79,0.22)';
+      ctx.shadowColor = 'rgba(40,20,0,0.3)';
       ctx.shadowBlur = 40;
       ctx.shadowOffsetY = 18;
       roundRect(ctx, x, y, cw, ch, 22);
@@ -866,49 +999,29 @@ export function drawPoster(ctx: CanvasRenderingContext2D, s: VideoScene) {
       drawCover(ctx, s.images.get(b.id)!, x, y, cw, ch);
       ctx.restore();
     });
-    posterBrand(ctx, s, 1640, INK);
-    return;
-  }
-
-  fill(ctx, NIGHT);
-  glow(ctx, W / 2, 1150, 900, 'rgba(33,120,215,0.32)');
-  if (s.template === 'countdown') {
-    posterTitle(ctx, s, 330, true, `Top ${books.length} · ${s.periodLabel}`);
-    const b = books[0];
-    if (b) {
-      if (books[1]) { ctx.globalAlpha = 0.55; tiltedCard(ctx, s, books[1], W / 2 - 250, 820, 380, -9); ctx.globalAlpha = 1; }
-      if (books[2]) { ctx.globalAlpha = 0.55; tiltedCard(ctx, s, books[2], W / 2 + 250, 820, 380, 9); ctx.globalAlpha = 1; }
-      tiltedCard(ctx, s, b, W / 2, 720, 480, 0);
-      // "#1" belgisi
-      ctx.save();
-      ctx.translate(W / 2 + 220, 730);
-      ctx.beginPath();
-      ctx.arc(0, 0, 78, 0, Math.PI * 2);
-      ctx.fillStyle = BLUE;
-      ctx.shadowColor = 'rgba(0,0,0,0.35)';
-      ctx.shadowBlur = 30;
-      ctx.fill();
-      ctx.shadowColor = 'transparent';
-      setFont(ctx, 62, 800, -2);
-      ctx.fillStyle = '#fff';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('#1', 0, 4);
-      ctx.restore();
-    }
+    tape(ctx, `${books.length} TA KITOB`, 820, 1520, -0.12, th.tape, th.tapeInk, 1);
   } else {
-    posterTitle(ctx, s, 330, true, s.periodLabel);
-    const [a, b, c] = books;
-    if (b) tiltedCard(ctx, s, b, W / 2 - 260, 840, 390, -10);
-    if (c) tiltedCard(ctx, s, c, W / 2 + 260, 840, 390, 10);
-    if (a) tiltedCard(ctx, s, a, W / 2, 740, 470, 0);
+    const [a, b, c] = s.template === 'countdown' ? [books[0], books[1], books[2]] : books;
+    if (b) tiltedCard(ctx, s, b, W / 2 - 250, 1180, 380, -10);
+    if (c) tiltedCard(ctx, s, c, W / 2 + 250, 1180, 380, 10);
+    if (a) tiltedCard(ctx, s, a, W / 2, 1110, 470, 0);
+    tape(ctx, s.template === 'countdown' ? "#1 — ENG KO'P SOTILGAN" : `TOP ${books.length}`, W / 2 + 120, 1490, -0.1, th.tape, th.tapeInk, 1, 44);
   }
-  posterBrand(ctx, s, 1600, '#FFFFFF');
+  decor(ctx, th, idx, 5, 1, 0, 0, true, 90);
+  posterBrand(ctx, s, 1640, th.ink);
 }
 
 // ── recording ────────────────────────────────────────────────────
 // H.264 1080×1920 uchun kamida 4.0-daraja kerak (…1F = 3.1 — faqat 720p gacha).
 // VP9 sekin kompyuterlarda 1080×1920 da bo'sh fayl berishi mumkin, shuning uchun VP8.
+// Ovozli yozuv uchun avval AAC (mp4a) bilan H.264 — Instagram to'g'ridan-to'g'ri qabul qiladi.
+const AUDIO_MIME_CANDIDATES = [
+  'video/mp4;codecs=avc1.640033,mp4a.40.2',
+  'video/mp4;codecs=avc1.4D0033,mp4a.40.2',
+  'video/mp4;codecs=avc1.42E033,mp4a.40.2',
+  'video/mp4;codecs=avc1,mp4a.40.2',
+  'video/webm;codecs=vp8,opus',
+];
 const MIME_CANDIDATES = [
   'video/mp4;codecs=avc1.640033',
   'video/mp4;codecs=avc1.4D0033',
@@ -923,14 +1036,15 @@ export function pickMimeType(format: 'any' | 'webm' = 'any'): string | null {
   return mimeCandidates(format)[0] ?? null;
 }
 
-function mimeCandidates(format: 'any' | 'webm'): string[] {
+function mimeCandidates(format: 'any' | 'webm', withAudio = false): string[] {
   if (typeof MediaRecorder === 'undefined') return [];
-  const list = format === 'webm' ? MIME_CANDIDATES.filter((m) => m.startsWith('video/webm')) : MIME_CANDIDATES;
+  const all = withAudio ? [...AUDIO_MIME_CANDIDATES, ...MIME_CANDIDATES] : MIME_CANDIDATES;
+  const list = format === 'webm' ? all.filter((m) => m.startsWith('video/webm')) : all;
   return list.filter((m) => MediaRecorder.isTypeSupported(m));
 }
 
-/** Yozilgan fayl aniq H.264 (Instagram uchun tayyor) ekanmi. */
-export const isInstagramReady = (mime: string) => mime.includes('avc1');
+/** Yozilgan fayl aniq H.264 (+ ovoz bo'lsa AAC) — Instagram uchun tayyor ekanmi. */
+export const isInstagramReady = (mime: string, withAudio = false) => mime.includes('avc1') && (!withAudio || mime.includes('mp4a'));
 
 /**
  * Videoni real vaqtda yozadi (davomiyligi — shablon uzunligi). Brauzer
@@ -941,18 +1055,30 @@ export function recordVideo(
   scene: VideoScene,
   onProgress: (p: number) => void,
   format: 'any' | 'webm' = 'any',
+  audio: AudioBuffer | null = null,
 ): Promise<{ blob: Blob; ext: 'mp4' | 'webm'; mime: string }> {
   const ctx = canvas.getContext('2d');
   if (!ctx) return Promise.reject(new Error('Canvas topilmadi'));
 
   const total = durationOf(scene.template, scene.books.length);
   const stream = canvas.captureStream(30);
+  // Ovoz: tayyor AudioBuffer video bilan bir vaqtda ijro etilib, oqimga qo'shiladi
+  let ac: AudioContext | null = null;
+  let src: AudioBufferSourceNode | null = null;
+  if (audio) {
+    ac = new AudioContext();
+    const dest = ac.createMediaStreamDestination();
+    src = ac.createBufferSource();
+    src.buffer = audio;
+    src.connect(dest);
+    dest.stream.getAudioTracks().forEach((tr) => stream.addTrack(tr));
+  }
   // isTypeSupported "ha" desa ham konstruktor rad etishi mumkin — navbatdagisini sinaymiz
   let recorder: MediaRecorder | null = null;
   let mimeType = '';
-  for (const m of mimeCandidates(format)) {
+  for (const m of mimeCandidates(format, !!audio)) {
     try {
-      recorder = new MediaRecorder(stream, { mimeType: m, videoBitsPerSecond: 10_000_000 });
+      recorder = new MediaRecorder(stream, { mimeType: m, videoBitsPerSecond: 10_000_000, audioBitsPerSecond: 192_000 });
       mimeType = m;
       break;
     } catch {
@@ -961,6 +1087,7 @@ export function recordVideo(
   }
   if (!recorder) {
     stream.getTracks().forEach((tr) => tr.stop());
+    void ac?.close();
     return Promise.reject(new Error("Bu brauzer videoni yozishni qo'llab-quvvatlamaydi. Google Chrome'dan foydalaning."));
   }
   const chunks: BlobPart[] = [];
@@ -970,11 +1097,14 @@ export function recordVideo(
     recorder!.onerror = () => reject(new Error('Video yozishda xatolik'));
     recorder!.onstop = () => {
       stream.getTracks().forEach((tr) => tr.stop());
+      void ac?.close();
       const ext = mimeType.startsWith('video/mp4') ? 'mp4' : 'webm';
       resolve({ blob: new Blob(chunks, { type: mimeType.split(';')[0] }), ext, mime: mimeType });
     };
     drawFrame(ctx, scene, 0);
+    void ac?.resume();
     recorder!.start(250);
+    src?.start();
     const start = performance.now();
     const tick = () => {
       const t = (performance.now() - start) / 1000;

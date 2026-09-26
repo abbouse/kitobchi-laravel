@@ -5,6 +5,7 @@ import {
   VideoBook, VideoScene, VideoTemplate, W, H,
   drawFrame, drawPoster, durationOf, ensureFont, previewTime, isInstagramReady, loadImage, money, pickMimeType, recordVideo,
 } from '../utils/bookVideoRenderer';
+import { MusicMode, decodeMusicFile, renderSoundtrack } from '../utils/bookVideoAudio';
 
 type Props = {
   period: 'weekly' | 'monthly';
@@ -27,9 +28,9 @@ type Props = {
 };
 
 const TEMPLATE_INFO: Record<VideoTemplate, { name: string; desc: string; icon: string }> = {
-  carousel: { name: 'Karusel', desc: "Har zarbda yangi kitob: muqovadan xira fon, stories chiziqlari", icon: 'ti-arrows-horizontal' },
-  countdown: { name: 'Top reyting', desc: '#N dan #1 gacha, katta raqam zarbi — #1 oltin rangda', icon: 'ti-trophy' },
-  grid: { name: "To'r (grid)", desc: "Ko'k fonda kitoblar zarbga mos to'rga tushadi (6 tagacha)", icon: 'ti-layout-grid' },
+  carousel: { name: 'Karusel', desc: "3D coverflow: har kitob o'z rangli fonida, stiker va bezaklar bilan", icon: 'ti-arrows-horizontal' },
+  countdown: { name: 'Top reyting', desc: "Kartalar dastasi: #N dan #1 gacha, #1 da konfetti", icon: 'ti-trophy' },
+  grid: { name: "To'r (grid)", desc: "Kartalar dastadan to'rga uchib joylashadi (6 tagacha)", icon: 'ti-layout-grid' },
 };
 
 export default function BookVideos() {
@@ -44,6 +45,11 @@ export default function BookVideos() {
   const [recording, setRecording] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showCover, setShowCover] = useState(false);
+  const [music, setMusic] = useState<MusicMode>('fresh');
+  const [sfx, setSfx] = useState(true);
+  const [custom, setCustom] = useState<{ name: string; buffer: AudioBuffer } | null>(null);
+  const [soundOn, setSoundOn] = useState(false);
+  const soundCache = useRef<{ key: string; buffer: AudioBuffer | null } | null>(null);
   const [images, setImages] = useState<Map<number, HTMLImageElement>>(new Map());
   const [loadedAssets, setLoadedAssets] = useState<VideoScene['assets']>({});
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -79,6 +85,15 @@ export default function BookVideos() {
   }), [template, title, set.periodLabel, books, images, loadedAssets]);
   const total = durationOf(template, books.length);
 
+  /** Ovoz yo'lagi (musiqa + SFX) — sozlamalar o'zgarmasa qayta sintez qilinmaydi. */
+  const getSound = async (): Promise<AudioBuffer | null> => {
+    const key = [template, books.map((b) => b.id).join(','), music, sfx, custom?.name ?? ''].join('|');
+    if (soundCache.current?.key === key) return soundCache.current.buffer;
+    const buffer = await renderSoundtrack(scene, { music, custom: custom?.buffer ?? null, sfx });
+    soundCache.current = { key, buffer };
+    return buffer;
+  };
+
   // Jonli ko'rish (yozish paytida to'xtaydi — kadrni recorder chizadi)
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -86,15 +101,30 @@ export default function BookVideos() {
     if (!canvas || !ctx || recording !== null || !books.length) return;
     if (showCover) { drawPoster(ctx, scene); return; }
     let raf = 0;
-    const start = performance.now();
+    let cancelled = false;
+    let ac: AudioContext | null = null;
+    let start = performance.now();
     const loop = () => {
       const t = playing ? ((performance.now() - start) / 1000) % total : previewTime(template, books.length);
       drawFrame(ctx, scene, t);
       if (playing) raf = requestAnimationFrame(loop);
     };
     loop();
-    return () => cancelAnimationFrame(raf);
-  }, [scene, playing, recording, total, books.length, template, showCover]);
+    // Ovozli ko'rish: trek tayyor bo'lgach, video va ovoz bir vaqtda boshidan boshlanadi
+    if (playing && soundOn) {
+      void getSound().then((buf) => {
+        if (cancelled || !buf) return;
+        ac = new AudioContext();
+        const src = ac.createBufferSource();
+        src.buffer = buf;
+        src.loop = true;
+        src.connect(ac.destination);
+        src.start();
+        start = performance.now();
+      });
+    }
+    return () => { cancelled = true; cancelAnimationFrame(raf); void ac?.close(); };
+  }, [scene, playing, recording, total, books.length, template, showCover, soundOn, music, sfx, custom]);
 
   // Qidiruv (debounce)
   useEffect(() => {
@@ -155,11 +185,12 @@ export default function BookVideos() {
     setError(null);
     setRecording(0);
     try {
-      let { blob, ext, mime } = await recordVideo(canvas, scene, (p) => setRecording(p));
+      const audio = await getSound();
+      let { blob, ext, mime } = await recordVideo(canvas, scene, (p) => setRecording(p), 'any', audio);
       // Ba'zi brauzerlar formatni "qo'llaydi" deb aytadi-yu, bo'sh fayl beradi — WebM bilan qayta yozamiz
-      if (!blob.size) ({ blob, ext, mime } = await recordVideo(canvas, scene, (p) => setRecording(p), 'webm'));
+      if (!blob.size) ({ blob, ext, mime } = await recordVideo(canvas, scene, (p) => setRecording(p), 'webm', audio));
       // Aniq H.264 bo'lmasa (WebM yoki kodeki noma'lum MP4) — serverda Instagram formatiga o'giramiz
-      if (blob.size && !isInstagramReady(mime)) {
+      if (blob.size && !isInstagramReady(mime, !!audio)) {
         setRecording(1);
         const form = new FormData();
         form.append('video', blob, 'video.webm');
@@ -176,7 +207,7 @@ export default function BookVideos() {
       a.download = `${fileBase}.${ext}`;
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 5000);
-      if (!isInstagramReady(mime)) setError("Serverda MP4 (H.264) ga o'girib bo'lmadi — fayl Instagram'ga yuklanmasligi mumkin. Google Chrome'ning yangi versiyasidan foydalaning.");
+      if (!isInstagramReady(mime, !!audio)) setError("Serverda MP4 (H.264) ga o'girib bo'lmadi — fayl Instagram'ga yuklanmasligi mumkin. Google Chrome'ning yangi versiyasidan foydalaning.");
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Video yozishda xatolik');
     } finally {
@@ -297,7 +328,34 @@ export default function BookVideos() {
             <div className="card-body text-center">
               <canvas ref={canvasRef} width={W} height={H}
                 style={{ width: 300, maxWidth: '100%', aspectRatio: '9 / 16', borderRadius: 18, boxShadow: '0 10px 30px rgba(0,0,0,.15)', background: '#F3F6FB' }} />
-              <div className="small text-secondary mt-2">{Math.round(total)} soniya · 1080×1920 · musiqasiz</div>
+              <div className="small text-secondary mt-2">
+                {Math.round(total)} soniya · 1080×1920 · {music === 'fresh' ? 'quvnoq trek' : music === 'custom' ? (custom?.name ?? 'fayl tanlanmagan') : 'musiqasiz'}{sfx ? ' + effektlar' : ''}
+              </div>
+              <div className="border rounded-3 p-2 mt-3 text-start">
+                <div className="small fw-semibold mb-2"><i className="ti ti-music me-1"></i>Ovoz</div>
+                <div className="btn-group btn-group-sm w-100 mb-2" role="group">
+                  {([['fresh', 'Quvnoq trek'], ['custom', "O'z musiqam"], ['none', 'Musiqasiz']] as [MusicMode, string][]).map(([m, l]) => (
+                    <button key={m} type="button" className={`btn ${music === m ? 'btn-primary' : 'btn-light-secondary'}`} disabled={recording !== null} onClick={() => setMusic(m)}>{l}</button>
+                  ))}
+                </div>
+                {music === 'custom' && (
+                  <input type="file" accept="audio/*" className="form-control form-control-sm mb-2" disabled={recording !== null}
+                    onChange={async (e) => {
+                      const f = e.target.files?.[0];
+                      if (!f) return;
+                      try { setCustom({ name: f.name, buffer: await decodeMusicFile(f) }); setError(null); } catch { setError("Musiqa faylini o'qib bo'lmadi (mp3, m4a, wav ishlaydi)."); }
+                    }} />
+                )}
+                <div className="d-flex justify-content-between align-items-center">
+                  <label className="form-check small mb-0">
+                    <input type="checkbox" className="form-check-input" checked={sfx} disabled={recording !== null} onChange={(e) => setSfx(e.target.checked)} />
+                    <span className="form-check-label">Ovoz effektlari (whoosh, pop, ding)</span>
+                  </label>
+                  <button type="button" className={`btn btn-sm ${soundOn ? 'btn-light-primary' : 'btn-light-secondary'}`} disabled={recording !== null || showCover} onClick={() => { setSoundOn((v) => !v); setPlaying(true); }}>
+                    <i className={`ti ${soundOn ? 'ti-volume' : 'ti-volume-off'} me-1`}></i>{soundOn ? 'Ovoz yoqilgan' : 'Tinglash'}
+                  </button>
+                </div>
+              </div>
               <div className="d-flex justify-content-center gap-2 mt-3">
                 <button type="button" className={`btn btn-sm ${showCover ? 'btn-light-primary' : 'btn-light-secondary'}`} disabled={recording !== null} onClick={() => setShowCover((v) => !v)}>
                   <i className="ti ti-photo me-1"></i>{showCover ? 'Video' : 'Cover'}
