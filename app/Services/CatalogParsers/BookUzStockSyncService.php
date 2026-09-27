@@ -560,6 +560,18 @@ class BookUzStockSyncService
                     $bookUpdates['price'] = $remotePrice;
                     $bookUpdates['discountPrice'] = $remoteDiscountPrice;
                 }
+
+                // Agar kitobning mavjud rasmi bo'sh bo'lsa yoki eski dd9xb0bqw (bloklangan Cloudinary) bo'lsa, Book.uz ning yangi rasmi bilan almashtiramiz
+                $remoteImage = $matchedProduct['image'] ?? null;
+                $hasWorkingRemoteImage = is_string($remoteImage) && filled($remoteImage) && ! str_contains($remoteImage, 'dd9xb0bqw');
+                if ($hasWorkingRemoteImage) {
+                    $currentImages = is_array($book->images) ? $book->images : [];
+                    $firstImg = (string) ($currentImages[0] ?? '');
+                    if (empty($currentImages) || str_contains($firstImg, 'dd9xb0bqw')) {
+                        $bookUpdates['images'] = Arr::wrap($remoteImage);
+                    }
+                }
+
                 // Agar filiallarda qoldiq bo'lsa, kitobni faollashtiramiz
                 if ($newTotalStock > 0 && (! $book->status || $book->is_hidden)) {
                     $bookUpdates['status'] = true;
@@ -578,6 +590,21 @@ class BookUzStockSyncService
                         }
                     } catch (\Throwable $e) {
                         Log::warning("[bookuz_stock_sync] Failed to link existing book {$book->id} to edition: {$e->getMessage()}");
+                    }
+                } else {
+                    // Agar mavjud global edition ning ham rasmi dd9xb0bqw bo'lsa, yangi rasm bilan to'g'irlaymiz
+                    if ($hasWorkingRemoteImage) {
+                        try {
+                            $edition = $book->edition;
+                            if ($edition && (empty($edition->front_image) || str_contains((string) $edition->front_image, 'dd9xb0bqw'))) {
+                                $edition->update([
+                                    'front_image' => $remoteImage,
+                                    'images' => Arr::wrap($remoteImage),
+                                ]);
+                            }
+                        } catch (\Throwable) {
+                            // ignore edition update error
+                        }
                     }
                 }
             }
