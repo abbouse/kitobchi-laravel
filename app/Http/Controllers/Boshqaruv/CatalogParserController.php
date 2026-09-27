@@ -7,10 +7,13 @@ use App\Services\CatalogParsers\ExternalCatalogSyncService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
+use App\Services\CatalogParsers\BookUzStockSyncService;
+
 class CatalogParserController extends Controller
 {
     public function __construct(
         private readonly ExternalCatalogSyncService $syncService,
+        private readonly BookUzStockSyncService $bookUzStockSync,
     ) {}
 
     /**
@@ -23,6 +26,8 @@ class CatalogParserController extends Controller
             'stats' => $this->syncService->getStats(),
             'progress' => \Illuminate\Support\Facades\Cache::get('catalog_parser_progress'),
             'enrich_progress' => \Illuminate\Support\Facades\Cache::get('catalog_enrich_description_progress'),
+            'bookuz_stock_stats' => $this->bookUzStockSync->getStats(),
+            'bookuz_stock_progress' => \Illuminate\Support\Facades\Cache::get(BookUzStockSyncService::CACHE_PROGRESS_KEY),
         ]);
     }
 
@@ -184,6 +189,86 @@ class CatalogParserController extends Controller
                 'message' => "AI tavsiflash yakunlandi: {$report['updated']} ta kitobga tavsif yozildi.",
                 'report' => $report,
                 'stats' => $this->syncService->getStats(),
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Xatolik yuz berdi: " . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Seller 55 kitoblarini Book.uz saytidagi Qatortol filiali qoldig'i bilan sinxronlash.
+     */
+    public function syncBookUzStock(Request $request): JsonResponse
+    {
+        $limit = (int) $request->input('limit', 50);
+        $importNew = (bool) $request->input('import_new', false);
+        $dryRun = (bool) $request->input('dry_run', false);
+
+        if ($limit === 0 || $limit > 100) {
+            $artisan = base_path('artisan');
+            $limitFlag = $limit > 0 ? "--limit={$limit}" : '--limit=0';
+            $importFlag = $importNew ? '--import-new' : '';
+            $dryRunFlag = $dryRun ? '--dry-run' : '';
+            $phpBinary = $this->getCliPhpBinary();
+            $logFile = storage_path('logs/bookuz-stock-sync.log');
+
+            $cmd = sprintf(
+                '%s %s catalog:sync-bookuz-stock %s %s %s >> %s 2>&1 &',
+                escapeshellcmd($phpBinary),
+                escapeshellarg($artisan),
+                $limitFlag,
+                $importFlag,
+                $dryRunFlag,
+                escapeshellarg($logFile)
+            );
+
+            @exec($cmd);
+
+            $progressData = [
+                'running' => true,
+                'scanned' => 0,
+                'total_target' => 0,
+                'matched' => 0,
+                'not_found' => 0,
+                'in_stock' => 0,
+                'zeroed' => 0,
+                'stock_changed' => 0,
+                'new_imported' => 0,
+                'total_stock_count' => 0,
+                'last_title' => 'Fonda Book.uz Qatortol qoldiqlarini sinxronlash boshlanmoqda...',
+                'started_at' => now()->toIso8601String(),
+                'updated_at' => now()->toIso8601String(),
+            ];
+
+            \Illuminate\Support\Facades\Cache::put(
+                \App\Services\CatalogParsers\BookUzStockSyncService::CACHE_PROGRESS_KEY,
+                $progressData,
+                7200
+            );
+
+            return response()->json([
+                'success' => true,
+                'is_background' => true,
+                'message' => "Book.uz (Qatortol filiali) qoldiqlarini sinxronlash orqa fonda (background) ishga tushirildi! Sayt qotmaydi, jarayonni quyidagi ko'rsatkichlar orqali real vaqtda kuzatib turishingiz mumkin.",
+                'stats' => $this->syncService->getStats(),
+                'bookuz_stock_stats' => $this->bookUzStockSync->getStats(),
+                'bookuz_stock_progress' => $progressData,
+            ]);
+        }
+
+        try {
+            $report = $this->bookUzStockSync->syncSeller55Stock($limit, $importNew, $dryRun);
+
+            return response()->json([
+                'success' => true,
+                'is_background' => false,
+                'message' => "Book.uz (Qatortol filiali) bilan sinxronlash yakunlandi: {$report['stock_changed']} ta kitob qoldig'i yangilandi.",
+                'report' => $report,
+                'stats' => $this->syncService->getStats(),
+                'bookuz_stock_stats' => $this->bookUzStockSync->getStats(),
             ]);
         } catch (\Throwable $e) {
             return response()->json([

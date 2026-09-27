@@ -15341,7 +15341,7 @@
       "file_type": "code",
       "norm_label": ".resolvedefaultcategory()",
       "source_file": "app/Services/CatalogParsers/ExternalCatalogSyncService.php",
-      "source_location": "L935"
+      "source_location": "L947"
     },
     {
       "id": "app_console_commands_generatecollectiondrafts_generatecollectiondrafts_handle",
@@ -47957,7 +47957,7 @@
       "file_type": "code",
       "norm_label": ".categorizeexistingeditions()",
       "source_file": "app/Services/CatalogParsers/ExternalCatalogSyncService.php",
-      "source_location": "L732"
+      "source_location": "L744"
     },
     {
       "id": "app_services_catalogparsers_externalcatalogsyncservice_externalcatalogsyncservice_construct",
@@ -47981,7 +47981,7 @@
       "file_type": "code",
       "norm_label": ".downloadandsavecover()",
       "source_file": "app/Services/CatalogParsers/ExternalCatalogSyncService.php",
-      "source_location": "L943"
+      "source_location": "L955"
     },
     {
       "id": "app_services_catalogparsers_externalcatalogsyncservice_externalcatalogsyncservice_enrichmissingdescriptionswithai",
@@ -47993,7 +47993,7 @@
       "file_type": "code",
       "norm_label": ".enrichmissingdescriptionswithai()",
       "source_file": "app/Services/CatalogParsers/ExternalCatalogSyncService.php",
-      "source_location": "L1043"
+      "source_location": "L1055"
     },
     {
       "id": "app_services_catalogparsers_externalcatalogsyncservice_externalcatalogsyncservice_findeditionbytitle",
@@ -48005,7 +48005,7 @@
       "file_type": "code",
       "norm_label": ".findeditionbytitle()",
       "source_file": "app/Services/CatalogParsers/ExternalCatalogSyncService.php",
-      "source_location": "L512"
+      "source_location": "L524"
     },
     {
       "id": "app_services_catalogparsers_externalcatalogsyncservice_externalcatalogsyncservice_generatebookdescriptionwithai",
@@ -48017,7 +48017,7 @@
       "file_type": "code",
       "norm_label": ".generatebookdescriptionwithai()",
       "source_file": "app/Services/CatalogParsers/ExternalCatalogSyncService.php",
-      "source_location": "L983"
+      "source_location": "L995"
     },
     {
       "id": "app_services_catalogparsers_externalcatalogsyncservice_externalcatalogsyncservice_getstats",
@@ -48041,7 +48041,7 @@
       "file_type": "code",
       "norm_label": ".resolvecategorywithai()",
       "source_file": "app/Services/CatalogParsers/ExternalCatalogSyncService.php",
-      "source_location": "L584"
+      "source_location": "L596"
     },
     {
       "id": "app_services_catalogparsers_externalcatalogsyncservice_externalcatalogsyncservice_resolvefallbackcategorybykeywords",
@@ -48053,7 +48053,7 @@
       "file_type": "code",
       "norm_label": ".resolvefallbackcategorybykeywords()",
       "source_file": "app/Services/CatalogParsers/ExternalCatalogSyncService.php",
-      "source_location": "L695"
+      "source_location": "L707"
     },
     {
       "id": "app_services_catalogparsers_externalcatalogsyncservice_externalcatalogsyncservice_resolvepublisherid",
@@ -48065,7 +48065,7 @@
       "file_type": "code",
       "norm_label": ".resolvepublisherid()",
       "source_file": "app/Services/CatalogParsers/ExternalCatalogSyncService.php",
-      "source_location": "L550"
+      "source_location": "L562"
     },
     {
       "id": "app_services_catalogparsers_externalcatalogsyncservice_externalcatalogsyncservice_resolvetagswithai",
@@ -48077,7 +48077,7 @@
       "file_type": "code",
       "norm_label": ".resolvetagswithai()",
       "source_file": "app/Services/CatalogParsers/ExternalCatalogSyncService.php",
-      "source_location": "L818"
+      "source_location": "L830"
     },
     {
       "id": "app_services_catalogparsers_externalcatalogsyncservice_externalcatalogsyncservice_runsync",
@@ -139392,7 +139392,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "app/Services/CatalogParsers/ExternalCatalogSyncService.php",
-      "source_location": "L759",
+      "source_location": "L771",
       "weight": 1.0
     },
     {
@@ -139404,7 +139404,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "app/Services/CatalogParsers/ExternalCatalogSyncService.php",
-      "source_location": "L765",
+      "source_location": "L777",
       "weight": 1.0
     },
     {
@@ -139416,7 +139416,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "app/Services/CatalogParsers/ExternalCatalogSyncService.php",
-      "source_location": "L1081",
+      "source_location": "L1093",
       "weight": 1.0
     },
     {
@@ -139428,7 +139428,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "app/Services/CatalogParsers/ExternalCatalogSyncService.php",
-      "source_location": "L520",
+      "source_location": "L532",
       "weight": 1.0
     },
     {
@@ -139440,7 +139440,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "app/Services/CatalogParsers/ExternalCatalogSyncService.php",
-      "source_location": "L688",
+      "source_location": "L700",
       "weight": 1.0
     },
     {
@@ -139500,7 +139500,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "app/Services/CatalogParsers/ExternalCatalogSyncService.php",
-      "source_location": "L373",
+      "source_location": "L379",
       "weight": 1.0
     },
     {
@@ -139512,7 +139512,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "app/Services/CatalogParsers/ExternalCatalogSyncService.php",
-      "source_location": "L386",
+      "source_location": "L392",
       "weight": 1.0
     },
     {
@@ -179424,7 +179424,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "app/Services/CatalogParsers/ExternalCatalogSyncService.php",
-      "source_location": "L737",
+      "source_location": "L749",
       "weight": 1.0
     },
     {
@@ -179436,7 +179436,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "app/Services/CatalogParsers/ExternalCatalogSyncService.php",
-      "source_location": "L1048",
+      "source_location": "L1060",
       "weight": 1.0
     },
     {
@@ -179460,7 +179460,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "app/Services/CatalogParsers/ExternalCatalogSyncService.php",
-      "source_location": "L468",
+      "source_location": "L350",
       "weight": 1.0
     },
     {
@@ -248772,7 +248772,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "app/Services/CatalogParsers/ExternalCatalogSyncService.php",
-      "source_location": "L983",
+      "source_location": "L995",
       "weight": 1.0
     },
     {
@@ -258768,7 +258768,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "app/Services/CatalogParsers/ExternalCatalogSyncService.php",
-      "source_location": "L512",
+      "source_location": "L524",
       "weight": 1.0
     },
     {
@@ -329172,7 +329172,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "app/Services/CatalogParsers/ExternalCatalogSyncService.php",
-      "source_location": "L1043",
+      "source_location": "L1055",
       "weight": 1.0
     },
     {
@@ -329216,7 +329216,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "app/Services/CatalogParsers/ExternalCatalogSyncService.php",
-      "source_location": "L512",
+      "source_location": "L524",
       "weight": 1.0
     },
     {
@@ -329227,7 +329227,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "app/Services/CatalogParsers/ExternalCatalogSyncService.php",
-      "source_location": "L550",
+      "source_location": "L562",
       "weight": 1.0
     },
     {
@@ -329238,7 +329238,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "app/Services/CatalogParsers/ExternalCatalogSyncService.php",
-      "source_location": "L584",
+      "source_location": "L596",
       "weight": 1.0
     },
     {
@@ -329260,7 +329260,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "app/Services/CatalogParsers/ExternalCatalogSyncService.php",
-      "source_location": "L695",
+      "source_location": "L707",
       "weight": 1.0
     },
     {
@@ -329271,7 +329271,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "app/Services/CatalogParsers/ExternalCatalogSyncService.php",
-      "source_location": "L732",
+      "source_location": "L744",
       "weight": 1.0
     },
     {
@@ -329282,7 +329282,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "app/Services/CatalogParsers/ExternalCatalogSyncService.php",
-      "source_location": "L818",
+      "source_location": "L830",
       "weight": 1.0
     },
     {
@@ -329293,7 +329293,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "app/Services/CatalogParsers/ExternalCatalogSyncService.php",
-      "source_location": "L935",
+      "source_location": "L947",
       "weight": 1.0
     },
     {
@@ -329304,7 +329304,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "app/Services/CatalogParsers/ExternalCatalogSyncService.php",
-      "source_location": "L943",
+      "source_location": "L955",
       "weight": 1.0
     },
     {
@@ -329315,7 +329315,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "app/Services/CatalogParsers/ExternalCatalogSyncService.php",
-      "source_location": "L983",
+      "source_location": "L995",
       "weight": 1.0
     },
     {
@@ -358928,7 +358928,7 @@
       "confidence_score": 0.85,
       "context": "call",
       "source_file": "app/Services/CatalogParsers/ExternalCatalogSyncService.php",
-      "source_location": "L968",
+      "source_location": "L980",
       "weight": 1.0
     },
     {
@@ -358964,7 +358964,7 @@
       "confidence_score": 0.85,
       "context": "call",
       "source_file": "app/Services/CatalogParsers/ExternalCatalogSyncService.php",
-      "source_location": "L591",
+      "source_location": "L603",
       "weight": 1.0
     },
     {
@@ -358976,7 +358976,7 @@
       "confidence_score": 0.85,
       "context": "call",
       "source_file": "app/Services/CatalogParsers/ExternalCatalogSyncService.php",
-      "source_location": "L937",
+      "source_location": "L949",
       "weight": 1.0
     },
     {
@@ -358988,7 +358988,7 @@
       "confidence_score": 0.85,
       "context": "call",
       "source_file": "app/Services/CatalogParsers/ExternalCatalogSyncService.php",
-      "source_location": "L557",
+      "source_location": "L569",
       "weight": 1.0
     },
     {
@@ -359000,7 +359000,7 @@
       "confidence_score": 0.85,
       "context": "call",
       "source_file": "app/Services/CatalogParsers/ExternalCatalogSyncService.php",
-      "source_location": "L827",
+      "source_location": "L839",
       "weight": 1.0
     },
     {
@@ -359024,7 +359024,7 @@
       "confidence_score": 0.85,
       "context": "call",
       "source_file": "app/Services/CatalogParsers/ExternalCatalogSyncService.php",
-      "source_location": "L352",
+      "source_location": "L358",
       "weight": 1.0
     },
     {
@@ -361021,5 +361021,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "9b2cb2d8421bdc291d3d4bd8f4fa08adf0f75e25"
+  "built_at_commit": "5c7746fd3be2ad8c383dbd258a998f139c9f6d6c"
 }

@@ -36,6 +36,56 @@ type EnrichReport = {
   failed: number;
 };
 
+type BookUzStockStats = {
+  seller_id: number;
+  total_books: number;
+  active_books: number;
+  progress?: BookUzStockProgress | null;
+};
+
+type BookUzStockProgress = {
+  running: boolean;
+  scanned: number;
+  total_target: number;
+  matched: number;
+  not_found: number;
+  in_stock: number;
+  zeroed: number;
+  stock_changed: number;
+  price_changed: number;
+  new_imported: number;
+  total_stock_count: number;
+  last_title: string | null;
+  started_at: string;
+  completed_at?: string;
+  updated_at: string;
+};
+
+type BookUzStockReport = {
+  success: boolean;
+  dry_run: boolean;
+  scanned: number;
+  matched: number;
+  not_found: number;
+  in_stock: number;
+  zeroed: number;
+  stock_changed: number;
+  price_changed: number;
+  new_imported: number;
+  total_stock_count: number;
+  updated_samples: Array<{
+    id: number;
+    name: string;
+    isbn: string;
+    old_stock: number;
+    new_stock: number;
+    old_price?: number;
+    new_price?: number;
+    match: string;
+  }>;
+  duration_seconds: number;
+};
+
 type ParserItemResult = {
   title: string;
   isbn: string;
@@ -76,6 +126,7 @@ type SettingsPayload = {
   cashbackDelivery?: Cashback[];
   cashbackPickup?: Cashback[];
   parserStats?: ParserStats;
+  bookUzStockStats?: BookUzStockStats;
   actions?: ActionMap;
 };
 
@@ -474,6 +525,8 @@ export default function Settings() {
           statsUrl={actions.parserStats}
           categorizeUrl={actions.parserCategorizeExisting}
           enrichUrl={actions.parserEnrichDescriptions}
+          syncStockUrl={actions.parserSyncBookUzStock}
+          bookUzStockStats={settings.bookUzStockStats}
         />
       )}
 
@@ -487,12 +540,16 @@ function CatalogParserSection({
   statsUrl,
   categorizeUrl,
   enrichUrl,
+  syncStockUrl,
+  bookUzStockStats: initialStockStats,
 }: {
   stats?: ParserStats;
   runUrl?: string;
   statsUrl?: string;
   categorizeUrl?: string;
   enrichUrl?: string;
+  syncStockUrl?: string;
+  bookUzStockStats?: BookUzStockStats;
 }) {
   const [stats, setStats] = useState<ParserStats | undefined>(initialStats);
   const [source, setSource] = useState('all');
@@ -511,6 +568,17 @@ function CatalogParserSection({
   const [enrichBgMsg, setEnrichBgMsg] = useState<string | null>(null);
   const [enrichError, setEnrichError] = useState<string | null>(null);
   const [enrichReport, setEnrichReport] = useState<EnrichReport | null>(null);
+
+  // Book.uz Qatortol qoldiqlarini sinxronlash state (Seller #55)
+  const [stockLimit, setStockLimit] = useState('50');
+  const [stockImportNew, setStockImportNew] = useState(false);
+  const [stockDryRun, setStockDryRun] = useState(false);
+  const [stockLoading, setStockLoading] = useState(false);
+  const [stockProgress, setStockProgress] = useState<BookUzStockProgress | null>(null);
+  const [stockBgMsg, setStockBgMsg] = useState<string | null>(null);
+  const [stockError, setStockError] = useState<string | null>(null);
+  const [stockReport, setStockReport] = useState<BookUzStockReport | null>(null);
+  const [stockStats, setStockStats] = useState<BookUzStockStats | undefined>(initialStockStats);
 
   const getCsrfToken = () => document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content || '';
 
@@ -538,6 +606,15 @@ function CatalogParserSection({
             setEnrichBgMsg(null);
           }
         }
+        if (data.bookuz_stock_stats) {
+          setStockStats(data.bookuz_stock_stats);
+        }
+        if (data.bookuz_stock_progress) {
+          setStockProgress(data.bookuz_stock_progress);
+          if (!data.bookuz_stock_progress.running) {
+            setStockBgMsg(null);
+          }
+        }
       }
     } catch {
       // ignore
@@ -546,7 +623,14 @@ function CatalogParserSection({
 
   useEffect(() => {
     let interval: any = null;
-    if (progress?.running || backgroundMsg || enrichProgress?.running || enrichBgMsg) {
+    if (
+      progress?.running ||
+      backgroundMsg ||
+      enrichProgress?.running ||
+      enrichBgMsg ||
+      stockProgress?.running ||
+      stockBgMsg
+    ) {
       interval = setInterval(() => {
         refreshStats();
       }, 3500);
@@ -554,7 +638,71 @@ function CatalogParserSection({
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [progress?.running, backgroundMsg, enrichProgress?.running, enrichBgMsg]);
+  }, [
+    progress?.running,
+    backgroundMsg,
+    enrichProgress?.running,
+    enrichBgMsg,
+    stockProgress?.running,
+    stockBgMsg,
+  ]);
+
+  const handleSyncStock = async (e: FormEvent) => {
+    e.preventDefault();
+    if (stockLoading) return;
+
+    setStockLoading(true);
+    setStockError(null);
+    setStockReport(null);
+
+    try {
+      const endpoint = syncStockUrl || '/boshqaruv/settings/parser/sync-bookuz-stock';
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-CSRF-TOKEN': getCsrfToken(),
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          limit: Number(stockLimit),
+          import_new: stockImportNew,
+          dry_run: stockDryRun,
+        }),
+      });
+
+      const contentType = res.headers.get('content-type') || '';
+      let data: any = null;
+      if (contentType.includes('application/json')) {
+        data = await res.json();
+      } else {
+        const text = await res.text();
+        throw new Error(`Server xatosi (${res.status}): ${text.slice(0, 100)}`);
+      }
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Qoldiqlarni sinxronlashda xatolik yuz berdi');
+      }
+
+      if (data.is_background) {
+        setStockBgMsg(data.message);
+        if (data.bookuz_stock_progress) setStockProgress(data.bookuz_stock_progress);
+        setStockReport(null);
+      } else {
+        setStockBgMsg(null);
+        setStockReport(data.report);
+      }
+
+      if (data.bookuz_stock_stats) {
+        setStockStats(data.bookuz_stock_stats);
+      }
+    } catch (err: any) {
+      setStockError(err.message || 'Xatolik yuz berdi');
+    } finally {
+      setStockLoading(false);
+    }
+  };
 
   const handleRun = async (e: FormEvent) => {
     e.preventDefault();
@@ -816,6 +964,100 @@ function CatalogParserSection({
           </form>
         </SectionCard>
 
+        {/* Book.uz Qatortol qoldiqlarini sinxronlash (Seller #55) */}
+        <div className="mt-3">
+          <SectionCard title="Book.uz (Qatortol) qoldiqlari — Seller #55" icon="ti-building-store">
+            <p className="text-muted f-s-13 mb-3">
+              Book.uz saytidagi <strong>Toshkent - Qatortol - bosh do'kon</strong> filiali qoldiqlarini olib, marketimizdagi <strong>Seller #55</strong> kitoblari qoldig'iga o'rnatadi. 
+              Qatortolda yo'q kitoblar qoldig'i <code>0</code> ga tushadi, mavjud bo'lsa yangi soni bilan darhol faollashadi.
+            </p>
+
+            {stockStats && (
+              <div className="d-flex align-items-center justify-content-between p-2 mb-3 bg-light-primary rounded border border-primary">
+                <div>
+                  <span className="text-muted f-s-12">Seller 55 kitoblari:</span>{' '}
+                  <strong className="text-primary">{fmt(stockStats.total_books)} ta</strong>
+                </div>
+                <div>
+                  <span className="text-muted f-s-12">Sotuvda faol:</span>{' '}
+                  <strong className="text-success">{fmt(stockStats.active_books)} ta</strong>
+                </div>
+              </div>
+            )}
+
+            <form onSubmit={handleSyncStock}>
+              <div className="mb-3">
+                <label className="form-label f-s-13 text-muted f-w-600">Tekshirish hajmi (Limit)</label>
+                <select className="form-select" value={stockLimit} onChange={(e) => setStockLimit(e.target.value)} disabled={stockLoading}>
+                  <option value="25">25 ta kitob (Tezkor sinov)</option>
+                  <option value="50">50 ta kitob</option>
+                  <option value="100">100 ta kitob</option>
+                  <option value="0">Barcha kitoblar ({fmt(stockStats?.total_books || 0)} ta - Fonda)</option>
+                </select>
+              </div>
+
+              <div className="mb-2">
+                <label className="d-flex align-items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="form-check-input mt-0"
+                    checked={stockImportNew}
+                    onChange={(e) => setStockImportNew(e.target.checked)}
+                    disabled={stockLoading}
+                  />
+                  <span className="f-s-13">Qatortolda bor yangi kitoblarni ham Seller 55 ga qo'shish</span>
+                </label>
+              </div>
+
+              <div className="mb-4">
+                <label className="d-flex align-items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="form-check-input mt-0"
+                    checked={stockDryRun}
+                    onChange={(e) => setStockDryRun(e.target.checked)}
+                    disabled={stockLoading}
+                  />
+                  <span className="f-s-13 text-muted">Dry-run (faqat hisoblash, bazani o'zgartirmasdan)</span>
+                </label>
+              </div>
+
+              <div className="d-flex justify-content-between align-items-center">
+                <button type="button" className="btn btn-outline-secondary btn-sm" onClick={refreshStats} disabled={stockLoading}>
+                  <i className="ti ti-refresh me-1"></i>Tekshirish
+                </button>
+                <button type="submit" className="btn btn-warning text-dark" disabled={stockLoading || stockProgress?.running}>
+                  {stockLoading ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                      Tekshirilmoqda...
+                    </>
+                  ) : stockProgress?.running ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                      Fonda ishlamoqda...
+                    </>
+                  ) : (
+                    <>
+                      <i className="ti ti-building-warehouse me-1"></i>Qatortol qoldiqlarini sinxronlash
+                    </>
+                  )}
+                </button>
+              </div>
+
+              <div className="mt-3 p-2 b-r-6 bg-light text-muted f-s-12">
+                <div className="d-flex align-items-center gap-1 mb-1">
+                  <i className="ti ti-terminal text-warning"></i>
+                  <strong className="text-dark">Terminaldan to'liq ishga tushirish:</strong>
+                </div>
+                <code className="d-block user-select-all bg-white p-1 border b-r-4 text-dark f-s-11">
+                  php artisan catalog:sync-bookuz-stock --limit=0
+                </code>
+              </div>
+            </form>
+          </SectionCard>
+        </div>
+
         {/* AI Tavsif Generator (Orqa fonda) */}
         <div className="mt-3">
           <SectionCard title="AI Tavsif Generator (Fonda)" icon="ti-sparkles">
@@ -879,6 +1121,132 @@ function CatalogParserSection({
 
       {/* O'ng ustun: Natijalar paneli */}
       <div className="col-xl-7">
+        {/* Book.uz Stock Sinxronlash xabarlari va progress */}
+        {stockError && (
+          <div className="alert alert-danger d-flex align-items-center gap-2 mb-3">
+            <i className="ti ti-alert-triangle f-s-18"></i>
+            <div>{stockError}</div>
+          </div>
+        )}
+
+        {stockBgMsg && (
+          <div className="alert alert-success d-flex align-items-center gap-2 mb-3">
+            <i className="ti ti-circle-check f-s-18"></i>
+            <div>{stockBgMsg}</div>
+          </div>
+        )}
+
+        {stockProgress && stockProgress.running && (
+          <div className="card mb-3 border-warning bg-light-warning">
+            <div className="card-body py-3">
+              <div className="d-flex align-items-center justify-content-between mb-2">
+                <div className="d-flex align-items-center gap-2">
+                  <span className="spinner-border spinner-border-sm text-warning" role="status" aria-hidden="true"></span>
+                  <strong className="text-dark">Book.uz (Qatortol filiali) qoldiqlari orqa fonda sinxronlanmoqda...</strong>
+                </div>
+                <button type="button" className="btn btn-outline-warning btn-xs py-0 px-2 f-s-11" onClick={refreshStats}>
+                  Yangilash
+                </button>
+              </div>
+              <div className="progress mb-2" style={{ height: '8px' }}>
+                <div
+                  className="progress-bar bg-warning progress-bar-striped progress-bar-animated"
+                  role="progressbar"
+                  style={{
+                    width: `${stockProgress.total_target > 0 ? Math.min(100, Math.round((stockProgress.scanned / stockProgress.total_target) * 100)) : 10}%`,
+                  }}
+                ></div>
+              </div>
+              <div className="f-s-13">
+                Jarayon: <strong>{stockProgress.scanned}</strong> {stockProgress.total_target > 0 ? `/ ${stockProgress.total_target}` : 'ta kitob'} | 
+                Topildi: <strong className="text-primary">{stockProgress.matched}</strong> | 
+                Qatortolda bor: <strong className="text-success">{stockProgress.in_stock} ta ({stockProgress.total_stock_count} dona)</strong> | 
+                Qoldiq 0 qilindi: <strong className="text-muted">{stockProgress.zeroed}</strong> | 
+                Qoldig'i yangilandi: <strong className="text-warning">{stockProgress.stock_changed}</strong>
+                {stockProgress.new_imported > 0 && (
+                  <span> | Yangi qo'shildi: <strong className="text-info">+{stockProgress.new_imported}</strong></span>
+                )}
+              </div>
+              {stockProgress.last_title && (
+                <div className="f-s-12 text-muted mt-1 text-truncate">
+                  Hozir: <em>{stockProgress.last_title}</em>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {stockReport && (
+          <div className="card mb-3 border-success bg-light-success">
+            <div className="card-body py-3">
+              <div className="d-flex align-items-center justify-content-between mb-2">
+                <div className="d-flex align-items-center gap-2">
+                  <i className="ti ti-circle-check text-success f-s-22"></i>
+                  <h6 className="mb-0 text-success f-w-700">Book.uz (Qatortol) qoldiqlari muvaffaqiyatli sinxronlandi!</h6>
+                </div>
+                <span className="badge bg-success">{stockReport.duration_seconds} soniya</span>
+              </div>
+              <div className="row g-2 f-s-13 mt-1">
+                <div className="col-sm-3">
+                  <div className="p-2 bg-white rounded border">
+                    <span className="text-muted d-block f-s-11">Tekshirildi:</span>
+                    <strong>{fmt(stockReport.scanned)} ta kitob</strong>
+                  </div>
+                </div>
+                <div className="col-sm-3">
+                  <div className="p-2 bg-white rounded border">
+                    <span className="text-muted d-block f-s-11">Qatortolda mavjud:</span>
+                    <strong className="text-success">{fmt(stockReport.in_stock)} ta ({fmt(stockReport.total_stock_count)} dona)</strong>
+                  </div>
+                </div>
+                <div className="col-sm-3">
+                  <div className="p-2 bg-white rounded border">
+                    <span className="text-muted d-block f-s-11">Qoldig'i yangilandi:</span>
+                    <strong className="text-primary">{fmt(stockReport.stock_changed)} ta</strong>
+                  </div>
+                </div>
+                <div className="col-sm-3">
+                  <div className="p-2 bg-white rounded border">
+                    <span className="text-muted d-block f-s-11">Narxi yangilandi:</span>
+                    <strong className="text-warning">{fmt(stockReport.price_changed || 0)} ta</strong>
+                  </div>
+                </div>
+              </div>
+              {stockReport.updated_samples && stockReport.updated_samples.length > 0 && (
+                <div className="mt-3">
+                  <span className="f-s-12 text-muted f-w-600">Yangilangan kitoblardan ayrim namunalar (qoldiq va yangi narxlar):</span>
+                  <div className="table-responsive mt-1 bg-white rounded border" style={{ maxHeight: '220px' }}>
+                    <table className="table table-sm table-hover mb-0 f-s-12">
+                      <thead className="table-light">
+                        <tr>
+                          <th>Kitob nomi</th>
+                          <th>ISBN</th>
+                          <th className="text-center">Eski qoldiq</th>
+                          <th className="text-center">Yangi (Qatortol)</th>
+                          <th className="text-end">Hozirgi narx</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {stockReport.updated_samples.map((s) => (
+                          <tr key={s.id}>
+                            <td className="text-truncate" style={{ maxWidth: '220px' }}>{s.name}</td>
+                            <td><code>{s.isbn || '-'}</code></td>
+                            <td className="text-center text-muted">{s.old_stock}</td>
+                            <td className="text-center font-bold text-success"><strong>{s.new_stock} dona</strong></td>
+                            <td className="text-end font-bold text-dark">
+                              {s.new_price ? `${fmt(s.new_price)} so'm` : '-'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* AI Tavsiflash xabarlari va progress */}
         {enrichError && (
           <div className="alert alert-danger d-flex align-items-center gap-2 mb-3">

@@ -10730,8 +10730,10 @@ PROMPT;
                 'parserStats' => route('boshqaruv.settings.parser.stats'),
                 'parserCategorizeExisting' => route('boshqaruv.settings.parser.categorize-existing'),
                 'parserEnrichDescriptions' => route('boshqaruv.settings.parser.enrich-descriptions'),
+                'parserSyncBookUzStock' => route('boshqaruv.settings.parser.sync-bookuz-stock'),
             ],
             'parserStats' => app(\App\Services\CatalogParsers\ExternalCatalogSyncService::class)->getStats(),
+            'bookUzStockStats' => app(\App\Services\CatalogParsers\BookUzStockSyncService::class)->getStats(),
             'indexUrl' => route('boshqaruv.settings'),
         ];
     }

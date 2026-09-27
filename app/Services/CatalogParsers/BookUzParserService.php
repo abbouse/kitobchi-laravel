@@ -31,7 +31,7 @@ class BookUzParserService
 
     private const BASE_URL = 'https://book.uz';
 
-    private const USER_API_BASE_URL = 'https://backend.book.uz/user-api';
+    private const USER_API_BASE_URL = 'https://backend.book.uz/api/v1';
 
     private ?array $booksTableColumns = null;
 
@@ -566,7 +566,7 @@ class BookUzParserService
         $perPage = $limit !== null ? max(1, min(100, $limit)) : 36;
 
         while (true) {
-            $payload = $this->fetchJson(self::USER_API_BASE_URL.'/book', [
+            $payload = $this->fetchJson(self::USER_API_BASE_URL.'/products', [
                 'page' => $page,
                 'limit' => $perPage,
             ]);
@@ -575,7 +575,7 @@ class BookUzParserService
                 break;
             }
 
-            $items = collect(data_get($payload, 'data.data', []))
+            $items = collect(data_get($payload, 'data.products', data_get($payload, 'data.data', [])))
                 ->filter(fn ($item) => is_array($item))
                 ->values();
 
@@ -590,7 +590,7 @@ class BookUzParserService
                 }
             }
 
-            $total = (int) (data_get($payload, 'data.total') ?? data_get($payload, 'data.count') ?? 0);
+            $total = (int) (data_get($payload, 'data.pagination.total') ?? data_get($payload, 'data.total') ?? data_get($payload, 'data.count') ?? 0);
             if ($total > 0 && $page * $perPage >= $total) {
                 break;
             }
@@ -791,12 +791,12 @@ class BookUzParserService
 
     private function catalogItemToProductUrl(array $item): ?string
     {
-        $slug = trim((string) ($item['link'] ?? ''));
+        $slug = trim((string) ($item['slug'] ?? $item['link'] ?? ''));
         if ($slug === '') {
             return null;
         }
 
-        return $this->sanitizeProductUrl(self::BASE_URL.'/books/details/'.ltrim($slug, '/'));
+        return $this->sanitizeProductUrl(self::BASE_URL.'/book/'.ltrim($slug, '/'));
     }
 
     private function sanitizeProductUrl(?string $url): ?string

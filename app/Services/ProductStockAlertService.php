@@ -78,9 +78,20 @@ class ProductStockAlertService
             return;
         }
 
+        $bookIds = [$book->id];
+        if (! empty($book->edition_id)) {
+            $siblingIds = Books::query()
+                ->where('edition_id', $book->edition_id)
+                ->pluck('id')
+                ->all();
+            if (! empty($siblingIds)) {
+                $bookIds = array_values(array_unique(array_merge($bookIds, $siblingIds)));
+            }
+        }
+
         $alerts = ProductStockAlert::query()
             ->where('product_type', 'book')
-            ->where('product_id', $book->id)
+            ->whereIn('product_id', $bookIds)
             ->whereNull('variant_id')
             ->get();
 

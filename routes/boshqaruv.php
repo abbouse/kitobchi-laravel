@@ -422,6 +422,7 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
             Route::post('/settings/parser/run', [\App\Http\Controllers\Boshqaruv\CatalogParserController::class, 'run'])->name('settings.parser.run');
             Route::post('/settings/parser/categorize-existing', [\App\Http\Controllers\Boshqaruv\CatalogParserController::class, 'categorizeExisting'])->name('settings.parser.categorize-existing');
             Route::post('/settings/parser/enrich-descriptions', [\App\Http\Controllers\Boshqaruv\CatalogParserController::class, 'enrichDescriptions'])->name('settings.parser.enrich-descriptions');
+            Route::post('/settings/parser/sync-bookuz-stock', [\App\Http\Controllers\Boshqaruv\CatalogParserController::class, 'syncBookUzStock'])->name('settings.parser.sync-bookuz-stock');
 
             // Kiberxavfsizlik va Server monitoring
             Route::get('/security', [SecurityController::class, 'index'])->name('security');
