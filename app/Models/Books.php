@@ -234,6 +234,22 @@ class Books extends Model
         return $this->hasMany(MyCart::class, 'product_id')->where('product_type', 'book');
     }
 
+    public function getImagesAttribute($value): array
+    {
+        $images = is_string($value) ? json_decode($value, true) : $value;
+        if (! is_array($images)) {
+            return [];
+        }
+
+        return array_values(array_filter(array_map(function ($img) {
+            if (is_string($img) && str_contains($img, 'res.cloudinary.com/dd9xb0bqw/')) {
+                return 'https://book.uz/_next/image?url='.urlencode($img).'&w=640&q=75';
+            }
+
+            return $img;
+        }, $images)));
+    }
+
     public function getFirstImageAttribute(): ?string
     {
         $images = $this->images;

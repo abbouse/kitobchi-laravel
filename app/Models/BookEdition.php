@@ -93,6 +93,31 @@ class BookEdition extends Model
         return in_array($this->status, [self::STATUS_ACTIVE, self::STATUS_PENDING], true) && ! $this->trashed();
     }
 
+    public function getFrontImageAttribute($value): ?string
+    {
+        if (is_string($value) && str_contains($value, 'res.cloudinary.com/dd9xb0bqw/')) {
+            return 'https://book.uz/_next/image?url='.urlencode($value).'&w=640&q=75';
+        }
+
+        return $value;
+    }
+
+    public function getImagesAttribute($value): array
+    {
+        $images = is_string($value) ? json_decode($value, true) : $value;
+        if (! is_array($images)) {
+            return [];
+        }
+
+        return array_values(array_filter(array_map(function ($img) {
+            if (is_string($img) && str_contains($img, 'res.cloudinary.com/dd9xb0bqw/')) {
+                return 'https://book.uz/_next/image?url='.urlencode($img).'&w=640&q=75';
+            }
+
+            return $img;
+        }, $images)));
+    }
+
     /** Muqova (old) rasmi: alohida ustun yoki images[0]. */
     public function coverPath(): ?string
     {

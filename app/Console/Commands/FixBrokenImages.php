@@ -16,10 +16,10 @@ class FixBrokenImages extends Command
 {
     protected $signature = 'catalog:fix-broken-images
                             {--limit=0 : Maksimal tekshiriladigan kitoblar soni (0 = barchasi)}
-                            {--download : Rasmlarni tashqi Cloudinary havolasi o\'rniga o\'zimizning local serverga (storage/books) yuklab olish}
+                            {--download : Rasmlarni tashqi serverga bog\'lanmasdan o\'zimizning local serverga (storage/books) yuklab olish}
                             {--dry-run : Bazaga yozmasdan faqat tekshiruv rejimida ishlash}';
 
-    protected $description = 'Bloklangan Cloudinary (dd9xb0bqw) rasmlarini Book.uz ning yangi havolalari yoki Google Books orqali tiklash';
+    protected $description = 'Bloklangan Cloudinary (dd9xb0bqw) rasmlarini Book.uz kesh serveri yoki Google Books orqali tiklash';
 
     private const BROKEN_SUBSTRING = 'dd9xb0bqw';
 
@@ -34,8 +34,8 @@ class FixBrokenImages extends Command
             'timeout' => 15,
             'connect_timeout' => 5,
             'headers' => [
-                'User-Agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept' => 'application/json',
+                'User-Agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                'Accept' => 'image/webp,image/apng,image/*,*/*;q=0.8',
             ],
             'verify' => false,
         ]);
@@ -51,11 +51,10 @@ class FixBrokenImages extends Command
         $this->info("      BLOKLANGAN CLOUDINARY (dd9xb0bqw) RASMLARINI TIKLASH       ");
         $this->info("=================================================================");
         $this->line("Rejim: ".($dryRun ? '<fg=yellow>DRY-RUN (tekshiruv, bazaga yozilmaydi)</>' : '<fg=green>Haqiqiy tuzatish (bazadagi rasmlar yangilanadi)</>'));
-        $this->line("Lokal saqlash: ".($download ? '<fg=cyan>Ha (rasmlar storage/books ga yuklab olinadi)</>' : '<fg=gray>Yo\'q (yangi to\'g\'ridan-to\'g\'ri havola saqlanadi)</>'));
+        $this->line("Lokal saqlash: ".($download ? '<fg=cyan>Ha (rasmlar storage/books ga yuklab olinadi)</>' : '<fg=gray>Yo\'q (ishlaydigan Book.uz kesh havolasi saqlanadi)</>'));
         $this->newLine();
 
-        // 1. Bazadagi nosoz kitoblar va editionlarni qidiramiz
-        $this->info("Bazada nosoz 'dd9xb0bqw' rasmli kitoblar tekshirilmoqda...");
+        $this->info("Bazada nosoz 'dd9xb0bqw' rasmli kitoblar qidirilmoqda...");
 
         $brokenBooksQuery = Books::query()
             ->where(function ($q) {
@@ -85,16 +84,34 @@ class FixBrokenImages extends Command
         $this->line("Nosoz rasmli global kartalar (BookEdition): <comment>{$brokenEditions->count()} ta</comment>");
         $this->newLine();
 
+        $totalCount = $brokenBooks->count() + $brokenEditions->count();
+        if ($totalCount === 0) {
+            $this->info("✅ Bazada nosoz (dd9xb0bqw) rasmli kitoblar topilmadi!");
+
+            return Command::SUCCESS;
+        }
+
         $fixedBooks = 0;
         $fixedEditions = 0;
         $notFound = 0;
 
-        $bar = $this->output->createProgressBar($brokenBooks->count() + $brokenEditions->count());
+        $bar = $this->output->createProgressBar($totalCount);
         $bar->start();
 
-        // Books takliflarini tuzatish
+        // 1. Books takliflarini tuzatish
         foreach ($brokenBooks as $book) {
-            $workingUrl = $this->resolveWorkingImageUrl($book->name, $book->isbn);
+            $rawImages = $book->getRawOriginal('images');
+            $decoded = is_string($rawImages) ? json_decode($rawImages, true) : (array) $rawImages;
+            $oldUrl = is_array($decoded) ? ($decoded[0] ?? null) : null;
+
+            $workingUrl = null;
+            if ($oldUrl && str_contains($oldUrl, self::BROKEN_SUBSTRING)) {
+                $workingUrl = 'https://book.uz/_next/image?url='.urlencode($oldUrl).'&w=640&q=75';
+            }
+
+            if (! $workingUrl) {
+                $workingUrl = $this->resolveWorkingImageUrl($book->name, $book->isbn);
+            }
 
             if ($workingUrl) {
                 if ($download && ! $dryRun) {
@@ -114,9 +131,23 @@ class FixBrokenImages extends Command
             $bar->advance();
         }
 
-        // Global kartalarni tuzatish
+        // 2. Global kartalarni (BookEdition) tuzatish
         foreach ($brokenEditions as $edition) {
-            $workingUrl = $this->resolveWorkingImageUrl($edition->title, $edition->isbn13 ?: $edition->isbn10);
+            $oldUrl = $edition->getRawOriginal('front_image');
+            if (! $oldUrl || ! str_contains($oldUrl, self::BROKEN_SUBSTRING)) {
+                $rawImages = $edition->getRawOriginal('images');
+                $decoded = is_string($rawImages) ? json_decode($rawImages, true) : (array) $rawImages;
+                $oldUrl = is_array($decoded) ? ($decoded[0] ?? null) : null;
+            }
+
+            $workingUrl = null;
+            if ($oldUrl && str_contains($oldUrl, self::BROKEN_SUBSTRING)) {
+                $workingUrl = 'https://book.uz/_next/image?url='.urlencode($oldUrl).'&w=640&q=75';
+            }
+
+            if (! $workingUrl) {
+                $workingUrl = $this->resolveWorkingImageUrl($edition->title, $edition->isbn13 ?: $edition->isbn10);
+            }
 
             if ($workingUrl) {
                 if ($download && ! $dryRun) {
@@ -169,7 +200,7 @@ class FixBrokenImages extends Command
             }
         }
 
-        // 2. Book.uz API dan kitob nomi bo'yicha qidiramiz
+        // 2. Book.uz API dan kitob nomi (keyword) bo'yicha qidiramiz
         if (mb_strlen(trim($title)) >= 3) {
             $url = $this->searchBookUz($title);
             if ($url) {
@@ -193,7 +224,7 @@ class FixBrokenImages extends Command
         try {
             $response = $this->http->get(self::BOOKUZ_API.'/products', [
                 'query' => [
-                    'search' => $query,
+                    'keyword' => $query,
                     'limit' => 3,
                 ],
             ]);
@@ -238,7 +269,6 @@ class FixBrokenImages extends Command
             if (! empty($items[0]['volumeInfo']['imageLinks']['thumbnail'])) {
                 $thumb = (string) $items[0]['volumeInfo']['imageLinks']['thumbnail'];
 
-                // HTTP bo'lsa HTTPS ga o'tkazamiz
                 return str_replace('http://', 'https://', $thumb);
             }
         } catch (\Throwable) {
@@ -254,7 +284,21 @@ class FixBrokenImages extends Command
     private function downloadToLocal(string $url, string $prefix): ?string
     {
         try {
-            $res = $this->http->get($url);
+            $downloadUrl = $url;
+            $headers = [
+                'User-Agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                'Accept' => 'image/webp,image/apng,image/*,*/*;q=0.8',
+            ];
+
+            if (str_contains($url, self::BROKEN_SUBSTRING) && ! str_contains($url, 'book.uz/_next/image')) {
+                $downloadUrl = 'https://book.uz/_next/image?url='.urlencode($url).'&w=640&q=75';
+                $headers['Referer'] = 'https://book.uz/';
+            }
+
+            $res = $this->http->get($downloadUrl, [
+                'headers' => $headers,
+            ]);
+
             if ($res->getStatusCode() !== 200) {
                 return null;
             }
@@ -264,12 +308,12 @@ class FixBrokenImages extends Command
                 return null;
             }
 
-            $extension = 'jpg';
+            $extension = 'webp';
             $contentType = $res->getHeaderLine('content-type');
-            if (str_contains($contentType, 'png')) {
+            if (str_contains($contentType, 'jpeg') || str_contains($contentType, 'jpg')) {
+                $extension = 'jpg';
+            } elseif (str_contains($contentType, 'png')) {
                 $extension = 'png';
-            } elseif (str_contains($contentType, 'webp')) {
-                $extension = 'webp';
             }
 
             $filename = 'books/fixed_'.$prefix.'_'.Str::random(8).'.'.$extension;
