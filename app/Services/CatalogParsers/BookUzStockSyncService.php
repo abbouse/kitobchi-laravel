@@ -2,7 +2,9 @@
 
 namespace App\Services\CatalogParsers;
 
+use App\Models\BookCategories;
 use App\Models\Books;
+use App\Models\BranchStock;
 use App\Models\CatalogParserItem;
 use App\Models\Seller;
 use App\Models\SellerLocation;
@@ -22,9 +24,10 @@ class BookUzStockSyncService
 
     public const API_BASE = 'https://backend.book.uz/api/v1';
 
-    public const TARGET_STORE_ID = '8cac779b-ab52-11ec-0a80-09ec0007a15e';
+    // Book.uz dagi Qatortol va Chorsu filiallarining ichki storeId'lari
+    public const STORE_ID_QATORTOL = '8cac779b-ab52-11ec-0a80-09ec0007a15e';
 
-    public const TARGET_STORE_KEYWORD = 'qatortol';
+    public const STORE_ID_CHORSU = '9a503767-453b-11f0-0a80-0f9d0033e459';
 
     public const CACHE_PROGRESS_KEY = 'bookuz_stock_sync_progress';
 
@@ -62,41 +65,155 @@ class BookUzStockSyncService
     }
 
     /**
-     * Book.uz mahsulot ob'ektidan Qatortol filiali qoldig'ini ajratib olish.
-     * Saytdagi: "Toshkent - Qatortol - bosh do'kon X dona"
+     * Seller 55 ning Qatortol (description 111) va Chorsu (description 777) filiallarini aniqlash.
+     *
+     * @return array{qatortol: SellerLocation, chorsu: SellerLocation}
+     */
+    public function resolveSellerBranches(): array
+    {
+        $locations = SellerLocation::query()
+            ->where('seller_id', self::SELLER_ID)
+            ->where('is_deleted', false)
+            ->orderBy('id')
+            ->get();
+
+        $qatortol = null;
+        $chorsu = null;
+
+        // 1. Foydalanuvchi ko'rsatgan qoida: description '111' bo'lsa Qatortol, '777' bo'lsa Chorsu
+        foreach ($locations as $loc) {
+            $desc = (string) $loc->description;
+            if (str_contains($desc, '111')) {
+                $qatortol = $loc;
+            } elseif (str_contains($desc, '777')) {
+                $chorsu = $loc;
+            }
+        }
+
+        // 2. Nom va manzil orqali tekshirish (fallback)
+        if (! $qatortol) {
+            foreach ($locations as $loc) {
+                $text = (string) ($loc->description.' '.$loc->fullAddress);
+                if (stripos($text, 'qatortol') !== false || stripos($text, 'bosh do\'kon') !== false) {
+                    $qatortol = $loc;
+                    break;
+                }
+            }
+        }
+
+        if (! $chorsu) {
+            foreach ($locations as $loc) {
+                $text = (string) ($loc->description.' '.$loc->fullAddress);
+                if (stripos($text, 'chorsu') !== false) {
+                    $chorsu = $loc;
+                    break;
+                }
+            }
+        }
+
+        // 3. Fallback: agar hanuz Qatortol topilmasa, asosiy (is_main) filialni olamiz yoki birinchisini
+        if (! $qatortol) {
+            $qatortol = $locations->firstWhere('is_main', true) ?? $locations->first();
+        }
+
+        // Agar bazada umuman filial bo'lmasa, yaratamiz
+        if (! $qatortol) {
+            $qatortol = SellerLocation::create([
+                'seller_id' => self::SELLER_ID,
+                'fullAddress' => 'Toshkent sh., Qatortol ko\'chasi, Book.uz bosh do\'koni',
+                'description' => '111 - Toshkent - Qatortol - bosh do\'kon',
+                'is_main' => true,
+                'is_deleted' => false,
+            ]);
+        }
+
+        // Agar Chorsu topilmasa, Qatortoldan boshqa ikkinchi filial bormi?
+        if (! $chorsu) {
+            $other = $locations->first(fn ($l) => $l->id !== $qatortol->id);
+            if ($other) {
+                $chorsu = $other;
+            } else {
+                $chorsu = SellerLocation::create([
+                    'seller_id' => self::SELLER_ID,
+                    'fullAddress' => 'Toshkent sh., Chorsu, Book.uz filiali',
+                    'description' => '777 - Toshkent - Chorsu filial',
+                    'is_main' => false,
+                    'is_deleted' => false,
+                ]);
+            }
+        }
+
+        return [
+            'qatortol' => $qatortol,
+            'chorsu' => $chorsu,
+        ];
+    }
+
+    /**
+     * Book.uz mahsulot ob'ektidan Qatortol va Chorsu filiallari qoldiqlarini ajratib olish.
+     * Saytdagi ko'rinishlar:
+     * - "Toshkent - Qatortol - bosh do'kon X dona" (storeId: 8cac779b-ab52-11ec-0a80-09ec0007a15e)
+     * - "Toshkent - Chorsu filial Y dona" (storeId: 9a503767-453b-11f0-0a80-0f9d0033e459)
+     *
+     * @return array{qatortol: int, chorsu: int, total: int}
+     */
+    public function extractBranchStocks(array $product): array
+    {
+        $qatortolStock = 0;
+        $chorsuStock = 0;
+
+        $branchStocks = $product['branchStocks'] ?? [];
+        if (is_array($branchStocks)) {
+            foreach ($branchStocks as $branch) {
+                if (! is_array($branch)) {
+                    continue;
+                }
+
+                $storeId = (string) ($branch['storeId'] ?? '');
+                $storeName = (string) ($branch['storeName'] ?? '');
+                $avail = isset($branch['available']) ? (int) $branch['available'] : (int) ($branch['quantity'] ?? 0);
+                $avail = max(0, $avail);
+
+                $isQatortol = $storeId === self::STORE_ID_QATORTOL
+                    || stripos($storeName, 'qatortol') !== false
+                    || stripos($storeName, 'bosh do\'kon') !== false;
+
+                $isChorsu = $storeId === self::STORE_ID_CHORSU
+                    || stripos($storeName, 'chorsu') !== false;
+
+                if ($isQatortol) {
+                    $qatortolStock = $avail;
+                } elseif ($isChorsu) {
+                    $chorsuStock = $avail;
+                }
+            }
+        }
+
+        return [
+            'qatortol' => $qatortolStock,
+            'chorsu' => $chorsuStock,
+            'total' => $qatortolStock + $chorsuStock,
+        ];
+    }
+
+    /**
+     * Qatortol qoldig'i (backward compatibility).
      */
     public function extractQatortolStock(array $product): int
     {
-        $branchStocks = $product['branchStocks'] ?? [];
-        if (! is_array($branchStocks)) {
-            return 0;
-        }
+        return $this->extractBranchStocks($product)['qatortol'];
+    }
 
-        foreach ($branchStocks as $branch) {
-            if (! is_array($branch)) {
-                continue;
-            }
-
-            $storeId = (string) ($branch['storeId'] ?? '');
-            $storeName = (string) ($branch['storeName'] ?? '');
-
-            $isQatortol = $storeId === self::TARGET_STORE_ID
-                || stripos($storeName, self::TARGET_STORE_KEYWORD) !== false;
-
-            if ($isQatortol) {
-                // available miqdori yoki quantity
-                $avail = isset($branch['available']) ? (int) $branch['available'] : (int) ($branch['quantity'] ?? 0);
-
-                return max(0, $avail);
-            }
-        }
-
-        return 0;
+    /**
+     * Chorsu qoldig'i.
+     */
+    public function extractChorsuStock(array $product): int
+    {
+        return $this->extractBranchStocks($product)['chorsu'];
     }
 
     /**
      * Book.uz backend API'sidan barcha yoki limitlangan mahsulotlarni yuklash.
-     * /api/v1/products har sahifada 100 tagacha mahsulot va ularning branchStocks'ini beradi.
      */
     public function fetchBookUzProducts(?int $limit = null, ?callable $logger = null, ?callable $onProgress = null): array
     {
@@ -190,7 +307,7 @@ class BookUzStockSyncService
         $byBarcode = [];
         $bySlug = [];
         $byTitle = [];
-        $withQatortol = [];
+        $withStock = [];
 
         foreach ($products as $p) {
             $slug = trim((string) ($p['slug'] ?? ''));
@@ -216,11 +333,13 @@ class BookUzStockSyncService
                 $byTitle[$normTitle] = $p;
             }
 
-            $qatortolStock = $this->extractQatortolStock($p);
-            if ($qatortolStock > 0) {
-                $withQatortol[] = [
+            $branchStocks = $this->extractBranchStocks($p);
+            if ($branchStocks['total'] > 0) {
+                $withStock[] = [
                     'product' => $p,
-                    'stock' => $qatortolStock,
+                    'qatortol' => $branchStocks['qatortol'],
+                    'chorsu' => $branchStocks['chorsu'],
+                    'total' => $branchStocks['total'],
                 ];
             }
         }
@@ -229,50 +348,27 @@ class BookUzStockSyncService
             'by_barcode' => $byBarcode,
             'by_slug' => $bySlug,
             'by_title' => $byTitle,
-            'with_qatortol' => $withQatortol,
+            'with_stock' => $withStock,
+            'with_qatortol' => $withStock, // backward-compat
         ];
     }
 
     /**
-     * Seller 55 uchun asosiy filial mavjudligini kafolatlash.
-     */
-    public function ensureSellerLocation(): int
-    {
-        $location = SellerLocation::query()
-            ->where('seller_id', self::SELLER_ID)
-            ->where('is_deleted', false)
-            ->orderByDesc('is_main')
-            ->orderBy('id')
-            ->first();
-
-        if ($location) {
-            return (int) $location->id;
-        }
-
-        $newLoc = SellerLocation::create([
-            'seller_id' => self::SELLER_ID,
-            'fullAddress' => 'Toshkent sh., Qatortol ko\'chasi, Book.uz bosh do\'koni',
-            'description' => 'Qatortol - bosh do\'kon',
-            'is_main' => true,
-            'is_deleted' => false,
-        ]);
-
-        return (int) $newLoc->id;
-    }
-
-    /**
-     * Seller 55 kitoblarini Book.uz saytining "Toshkent - Qatortol - bosh do'kon" qoldig'i bilan sinxronlash.
+     * Seller 55 kitoblarini Book.uz saytidagi Qatortol (111) va Chorsu (777) filiallari qoldiqlari bilan sinxronlash.
+     * Agar Book.uz da bor kitob bizda (Seller 55 da) bo'lmasa, uni qo'shib global kitobga (BookEdition) ulaydi.
      */
     public function syncSeller55Stock(
         ?int $limit = null,
-        bool $importNew = false,
+        bool $importNew = true,
         bool $dryRun = false,
         ?callable $logger = null
     ): array {
         @set_time_limit(0);
 
         $startedAt = now();
-        $locationId = $this->ensureSellerLocation();
+        $branches = $this->resolveSellerBranches();
+        $qatortolLoc = $branches['qatortol'];
+        $chorsuLoc = $branches['chorsu'];
 
         $progressData = [
             'running' => true,
@@ -285,6 +381,9 @@ class BookUzStockSyncService
             'stock_changed' => 0,
             'price_changed' => 0,
             'new_imported' => 0,
+            'global_linked' => 0,
+            'qatortol_stock_count' => 0,
+            'chorsu_stock_count' => 0,
             'total_stock_count' => 0,
             'last_title' => 'Book.uz katalogi yuklanmoqda...',
             'started_at' => $startedAt->toIso8601String(),
@@ -293,10 +392,11 @@ class BookUzStockSyncService
         Cache::put(self::CACHE_PROGRESS_KEY, $progressData, 7200);
 
         if ($logger) {
+            $logger("Filiallar: Qatortol [ID: {$qatortolLoc->id}, desc: {$qatortolLoc->description}], Chorsu [ID: {$chorsuLoc->id}, desc: {$chorsuLoc->description}]");
             $logger("Book.uz mahsulotlari API dan olinmoqda...");
         }
 
-        // 1. Book.uz dan barcha mahsulotlarni yuklab olamiz
+        // 1. Book.uz dan mahsulotlarni yuklab olamiz
         $bookUzProducts = $this->fetchBookUzProducts(null, $logger, function ($current, $total) use (&$progressData) {
             $progressData['last_title'] = "Book.uz dan {$current}/{$total} ta mahsulot yuklandi...";
             $progressData['updated_at'] = now()->toIso8601String();
@@ -367,15 +467,18 @@ class BookUzStockSyncService
                 }
             }
 
-            // Qatortol qoldig'ini hisoblash
+            // Filiallar bo'yicha qoldiqni hisoblash
             if ($matchedProduct) {
                 $progressData['matched']++;
-                $qatortolStock = $this->extractQatortolStock($matchedProduct);
+                $bStocks = $this->extractBranchStocks($matchedProduct);
+                $qatortolStock = $bStocks['qatortol'];
+                $chorsuStock = $bStocks['chorsu'];
             } else {
                 $progressData['not_found']++;
-                // Saytda yoki filialda topilmagan kitob qoldig'i 0 ga tushadi
                 $qatortolStock = 0;
+                $chorsuStock = 0;
             }
+            $newTotalStock = $qatortolStock + $chorsuStock;
 
             // Narxni tekshirish va yangilash (Book.uz dagi hozirgi narx)
             $remotePrice = (int) ($matchedProduct['price'] ?? 0);
@@ -388,13 +491,27 @@ class BookUzStockSyncService
                 $progressData['price_changed']++;
             }
 
-            // Hozirgi mavjud qoldiq
-            $oldStock = $this->branchStockService->totalAvailable('book', (int) $book->id);
-            $stockChanged = ($oldStock !== $qatortolStock);
+            // Hozirgi filiallardagi qoldiqlar
+            $oldQatortol = (int) (BranchStock::query()
+                ->where('product_type', 'book')
+                ->where('product_id', $book->id)
+                ->where('seller_location_id', $qatortolLoc->id)
+                ->value('quantity') ?? 0);
 
-            if ($qatortolStock > 0) {
+            $oldChorsu = (int) (BranchStock::query()
+                ->where('product_type', 'book')
+                ->where('product_id', $book->id)
+                ->where('seller_location_id', $chorsuLoc->id)
+                ->value('quantity') ?? 0);
+
+            $oldTotalStock = $oldQatortol + $oldChorsu;
+            $stockChanged = ($oldQatortol !== $qatortolStock || $oldChorsu !== $chorsuStock);
+
+            if ($newTotalStock > 0) {
                 $progressData['in_stock']++;
-                $progressData['total_stock_count'] += $qatortolStock;
+                $progressData['qatortol_stock_count'] += $qatortolStock;
+                $progressData['chorsu_stock_count'] += $chorsuStock;
+                $progressData['total_stock_count'] += $newTotalStock;
             } else {
                 $progressData['zeroed']++;
             }
@@ -404,17 +521,36 @@ class BookUzStockSyncService
             }
 
             if (! $dryRun) {
-                if ($stockChanged) {
-                    $this->branchStockService->setTotalFromLegacy(
+                // 1. Qatortol filiali qoldig'ini o'rnatish
+                if ($oldQatortol !== $qatortolStock) {
+                    $this->branchStockService->setBranchQuantity(
                         'book',
                         (int) $book->id,
                         0,
                         self::SELLER_ID,
+                        (int) $qatortolLoc->id,
                         $qatortolStock,
-                        $locationId,
+                        'bookuz_sync',
                         [
                             'actor_type' => 'system',
-                            'note' => "Book.uz Qatortol sync: {$qatortolStock} dona (avval: {$oldStock})",
+                            'note' => "Book.uz sync Qatortol (111): {$qatortolStock} dona (avval: {$oldQatortol})",
+                        ]
+                    );
+                }
+
+                // 2. Chorsu filiali qoldig'ini o'rnatish
+                if ($oldChorsu !== $chorsuStock) {
+                    $this->branchStockService->setBranchQuantity(
+                        'book',
+                        (int) $book->id,
+                        0,
+                        self::SELLER_ID,
+                        (int) $chorsuLoc->id,
+                        $chorsuStock,
+                        'bookuz_sync',
+                        [
+                            'actor_type' => 'system',
+                            'note' => "Book.uz sync Chorsu (777): {$chorsuStock} dona (avval: {$oldChorsu})",
                         ]
                     );
                 }
@@ -424,13 +560,25 @@ class BookUzStockSyncService
                     $bookUpdates['price'] = $remotePrice;
                     $bookUpdates['discountPrice'] = $remoteDiscountPrice;
                 }
-                // Agar kitobda qoldiq paydo bo'lsa, statusini faollashtiramiz
-                if ($qatortolStock > 0 && (! $book->status || $book->is_hidden)) {
+                // Agar filiallarda qoldiq bo'lsa, kitobni faollashtiramiz
+                if ($newTotalStock > 0 && (! $book->status || $book->is_hidden)) {
                     $bookUpdates['status'] = true;
                     $bookUpdates['is_hidden'] = false;
                 }
                 if (! empty($bookUpdates)) {
                     $book->update($bookUpdates);
+                }
+
+                // Agar global kitobga ulanmagan bo'lsa, ulab qo'yamiz
+                if (empty($book->edition_id)) {
+                    try {
+                        $edition = $this->catalogService->linkOffer($book, 'import');
+                        if ($edition) {
+                            $progressData['global_linked']++;
+                        }
+                    } catch (\Throwable $e) {
+                        Log::warning("[bookuz_stock_sync] Failed to link existing book {$book->id} to edition: {$e->getMessage()}");
+                    }
                 }
             }
 
@@ -439,11 +587,14 @@ class BookUzStockSyncService
                     'id' => $book->id,
                     'name' => $book->name,
                     'isbn' => $book->isbn,
-                    'old_stock' => $oldStock,
-                    'new_stock' => $qatortolStock,
+                    'old_stock' => $oldTotalStock,
+                    'new_stock' => $newTotalStock,
+                    'qatortol_stock' => $qatortolStock,
+                    'chorsu_stock' => $chorsuStock,
                     'old_price' => $oldPrice,
                     'new_price' => $remotePrice > 0 ? $remotePrice : $oldPrice,
                     'match' => $matchMethod ?: 'not_found',
+                    'global_linked' => ! empty($book->edition_id),
                 ];
             }
 
@@ -454,10 +605,10 @@ class BookUzStockSyncService
             }
         }
 
-        // 4. Qo'shimcha rejim: Book.uz dagi Qatortol qoldig'i bor yangi kitoblarni Seller 55 ga import qilish
+        // 4. Book.uz dagi filiallarida (Qatortol yoki Chorsu) qoldig'i bor yangi kitoblarni Seller 55 ga qo'shish va global kitobga ulash
         if ($importNew && ! $dryRun) {
             if ($logger) {
-                $logger("Qatortol filiali mavjud yangi kitoblar tekshirilmoqda...");
+                $logger("Book.uz dagi filiallarida (Qatortol/Chorsu) qoldig'i bor yangi kitoblar tekshirilmoqda...");
             }
 
             $existingSellerIsbns = Books::query()
@@ -469,13 +620,35 @@ class BookUzStockSyncService
                 ->flip()
                 ->all();
 
-            foreach ($indices['with_qatortol'] as $item) {
+            $existingSellerTitles = Books::query()
+                ->where('seller_id', self::SELLER_ID)
+                ->pluck('name')
+                ->map(fn ($n) => $this->normalizeTitle($n))
+                ->filter()
+                ->flip()
+                ->all();
+
+            $defaultCategoryId = (int) (BookCategories::query()->where('is_active', true)->value('id') ?? 1);
+
+            foreach ($indices['with_stock'] as $item) {
                 $p = $item['product'];
-                $stock = $item['stock'];
+                $qatortolStock = (int) $item['qatortol'];
+                $chorsuStock = (int) $item['chorsu'];
+                $totalStock = (int) $item['total'];
+
+                if ($totalStock <= 0) {
+                    continue;
+                }
 
                 $barcode = Isbn::clean((string) ($p['barcode'] ?? $p['isbn'] ?? ''));
+                $normTitle = $this->normalizeTitle($p['title'] ?? null);
+
+                // Agar sellerda allaqachon mavjud bo'lsa, o'tkazib yuboramiz
                 if ($barcode !== '' && isset($existingSellerIsbns[$barcode])) {
-                    continue; // Sellerda allaqachon bor
+                    continue;
+                }
+                if ($normTitle !== '' && isset($existingSellerTitles[$normTitle])) {
+                    continue;
                 }
 
                 $title = is_array($p['title'] ?? null)
@@ -490,46 +663,102 @@ class BookUzStockSyncService
                     ? ($p['description']['uz'] ?? '')
                     : ($p['description'] ?? '');
 
+                $images = ! empty($p['image']) ? Arr::wrap($p['image']) : [];
+                if (empty($images) && ! empty($p['images']) && is_array($p['images'])) {
+                    $images = array_filter(Arr::flatten($p['images']));
+                }
+
                 try {
                     $newBook = Books::create([
                         'seller_id' => self::SELLER_ID,
-                        'name' => $title,
-                        'author' => $author,
+                        'category_id' => $defaultCategoryId,
+                        'name' => trim((string) $title),
+                        'author' => trim((string) $author),
                         'isbn' => $barcode ?: null,
                         'price' => (int) ($p['price'] ?? 0),
                         'discountPrice' => (int) ($p['discountPrice'] ?? 0),
-                        'images' => ! empty($p['image']) ? Arr::wrap($p['image']) : [],
+                        'images' => $images,
                         'year' => (int) ($p['year'] ?? 0),
-                        'pages' => (int) ($p['numberOfPage'] ?? 0),
+                        'pages' => (int) ($p['numberOfPage'] ?? $p['pages'] ?? 0),
+                        'lang' => 'uz',
+                        'langType' => 'latin',
+                        'coverType' => 'soft',
                         'status' => true,
                         'is_approved' => 1,
                         'is_hidden' => false,
                         'description' => $desc,
                     ]);
 
-                    $this->branchStockService->setTotalFromLegacy(
-                        'book',
-                        (int) $newBook->id,
-                        0,
-                        self::SELLER_ID,
-                        $stock,
-                        $locationId,
-                        [
-                            'actor_type' => 'system',
-                            'note' => "Book.uz Qatortol yangi import: {$stock} dona",
-                        ]
-                    );
+                    // Qatortol filial qoldig'i (111)
+                    if ($qatortolStock > 0) {
+                        $this->branchStockService->setBranchQuantity(
+                            'book',
+                            (int) $newBook->id,
+                            0,
+                            self::SELLER_ID,
+                            (int) $qatortolLoc->id,
+                            $qatortolStock,
+                            'bookuz_sync',
+                            [
+                                'actor_type' => 'system',
+                                'note' => "Book.uz yangi import - Qatortol (111): {$qatortolStock} dona",
+                            ]
+                        );
+                    }
 
+                    // Chorsu filial qoldig'i (777)
+                    if ($chorsuStock > 0) {
+                        $this->branchStockService->setBranchQuantity(
+                            'book',
+                            (int) $newBook->id,
+                            0,
+                            self::SELLER_ID,
+                            (int) $chorsuLoc->id,
+                            $chorsuStock,
+                            'bookuz_sync',
+                            [
+                                'actor_type' => 'system',
+                                'note' => "Book.uz yangi import - Chorsu (777): {$chorsuStock} dona",
+                            ]
+                        );
+                    }
+
+                    // Global kartaga ulaymiz (BookEdition)
                     try {
-                        $this->catalogService->linkOffer($newBook, 'import');
-                    } catch (\Throwable) {
-                        // ignore catalog link error
+                        $edition = $this->catalogService->linkOffer($newBook, 'import');
+                        if ($edition) {
+                            $progressData['global_linked']++;
+                        }
+                    } catch (\Throwable $e) {
+                        Log::warning("[bookuz_stock_sync] Failed to link new book {$newBook->id} to edition: {$e->getMessage()}");
                     }
 
                     $progressData['new_imported']++;
-                    $progressData['total_stock_count'] += $stock;
+                    $progressData['qatortol_stock_count'] += $qatortolStock;
+                    $progressData['chorsu_stock_count'] += $chorsuStock;
+                    $progressData['total_stock_count'] += $totalStock;
+
                     if ($barcode !== '') {
                         $existingSellerIsbns[$barcode] = true;
+                    }
+                    if ($normTitle !== '') {
+                        $existingSellerTitles[$normTitle] = true;
+                    }
+
+                    if (count($updatedDetails) < 50) {
+                        $updatedDetails[] = [
+                            'id' => $newBook->id,
+                            'name' => $newBook->name,
+                            'isbn' => $newBook->isbn,
+                            'old_stock' => 0,
+                            'new_stock' => $totalStock,
+                            'qatortol_stock' => $qatortolStock,
+                            'chorsu_stock' => $chorsuStock,
+                            'old_price' => 0,
+                            'new_price' => (int) ($p['price'] ?? 0),
+                            'match' => 'new_import',
+                            'global_linked' => true,
+                        ];
                     }
                 } catch (\Throwable $e) {
                     Log::warning("[bookuz_stock_sync] Failed to import new book {$title}: {$e->getMessage()}");
@@ -544,7 +773,7 @@ class BookUzStockSyncService
         Cache::put(self::CACHE_PROGRESS_KEY, $progressData, 7200);
 
         if ($logger) {
-            $logger("Sinxronlash tugadi. Jami: {$progressData['scanned']} ta tekshirildi, {$progressData['stock_changed']} tasining qoldig'i yangilandi.");
+            $logger("Sinxronlash tugadi. Jami: {$progressData['scanned']} ta tekshirildi, {$progressData['stock_changed']} ta qoldiq va {$progressData['price_changed']} ta narx yangilandi. Yangi qo'shildi: {$progressData['new_imported']}.");
         }
 
         return [
@@ -558,6 +787,9 @@ class BookUzStockSyncService
             'stock_changed' => $progressData['stock_changed'],
             'price_changed' => $progressData['price_changed'],
             'new_imported' => $progressData['new_imported'],
+            'global_linked' => $progressData['global_linked'],
+            'qatortol_stock_count' => $progressData['qatortol_stock_count'],
+            'chorsu_stock_count' => $progressData['chorsu_stock_count'],
             'total_stock_count' => $progressData['total_stock_count'],
             'updated_samples' => $updatedDetails,
             'duration_seconds' => now()->diffInSeconds($startedAt),

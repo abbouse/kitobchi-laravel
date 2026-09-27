@@ -1044,9 +1044,9 @@
     "semantic_hash": "25ad84eb7154236e8f2415a9c416ac4c"
   },
   "app/Http/Controllers/Boshqaruv/AdminController.php": {
-    "mtime": 1790507222.8531408,
-    "seen": 1790507408.718278,
-    "ast_hash": "8595de76487e1cdbb57b77229b82ef1b",
+    "mtime": 1790536485.2889369,
+    "seen": 1790536945.938913,
+    "ast_hash": "317cc0d7b63e8b37cdb8392d703af875",
     "semantic_hash": ""
   },
   "app/Http/Controllers/CareersController.php": {
@@ -2334,9 +2334,9 @@
     "semantic_hash": "7887c2b6803a31b16074c8ff92d43b8d"
   },
   "app/Services/CatalogParsers/BookUzParserService.php": {
-    "mtime": 1790099982.3259366,
-    "seen": 1790356883.422996,
-    "ast_hash": "f36f1bdec7b769bcabac87869d77cb3d",
+    "mtime": 1790536444.3171554,
+    "seen": 1790536945.9390411,
+    "ast_hash": "11fb84c85b2299a603b9d53bacff440f",
     "semantic_hash": ""
   },
   "app/Services/ChatBotKnowledgeService.php": {
@@ -2646,10 +2646,10 @@
     "semantic_hash": "d6bee5e80ab6844784d057876ff95b6f"
   },
   "app/Services/ProductStockAlertService.php": {
-    "mtime": 1778350610.5664475,
-    "seen": 1787659299.020392,
-    "ast_hash": "d51435e7b7e99187d314bf7ce4b0522d",
-    "semantic_hash": "d51435e7b7e99187d314bf7ce4b0522d"
+    "mtime": 1790536674.5062487,
+    "seen": 1790536945.9390678,
+    "ast_hash": "686d8a7db9ddbf7a42efb650f131cfa0",
+    "semantic_hash": ""
   },
   "app/Services/ProductUgcRatingService.php": {
     "mtime": 1790099982.329813,
@@ -3000,8 +3000,8 @@
     "semantic_hash": "b7b09d68f8893547a7e5fbd5207fc8fa"
   },
   "config/fcm.php": {
-    "mtime": 1790512080.5658526,
-    "seen": 1790512186.32169,
+    "mtime": 1790536615.3233867,
+    "seen": 1790536945.939105,
     "ast_hash": "5ba2ac32c04d161d99057e23212f34b1",
     "semantic_hash": "5ba2ac32c04d161d99057e23212f34b1"
   },
@@ -4836,9 +4836,9 @@
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/Settings.tsx": {
-    "mtime": 1790507330.6906075,
-    "seen": 1790507408.718691,
-    "ast_hash": "010405208144cd2cc6499f614aad8297",
+    "mtime": 1790536763.3434417,
+    "seen": 1790536945.939297,
+    "ast_hash": "677d6b3048af3d8a562e070aabe8758c",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/Shikoyatlar.tsx": {
@@ -5364,9 +5364,9 @@
     "semantic_hash": ""
   },
   "routes/boshqaruv.php": {
-    "mtime": 1790507210.295932,
-    "seen": 1790507408.7187479,
-    "ast_hash": "79c57d3830b592c48e6269221ffb3883",
+    "mtime": 1790536368.3796737,
+    "seen": 1790536945.939355,
+    "ast_hash": "ce979001a008f20223b70a8d62d6e475",
     "semantic_hash": ""
   },
   "routes/channels.php": {
@@ -7110,9 +7110,9 @@
     "semantic_hash": ""
   },
   "app/Http/Controllers/Boshqaruv/CatalogParserController.php": {
-    "mtime": 1790512163.762232,
-    "seen": 1790512186.3215091,
-    "ast_hash": "2a4d28a7562a100a3ff0b26f39dad6b6",
+    "mtime": 1790536420.5562267,
+    "seen": 1790536945.9389162,
+    "ast_hash": "2d24f4c846b9413ba25bc752477f389c",
     "semantic_hash": ""
   },
   "app/Models/BookVideoSet.php": {
@@ -7173,6 +7173,18 @@
     "mtime": 1790507048.08029,
     "seen": 1790507408.718169,
     "ast_hash": "260fddf09f9bd0688805996907bb49ad",
+    "semantic_hash": ""
+  },
+  "app/Console/Commands/SyncBookUzStock.php": {
+    "mtime": 1790536733.981936,
+    "seen": 1790536945.9388359,
+    "ast_hash": "041e165471bb5b7e0b43be65ba6fd6a8",
+    "semantic_hash": ""
+  },
+  "app/Services/CatalogParsers/BookUzStockSyncService.php": {
+    "mtime": 1790536723.519404,
+    "seen": 1790536945.9390411,
+    "ast_hash": "283f790cff188f2381328305d3b8cce7",
     "semantic_hash": ""
   }
 }

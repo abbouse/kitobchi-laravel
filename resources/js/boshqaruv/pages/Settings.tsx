@@ -54,6 +54,9 @@ type BookUzStockProgress = {
   stock_changed: number;
   price_changed: number;
   new_imported: number;
+  global_linked?: number;
+  qatortol_stock_count?: number;
+  chorsu_stock_count?: number;
   total_stock_count: number;
   last_title: string | null;
   started_at: string;
@@ -72,6 +75,9 @@ type BookUzStockReport = {
   stock_changed: number;
   price_changed: number;
   new_imported: number;
+  global_linked?: number;
+  qatortol_stock_count?: number;
+  chorsu_stock_count?: number;
   total_stock_count: number;
   updated_samples: Array<{
     id: number;
@@ -79,9 +85,12 @@ type BookUzStockReport = {
     isbn: string;
     old_stock: number;
     new_stock: number;
+    qatortol_stock?: number;
+    chorsu_stock?: number;
     old_price?: number;
     new_price?: number;
     match: string;
+    global_linked?: boolean;
   }>;
   duration_seconds: number;
 };
@@ -569,9 +578,9 @@ function CatalogParserSection({
   const [enrichError, setEnrichError] = useState<string | null>(null);
   const [enrichReport, setEnrichReport] = useState<EnrichReport | null>(null);
 
-  // Book.uz Qatortol qoldiqlarini sinxronlash state (Seller #55)
+  // Book.uz Qatortol & Chorsu qoldiqlarini sinxronlash state (Seller #55)
   const [stockLimit, setStockLimit] = useState('50');
-  const [stockImportNew, setStockImportNew] = useState(false);
+  const [stockImportNew, setStockImportNew] = useState(true);
   const [stockDryRun, setStockDryRun] = useState(false);
   const [stockLoading, setStockLoading] = useState(false);
   const [stockProgress, setStockProgress] = useState<BookUzStockProgress | null>(null);
@@ -964,12 +973,12 @@ function CatalogParserSection({
           </form>
         </SectionCard>
 
-        {/* Book.uz Qatortol qoldiqlarini sinxronlash (Seller #55) */}
+        {/* Book.uz Qatortol & Chorsu qoldiqlarini sinxronlash (Seller #55) */}
         <div className="mt-3">
-          <SectionCard title="Book.uz (Qatortol) qoldiqlari — Seller #55" icon="ti-building-store">
+          <SectionCard title="Book.uz (Qatortol & Chorsu) qoldiqlari — Seller #55" icon="ti-building-store">
             <p className="text-muted f-s-13 mb-3">
-              Book.uz saytidagi <strong>Toshkent - Qatortol - bosh do'kon</strong> filiali qoldiqlarini olib, marketimizdagi <strong>Seller #55</strong> kitoblari qoldig'iga o'rnatadi. 
-              Qatortolda yo'q kitoblar qoldig'i <code>0</code> ga tushadi, mavjud bo'lsa yangi soni bilan darhol faollashadi.
+              Book.uz saytidagi <strong>Toshkent - Qatortol - bosh do'kon (111)</strong> va <strong>Toshkent - Chorsu filial (777)</strong> qoldiqlarini olib, marketimizdagi <strong>Seller #55</strong> tegishli filiallariga o'rnatadi. 
+              Book.uz da bor, lekin bizda mavjud bo'lmagan kitoblarni avtomatik ravishda Seller 55 ga qo'shib, umumiy <strong>global kitob (BookEdition)</strong> kartasiga ulaydi.
             </p>
 
             {stockStats && (
@@ -1005,7 +1014,7 @@ function CatalogParserSection({
                     onChange={(e) => setStockImportNew(e.target.checked)}
                     disabled={stockLoading}
                   />
-                  <span className="f-s-13">Qatortolda bor yangi kitoblarni ham Seller 55 ga qo'shish</span>
+                  <span className="f-s-13">Filiallarda bor yangi kitoblarni Seller 55 ga qo'shish va global kitobga ulash</span>
                 </label>
               </div>
 
@@ -1039,7 +1048,7 @@ function CatalogParserSection({
                     </>
                   ) : (
                     <>
-                      <i className="ti ti-building-warehouse me-1"></i>Qatortol qoldiqlarini sinxronlash
+                      <i className="ti ti-building-warehouse me-1"></i>Qatortol & Chorsu qoldiqlarini sinxronlash
                     </>
                   )}
                 </button>
@@ -1142,7 +1151,7 @@ function CatalogParserSection({
               <div className="d-flex align-items-center justify-content-between mb-2">
                 <div className="d-flex align-items-center gap-2">
                   <span className="spinner-border spinner-border-sm text-warning" role="status" aria-hidden="true"></span>
-                  <strong className="text-dark">Book.uz (Qatortol filiali) qoldiqlari orqa fonda sinxronlanmoqda...</strong>
+                  <strong className="text-dark">Book.uz (Qatortol & Chorsu filiallari) qoldiqlari orqa fonda sinxronlanmoqda...</strong>
                 </div>
                 <button type="button" className="btn btn-outline-warning btn-xs py-0 px-2 f-s-11" onClick={refreshStats}>
                   Yangilash
@@ -1160,11 +1169,14 @@ function CatalogParserSection({
               <div className="f-s-13">
                 Jarayon: <strong>{stockProgress.scanned}</strong> {stockProgress.total_target > 0 ? `/ ${stockProgress.total_target}` : 'ta kitob'} | 
                 Topildi: <strong className="text-primary">{stockProgress.matched}</strong> | 
-                Qatortolda bor: <strong className="text-success">{stockProgress.in_stock} ta ({stockProgress.total_stock_count} dona)</strong> | 
+                Filiallarda bor: <strong className="text-success">{stockProgress.in_stock} ta ({stockProgress.total_stock_count} dona)</strong> | 
                 Qoldiq 0 qilindi: <strong className="text-muted">{stockProgress.zeroed}</strong> | 
                 Qoldig'i yangilandi: <strong className="text-warning">{stockProgress.stock_changed}</strong>
                 {stockProgress.new_imported > 0 && (
                   <span> | Yangi qo'shildi: <strong className="text-info">+{stockProgress.new_imported}</strong></span>
+                )}
+                {stockProgress.global_linked && stockProgress.global_linked > 0 && (
+                  <span> | Global ulandi: <strong className="text-success">+{stockProgress.global_linked}</strong></span>
                 )}
               </div>
               {stockProgress.last_title && (
@@ -1182,7 +1194,7 @@ function CatalogParserSection({
               <div className="d-flex align-items-center justify-content-between mb-2">
                 <div className="d-flex align-items-center gap-2">
                   <i className="ti ti-circle-check text-success f-s-22"></i>
-                  <h6 className="mb-0 text-success f-w-700">Book.uz (Qatortol) qoldiqlari muvaffaqiyatli sinxronlandi!</h6>
+                  <h6 className="mb-0 text-success f-w-700">Book.uz (Qatortol & Chorsu) qoldiqlari muvaffaqiyatli sinxronlandi!</h6>
                 </div>
                 <span className="badge bg-success">{stockReport.duration_seconds} soniya</span>
               </div>
@@ -1195,46 +1207,58 @@ function CatalogParserSection({
                 </div>
                 <div className="col-sm-3">
                   <div className="p-2 bg-white rounded border">
-                    <span className="text-muted d-block f-s-11">Qatortolda mavjud:</span>
+                    <span className="text-muted d-block f-s-11">Filiallarda mavjud:</span>
                     <strong className="text-success">{fmt(stockReport.in_stock)} ta ({fmt(stockReport.total_stock_count)} dona)</strong>
                   </div>
                 </div>
                 <div className="col-sm-3">
                   <div className="p-2 bg-white rounded border">
-                    <span className="text-muted d-block f-s-11">Qoldig'i yangilandi:</span>
-                    <strong className="text-primary">{fmt(stockReport.stock_changed)} ta</strong>
+                    <span className="text-muted d-block f-s-11">Qatortol / Chorsu qoldiq:</span>
+                    <strong className="text-primary">{fmt(stockReport.qatortol_stock_count || 0)} / {fmt(stockReport.chorsu_stock_count || 0)} dona</strong>
                   </div>
                 </div>
                 <div className="col-sm-3">
                   <div className="p-2 bg-white rounded border">
-                    <span className="text-muted d-block f-s-11">Narxi yangilandi:</span>
-                    <strong className="text-warning">{fmt(stockReport.price_changed || 0)} ta</strong>
+                    <span className="text-muted d-block f-s-11">Yangi import & Global ulandi:</span>
+                    <strong className="text-info">+{fmt(stockReport.new_imported || 0)} ta</strong>
                   </div>
                 </div>
               </div>
               {stockReport.updated_samples && stockReport.updated_samples.length > 0 && (
                 <div className="mt-3">
-                  <span className="f-s-12 text-muted f-w-600">Yangilangan kitoblardan ayrim namunalar (qoldiq va yangi narxlar):</span>
-                  <div className="table-responsive mt-1 bg-white rounded border" style={{ maxHeight: '220px' }}>
+                  <span className="f-s-12 text-muted f-w-600">Yangilangan kitoblardan ayrim namunalar (qoldiq, filiallar va yangi narxlar):</span>
+                  <div className="table-responsive mt-1 bg-white rounded border" style={{ maxHeight: '240px' }}>
                     <table className="table table-sm table-hover mb-0 f-s-12">
                       <thead className="table-light">
                         <tr>
                           <th>Kitob nomi</th>
                           <th>ISBN</th>
-                          <th className="text-center">Eski qoldiq</th>
-                          <th className="text-center">Yangi (Qatortol)</th>
+                          <th className="text-center">Eski</th>
+                          <th className="text-center">Qatortol (111)</th>
+                          <th className="text-center">Chorsu (777)</th>
+                          <th className="text-center">Jami</th>
                           <th className="text-end">Hozirgi narx</th>
+                          <th className="text-center">Global</th>
                         </tr>
                       </thead>
                       <tbody>
                         {stockReport.updated_samples.map((s) => (
                           <tr key={s.id}>
-                            <td className="text-truncate" style={{ maxWidth: '220px' }}>{s.name}</td>
+                            <td className="text-truncate" style={{ maxWidth: '200px' }}>{s.name}</td>
                             <td><code>{s.isbn || '-'}</code></td>
                             <td className="text-center text-muted">{s.old_stock}</td>
+                            <td className="text-center font-bold text-primary">{s.qatortol_stock ?? '-'}</td>
+                            <td className="text-center font-bold text-info">{s.chorsu_stock ?? '-'}</td>
                             <td className="text-center font-bold text-success"><strong>{s.new_stock} dona</strong></td>
                             <td className="text-end font-bold text-dark">
                               {s.new_price ? `${fmt(s.new_price)} so'm` : '-'}
+                            </td>
+                            <td className="text-center">
+                              {s.global_linked ? (
+                                <span className="badge bg-light-success text-success f-s-11">Ulangan</span>
+                              ) : (
+                                <span className="badge bg-light-secondary text-muted f-s-11">-</span>
+                              )}
                             </td>
                           </tr>
                         ))}

@@ -199,18 +199,18 @@ class CatalogParserController extends Controller
     }
 
     /**
-     * Seller 55 kitoblarini Book.uz saytidagi Qatortol filiali qoldig'i bilan sinxronlash.
+     * Seller 55 kitoblarini Book.uz saytidagi Qatortol (111) va Chorsu (777) filiallari qoldiqlari bilan sinxronlash.
      */
     public function syncBookUzStock(Request $request): JsonResponse
     {
         $limit = (int) $request->input('limit', 50);
-        $importNew = (bool) $request->input('import_new', false);
+        $importNew = $request->boolean('import_new', true);
         $dryRun = (bool) $request->input('dry_run', false);
 
         if ($limit === 0 || $limit > 100) {
             $artisan = base_path('artisan');
             $limitFlag = $limit > 0 ? "--limit={$limit}" : '--limit=0';
-            $importFlag = $importNew ? '--import-new' : '';
+            $skipNewFlag = ! $importNew ? '--skip-new' : '';
             $dryRunFlag = $dryRun ? '--dry-run' : '';
             $phpBinary = $this->getCliPhpBinary();
             $logFile = storage_path('logs/bookuz-stock-sync.log');
@@ -220,7 +220,7 @@ class CatalogParserController extends Controller
                 escapeshellcmd($phpBinary),
                 escapeshellarg($artisan),
                 $limitFlag,
-                $importFlag,
+                $skipNewFlag,
                 $dryRunFlag,
                 escapeshellarg($logFile)
             );
@@ -236,9 +236,13 @@ class CatalogParserController extends Controller
                 'in_stock' => 0,
                 'zeroed' => 0,
                 'stock_changed' => 0,
+                'price_changed' => 0,
                 'new_imported' => 0,
+                'global_linked' => 0,
+                'qatortol_stock_count' => 0,
+                'chorsu_stock_count' => 0,
                 'total_stock_count' => 0,
-                'last_title' => 'Fonda Book.uz Qatortol qoldiqlarini sinxronlash boshlanmoqda...',
+                'last_title' => 'Fonda Book.uz Qatortol va Chorsu filiallari qoldiqlarini sinxronlash boshlanmoqda...',
                 'started_at' => now()->toIso8601String(),
                 'updated_at' => now()->toIso8601String(),
             ];
@@ -252,7 +256,7 @@ class CatalogParserController extends Controller
             return response()->json([
                 'success' => true,
                 'is_background' => true,
-                'message' => "Book.uz (Qatortol filiali) qoldiqlarini sinxronlash orqa fonda (background) ishga tushirildi! Sayt qotmaydi, jarayonni quyidagi ko'rsatkichlar orqali real vaqtda kuzatib turishingiz mumkin.",
+                'message' => "Book.uz (Qatortol va Chorsu filiallari) qoldiqlarini sinxronlash orqa fonda (background) ishga tushirildi! Sayt qotmaydi, jarayonni quyidagi ko'rsatkichlar orqali real vaqtda kuzatib turishingiz mumkin.",
                 'stats' => $this->syncService->getStats(),
                 'bookuz_stock_stats' => $this->bookUzStockSync->getStats(),
                 'bookuz_stock_progress' => $progressData,
@@ -265,7 +269,7 @@ class CatalogParserController extends Controller
             return response()->json([
                 'success' => true,
                 'is_background' => false,
-                'message' => "Book.uz (Qatortol filiali) bilan sinxronlash yakunlandi: {$report['stock_changed']} ta kitob qoldig'i yangilandi.",
+                'message' => "Book.uz (Qatortol & Chorsu) bilan sinxronlash yakunlandi: {$report['stock_changed']} ta qoldiq, {$report['price_changed']} ta narx yangilandi, {$report['new_imported']} ta yangi kitob qo'shilib global kartaga ulandi.",
                 'report' => $report,
                 'stats' => $this->syncService->getStats(),
                 'bookuz_stock_stats' => $this->bookUzStockSync->getStats(),
