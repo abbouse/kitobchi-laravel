@@ -1,9 +1,8 @@
-import { type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { Link, router, usePage } from '@inertiajs/react';
 import { PageCrumbs } from '../Layout';
 import FormAction from '../components/FormAction';
-import { EmptyState } from '../components/Axelit';
-import { AboutList, MediaCard } from '../components/Profile';
+import { EmptyState, StatWidget, MiniStat } from '../components/Axelit';
 import { CoverInputs, EditionFields, KeepImages, editionStatus, isbnCheckChip, type OptionItem } from '../components/CatalogFields';
 
 const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n || 0);
@@ -36,11 +35,15 @@ interface Edition {
   description?: string | null;
   frontUrl?: string | null;
   backUrl?: string | null;
-  rawImages?: string[];
-  images?: (string | null)[];
+  banned?: boolean;
+  banUrl?: string;
+  unbanUrl?: string;
   variant?: string;
   variantDiff?: string[];
   mergedInto?: { id: number; title: string; url: string } | null;
+  tagIds?: number[];
+  rawImages?: string[];
+  images?: (string | null)[];
 }
 
 interface Offer {
@@ -63,14 +66,22 @@ interface Offer {
 
 interface Submission {
   id: number;
+  type?: string;
   status: string;
   seller: string;
   isbn?: string | null;
   isbnCheck?: string | null;
   backIsbnServer?: string | null;
   backIsbnMethod?: string | null;
+  backIsbnClient?: string | null;
+  frontUrl?: string | null;
+  backUrl?: string | null;
+  message?: string | null;
+  field?: string | null;
+  suggested?: string | null;
+  requestedCover?: string | null;
+  proofUrls?: string[];
   createdAt?: string;
-  rejectReason?: string | null;
 }
 
 type Props = {
@@ -81,11 +92,25 @@ type Props = {
   formOptions: { categories: OptionItem[]; publishers: OptionItem[] };
 };
 
-
 export default function CatalogEdition() {
   const { edition, offers = [], submissions = [], mergeCandidates = [], formOptions } = usePage<Props>().props;
   const [label, chip] = editionStatus(edition.status, edition.verified);
   const base = `/boshqaruv/catalog/${edition.id}`;
+
+  const [activeTab, setActiveTab] = useState<'offers' | 'about' | 'submissions' | 'merge'>('offers');
+  const [copiedIsbn, setCopiedIsbn] = useState(false);
+  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(edition.frontUrl || edition.cover || null);
+
+  const totalSold = offers.reduce((sum, o) => sum + (o.sold || 0), 0);
+  const totalStock = offers.reduce((sum, o) => sum + (o.stock || 0), 0);
+  const buyBoxOffer = offers.find((o) => o.featured) || offers[0] || null;
+
+  const copyIsbn = (text: string) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopiedIsbn(true);
+    setTimeout(() => setCopiedIsbn(false), 2000);
+  };
 
   const submitUpdate = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -99,37 +124,114 @@ export default function CatalogEdition() {
     router.post(`${base}/merge`, new FormData(event.currentTarget), { preserveScroll: true });
   };
 
+  const submitBan = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    router.post(`${base}/ban`, new FormData(event.currentTarget), { preserveScroll: true });
+  };
+
+  const submitUnban = () => {
+    if (window.confirm("Kitob sotuvga qaytarilsinmi?")) {
+      router.post(`${base}/unban`, {}, { preserveScroll: true });
+    }
+  };
+
   const keepItems = (edition.rawImages || []).map((path, index) => ({ path, url: edition.images?.[index] || null }));
+  const allImages = Array.from(new Set([edition.frontUrl, edition.backUrl, ...(edition.images || [])].filter((x): x is string => Boolean(x))));
+
+  const isBanned = edition.banned || edition.status === 'rejected';
 
   return (
-    <div>
-      <div className="d-flex align-items-end justify-content-between flex-wrap gap-3 mx-1 mb-3">
-        <div>
-          <h4 className="main-title mb-0">{edition.title}</h4><PageCrumbs />
-          <p className="mb-0 text-secondary">Katalog kartasi #{edition.id}{edition.variant ? ` · ${edition.variant}` : ''}</p>
+    <div className="pb-5">
+      {/* ── Top Header & Actions ── */}
+      <div className="d-flex align-items-center justify-content-between flex-wrap gap-3 mx-1 mb-4">
+        <div className="min-w-0">
+          <div className="d-flex align-items-center gap-2 mb-1 flex-wrap">
+            <span className="badge bg-light-primary text-primary f-w-600">ID #{edition.id}</span>
+            <span className={`badge ${chip}`}>{label}</span>
+            {isBanned ? (
+              <span className="badge bg-danger-300 text-danger-dark f-w-600">
+                <i className="ti ti-ban me-1"></i>Sotuvdan olingan (Taqiqlangan)
+              </span>
+            ) : null}
+            {edition.deleted && !isBanned ? (
+              <span className="badge text-light-secondary">O'chirilgan</span>
+            ) : null}
+            {edition.variant ? <span className="badge text-light-info">{edition.variant}</span> : null}
+          </div>
+          <h3 className="main-title mb-1 f-w-700 text-dark text-break">{edition.title}</h3>
+          <p className="mb-0 text-secondary f-s-14 d-flex align-items-center gap-2 flex-wrap">
+            <span>Muallif: <strong className="text-dark">{edition.author || '—'}</strong></span>
+            <span>·</span>
+            {edition.isbn ? (
+              <span className="d-inline-flex align-items-center gap-1">
+                ISBN: <code className="text-primary f-w-600">{edition.isbn}</code>
+                <button
+                  type="button"
+                  className="btn btn-link p-0 text-secondary"
+                  onClick={() => copyIsbn(edition.isbn || '')}
+                  title="Nusxalash"
+                >
+                  <i className={copiedIsbn ? "ti ti-check text-success" : "ti ti-copy"}></i>
+                </button>
+                {copiedIsbn ? <small className="text-success f-w-600 ms-1">Nusxalandi!</small> : null}
+              </span>
+            ) : (
+              <span className="text-muted">ISBN yo'q</span>
+            )}
+            <span>·</span>
+            <span>Yaratilgan: <span className="text-dark">{edition.createdAt || '—'}</span></span>
+          </p>
         </div>
-        <div className="d-flex gap-2 flex-wrap">
-          <Link href="/boshqaruv/catalog" className="btn btn-light-secondary btn-sm"><i className="ti ti-arrow-left me-1"></i>Katalog</Link>
-          {!edition.deleted && edition.status !== 'merged' && (!edition.verified || edition.status !== 'active') ? (
-            <button type="button" className="btn btn-success btn-sm" onClick={() => router.post(`${base}/verify`, {}, { preserveScroll: true })}>
-              <i className="ti ti-circle-check me-1"></i>Tasdiqlash
+
+        <div className="d-flex gap-2 flex-wrap align-items-center">
+          <Link href="/boshqaruv/catalog" className="btn btn-light-secondary btn-sm d-inline-flex align-items-center">
+            <i className="ti ti-arrow-left me-1"></i>Katalog
+          </Link>
+
+          {!edition.deleted && edition.status !== 'merged' && (!edition.verified || edition.status !== 'active') && !isBanned ? (
+            <button
+              type="button"
+              className="btn btn-success btn-sm d-inline-flex align-items-center shadow-sm"
+              onClick={() => router.post(`${base}/verify`, {}, { preserveScroll: true })}
+            >
+              <i className="ti ti-circle-check me-1"></i>Katalogda Tasdiqlash
             </button>
           ) : null}
+
           {!edition.deleted && edition.status !== 'merged' ? (
-            <FormAction label="Tahrirlash" icon="ti ti-edit" variant="light-primary" modalSize="lg" title="Kitob kartasini tahrirlash" description="Saqlangach nom, muallif, muqova va tavsif shu kitobning barcha do'kon takliflariga ko'chiriladi." onSubmit={submitUpdate}>
+            <FormAction
+              label="Tahrirlash"
+              icon="ti ti-edit"
+              variant="primary"
+              modalSize="lg"
+              title="Kitob kartasini tahrirlash"
+              description="Saqlangach nom, muallif, muqova, annotatsiya shu kitobning barcha do'kon takliflariga avtomatik ko'chiriladi va vektorlar qayta hisoblanadi."
+              onSubmit={submitUpdate}
+            >
               <EditionFields values={edition} options={formOptions} />
               <hr />
-              <label className="form-label">Mavjud rasmlar</label>
+              <label className="form-label f-w-600">Mavjud rasmlar</label>
               <KeepImages items={keepItems} />
               <div className="mt-3"><CoverInputs requireFront={false} /></div>
               <div className="alert alert-light-primary mt-3 mb-0 f-s-13">
                 <i className="ti ti-info-circle me-1"></i>
-                Saqlangach ma'lumot shu kartaga ulangan barcha do'kon takliflariga avtomatik ko'chiriladi.
+                Saqlangach ma'lumot barcha do'konlarga sinxronlashtiriladi va qidiruv indeksi yangilanadi.
               </div>
             </FormAction>
           ) : null}
-          {!edition.deleted && edition.status !== 'merged' ? (
-            <FormAction label="Birlashtirish" icon="ti ti-arrows-exchange" variant="light-warning" title="Boshqa kartaga birlashtirish" description="Bu kartaning barcha takliflari, sharhlari va arizalari tanlangan kartaga o'tadi. Bu karta 'birlashtirilgan' bo'lib qoladi." submitLabel="Birlashtirish" submitVariant="warning" confirmText="Kartalar birlashtirilsinmi?" onSubmit={submitMerge}>
+
+          {!edition.deleted && edition.status !== 'merged' && !isBanned ? (
+            <FormAction
+              label="Birlashtirish"
+              icon="ti ti-arrows-exchange"
+              variant="light-warning"
+              title="Boshqa kartaga birlashtirish"
+              description="Bu kartaning barcha takliflari, sharhlari va arizalari tanlangan kartaga o'tadi."
+              submitLabel="Birlashtirish"
+              submitVariant="warning"
+              confirmText="Kartalar birlashtirilsinmi?"
+              onSubmit={submitMerge}
+            >
               {mergeCandidates.length ? (
                 <div className="list-group mb-3">
                   {mergeCandidates.map((item) => (
@@ -140,7 +242,7 @@ export default function CatalogEdition() {
                         <small className="text-secondary">#{item.id} · {item.author || '—'} · {item.isbn || "ISBN yo'q"} · {item.offersCount} ta taklif</small>
                         {item.variant ? <small className="d-block text-primary">{item.variant}</small> : null}
                         {item.variantDiff?.length ? (
-                          <small className="d-block text-danger"><i className="ti ti-alert-triangle me-1"></i>Boshqa nashr — birlashtirilmasin ({item.variantDiff.join(', ')})</small>
+                          <small className="d-block text-danger"><i className="ti ti-alert-triangle me-1"></i>Boshqa nashr ({item.variantDiff.join(', ')})</small>
                         ) : null}
                       </span>
                     </label>
@@ -154,127 +256,604 @@ export default function CatalogEdition() {
               </div>
             </FormAction>
           ) : null}
-          {edition.deleted ? (
-            <button type="button" className="btn btn-light-success btn-sm" onClick={() => router.patch(`${base}/restore`, {}, { preserveScroll: true })}><i className="ti ti-rotate me-1"></i>Tiklash</button>
-          ) : edition.status !== 'merged' ? (
-            <button type="button" className="btn btn-light-danger btn-sm" onClick={() => { if (window.confirm("Karta o'chirilsinmi? Faol takliflari bo'lsa, o'chirilmaydi.")) router.delete(base, { preserveScroll: true }); }}>
-              <i className="ti ti-trash me-1"></i>O'chirish
+
+          {isBanned || edition.deleted ? (
+            <button
+              type="button"
+              className="btn btn-success btn-sm d-inline-flex align-items-center shadow-sm"
+              onClick={submitUnban}
+            >
+              <i className="ti ti-rotate-clockwise me-1"></i>Sotuvga qaytarish
             </button>
+          ) : edition.status !== 'merged' ? (
+            <FormAction
+              label="Sotuvdan olish"
+              icon="ti ti-ban"
+              variant="light-danger"
+              title="Kitobni sotuvdan olib tashlash (Taqiqlash)"
+              description="Ushbu amal kitob davlat taqiqiga tushgan yoki sotuvdan olinayotgan holatlar uchun himoyadir."
+              submitLabel="Sotuvdan to'liq olib tashlash"
+              submitVariant="danger"
+              confirmText="Haqiqatan ham bu kitobni barcha do'konlardan sotuvdan olib tashlamoqchimisiz? Kitob savat va sevimlilardan o'chiriladi."
+              onSubmit={submitBan}
+            >
+              <div className="alert alert-danger f-s-13 mb-3">
+                <i className="ti ti-alert-triangle me-1"></i>
+                Ushbu amal kitobning barcha do'kon takliflarini ({edition.offersCount} ta) darhol <strong>sotuvdan yashiradi</strong> va <strong>arxivlaydi</strong>. Xaridorlarning <strong>savati</strong> va <strong>sevimlilaridan</strong> butunlay tozalanadi.
+                <br /><br />
+                <em>Eslatma: Avval sotib olingan va to'langan buyurtmalar tarixi hamda BookClub muhokamalari saqlanib qoladi.</em>
+              </div>
+              <div className="mb-3">
+                <label className="form-label f-w-600">Sotuvdan olish sababi (izoh)</label>
+                <input
+                  type="text"
+                  name="reason"
+                  className="form-control"
+                  placeholder="Masalan: O'zbekistonda taqiqlangan adabiyot ro'yxatiga tushgan"
+                  defaultValue="O'zbekistonda taqiqlangan adabiyot yoki sotuv cheklovi"
+                />
+              </div>
+            </FormAction>
           ) : null}
         </div>
       </div>
 
-      {edition.mergedInto ? (
-        <div className="alert alert-light-warning d-flex align-items-center gap-2">
-          <i className="ti ti-arrows-exchange f-s-18"></i>
-          <span>Bu karta <Link href={edition.mergedInto.url} className="f-w-600">#{edition.mergedInto.id} {edition.mergedInto.title}</Link> ga birlashtirilgan.</span>
+      {/* ── Banned or Merged Alert Banner ── */}
+      {isBanned ? (
+        <div className="alert alert-danger d-flex align-items-center gap-3 p-3 mb-4 b-r-12 shadow-sm border-0">
+          <div className="h-45 w-45 d-flex-center b-r-50 bg-white text-danger flex-shrink-0 f-s-24 shadow-sm">
+            <i className="ti ti-ban"></i>
+          </div>
+          <div className="flex-grow-1">
+            <h5 className="mb-1 text-danger f-w-700">Ushbu kitob boshqaruv tomonidan sotuvdan olib tashlangan</h5>
+            <p className="mb-0 text-dark f-s-13">
+              Mijozlar ilovasida va qidiruvda ko'rinmaydi. Barcha do'kon takliflari yashirilgan, savat va sevimlilardan chiqarilgan.
+              Tarixiy sotilgan buyurtmalar va BookClub'dagi izohlar saqlanadi.
+            </p>
+          </div>
+          <button type="button" className="btn btn-outline-danger btn-sm" onClick={submitUnban}>
+            Qayta tiklash
+          </button>
         </div>
       ) : null}
 
-      <div className="row">
-        <div className="col-lg-4 col-xxl-3">
-          <MediaCard
-            image={edition.cover}
-            title={edition.title}
-            subtitle={edition.author}
-            badges={<>
-              <span className={`badge ${chip}`}>{label}</span>
-              {edition.deleted ? <span className="badge text-light-danger">O'chirilgan</span> : null}
-            </>}
-            stats={[
-              { label: 'Taklif', value: fmt(edition.offersCount) },
-              { label: 'Sotuvda', value: fmt(edition.inStockOffers) },
-              { label: 'Eng arzon', value: edition.minPrice ? fmt(edition.minPrice) : '—' },
-            ]}
-          />
-          {edition.backUrl ? (
-            <div className="card">
-              <div className="card-header"><h5 className="mb-0">Orqa muqova</h5></div>
-              <div className="card-body">
-                <a href={edition.backUrl} target="_blank" rel="noreferrer"><img className="w-100 b-r-10" src={edition.backUrl} alt="" /></a>
-              </div>
-            </div>
-          ) : null}
+      {edition.mergedInto ? (
+        <div className="alert alert-light-warning d-flex align-items-center gap-3 p-3 mb-4 b-r-12 border">
+          <i className="ti ti-arrows-exchange f-s-24 text-warning"></i>
+          <div>
+            <h6 className="mb-0 f-w-600">Bu karta boshqa nashrga birlashtirilgan</h6>
+            <p className="mb-0 text-secondary f-s-13">
+              Barcha do'kon takliflari va ma'lumotlar <Link href={edition.mergedInto.url} className="f-w-700 text-primary">#{edition.mergedInto.id} {edition.mergedInto.title}</Link> ga o'tkazilgan.
+            </p>
+          </div>
         </div>
+      ) : null}
 
-        <div className="col-lg-8 col-xxl-9">
-          <AboutList
-            title="Kitob ma'lumotlari"
-            rows={[
-              { icon: 'ti-qrcode', label: 'ISBN', value: edition.isbn },
-              { icon: 'ti-user', label: 'Muallif', value: edition.author },
-              { icon: 'ti-language', label: 'Tarjimon', value: edition.translator },
-              { icon: 'ti-building', label: 'Nashriyot', value: edition.publisher },
-              { icon: 'ti-bookmarks', label: 'Kategoriya', value: edition.category },
-              { icon: 'ti-language', label: 'Til / yozuv', value: [edition.lang, edition.langType].filter(Boolean).join(' / ') },
-              { icon: 'ti-book', label: 'Muqova / sahifa', value: [edition.coverType, edition.pages ? `${edition.pages} bet` : null].filter(Boolean).join(' / ') },
-              { icon: 'ti-calendar', label: 'Yil', value: edition.year },
-              { icon: 'ti-clock', label: 'Yaratilgan', value: edition.createdAt },
-            ]}
-          >
-            {edition.description ? <p className="text-secondary f-s-13 mb-3" style={{ whiteSpace: 'pre-wrap' }}>{edition.description}</p> : null}
-          </AboutList>
+      {/* ── 4 Top KPI Stat Widgets (Axelit eCommerce Ritm) ── */}
+      <div className="row g-3 mb-4">
+        <div className="col-xl-3 col-md-6">
+          <StatWidget
+            index={0}
+            label="Eng yaxshi narx (BuyBox)"
+            value={edition.minPrice ? `${fmt(edition.minPrice)} so'm` : 'Taklif yo\'q'}
+            sub={buyBoxOffer ? `${buyBoxOffer.seller} tomonidan` : 'Do\'konlar ulanmagan'}
+            variant="provided"
+          />
+        </div>
+        <div className="col-xl-3 col-md-6">
+          <StatWidget
+            index={1}
+            label="Do'kon takliflari"
+            value={`${fmt(edition.offersCount)} ta`}
+            sub={`${fmt(edition.inStockOffers)} tasi sotuvda mavjud`}
+            variant="primary"
+          />
+        </div>
+        <div className="col-xl-3 col-md-6">
+          <StatWidget
+            index={2}
+            label="Ombor qoldig'i"
+            value={`${fmt(totalStock)} dona`}
+            sub={`${fmt(totalSold)} dona sotilgan`}
+            variant="store"
+          />
+        </div>
+        <div className="col-xl-3 col-md-6">
+          <StatWidget
+            index={3}
+            label="Katalog Holati"
+            value={label}
+            sub={isBanned ? "Sotuv bloklangan" : edition.verified ? "Rasmiy tekshirilgan" : "Moderatsiyada"}
+            variant={isBanned ? "danger" : "info"}
+          />
+        </div>
+      </div>
 
-          <div className="card">
-            <div className="card-header">
-              <h5 className="mb-0">Do'kon takliflari</h5>
-              <p className="mb-0 text-secondary f-s-13">Mijoz ro'yxatlarida "tanlangan" taklif chiqadi: sotuvda bor, eng arzon, ishonchli do'kon</p>
-            </div>
-            <div className="card-body">
-              <div className="table-responsive app-scroll">
-                <table className="table table-bottom-border align-middle mb-0">
-                  <thead><tr><th>Do'kon</th><th>Narx</th><th>Qoldiq</th><th>Sotilgan</th><th>Status</th><th></th></tr></thead>
-                  <tbody>
-                    {offers.map((offer) => (
-                      <tr key={offer.id}>
-                        <td>
-                          <span className="f-w-600">{offer.seller}</span>
-                          <small className="d-block text-secondary">#{offer.id}{offer.artikul ? ` · ${offer.artikul}` : ''}</small>
-                        </td>
-                        <td>
-                          <span className="f-w-600">{fmt(offer.effectivePrice)} so'm</span>
-                          {offer.effectivePrice < offer.price ? <small className="d-block text-secondary text-decoration-line-through">{fmt(offer.price)}</small> : null}
-                        </td>
-                        <td>{fmt(offer.stock)}</td>
-                        <td>{fmt(offer.sold)}</td>
-                        <td>
-                          <div className="d-flex gap-1 flex-wrap">
-                            {offer.featured ? <span className="badge text-light-success"><i className="ti ti-crown me-1"></i>Tanlangan</span> : null}
-                            {offer.archived ? <span className="badge text-light-secondary">Arxiv</span>
-                              : offer.approved === 1 ? (offer.active && !offer.hidden && offer.sellerActive ? <span className="badge text-light-primary">Sotuvda</span> : <span className="badge text-light-secondary">Yashirin</span>)
-                              : offer.approved === 2 ? <span className="badge text-light-danger">Rad etilgan</span>
-                              : <span className="badge text-light-warning">Moderatsiya</span>}
-                          </div>
-                        </td>
-                        <td className="text-end"><a href={offer.url} className="btn btn-light-primary icon-btn w-30 h-30 b-r-22" title="Kitoblar sahifasida ochish"><i className="ti ti-external-link"></i></a></td>
-                      </tr>
-                    ))}
-                    {!offers.length ? <tr><td colSpan={7}><EmptyState text="Hali taklif yo'q" /></td></tr> : null}
-                  </tbody>
-                </table>
+      {/* ── Main Layout: Left Media Specs + Right Marketplace Tabs ── */}
+      <div className="row g-4">
+        {/* Left Column: Visual Media Showcase & Master Specs */}
+        <div className="col-xl-4 col-lg-5">
+          <div className="card border-0 shadow-sm b-r-16 overflow-hidden mb-4">
+            <div className="card-body p-4 text-center bg-light-secondary bg-opacity-25 position-relative">
+              {/* Cover Showcase with 3D Shadow */}
+              <div className="d-flex justify-content-center mb-3">
+                <div
+                  className="position-relative b-r-12 overflow-hidden shadow"
+                  style={{ width: 220, height: 320, background: '#f8f9fa' }}
+                >
+                  {selectedPhoto ? (
+                    <img
+                      src={selectedPhoto}
+                      alt={edition.title}
+                      className="w-100 h-100 object-fit-cover"
+                    />
+                  ) : (
+                    <div className="w-100 h-100 d-flex-center text-muted f-s-40">
+                      <i className="ti ti-book"></i>
+                    </div>
+                  )}
+
+                  {/* Overlays */}
+                  <div className="position-absolute top-0 start-0 m-2">
+                    <span className="badge bg-dark bg-opacity-75 text-white f-s-12">
+                      {edition.coverType || 'Yumshoq'}
+                    </span>
+                  </div>
+                  {edition.lang ? (
+                    <div className="position-absolute top-0 end-0 m-2">
+                      <span className="badge bg-primary text-white f-s-12">
+                        {edition.lang}
+                      </span>
+                    </div>
+                  ) : null}
+                </div>
               </div>
+
+              {/* Multiple Photos Thumbnails */}
+              {allImages.length > 1 ? (
+                <div className="d-flex justify-content-center gap-2 flex-wrap mt-3">
+                  {allImages.map((img, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setSelectedPhoto(img)}
+                      className={`btn p-0 border b-r-8 overflow-hidden ${selectedPhoto === img ? 'ring-2 border-primary shadow-sm' : 'opacity-75'}`}
+                      style={{ width: 44, height: 60 }}
+                    >
+                      <img src={img} alt="" className="w-100 h-100 object-fit-cover" />
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+
+              {/* Front / Back Switch Quick Buttons */}
+              {edition.frontUrl && edition.backUrl ? (
+                <div className="btn-group btn-group-sm mt-3 shadow-xs">
+                  <button
+                    type="button"
+                    className={`btn ${selectedPhoto === edition.frontUrl ? 'btn-primary' : 'btn-light-secondary'}`}
+                    onClick={() => setSelectedPhoto(edition.frontUrl || null)}
+                  >
+                    Old muqova
+                  </button>
+                  <button
+                    type="button"
+                    className={`btn ${selectedPhoto === edition.backUrl ? 'btn-primary' : 'btn-light-secondary'}`}
+                    onClick={() => setSelectedPhoto(edition.backUrl || null)}
+                  >
+                    Orqa muqova
+                  </button>
+                </div>
+              ) : null}
+            </div>
+
+            {/* Quick Specs List */}
+            <div className="card-body p-4 border-top">
+              <h6 className="f-w-700 text-dark mb-3 d-flex align-items-center gap-2">
+                <i className="ti ti-list-details text-primary"></i>
+                Katalog Xarakteristikalari
+              </h6>
+
+              <ul className="list-unstyled mb-0">
+                <li className="d-flex justify-content-between py-2 border-bottom">
+                  <span className="text-secondary f-s-13">ISBN-13</span>
+                  <span className="f-w-600 text-dark font-monospace d-flex align-items-center gap-1">
+                    {edition.isbn || '—'}
+                    {edition.isbn ? (
+                      <button
+                        type="button"
+                        className="btn btn-link p-0 text-secondary"
+                        onClick={() => copyIsbn(edition.isbn || '')}
+                      >
+                        <i className="ti ti-copy f-s-14"></i>
+                      </button>
+                    ) : null}
+                  </span>
+                </li>
+                <li className="d-flex justify-content-between py-2 border-bottom">
+                  <span className="text-secondary f-s-13">Nashriyot</span>
+                  <span className="f-w-600 text-dark">{edition.publisher || '—'}</span>
+                </li>
+                <li className="d-flex justify-content-between py-2 border-bottom">
+                  <span className="text-secondary f-s-13">Kategoriya</span>
+                  <span className="f-w-600 text-primary">{edition.category || '—'}</span>
+                </li>
+                <li className="d-flex justify-content-between py-2 border-bottom">
+                  <span className="text-secondary f-s-13">Til / Yozuv</span>
+                  <span className="f-w-600 text-dark">{[edition.lang, edition.langType].filter(Boolean).join(' / ') || '—'}</span>
+                </li>
+                <li className="d-flex justify-content-between py-2 border-bottom">
+                  <span className="text-secondary f-s-13">Muqova</span>
+                  <span className="f-w-600 text-dark">{edition.coverType || '—'}</span>
+                </li>
+                <li className="d-flex justify-content-between py-2 border-bottom">
+                  <span className="text-secondary f-s-13">Sahifalar soni</span>
+                  <span className="f-w-600 text-dark">{edition.pages ? `${edition.pages} bet` : '—'}</span>
+                </li>
+                <li className="d-flex justify-content-between py-2 border-bottom">
+                  <span className="text-secondary f-s-13">Chop etilgan yili</span>
+                  <span className="f-w-600 text-dark">{edition.year || '—'}</span>
+                </li>
+                {edition.translator ? (
+                  <li className="d-flex justify-content-between py-2 border-bottom">
+                    <span className="text-secondary f-s-13">Tarjimon</span>
+                    <span className="f-w-600 text-dark">{edition.translator}</span>
+                  </li>
+                ) : null}
+                <li className="d-flex justify-content-between py-2">
+                  <span className="text-secondary f-s-13">Manba</span>
+                  <span className="badge bg-light-secondary text-secondary">{edition.source || 'admin'}</span>
+                </li>
+              </ul>
             </div>
           </div>
+        </div>
 
-          {submissions.length ? (
-            <div className="card">
-              <div className="card-header"><h5 className="mb-0">Do'kon arizalari</h5></div>
-              <div className="card-body">
-                {submissions.map((item) => {
-                  const [checkLabel, checkChip, checkIcon] = isbnCheckChip(item.isbnCheck);
-                  return (
-                    <div key={item.id} className="d-flex align-items-center gap-3 py-2 b-b-1-light flex-wrap">
-                      <span className="f-w-600">#{item.id} · {item.seller}</span>
-                      <span className={`badge ${checkChip}`}><i className={`${checkIcon} me-1`}></i>{checkLabel}</span>
-                      <span className="text-secondary f-s-13">{item.isbn || '—'}{item.backIsbnServer ? ` · orqa: ${item.backIsbnServer} (${item.backIsbnMethod})` : ''}</span>
-                      <span className="badge text-light-secondary ms-auto">{item.status}</span>
-                      <small className="text-secondary">{item.createdAt}</small>
-                    </div>
-                  );
-                })}
+        {/* Right Column: Marketplace Ecosystem Tabs */}
+        <div className="col-xl-8 col-lg-7">
+          <div className="card border-0 shadow-sm b-r-16">
+            {/* Header Tabs (Axelit Segment Pill Style) */}
+            <div className="card-header bg-transparent border-bottom p-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+              <div className="nav kc-segment">
+                <div className="nav-item">
+                  <button
+                    type="button"
+                    className={`nav-link ${activeTab === 'offers' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('offers')}
+                  >
+                    <i className="ti ti-building-store me-1"></i>
+                    Do'kon takliflari
+                    <span className="badge bg-light-primary text-primary ms-2">{offers.length}</span>
+                  </button>
+                </div>
+                <div className="nav-item">
+                  <button
+                    type="button"
+                    className={`nav-link ${activeTab === 'about' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('about')}
+                  >
+                    <i className="ti ti-notes me-1"></i>
+                    Annotatsiya
+                  </button>
+                </div>
+                <div className="nav-item">
+                  <button
+                    type="button"
+                    className={`nav-link ${activeTab === 'submissions' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('submissions')}
+                  >
+                    <i className="ti ti-inbox me-1"></i>
+                    Arizalar
+                    {submissions.length ? (
+                      <span className="badge bg-light-warning text-warning-dark ms-2">{submissions.length}</span>
+                    ) : null}
+                  </button>
+                </div>
+                <div className="nav-item">
+                  <button
+                    type="button"
+                    className={`nav-link ${activeTab === 'merge' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('merge')}
+                  >
+                    <i className="ti ti-arrows-exchange me-1"></i>
+                    Birlashtirish
+                    {mergeCandidates.length ? (
+                      <span className="badge bg-light-info text-info ms-2">{mergeCandidates.length}</span>
+                    ) : null}
+                  </button>
+                </div>
               </div>
             </div>
-          ) : null}
+
+            {/* Tab 1: Do'kon takliflari (Offers & BuyBox) */}
+            {activeTab === 'offers' && (
+              <div className="card-body p-0">
+                <div className="p-3 bg-light-primary bg-opacity-25 border-bottom d-flex align-items-center justify-content-between flex-wrap gap-2">
+                  <div className="d-flex align-items-center gap-2">
+                    <span className="h-35 w-35 d-flex-center b-r-50 bg-primary text-white">
+                      <i className="ti ti-crown f-s-18"></i>
+                    </span>
+                    <div>
+                      <h6 className="mb-0 f-w-700 text-dark">BuyBox Tanlovi</h6>
+                      <small className="text-secondary">Xaridorlar ilovasida eng arzon, ishonchli va sotuvda bor do'kon ko'rsatiladi</small>
+                    </div>
+                  </div>
+                  {buyBoxOffer ? (
+                    <span className="badge bg-success-300 text-success-dark f-w-600 f-s-13 px-3 py-2">
+                      G'olib: {buyBoxOffer.seller} ({fmt(buyBoxOffer.effectivePrice)} so'm)
+                    </span>
+                  ) : null}
+                </div>
+
+                <div className="table-responsive app-scroll">
+                  <table className="table table-hover align-middle mb-0">
+                    <thead className="table-light">
+                      <tr>
+                        <th className="ps-4">Do'kon</th>
+                        <th>Narxi</th>
+                        <th>Ombor qoldig'i</th>
+                        <th>Sotilgan</th>
+                        <th>BuyBox</th>
+                        <th>Holati</th>
+                        <th className="pe-4 text-end">Amal</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {offers.map((offer) => {
+                        const isWinner = offer.featured;
+                        const isLowStock = offer.stock > 0 && offer.stock <= 5;
+                        const isOutOfStock = offer.stock === 0;
+
+                        return (
+                          <tr key={offer.id} className={isWinner ? 'bg-light-primary bg-opacity-10' : ''}>
+                            <td className="ps-4">
+                              <div className="d-flex align-items-center gap-2">
+                                <div className="h-35 w-35 d-flex-center b-r-8 bg-light-secondary text-dark f-w-700 flex-shrink-0">
+                                  {offer.seller.charAt(0).toUpperCase()}
+                                </div>
+                                <div>
+                                  <span className="f-w-600 text-dark d-block">{offer.seller}</span>
+                                  <small className="text-muted">
+                                    ID #{offer.id}{offer.artikul ? ` · ${offer.artikul}` : ''}
+                                  </small>
+                                </div>
+                              </div>
+                            </td>
+
+                            <td>
+                              <div>
+                                <span className="f-w-700 text-dark f-s-15">
+                                  {fmt(offer.effectivePrice)} so'm
+                                </span>
+                                {offer.discountPrice > 0 && offer.discountPrice < offer.price ? (
+                                  <small className="d-block text-muted text-decoration-line-through">
+                                    {fmt(offer.price)} so'm
+                                  </small>
+                                ) : null}
+                              </div>
+                            </td>
+
+                            <td>
+                              {isOutOfStock ? (
+                                <span className="badge bg-danger-300 text-danger-dark f-w-600">
+                                  Tugagan (0)
+                                </span>
+                              ) : isLowStock ? (
+                                <span className="badge bg-warning-300 text-warning-dark f-w-600">
+                                  {fmt(offer.stock)} dona (Kam)
+                                </span>
+                              ) : (
+                                <span className="badge bg-success-300 text-success-dark f-w-600">
+                                  {fmt(offer.stock)} dona
+                                </span>
+                              )}
+                            </td>
+
+                            <td>
+                              <span className="f-w-600 text-secondary d-flex align-items-center gap-1">
+                                <i className="ti ti-shopping-bag text-muted"></i>
+                                {fmt(offer.sold)} dona
+                              </span>
+                            </td>
+
+                            <td>
+                              {isWinner ? (
+                                <span className="badge bg-warning-300 text-warning-dark f-w-700 px-2 py-1 shadow-xs">
+                                  <i className="ti ti-crown me-1"></i>Tanlangan
+                                </span>
+                              ) : (
+                                <span className="text-muted f-s-13">—</span>
+                              )}
+                            </td>
+
+                            <td>
+                              {offer.archived ? (
+                                <span className="badge text-light-secondary">Arxiv</span>
+                              ) : offer.approved === 1 ? (
+                                offer.active && !offer.hidden && offer.sellerActive ? (
+                                  <span className="badge text-light-success">
+                                    <i className="ti ti-check me-1"></i>Sotuvda
+                                  </span>
+                                ) : (
+                                  <span className="badge text-light-secondary">Yashirin</span>
+                                )
+                              ) : offer.approved === 2 ? (
+                                <span className="badge text-light-danger">Rad etilgan</span>
+                              ) : (
+                                <span className="badge text-light-warning">Moderatsiya</span>
+                              )}
+                            </td>
+
+                            <td className="pe-4 text-end">
+                              <a
+                                href={offer.url}
+                                className="btn btn-light-primary icon-btn w-32 h-32 b-r-8"
+                                title="Taklifni to'liq ko'rish"
+                              >
+                                <i className="ti ti-external-link"></i>
+                              </a>
+                            </td>
+                          </tr>
+                        );
+                      })}
+
+                      {!offers.length ? (
+                        <tr>
+                          <td colSpan={7} className="py-5 text-center">
+                            <EmptyState
+                              icon="ti ti-building-store"
+                              text="Hozircha birorta ham do'kon ushbu kitobga taklif kiritmagan."
+                            />
+                          </td>
+                        </tr>
+                      ) : null}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Tab 2: Annotatsiya va Tavsif */}
+            {activeTab === 'about' && (
+              <div className="card-body p-4">
+                <div className="mb-4">
+                  <h6 className="f-w-700 text-dark mb-2 d-flex align-items-center gap-2">
+                    <i className="ti ti-file-text text-primary"></i>
+                    Kitob annotatsiyasi va rasmiy tavsifi
+                  </h6>
+                  {edition.description ? (
+                    <div
+                      className="p-4 bg-light-secondary bg-opacity-25 b-r-12 text-dark f-s-15 leading-relaxed"
+                      style={{ whiteSpace: 'pre-wrap', lineHeight: 1.7 }}
+                    >
+                      {edition.description}
+                    </div>
+                  ) : (
+                    <div className="alert alert-light-warning d-flex align-items-center gap-2">
+                      <i className="ti ti-alert-triangle f-s-20"></i>
+                      <span>Ushbu kitob uchun hali tavsif kiritilmagan. Yuqoridagi "Tahrirlash" orqali tavsif qo'shishingiz mumkin.</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="pt-3 border-top">
+                  <h6 className="f-w-700 text-dark mb-2">Qidiruv teglari va xususiyatlari</h6>
+                  <div className="d-flex gap-2 flex-wrap">
+                    <span className="badge bg-light-primary text-primary px-3 py-2 b-r-8">{edition.title}</span>
+                    {edition.author ? <span className="badge bg-light-info text-info px-3 py-2 b-r-8">{edition.author}</span> : null}
+                    {edition.publisher ? <span className="badge bg-light-secondary text-dark px-3 py-2 b-r-8">{edition.publisher}</span> : null}
+                    {edition.category ? <span className="badge bg-light-success text-success px-3 py-2 b-r-8">{edition.category}</span> : null}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Tab 3: Do'kon arizalari (Submissions) */}
+            {activeTab === 'submissions' && (
+              <div className="card-body p-4">
+                <div className="d-flex align-items-center justify-content-between mb-3">
+                  <h6 className="f-w-700 text-dark mb-0">Do'konlardan kelgan arizalar</h6>
+                  <span className="text-secondary f-s-13">Jami {submissions.length} ta ariza</span>
+                </div>
+
+                {submissions.length ? (
+                  <div className="d-flex flex-col gap-3">
+                    {submissions.map((item) => {
+                      const [checkLabel, checkChip, checkIcon] = isbnCheckChip(item.isbnCheck);
+
+                      return (
+                        <div key={item.id} className="p-3 border b-r-12 bg-white hover-shadow transition">
+                          <div className="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+                            <div className="d-flex align-items-center gap-2">
+                              <span className="badge bg-light-primary text-primary f-w-600">Ariza #{item.id}</span>
+                              <span className="f-w-600 text-dark">{item.seller}</span>
+                              <span className="text-muted f-s-12">· {item.createdAt}</span>
+                            </div>
+                            <span className={`badge ${checkChip} d-flex align-items-center gap-1`}>
+                              <i className={checkIcon}></i>
+                              {checkLabel}
+                            </span>
+                          </div>
+
+                          <div className="d-flex align-items-center gap-3 text-secondary f-s-13 flex-wrap">
+                            <span>ISBN: <code className="text-dark f-w-600">{item.isbn || '—'}</code></span>
+                            {item.backIsbnServer ? (
+                              <span>Orqa muqovadan o'qildi: <code className="text-success f-w-600">{item.backIsbnServer}</code> ({item.backIsbnMethod})</span>
+                            ) : null}
+                            <span className="badge text-light-secondary ms-auto">{item.status}</span>
+                          </div>
+
+                          {item.message ? (
+                            <p className="mb-0 mt-2 text-dark f-s-13 bg-light p-2 b-r-8">
+                              <i className="ti ti-message-dots me-1 text-secondary"></i>
+                              {item.message}
+                            </p>
+                          ) : null}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <EmptyState
+                    icon="ti ti-inbox"
+                    text="Ushbu nashr uchun do'konlardan arizalar kelib tushmagan."
+                  />
+                )}
+              </div>
+            )}
+
+            {/* Tab 4: O'xshash kartalar & Birlashtirish */}
+            {activeTab === 'merge' && (
+              <div className="card-body p-4">
+                <div className="d-flex align-items-center justify-content-between mb-3">
+                  <div>
+                    <h6 className="f-w-700 text-dark mb-0">Dublikat yoki O'xshash Nashrlar</h6>
+                    <small className="text-secondary">Bir xil kitob bir nechta nusxada ochilgan bo'lsa, ularni bitta master-kartaga birlashtiring</small>
+                  </div>
+                </div>
+
+                {mergeCandidates.length ? (
+                  <div className="list-group">
+                    {mergeCandidates.map((candidate) => (
+                      <div key={candidate.id} className="list-group-item d-flex align-items-center justify-content-between p-3 flex-wrap gap-2">
+                        <div className="d-flex align-items-center gap-3">
+                          <div className="w-40 h-55 b-r-8 overflow-hidden bg-light flex-shrink-0 border">
+                            {candidate.cover ? <img src={candidate.cover} alt="" className="w-100 h-100 object-fit-cover" /> : <i className="ti ti-book"></i>}
+                          </div>
+                          <div>
+                            <Link href={candidate.url} className="f-w-600 text-dark d-block hover-primary">
+                              #{candidate.id} · {candidate.title}
+                            </Link>
+                            <small className="text-secondary d-block">
+                              {candidate.author || '—'} · ISBN: {candidate.isbn || "ISBN yo'q"} · {candidate.offersCount} ta taklif
+                            </small>
+                            {candidate.variantDiff?.length ? (
+                              <small className="badge bg-danger-300 text-danger-dark mt-1">
+                                Farqlar mavjud: {candidate.variantDiff.join(', ')}
+                              </small>
+                            ) : (
+                              <small className="badge bg-success-300 text-success-dark mt-1">
+                                Aniq mos keluvchi dublikat
+                              </small>
+                            )}
+                          </div>
+                        </div>
+
+                        <Link href={candidate.url} className="btn btn-outline-primary btn-sm">
+                          Ko'rish
+                        </Link>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <EmptyState
+                    icon="ti ti-arrows-exchange"
+                    text="Tizimda ushbu kitobga o'xshash boshqa dublikat kartalar topilmadi."
+                  />
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

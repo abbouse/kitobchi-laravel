@@ -789,6 +789,13 @@ public function updateProductStatus(Request $request)
         return response()->json(['success' => false, 'message' => 'Product not found'], 404);
     }
 
+    if ($product->archived_at !== null) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Bu mahsulot moderator/admin tomonidan sotuvdan olingan yoki arxivlangan.',
+        ], 403);
+    }
+
     $oldStatus = $product->status ? 'Faol' : 'Nofaol';
     $newStatus = !$product->status ? 'Faol' : 'Nofaol';
     $prefix = match ($type) {
@@ -902,6 +909,13 @@ public function updateProductStatus(Request $request)
     $product = Books::query()->where('seller_id', $storeSellerId)->find($request->id);
     if (!$product) {
         return response()->json(['success' => false, 'message' => 'Mahsulot topilmadi'], 404);
+    }
+
+    if ($product->archived_at !== null) {
+        return response()->json([
+            'success' => false,
+            'message' => "Bu kitob moderator/admin tomonidan sotuvdan olingan yoki arxivlangan. Narx yoki qoldiqni o'zgartirib bo'lmaydi.",
+        ], 403);
     }
 
     // Kitobning O'ZINIKI bo'lgan ma'lumoti (nom, muallif, rasm, tavsif) KATALOGNIKI —

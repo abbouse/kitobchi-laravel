@@ -23,7 +23,7 @@ export const COVER_TYPES = ['Yumshoq', 'Qattiq'];
 
 export const editionStatus = (status?: string, verified?: boolean): [string, string] => {
   if (status === 'pending') return ['Tekshiruvda', 'text-light-warning'];
-  if (status === 'rejected') return ['Rad etilgan', 'text-light-danger'];
+  if (status === 'rejected') return ['Sotuvdan olingan (Taqiqlangan)', 'text-light-danger'];
   if (status === 'merged') return ['Birlashtirilgan', 'text-light-secondary'];
   return verified ? ['Tasdiqlangan', 'text-light-success'] : ['Tasdiqlanmagan', 'text-light-info'];
 };

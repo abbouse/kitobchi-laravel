@@ -37,7 +37,7 @@
     ]
   },
   "resources/css/app.css": {
-    "file": "assets/app-DhNl97Hp.css",
+    "file": "assets/app-DxFv1kbV.css",
     "src": "resources/css/app.css",
     "isEntry": true,
     "name": "app",
@@ -172,7 +172,7 @@
     ]
   },
   "resources/js/boshqaruv/main.tsx": {
-    "file": "assets/main-lOOPumqV.js",
+    "file": "assets/main-DB2XDStc.js",
     "name": "main",
     "src": "resources/js/boshqaruv/main.tsx",
     "isEntry": true,

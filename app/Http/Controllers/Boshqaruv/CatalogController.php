@@ -13,6 +13,7 @@ use App\Services\AuthorDirectoryService;
 use App\Services\BranchStockService;
 use App\Services\Catalog\BuyBoxService;
 use App\Services\Catalog\CatalogService;
+use App\Services\VectorSearchService;
 use App\Support\Isbn;
 use App\Support\ProductArtikul;
 use App\Support\ProductImageUrls;
@@ -588,6 +589,25 @@ class CatalogController extends Controller
      * "O'chirish" = arxivlash: buyurtma tarixi, moliyaviy yozuvlar va sharhlar
      * saqlanadi; kitob sotuvdan, savatlardan va qidiruvdan olinadi.
      */
+    public function banEdition(Request $request, int $edition): RedirectResponse
+    {
+        $model = BookEdition::withTrashed()->findOrFail($edition);
+        $reason = (string) $request->input('reason', 'Admin tomonidan taqiqlandi / sotuvdan olib tashlandi');
+        $adminId = Auth::guard('panel')->id();
+
+        $result = $this->catalog->banEdition($model, $reason, $adminId);
+
+        return back()->with('success', "Kitob sotuvdan olib tashlandi. {$result['offers_count']} ta do'kon taklifi yashirildi, savat va sevimlilardan tozalandi.");
+    }
+
+    public function unbanEdition(int $edition): RedirectResponse
+    {
+        $model = BookEdition::withTrashed()->findOrFail($edition);
+        $this->catalog->unbanEdition($model);
+
+        return back()->with('success', "Kitob kartasi qayta tiklandi va sotuvga qaytarildi.");
+    }
+
     public function archiveBook(Books $book, BranchStockService $stock): RedirectResponse
     {
         if ($book->archived_at) {
@@ -601,6 +621,10 @@ class CatalogController extends Controller
                 'archived_state' => ['is_hidden' => (bool) $book->is_hidden, 'status' => (bool) $book->status],
                 'is_hidden' => true,
                 'status' => false,
+                'is_approved' => 2,
+                'vectorData' => null,
+                'has_vector' => false,
+                'vector_text_hash' => null,
             ])->save();
 
             $stock->setTotalFromLegacy('book', (int) $book->id, 0, (int) $book->seller_id, 0, null, [
@@ -608,6 +632,7 @@ class CatalogController extends Controller
             ]);
 
             DB::table('my_carts')->where('product_id', $book->id)->where('product_type', 'book')->delete();
+            DB::table('favourite_products')->where('product_id', $book->id)->where('product_type', 'book')->delete();
         });
 
         try {
@@ -615,7 +640,9 @@ class CatalogController extends Controller
         } catch (\Throwable) {
         }
 
-        return back()->with('success', "Kitob arxivlandi (buyurtma tarixi saqlanadi).");
+        VectorSearchService::invalidateIndex('book');
+
+        return back()->with('success', "Kitob arxivlandi (savat va sevimlilardan tozalandi, buyurtma tarixi saqlanadi).");
     }
 
     public function restoreBook(Books $book): RedirectResponse
@@ -791,8 +818,11 @@ class CatalogController extends Controller
             // Nashr varianti — bir xil ISBN ostidagi kartalarni farqlash uchun
             'variant' => self::variantLabel($e),
             'deleted' => $e->trashed(),
+            'banned' => $e->status === BookEdition::STATUS_REJECTED,
             'createdAt' => optional($e->created_at)->format('Y-m-d H:i'),
             'url' => route('boshqaruv.catalog.show', $e->id),
+            'banUrl' => route('boshqaruv.catalog.ban', $e->id),
+            'unbanUrl' => route('boshqaruv.catalog.unban', $e->id),
         ];
 
         if ($full) {

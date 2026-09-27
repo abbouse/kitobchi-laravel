@@ -11,12 +11,40 @@ type ActionMap = Record<string, string>;
 type Commission = { id: number; priceFrom: number; priceTo: number; percent: number; updateUrl: string; destroyUrl: string };
 type Cashback = { id: number; fromUzs: number; toUzs: number; cashback: number; type: string; updateUrl: string; destroyUrl: string };
 
+type ParserStats = {
+  total_editions: number;
+  with_isbn: number;
+  without_isbn: number;
+  unlinked_books: number;
+  parser_items_cached: number;
+};
+
+type ParserItemResult = {
+  title: string;
+  isbn: string;
+  source: string;
+  action: string;
+  message: string;
+};
+
+type ParserReport = {
+  source: string;
+  total_scanned: number;
+  editions_created: number;
+  isbn_enriched: number;
+  already_matched: number;
+  skipped_no_isbn: number;
+  failed: number;
+  items: ParserItemResult[];
+};
+
 type SettingsPayload = {
   project?: ProjectSettings;
   commission?: Commission[];
   cashback?: Cashback[];
   cashbackDelivery?: Cashback[];
   cashbackPickup?: Cashback[];
+  parserStats?: ParserStats;
   actions?: ActionMap;
 };
 
@@ -29,6 +57,7 @@ const tabs = [
   { key: 'telegram', label: 'Telegram', icon: 'ti-brand-telegram' },
   { key: 'commission', label: 'Komissiya', icon: 'ti-percentage' },
   { key: 'cashback', label: 'Cashback', icon: 'ti-cash' },
+  { key: 'catalog-parser', label: 'Katalog Parseri', icon: 'ti-world-download' },
 ];
 
 function value(project: ProjectSettings, key: string, fallback = '') {
@@ -407,6 +436,312 @@ export default function Settings() {
         </div>
       )}
 
+      {tab === 'catalog-parser' && (
+        <CatalogParserSection
+          stats={settings.parserStats}
+          runUrl={actions.parserRun}
+          statsUrl={actions.parserStats}
+        />
+      )}
+
+    </div>
+  );
+}
+
+function CatalogParserSection({
+  stats: initialStats,
+  runUrl,
+  statsUrl,
+}: {
+  stats?: ParserStats;
+  runUrl?: string;
+  statsUrl?: string;
+}) {
+  const [stats, setStats] = useState<ParserStats | undefined>(initialStats);
+  const [source, setSource] = useState('all');
+  const [limit, setLimit] = useState('50');
+  const [withImages, setWithImages] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [report, setReport] = useState<ParserReport | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const getCsrfToken = () => document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content || '';
+
+  const refreshStats = async () => {
+    if (!statsUrl) return;
+    try {
+      const res = await fetch(statsUrl, {
+        headers: { Accept: 'application/json' },
+        credentials: 'same-origin',
+      });
+      const data = await res.json();
+      if (data.success && data.stats) {
+        setStats(data.stats);
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleRun = async (e: FormEvent) => {
+    e.preventDefault();
+    if (loading) return;
+
+    setLoading(true);
+    setError(null);
+    setReport(null);
+
+    try {
+      const endpoint = runUrl || '/boshqaruv/settings/parser/run';
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-CSRF-TOKEN': getCsrfToken(),
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          source,
+          limit: Number(limit),
+          with_images: withImages,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Sinxronlashda xatolik yuz berdi');
+      }
+
+      setReport(data.report);
+      if (data.stats) {
+        setStats(data.stats);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Xatolik yuz berdi');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="row g-3">
+      {/* 4 ta statistika kartochkasi */}
+      <div className="col-12">
+        <div className="row g-3">
+          <div className="col-xl-3 col-sm-6">
+            <div className="card mb-0 bg-light-primary border-primary">
+              <div className="card-body py-3">
+                <div className="d-flex align-items-center justify-content-between">
+                  <div>
+                    <span className="text-muted f-s-13 f-w-600">Jami kitob kartalari</span>
+                    <h4 className="mb-0 mt-1 f-w-700">{fmt(stats?.total_editions || 0)}</h4>
+                  </div>
+                  <i className="ti ti-books f-s-28 text-primary"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="col-xl-3 col-sm-6">
+            <div className="card mb-0 bg-light-success border-success">
+              <div className="card-body py-3">
+                <div className="d-flex align-items-center justify-content-between">
+                  <div>
+                    <span className="text-muted f-s-13 f-w-600">ISBN mavjud kartalar</span>
+                    <h4 className="mb-0 mt-1 f-w-700 text-success">{fmt(stats?.with_isbn || 0)}</h4>
+                  </div>
+                  <i className="ti ti-barcode f-s-28 text-success"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="col-xl-3 col-sm-6">
+            <div className="card mb-0 bg-light-warning border-warning">
+              <div className="card-body py-3">
+                <div className="d-flex align-items-center justify-content-between">
+                  <div>
+                    <span className="text-muted f-s-13 f-w-600">ISBN yo'q kartalar</span>
+                    <h4 className="mb-0 mt-1 f-w-700 text-warning">{fmt(stats?.without_isbn || 0)}</h4>
+                  </div>
+                  <i className="ti ti-alert-circle f-s-28 text-warning"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="col-xl-3 col-sm-6">
+            <div className="card mb-0 bg-light-secondary border-secondary">
+              <div className="card-body py-3">
+                <div className="d-flex align-items-center justify-content-between">
+                  <div>
+                    <span className="text-muted f-s-13 f-w-600">Ulanmagan do'kon kitoblari</span>
+                    <h4 className="mb-0 mt-1 f-w-700 text-secondary">{fmt(stats?.unlinked_books || 0)}</h4>
+                  </div>
+                  <i className="ti ti-link-off f-s-28 text-secondary"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Parser Boshqaruvi */}
+      <div className="col-xl-5">
+        <SectionCard title="Tashqi Katalog Parseri" icon="ti-cloud-download">
+          <p className="text-muted f-s-13 mb-3">
+            <strong>Qamar.uz</strong> va <strong>Book.uz</strong> saytlaridan ISBN mavjud kitoblarni olib, global katalogga (<code>book_editions</code>) saqlaydi. 
+            Agar bizning bazadagi kitob bilan nomi bir xil bo'lsa-yu, bizda ISBN yo'q yoki boshqacha bo'lsa — to'g'ri ISBN bilan to'ldirib qo'yadi.
+          </p>
+
+          <form onSubmit={handleRun}>
+            <div className="mb-3">
+              <label className="form-label f-s-13 text-muted f-w-600">Manba (Sayt)</label>
+              <select className="form-select" value={source} onChange={(e) => setSource(e.target.value)} disabled={loading}>
+                <option value="all">Qamar.uz va Book.uz (Ikkalasi)</option>
+                <option value="qamar_uz">Faqat Qamar.uz (2 700+ kitob)</option>
+                <option value="book_uz">Faqat Book.uz</option>
+              </select>
+            </div>
+
+            <div className="mb-3">
+              <label className="form-label f-s-13 text-muted f-w-600">Kitoblar soni (Limit)</label>
+              <select className="form-select" value={limit} onChange={(e) => setLimit(e.target.value)} disabled={loading}>
+                <option value="25">25 ta kitob (Tezkor tekshiruv)</option>
+                <option value="50">50 ta kitob</option>
+                <option value="100">100 ta kitob</option>
+                <option value="250">250 ta kitob</option>
+                <option value="500">500 ta kitob</option>
+                <option value="0">Barcha kitoblar (Ko'p vaqt olishi mumkin)</option>
+              </select>
+            </div>
+
+            <div className="mb-4">
+              <label className="d-flex align-items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="form-check-input mt-0"
+                  checked={withImages}
+                  onChange={(e) => setWithImages(e.target.checked)}
+                  disabled={loading}
+                />
+                <span className="f-s-13">Muqova rasmlarini serverga yuklab olish</span>
+              </label>
+            </div>
+
+            <div className="d-flex justify-content-between align-items-center">
+              <button type="button" className="btn btn-outline-secondary btn-sm" onClick={refreshStats} disabled={loading}>
+                <i className="ti ti-refresh me-1"></i>Statistikani yangilash
+              </button>
+              <button type="submit" className="btn btn-primary" disabled={loading}>
+                {loading ? (
+                  <>
+                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    Sinxronlanmoqda...
+                  </>
+                ) : (
+                  <>
+                    <i className="ti ti-player-play me-1"></i>Parserni ishga tushirish
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        </SectionCard>
+      </div>
+
+      {/* Natijalar paneli */}
+      <div className="col-xl-7">
+        <SectionCard title="Sinxronlash natijalari" icon="ti-report-analytics">
+          {error && (
+            <div className="alert alert-danger d-flex align-items-center gap-2 mb-3">
+              <i className="ti ti-alert-triangle f-s-18"></i>
+              <div>{error}</div>
+            </div>
+          )}
+
+          {loading && (
+            <div className="text-center py-5">
+              <div className="spinner-border text-primary mb-3" style={{ width: '3rem', height: '3rem' }} role="status"></div>
+              <h6 className="f-w-600">Kitoblar o'qilmoqda va bazaga kiritilmoqda...</h6>
+              <p className="text-muted f-s-13 mb-0">Iltimos kuting, bu biroz vaqt olishi mumkin (sitemap, ISBN tekshiruvi va rasmlar yuklanishi).</p>
+            </div>
+          )}
+
+          {!loading && !report && !error && (
+            <div className="text-center py-5 text-muted">
+              <i className="ti ti-cloud-search f-s-40 d-block mb-2 text-secondary"></i>
+              <p className="mb-0">Parser hali ishga tushirilmadi. Chapdagi forma orqali manba va limitni tanlab, "Parserni ishga tushirish" tugmasini bosing.</p>
+            </div>
+          )}
+
+          {report && (
+            <div>
+              <div className="alert alert-success d-flex align-items-center justify-content-between mb-3">
+                <div className="d-flex align-items-center gap-2">
+                  <i className="ti ti-circle-check f-s-20"></i>
+                  <span>Sinxronlash muvaffaqiyatli yakunlandi! ({report.total_scanned} ta kitob ko'rib chiqildi)</span>
+                </div>
+              </div>
+
+              <div className="row g-2 mb-3">
+                <div className="col-sm-3 col-6">
+                  <div className="p-2 b-r-8 bg-light-success text-center">
+                    <span className="d-block f-s-11 text-muted">Yangi kartalar</span>
+                    <strong className="f-s-16 text-success">+{report.editions_created}</strong>
+                  </div>
+                </div>
+                <div className="col-sm-3 col-6">
+                  <div className="p-2 b-r-8 bg-light-primary text-center">
+                    <span className="d-block f-s-11 text-muted">ISBN to'ldirildi</span>
+                    <strong className="f-s-16 text-primary">+{report.isbn_enriched}</strong>
+                  </div>
+                </div>
+                <div className="col-sm-3 col-6">
+                  <div className="p-2 b-r-8 bg-light-secondary text-center">
+                    <span className="d-block f-s-11 text-muted">Mavjud edi</span>
+                    <strong className="f-s-16 text-secondary">{report.already_matched}</strong>
+                  </div>
+                </div>
+                <div className="col-sm-3 col-6">
+                  <div className="p-2 b-r-8 bg-light-warning text-center">
+                    <span className="d-block f-s-11 text-muted">ISBN'siz (o'tkazildi)</span>
+                    <strong className="f-s-16 text-warning">{report.skipped_no_isbn}</strong>
+                  </div>
+                </div>
+              </div>
+
+              {report.items && report.items.length > 0 && (
+                <div className="table-responsive app-scroll" style={{ maxHeight: '340px' }}>
+                  <table className="table table-sm table-bottom-border align-middle mb-0 f-s-12">
+                    <thead>
+                      <tr>
+                        <th>Kitob nomi</th>
+                        <th>ISBN</th>
+                        <th>Manba</th>
+                        <th>Holati</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {report.items.map((item, idx) => (
+                        <tr key={idx}>
+                          <td className="f-w-600">{item.title}</td>
+                          <td><code>{item.isbn || '—'}</code></td>
+                          <td><span className="badge text-light-secondary">{item.source}</span></td>
+                          <td>
+                            {item.action === 'edition_created' && <span className="badge text-light-success">Yangi ochildi</span>}
+                            {item.action === 'isbn_enriched' && <span className="badge text-light-primary">ISBN to'ldirildi</span>}
+                            {item.action === 'already_matched' && <span className="badge text-light-secondary">Mavjud</span>}
+                            {item.action === 'skipped_no_isbn' && <span className="badge text-light-warning">ISBN'siz</span>}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+        </SectionCard>
+      </div>
     </div>
   );
 }

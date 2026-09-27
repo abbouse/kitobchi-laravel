@@ -2,9 +2,11 @@
 
 namespace App\Services\Catalog;
 
+use App\Jobs\SyncProductVectorJob;
 use App\Models\BookEdition;
 use App\Models\BookEditionSubmission;
 use App\Models\Books;
+use App\Services\VectorSearchService;
 use App\Support\Isbn;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -458,6 +460,16 @@ class CatalogService
 
         $this->buyBox->reindex($ids);
 
+        // Vektorlarni darhol qayta hisoblash navbatiga qo'yamiz va qidiruv indeksini yangilaymiz
+        foreach ($ids as $bookId) {
+            SyncProductVectorJob::dispatch('book', (int) $bookId);
+        }
+        VectorSearchService::invalidateIndex('book');
+        try {
+            Books::query()->whereIn('id', $ids)->get()->searchable();
+        } catch (\Throwable) {
+        }
+
         return count($ids);
     }
 
@@ -529,5 +541,124 @@ class CatalogService
     public static function slugTitle(BookEdition $edition): string
     {
         return Str::limit(Str::slug($edition->title), 80, '');
+    }
+
+    /**
+     * Kitobni (edition va unga ulangan barcha do'kon takliflarini) sotuvdan
+     * butunlay olib tashlash (taqiqlash / himoya).
+     *
+     * Tarixiy buyurtmalar (solds, orders) va BookClub muhokamalari saqlanadi.
+     * Foydalanuvchilar savati (my_carts) va sevimlilaridan (favourite_products) o'chiriladi.
+     *
+     * @return array{edition_id: int, offers_count: int}
+     */
+    public function banEdition(BookEdition $edition, ?string $reason = null, ?int $adminId = null): array
+    {
+        $offerIds = Books::query()->where('edition_id', $edition->id)->pluck('id')->all();
+        $now = now();
+
+        DB::transaction(function () use ($edition, $offerIds, $now, $adminId, $reason) {
+            // 1. Master kartani (BookEdition) statusini 'rejected' qilish va o'chirish (soft delete)
+            $edition->forceFill([
+                'status' => BookEdition::STATUS_REJECTED,
+            ])->save();
+
+            if (! $edition->trashed()) {
+                $edition->delete();
+            }
+
+            if (! empty($offerIds)) {
+                // 2. Takliflarni sotuvdan yashirish va arxivlash
+                Books::writingFromCatalog(function () use ($offerIds, $now, $adminId, $reason) {
+                    foreach (array_chunk($offerIds, 500) as $chunk) {
+                        Books::query()->whereIn('id', $chunk)->toBase()->update([
+                            'archived_at' => $now,
+                            'archived_by' => $adminId,
+                            'archived_state' => json_encode(['reason' => $reason, 'banned_at' => $now->toDateTimeString()], JSON_UNESCAPED_UNICODE),
+                            'is_hidden' => true,
+                            'status' => false,
+                            'is_approved' => 2, // rejected
+                            'updated_at' => $now,
+                            'vectorData' => null,
+                            'has_vector' => false,
+                            'vector_text_hash' => null,
+                        ]);
+                    }
+                });
+
+                // 3. Savatlardan (my_carts) butunlay tozalash
+                DB::table('my_carts')
+                    ->whereIn('product_id', $offerIds)
+                    ->where('product_type', 'book')
+                    ->delete();
+
+                // 4. Sevimlilardan (favourite_products) butunlay tozalash
+                DB::table('favourite_products')
+                    ->whereIn('product_id', $offerIds)
+                    ->where('product_type', 'book')
+                    ->delete();
+
+                // 5. Qoldiqlarni 0 ga tushirish (branch_stocks)
+                if (\Illuminate\Support\Facades\Schema::hasTable('branch_stocks')) {
+                    DB::table('branch_stocks')
+                        ->whereIn('product_id', $offerIds)
+                        ->where('product_type', 'book')
+                        ->update(['stock' => 0, 'updated_at' => $now]);
+                }
+            }
+        });
+
+        // 6. Qidiruv indekslaridan chiqarish
+        if (! empty($offerIds)) {
+            try {
+                Books::query()->whereIn('id', $offerIds)->unsearchable();
+            } catch (\Throwable) {
+            }
+        }
+
+        VectorSearchService::invalidateIndex('book');
+        $this->buyBox->touch((int) $edition->id);
+
+        Log::warning('Kitob boshqaruvdan sotuvdan olib tashlandi (taqiqlandi)', [
+            'edition_id' => $edition->id,
+            'title' => $edition->title,
+            'reason' => $reason,
+            'admin_id' => $adminId,
+            'offers_count' => count($offerIds),
+        ]);
+
+        return [
+            'edition_id' => $edition->id,
+            'offers_count' => count($offerIds),
+        ];
+    }
+
+    /**
+     * Taqiqqa tushgan kitobni qayta tiklash (sotuvga qaytarish).
+     *
+     * @return array{edition_id: int}
+     */
+    public function unbanEdition(BookEdition $edition): array
+    {
+        DB::transaction(function () use ($edition) {
+            if ($edition->trashed()) {
+                $edition->restore();
+            }
+
+            $edition->forceFill([
+                'status' => BookEdition::STATUS_ACTIVE,
+            ])->save();
+        });
+
+        $this->buyBox->touch((int) $edition->id);
+
+        Log::info('Kitob taqiqdan chiqarildi va faollashtirildi', [
+            'edition_id' => $edition->id,
+            'title' => $edition->title,
+        ]);
+
+        return [
+            'edition_id' => $edition->id,
+        ];
     }
 }

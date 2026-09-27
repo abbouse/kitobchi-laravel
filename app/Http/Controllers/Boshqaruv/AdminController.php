@@ -10726,7 +10726,10 @@ PROMPT;
                 'telegram' => route('boshqaruv.settings.telegram'),
                 'commissionStore' => route('boshqaruv.settings.commission.store'),
                 'cashbackStore' => route('boshqaruv.settings.cashback.store'),
+                'parserRun' => route('boshqaruv.settings.parser.run'),
+                'parserStats' => route('boshqaruv.settings.parser.stats'),
             ],
+            'parserStats' => app(\App\Services\CatalogParsers\ExternalCatalogSyncService::class)->getStats(),
             'indexUrl' => route('boshqaruv.settings'),
         ];
     }

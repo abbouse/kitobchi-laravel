@@ -74,6 +74,8 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
             Route::post('/catalog/{edition}/merge', [\App\Http\Controllers\Boshqaruv\CatalogController::class, 'merge'])->whereNumber('edition')->name('catalog.merge');
             Route::delete('/catalog/{edition}', [\App\Http\Controllers\Boshqaruv\CatalogController::class, 'destroy'])->whereNumber('edition')->name('catalog.destroy');
             Route::patch('/catalog/{edition}/restore', [\App\Http\Controllers\Boshqaruv\CatalogController::class, 'restore'])->whereNumber('edition')->name('catalog.restore');
+            Route::post('/catalog/{edition}/ban', [\App\Http\Controllers\Boshqaruv\CatalogController::class, 'banEdition'])->whereNumber('edition')->name('catalog.ban');
+            Route::post('/catalog/{edition}/unban', [\App\Http\Controllers\Boshqaruv\CatalogController::class, 'unbanEdition'])->whereNumber('edition')->name('catalog.unban');
             Route::put('/books/{book}', [AdminController::class, 'updateBook'])->name('books.update');
             Route::patch('/stationery/{id}/moderate', [\App\Http\Controllers\A122\StationeryController::class, 'moderate'])->name('stationery.moderate');
             Route::put('/stationery/{stationery}', [AdminController::class, 'updateStationery'])->name('stationery.update');
@@ -416,6 +418,8 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
             Route::post('/settings/cashback', [\App\Http\Controllers\A122\SettingsController::class, 'storeCashback'])->name('settings.cashback.store');
             Route::put('/settings/cashback/{cashbackSetting}', [\App\Http\Controllers\A122\SettingsController::class, 'updateCashback'])->name('settings.cashback.update');
             Route::delete('/settings/cashback/{cashbackSetting}', [\App\Http\Controllers\A122\SettingsController::class, 'destroyCashback'])->name('settings.cashback.destroy');
+            Route::get('/settings/parser/stats', [\App\Http\Controllers\Boshqaruv\CatalogParserController::class, 'stats'])->name('settings.parser.stats');
+            Route::post('/settings/parser/run', [\App\Http\Controllers\Boshqaruv\CatalogParserController::class, 'run'])->name('settings.parser.run');
 
             // Kiberxavfsizlik va Server monitoring
             Route::get('/security', [SecurityController::class, 'index'])->name('security');
