@@ -5,6 +5,7 @@ namespace App\Services\CatalogParsers;
 use App\Models\BookCategories;
 use App\Models\BookEdition;
 use App\Models\Books;
+use App\Models\BookTag;
 use App\Models\CatalogParserItem;
 use App\Models\Publisher;
 use App\Services\AuthorDirectoryService;
@@ -135,6 +136,8 @@ class ExternalCatalogSyncService
                             'price_uzs' => $item->price_uzs,
                             'category_raw' => $item->source_category ?? $item->suggested_category_name ?? null,
                             'suggested_category_id' => $item->suggested_category_id ? (int) $item->suggested_category_id : null,
+                            'raw_tags' => data_get($item->payload, 'tags', []),
+                            'suggested_tag_ids' => is_array($item->suggested_tag_ids) ? $item->suggested_tag_ids : null,
                         ];
                     }
                 }
@@ -276,6 +279,20 @@ class ExternalCatalogSyncService
                     $enriched = true;
                 }
             }
+            if (empty($matchedEdition->tag_ids)) {
+                $tagIds = $this->resolveTagsWithAi(
+                    title: $matchedEdition->title,
+                    author: $matchedEdition->author ?: ($item['author'] ?? null),
+                    description: $matchedEdition->description ?: ($item['description'] ?? null),
+                    categoryId: (int) ($matchedEdition->category_id ?: 1),
+                    rawTags: $item['raw_tags'] ?? ($item['tags'] ?? null),
+                    suggestedTagIds: $item['suggested_tag_ids'] ?? null
+                );
+                if (! empty($tagIds)) {
+                    $matchedEdition->tag_ids = $tagIds;
+                    $enriched = true;
+                }
+            }
             if ($enriched) {
                 $matchedEdition->save();
             }
@@ -310,6 +327,15 @@ class ExternalCatalogSyncService
             suggestedId: $item['suggested_category_id'] ?? null
         );
 
+        $tagIds = $this->resolveTagsWithAi(
+            title: $title,
+            author: $author?->name ?: ($item['author'] ?? null),
+            description: $item['description'] ?? null,
+            categoryId: $categoryId,
+            rawTags: $item['raw_tags'] ?? ($item['tags'] ?? null),
+            suggestedTagIds: $item['suggested_tag_ids'] ?? null
+        );
+
         $imagePath = null;
         if ($withImages && ! empty($item['image_url'])) {
             $imagePath = $this->downloadAndSaveCover($item['image_url'], $title);
@@ -327,6 +353,7 @@ class ExternalCatalogSyncService
             'author_id' => $author?->id,
             'publisher_id' => $publisherId,
             'category_id' => $categoryId,
+            'tag_ids' => $tagIds,
             'lang' => $lang,
             'langType' => $langType,
             'coverType' => $coverType,
@@ -354,6 +381,18 @@ class ExternalCatalogSyncService
                 'isbn' => $isbn13,
                 'category_id' => $categoryId,
             ])->saveQuietly();
+
+            // Do'kon taklifi uchun book_tag_relations ni ham yangilaymiz
+            if (! empty($tagIds)) {
+                $now = now();
+                $tagRows = array_map(fn ($tagId) => [
+                    'book_id' => $unlinkedBook->id,
+                    'tag_id' => (int) $tagId,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ], $tagIds);
+                DB::table('book_tag_relations')->insertOrIgnore($tagRows);
+            }
         }
 
         return [
@@ -620,8 +659,24 @@ class ExternalCatalogSyncService
                     description: $edition->description
                 );
 
+                $newTagIds = $this->resolveTagsWithAi(
+                    title: $edition->title,
+                    author: $edition->author,
+                    description: $edition->description,
+                    categoryId: $newCatId ?: (int) $edition->category_id
+                );
+
+                $changed = false;
                 if ($newCatId && (int) $edition->category_id !== $newCatId) {
                     $edition->category_id = $newCatId;
+                    $changed = true;
+                }
+                if (! empty($newTagIds) && empty($edition->tag_ids)) {
+                    $edition->tag_ids = $newTagIds;
+                    $changed = true;
+                }
+
+                if ($changed) {
                     $edition->save();
 
                     // Bog'langan takliflarni ham sinxronlaymiz
@@ -644,6 +699,131 @@ class ExternalCatalogSyncService
             'updated' => $updated,
             'failed' => $failed,
         ];
+    }
+
+    /**
+     * Kitob uchun mos teglarni AI va matn tahlili orqali aniqlash (0-5 ta teg).
+     *
+     * @param string $title
+     * @param string|null $author
+     * @param string|null $description
+     * @param int $categoryId
+     * @param array|null $rawTags
+     * @param array|null $suggestedTagIds
+     * @return array<int>
+     */
+    public function resolveTagsWithAi(
+        string $title,
+        ?string $author = null,
+        ?string $description = null,
+        int $categoryId = 1,
+        ?array $rawTags = null,
+        ?array $suggestedTagIds = null
+    ): array {
+        // 1. Shu kategoriyaga bog'langan yoki umumiy teglarni olamiz
+        $categoryTags = BookTag::query()
+            ->whereHas('categories', fn ($q) => $q->where('category_id', $categoryId))
+            ->get(['id', 'tag_name_uz', 'tag_name_ru', 'tag_name_en']);
+
+        $availableTags = $categoryTags->isNotEmpty()
+            ? $categoryTags
+            : BookTag::query()->get(['id', 'tag_name_uz', 'tag_name_ru', 'tag_name_en']);
+
+        if ($availableTags->isEmpty()) {
+            return [];
+        }
+
+        // 2. Agar oldindan aniqlangan suggested_tag_ids bo'lsa va ular mavjud bo'lsa
+        if (! empty($suggestedTagIds) && is_array($suggestedTagIds)) {
+            $validIds = $availableTags->pluck('id')->all();
+            $filtered = array_values(array_intersect($suggestedTagIds, $validIds));
+            if (! empty($filtered)) {
+                return array_map('intval', array_slice($filtered, 0, 5));
+            }
+        }
+
+        // 3. Tezkor Heuristic: Kitob matni yoki tashqi teglarda to'g'ridan-to'g'ri teg nomi bormi?
+        $text = mb_strtolower($title . ' ' . strip_tags((string) $description) . ' ' . implode(' ', (array) $rawTags));
+        $matchedTagIds = [];
+
+        foreach ($availableTags as $tag) {
+            $names = array_filter([$tag->tag_name_uz, $tag->tag_name_ru, $tag->tag_name_en]);
+            foreach ($names as $name) {
+                $norm = mb_strtolower(trim((string) $name));
+                if (mb_strlen($norm) >= 3 && str_contains($text, $norm)) {
+                    $matchedTagIds[] = (int) $tag->id;
+                    break;
+                }
+            }
+        }
+
+        $matchedTagIds = array_values(array_unique($matchedTagIds));
+        if (count($matchedTagIds) >= 2) {
+            return array_slice($matchedTagIds, 0, 5);
+        }
+
+        // 4. AI orqali kesh bilan aniqlash
+        $cacheKey = 'catalog_tags_ai:' . md5(mb_strtolower(trim($title . '|' . ($author ?? '') . '|' . $categoryId)));
+
+        return (array) Cache::remember($cacheKey, now()->addDays(30), function () use ($title, $author, $description, $categoryId, $rawTags, $availableTags, $matchedTagIds) {
+            try {
+                if (! config('services.openai.key')) {
+                    throw new \RuntimeException('OpenAI API key not configured.');
+                }
+
+                /** @var OpenAIService $ai */
+                $ai = app(OpenAIService::class);
+
+                $tagList = $availableTags->map(fn ($tag) => [
+                    'id' => (int) $tag->id,
+                    'name_uz' => $tag->tag_name_uz,
+                    'name_ru' => $tag->tag_name_ru,
+                ])->values()->all();
+
+                $prompt = json_encode([
+                    'task' => 'Kitob uchun berilgan teglardan eng mos keluvchi 1 tadan 5 tagacha teglarni tanlang.',
+                    'book' => [
+                        'title' => $title,
+                        'author' => $author,
+                        'category_id' => $categoryId,
+                        'description' => Str::limit(strip_tags((string) $description), 500, ''),
+                        'raw_tags' => array_slice((array) $rawTags, 0, 10),
+                    ],
+                    'available_tags' => $tagList,
+                    'rules' => [
+                        'Faqat available_tags ro\'yxatidagi "id" lardan tanlang.',
+                        'Eng ko\'pi bilan 5 ta eng muhim tegni tanlang.',
+                        'Agar hech biri mos kelmasa bo\'sh massiv [] qaytaring.',
+                        'Format: {"tag_ids": [int, ...], "tag_names": [string, ...], "reason": string}',
+                    ],
+                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+                $result = $ai->askJsonWithMessages([
+                    [
+                        'role' => 'system',
+                        'content' => "Sen kitob katalogi uchun teglar klassifikatori AI san. Faqat toza JSON qaytar.",
+                    ],
+                    [
+                        'role' => 'user',
+                        'content' => $prompt,
+                    ],
+                ], 300, 0.1);
+
+                $selectedIds = (array) ($result['tag_ids'] ?? []);
+                $validAvailableIds = $availableTags->pluck('id')->all();
+                $finalIds = array_values(array_intersect($selectedIds, $validAvailableIds));
+
+                if (! empty($finalIds)) {
+                    Log::info("AI Tags aniqlandi: [{$title}] -> " . json_encode($finalIds));
+
+                    return array_map('intval', array_slice($finalIds, 0, 5));
+                }
+            } catch (\Throwable $e) {
+                Log::warning('AI tags resolution xatolik: ' . $e->getMessage());
+            }
+
+            return array_slice($matchedTagIds, 0, 5);
+        });
     }
 
     /**

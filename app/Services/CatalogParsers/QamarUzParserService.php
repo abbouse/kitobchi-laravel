@@ -143,6 +143,16 @@ class QamarUzParserService
                 }
             }
 
+            $rawTags = [];
+            if (! empty($bookData['keywords'])) {
+                $rawTags = is_array($bookData['keywords'])
+                    ? $bookData['keywords']
+                    : array_map('trim', explode(',', (string) $bookData['keywords']));
+            } elseif (preg_match('/<meta\s+name=["\']keywords["\']\s+content=["\']([^"\']+)["\']/i', $html, $kMatch)) {
+                $rawTags = array_map('trim', explode(',', $kMatch[1]));
+            }
+            $rawTags = array_values(array_unique(array_filter($rawTags)));
+
             return [
                 'source' => 'qamar_uz',
                 'source_url' => $url,
@@ -160,6 +170,7 @@ class QamarUzParserService
                 'description' => $description,
                 'price_uzs' => $price,
                 'category_raw' => $categoryRaw,
+                'raw_tags' => $rawTags,
             ];
         } catch (\Throwable $e) {
             Log::warning('QamarUzParser: kitobni o\'qishda xatolik ' . $url, ['error' => $e->getMessage()]);
