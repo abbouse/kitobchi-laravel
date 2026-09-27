@@ -48,6 +48,7 @@ class ExternalCatalogSyncService
             'total_editions' => BookEdition::query()->where('status', '!=', BookEdition::STATUS_MERGED)->count(),
             'with_isbn' => BookEdition::query()->whereNotNull('isbn13')->count(),
             'without_isbn' => BookEdition::query()->whereNull('isbn13')->count(),
+            'without_description' => BookEdition::query()->where('status', '!=', BookEdition::STATUS_MERGED)->where(fn ($q) => $q->whereNull('description')->orWhere('description', '')->orWhereRaw('CHAR_LENGTH(description) < 30'))->count(),
             'unlinked_books' => Books::query()->whereNull('edition_id')->count(),
             'parser_items_cached' => CatalogParserItem::query()->whereNotNull('isbn')->count(),
         ];
@@ -917,5 +918,159 @@ class ExternalCatalogSyncService
             Log::warning('Muqova rasmini yuklab olishda xatolik: ' . $imageUrl, ['error' => $e->getMessage()]);
             return null;
         }
+    }
+
+    /**
+     * Kitob haqida AI orqali jozibali, professional tavsif (annotatsiya) yozish.
+     */
+    public function generateBookDescriptionWithAi(BookEdition $edition): ?string
+    {
+        try {
+            if (! config('services.openai.key')) {
+                return null;
+            }
+
+            /** @var OpenAIService $ai */
+            $ai = app(OpenAIService::class);
+
+            $categoryName = $edition->category?->name_uz ?? '';
+            $authorName = $edition->authorProfile?->name ?: $edition->author;
+            $publisherName = $edition->publisher?->name;
+
+            $details = collect([
+                "Kitob nomi: {$edition->title}",
+                $authorName ? "Muallif: {$authorName}" : null,
+                $categoryName ? "Kategoriya: {$categoryName}" : null,
+                $publisherName ? "Nashriyot: {$publisherName}" : null,
+                $edition->year ? "Yil: {$edition->year}" : null,
+                $edition->pages ? "Sahifalar soni: {$edition->pages} ta" : null,
+                $edition->lang ? "Til: {$edition->lang}" : null,
+            ])->filter()->implode("\n");
+
+            $systemPrompt = "Sen professional kitob do'koni uchun tavsif (annotatsiya) yozuvchi adabiy muharrir AI san. FAQAT O'ZBEK TILIDA jozibali, mazmunli va aniq tavsif yoz.";
+
+            $userPrompt = <<<EOT
+Quyidagi kitob haqida o'zbek tilida 3-5 jumladan iborat qisqa, jozibali va qiziqarli annotatsiya/tavsif yoz.
+
+Kitob ma'lumotlari:
+{$details}
+
+QOIDALAR:
+- Tavsif xaridor uchun yozilgan bo'lsin ("kitob haqida" formatida).
+- Kitobning ehtimoliy mavzusi, mazmuni va o'quvchiga beradigan foydasini ko'rsat.
+- Emoji ishlatma.
+- Maksimal 4-5 jumla.
+- Faqat tavsif matnini yoz, boshqa hech qanday so'zboshi yoki kirish gap qo'shma.
+EOT;
+
+            $content = $ai->askSimpleWithMessages([
+                ['role' => 'system', 'content' => $systemPrompt],
+                ['role' => 'user', 'content' => $userPrompt],
+            ], 450, 0.6);
+
+            $clean = trim((string) $content);
+            if (mb_strlen($clean) > 30 && ! str_contains($clean, 'Kechirasiz, hozir')) {
+                return $clean;
+            }
+
+            return null;
+        } catch (\Throwable $e) {
+            Log::warning("AI tavsif yozishda xatolik [{$edition->title}]: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Tavsifi bo'lmagan kitoblarga AI orqali sekin-asta tavsif yozib chiqish.
+     */
+    public function enrichMissingDescriptionsWithAi(int $limit = 50, ?callable $logger = null): array
+    {
+        @set_time_limit(0);
+
+        $query = BookEdition::query()
+            ->where('status', '!=', BookEdition::STATUS_MERGED)
+            ->where(function ($q) {
+                $q->whereNull('description')
+                  ->orWhere('description', '')
+                  ->orWhereRaw('CHAR_LENGTH(description) < 30');
+            })
+            ->latest('id');
+
+        if ($limit > 0) {
+            $query->limit($limit);
+        }
+
+        $editions = $query->get();
+        $total = $editions->count();
+        $updated = 0;
+        $failed = 0;
+
+        Cache::put('catalog_enrich_description_progress', [
+            'running' => true,
+            'total' => $total,
+            'processed' => 0,
+            'updated' => 0,
+            'failed' => 0,
+            'last_title' => $total > 0 ? "Tavsiflar yozilmoqda..." : "Tavsifsiz kitoblar topilmadi",
+            'updated_at' => now()->toIso8601String(),
+        ], 7200);
+
+        foreach ($editions as $idx => $edition) {
+            try {
+                if ($logger) {
+                    $logger(($idx + 1) . " / {$total}: {$edition->title} uchun tavsif yozilmoqda...");
+                }
+
+                $description = $this->generateBookDescriptionWithAi($edition);
+
+                if ($description) {
+                    $edition->description = $description;
+                    $edition->save();
+
+                    // Bog'langan takliflarga ham sinxronlaymiz
+                    try {
+                        CatalogService::syncOffers($edition->id);
+                    } catch (\Throwable) {
+                        // ignore
+                    }
+
+                    $updated++;
+                } else {
+                    $failed++;
+                }
+
+                Cache::put('catalog_enrich_description_progress', [
+                    'running' => ($idx + 1) < $total,
+                    'total' => $total,
+                    'processed' => $idx + 1,
+                    'updated' => $updated,
+                    'failed' => $failed,
+                    'last_title' => $edition->title,
+                    'updated_at' => now()->toIso8601String(),
+                ], 7200);
+
+                // API cheklovlariga tushmaslik uchun sekin oraliq (0.4 sekund)
+                usleep(400000);
+            } catch (\Throwable $e) {
+                $failed++;
+                Log::warning("Tavsif to'ldirishda xato: {$edition->id}", ['error' => $e->getMessage()]);
+            }
+        }
+
+        Cache::put('catalog_enrich_description_progress', [
+            'running' => false,
+            'total' => $total,
+            'processed' => $total,
+            'updated' => $updated,
+            'failed' => $failed,
+            'last_title' => "Yakunlandi",
+            'updated_at' => now()->toIso8601String(),
+        ], 7200);
+
+        return [
+            'total' => $total,
+            'updated' => $updated,
+            'failed' => $failed,
+        ];
     }
 }

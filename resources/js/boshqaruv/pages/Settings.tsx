@@ -15,8 +15,25 @@ type ParserStats = {
   total_editions: number;
   with_isbn: number;
   without_isbn: number;
+  without_description?: number;
   unlinked_books: number;
   parser_items_cached: number;
+};
+
+type EnrichProgress = {
+  running: boolean;
+  total: number;
+  processed: number;
+  updated: number;
+  failed: number;
+  last_title: string | null;
+  updated_at: string;
+};
+
+type EnrichReport = {
+  total: number;
+  updated: number;
+  failed: number;
 };
 
 type ParserItemResult = {
@@ -455,6 +472,8 @@ export default function Settings() {
           stats={settings.parserStats}
           runUrl={actions.parserRun}
           statsUrl={actions.parserStats}
+          categorizeUrl={actions.parserCategorizeExisting}
+          enrichUrl={actions.parserEnrichDescriptions}
         />
       )}
 
@@ -466,10 +485,14 @@ function CatalogParserSection({
   stats: initialStats,
   runUrl,
   statsUrl,
+  categorizeUrl,
+  enrichUrl,
 }: {
   stats?: ParserStats;
   runUrl?: string;
   statsUrl?: string;
+  categorizeUrl?: string;
+  enrichUrl?: string;
 }) {
   const [stats, setStats] = useState<ParserStats | undefined>(initialStats);
   const [source, setSource] = useState('all');
@@ -480,6 +503,14 @@ function CatalogParserSection({
   const [progress, setProgress] = useState<ParserProgress | null>(null);
   const [backgroundMsg, setBackgroundMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // AI Tavsif to'ldirish state
+  const [enrichLimit, setEnrichLimit] = useState('50');
+  const [enrichLoading, setEnrichLoading] = useState(false);
+  const [enrichProgress, setEnrichProgress] = useState<EnrichProgress | null>(null);
+  const [enrichBgMsg, setEnrichBgMsg] = useState<string | null>(null);
+  const [enrichError, setEnrichError] = useState<string | null>(null);
+  const [enrichReport, setEnrichReport] = useState<EnrichReport | null>(null);
 
   const getCsrfToken = () => document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content || '';
 
@@ -501,6 +532,12 @@ function CatalogParserSection({
             setBackgroundMsg(null);
           }
         }
+        if (data.enrich_progress) {
+          setEnrichProgress(data.enrich_progress);
+          if (!data.enrich_progress.running) {
+            setEnrichBgMsg(null);
+          }
+        }
       }
     } catch {
       // ignore
@@ -509,7 +546,7 @@ function CatalogParserSection({
 
   useEffect(() => {
     let interval: any = null;
-    if (progress?.running || backgroundMsg) {
+    if (progress?.running || backgroundMsg || enrichProgress?.running || enrichBgMsg) {
       interval = setInterval(() => {
         refreshStats();
       }, 3500);
@@ -517,7 +554,7 @@ function CatalogParserSection({
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [progress?.running, backgroundMsg]);
+  }, [progress?.running, backgroundMsg, enrichProgress?.running, enrichBgMsg]);
 
   const handleRun = async (e: FormEvent) => {
     e.preventDefault();
@@ -579,12 +616,67 @@ function CatalogParserSection({
     }
   };
 
+  const handleEnrich = async (e: FormEvent) => {
+    e.preventDefault();
+    if (enrichLoading) return;
+
+    setEnrichLoading(true);
+    setEnrichError(null);
+    setEnrichReport(null);
+
+    try {
+      const endpoint = enrichUrl || '/boshqaruv/settings/parser/enrich-descriptions';
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-CSRF-TOKEN': getCsrfToken(),
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          limit: Number(enrichLimit),
+        }),
+      });
+
+      const contentType = res.headers.get('content-type') || '';
+      let data: any = null;
+      if (contentType.includes('application/json')) {
+        data = await res.json();
+      } else {
+        const text = await res.text();
+        throw new Error(`Server xatosi (${res.status}): ${text.slice(0, 100)}`);
+      }
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Tavsiflashda xatolik yuz berdi');
+      }
+
+      if (data.is_background) {
+        setEnrichBgMsg(data.message);
+        if (data.enrich_progress) setEnrichProgress(data.enrich_progress);
+        setEnrichReport(null);
+      } else {
+        setEnrichBgMsg(null);
+        setEnrichReport(data.report);
+      }
+
+      if (data.stats) {
+        setStats(data.stats);
+      }
+    } catch (err: any) {
+      setEnrichError(err.message || 'Xatolik yuz berdi');
+    } finally {
+      setEnrichLoading(false);
+    }
+  };
+
   return (
     <div className="row g-3">
-      {/* 4 ta statistika kartochkasi */}
+      {/* 5 ta statistika kartochkasi */}
       <div className="col-12">
         <div className="row g-3">
-          <div className="col-xl-3 col-sm-6">
+          <div className="col-xl col-md-4 col-sm-6">
             <div className="card mb-0 bg-light-primary border-primary">
               <div className="card-body py-3">
                 <div className="d-flex align-items-center justify-content-between">
@@ -597,7 +689,7 @@ function CatalogParserSection({
               </div>
             </div>
           </div>
-          <div className="col-xl-3 col-sm-6">
+          <div className="col-xl col-md-4 col-sm-6">
             <div className="card mb-0 bg-light-success border-success">
               <div className="card-body py-3">
                 <div className="d-flex align-items-center justify-content-between">
@@ -610,7 +702,7 @@ function CatalogParserSection({
               </div>
             </div>
           </div>
-          <div className="col-xl-3 col-sm-6">
+          <div className="col-xl col-md-4 col-sm-6">
             <div className="card mb-0 bg-light-warning border-warning">
               <div className="card-body py-3">
                 <div className="d-flex align-items-center justify-content-between">
@@ -623,7 +715,20 @@ function CatalogParserSection({
               </div>
             </div>
           </div>
-          <div className="col-xl-3 col-sm-6">
+          <div className="col-xl col-md-4 col-sm-6">
+            <div className="card mb-0 bg-light-danger border-danger">
+              <div className="card-body py-3">
+                <div className="d-flex align-items-center justify-content-between">
+                  <div>
+                    <span className="text-muted f-s-13 f-w-600">Tavsifi yo'q kartalar</span>
+                    <h4 className="mb-0 mt-1 f-w-700 text-danger">{fmt(stats?.without_description || 0)}</h4>
+                  </div>
+                  <i className="ti ti-file-description f-s-28 text-danger"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="col-xl col-md-4 col-sm-6">
             <div className="card mb-0 bg-light-secondary border-secondary">
               <div className="card-body py-3">
                 <div className="d-flex align-items-center justify-content-between">
@@ -639,12 +744,13 @@ function CatalogParserSection({
         </div>
       </div>
 
-      {/* Parser Boshqaruvi */}
+      {/* Chap ustun: Boshqaruv vositalari */}
       <div className="col-xl-5">
+        {/* Parser Boshqaruvi */}
         <SectionCard title="Tashqi Katalog Parseri" icon="ti-cloud-download">
           <p className="text-muted f-s-13 mb-3">
             <strong>Qamar.uz</strong> va <strong>Book.uz</strong> saytlaridan ISBN mavjud kitoblarni olib, global katalogga (<code>book_editions</code>) saqlaydi. 
-            Agar bizning bazadagi kitob bilan nomi bir xil bo'lsa-yu, bizda ISBN yo'q yoki boshqacha bo'lsa — to'g'ri ISBN bilan to'ldirib qo'yadi.
+            Mavjud kitob bilan nomi to'g'ri kelsa, uning ISBN va ma'lumotlarini to'ldirib qo'yadi.
           </p>
 
           <form onSubmit={handleRun}>
@@ -709,10 +815,129 @@ function CatalogParserSection({
             </div>
           </form>
         </SectionCard>
+
+        {/* AI Tavsif Generator (Orqa fonda) */}
+        <div className="mt-3">
+          <SectionCard title="AI Tavsif Generator (Fonda)" icon="ti-sparkles">
+            <p className="text-muted f-s-13 mb-3">
+              Tavsifi bo'lmagan kitoblarga <strong>OpenAI</strong> orqali 3-5 gapli chiroyli adabiy o'zbekcha tavsif yozib chiqiladi.
+              Tavsif saqlangach, bog'langan barcha do'kon takliflariga ham avtomatik uzatiladi.
+              Server va API qotib qolmasligi uchun jarayon orqa fonda sekin tanaffuslar bilan bajariladi.
+            </p>
+
+            <form onSubmit={handleEnrich}>
+              <div className="mb-3">
+                <label className="form-label f-s-13 text-muted f-w-600">Ko'rib chiqish limiti</label>
+                <select className="form-select" value={enrichLimit} onChange={(e) => setEnrichLimit(e.target.value)} disabled={enrichLoading}>
+                  <option value="15">15 ta kitob (Tezkor tekshiruv)</option>
+                  <option value="50">50 ta kitob (Fonda)</option>
+                  <option value="100">100 ta kitob (Fonda)</option>
+                  <option value="0">Barcha tavsifsiz kitoblar ({fmt(stats?.without_description || 0)} ta - Fonda)</option>
+                </select>
+              </div>
+
+              <div className="d-flex justify-content-between align-items-center">
+                <button type="button" className="btn btn-outline-secondary btn-sm" onClick={refreshStats} disabled={enrichLoading}>
+                  <i className="ti ti-refresh me-1"></i>Tekshirish
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-success"
+                  disabled={enrichLoading || (stats?.without_description === 0) || enrichProgress?.running}
+                >
+                  {enrichLoading ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                      Yuborilmoqda...
+                    </>
+                  ) : enrichProgress?.running ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                      Fonda ishlamoqda...
+                    </>
+                  ) : (
+                    <>
+                      <i className="ti ti-sparkles me-1"></i>AI bilan tavsif yozish
+                    </>
+                  )}
+                </button>
+              </div>
+
+              <div className="mt-3 p-2 b-r-6 bg-light text-muted f-s-12">
+                <div className="d-flex align-items-center gap-1 mb-1">
+                  <i className="ti ti-terminal text-success"></i>
+                  <strong className="text-dark">Terminaldan sekin fonda yurgizish:</strong>
+                </div>
+                <code className="d-block user-select-all bg-white p-1 border b-r-4 text-dark f-s-11">
+                  php artisan catalog:enrich-descriptions --limit=0
+                </code>
+              </div>
+            </form>
+          </SectionCard>
+        </div>
       </div>
 
-      {/* Natijalar paneli */}
+      {/* O'ng ustun: Natijalar paneli */}
       <div className="col-xl-7">
+        {/* AI Tavsiflash xabarlari va progress */}
+        {enrichError && (
+          <div className="alert alert-danger d-flex align-items-center gap-2 mb-3">
+            <i className="ti ti-alert-triangle f-s-18"></i>
+            <div>{enrichError}</div>
+          </div>
+        )}
+
+        {enrichBgMsg && (
+          <div className="alert alert-success d-flex align-items-center gap-2 mb-3">
+            <i className="ti ti-circle-check f-s-18"></i>
+            <div>{enrichBgMsg}</div>
+          </div>
+        )}
+
+        {enrichProgress && enrichProgress.running && (
+          <div className="card mb-3 border-warning bg-light-warning">
+            <div className="card-body py-3">
+              <div className="d-flex align-items-center justify-content-between mb-2">
+                <div className="d-flex align-items-center gap-2">
+                  <span className="spinner-border spinner-border-sm text-warning" role="status" aria-hidden="true"></span>
+                  <strong className="text-dark">AI orqa fonda kitoblarga tavsif yozmoqda...</strong>
+                </div>
+                <button type="button" className="btn btn-outline-warning btn-xs py-0 px-2 f-s-11" onClick={refreshStats}>
+                  Yangilash
+                </button>
+              </div>
+              <div className="progress mb-2" style={{ height: '8px' }}>
+                <div
+                  className="progress-bar bg-warning progress-bar-striped progress-bar-animated"
+                  role="progressbar"
+                  style={{
+                    width: `${enrichProgress.total > 0 ? Math.min(100, Math.round((enrichProgress.processed / enrichProgress.total) * 100)) : 10}%`,
+                  }}
+                ></div>
+              </div>
+              <div className="f-s-13">
+                Jarayon: <strong>{enrichProgress.processed}</strong> {enrichProgress.total > 0 ? `/ ${enrichProgress.total}` : 'ta kitob'} | 
+                Tavsif saqlandi: <strong className="text-success">+{enrichProgress.updated}</strong> | 
+                Xatolik: <strong className="text-danger">{enrichProgress.failed}</strong>
+              </div>
+              {enrichProgress.last_title && (
+                <div className="f-s-12 text-muted mt-1 text-truncate">
+                  Hozir yozilmoqda: <em>{enrichProgress.last_title}</em>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {enrichReport && (
+          <div className="alert alert-success d-flex align-items-center justify-content-between mb-3">
+            <div className="d-flex align-items-center gap-2">
+              <i className="ti ti-sparkles f-s-20"></i>
+              <span>AI tavsiflash yakunlandi: <strong>{enrichReport.updated}</strong> ta kitobga sifatli tavsif yozildi va saqlandi! ({enrichReport.failed} ta xatolik)</span>
+            </div>
+          </div>
+        )}
+
         <SectionCard title="Sinxronlash natijalari" icon="ti-report-analytics">
           {error && (
             <div className="alert alert-danger d-flex align-items-center gap-2 mb-3">

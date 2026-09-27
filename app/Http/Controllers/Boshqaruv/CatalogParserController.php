@@ -22,6 +22,7 @@ class CatalogParserController extends Controller
             'success' => true,
             'stats' => $this->syncService->getStats(),
             'progress' => \Illuminate\Support\Facades\Cache::get('catalog_parser_progress'),
+            'enrich_progress' => \Illuminate\Support\Facades\Cache::get('catalog_enrich_description_progress'),
         ]);
     }
 
@@ -124,4 +125,66 @@ class CatalogParserController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Tavsifi yo'q kitob nashrlariga AI orqali sekin tavsif yozib chiqish.
+     */
+    public function enrichDescriptions(Request $request): JsonResponse
+    {
+        $limit = (int) $request->input('limit', 50);
+
+        // Agar limit 0 (barcha kitoblar) bo'lsa yoki 15 dan ortiq bo'lsa:
+        // Orqa fonda (CLI background) ishga tushiramiz, brauzer qotib qolmaydi.
+        if ($limit === 0 || $limit > 15) {
+            $artisan = base_path('artisan');
+            $limitFlag = $limit > 0 ? "--limit={$limit}" : '--limit=0';
+
+            $cmd = sprintf(
+                '%s %s catalog:enrich-descriptions %s > /dev/null 2>&1 &',
+                escapeshellcmd(PHP_BINARY),
+                escapeshellarg($artisan),
+                $limitFlag
+            );
+
+            @exec($cmd);
+
+            $progressData = [
+                'running' => true,
+                'total' => 0,
+                'processed' => 0,
+                'updated' => 0,
+                'failed' => 0,
+                'last_title' => "Fonda AI tavsif yozish boshlanmoqda...",
+                'updated_at' => now()->toIso8601String(),
+            ];
+
+            \Illuminate\Support\Facades\Cache::put('catalog_enrich_description_progress', $progressData, 7200);
+
+            return response()->json([
+                'success' => true,
+                'is_background' => true,
+                'message' => "Tavsifi yo'q kitoblarga AI orqali tavsif yozish orqa fonda (background rejimida) ishga tushirildi! Sayt qotmaydi, jarayonni real vaqtda kuzatib turishingiz mumkin.",
+                'stats' => $this->syncService->getStats(),
+                'enrich_progress' => $progressData,
+            ]);
+        }
+
+        try {
+            $report = $this->syncService->enrichMissingDescriptionsWithAi($limit);
+
+            return response()->json([
+                'success' => true,
+                'is_background' => false,
+                'message' => "AI tavsiflash yakunlandi: {$report['updated']} ta kitobga tavsif yozildi.",
+                'report' => $report,
+                'stats' => $this->syncService->getStats(),
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Xatolik yuz berdi: " . $e->getMessage(),
+            ], 500);
+        }
+    }
 }
+

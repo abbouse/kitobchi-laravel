@@ -10728,6 +10728,8 @@ PROMPT;
                 'cashbackStore' => route('boshqaruv.settings.cashback.store'),
                 'parserRun' => route('boshqaruv.settings.parser.run'),
                 'parserStats' => route('boshqaruv.settings.parser.stats'),
+                'parserCategorizeExisting' => route('boshqaruv.settings.parser.categorize-existing'),
+                'parserEnrichDescriptions' => route('boshqaruv.settings.parser.enrich-descriptions'),
             ],
             'parserStats' => app(\App\Services\CatalogParsers\ExternalCatalogSyncService::class)->getStats(),
             'indexUrl' => route('boshqaruv.settings'),
