@@ -77,144 +77,201 @@ class ExternalCatalogSyncService
             'items' => [],
         ];
 
-        $itemsToProcess = [];
-
-        // 1. Qamar.uz dan yig'ish
+        // 1. Qamar.uz dan oqimli (stream) sinxronlash
         if ($source === 'qamar_uz' || $source === 'all') {
             $qamarLimit = ($source === 'all' && $limit > 0) ? (int) ceil($limit / 2) : $limit;
             if ($logger) {
                 $logger("qamar.uz sitemap o'qilmoqda...");
             }
-            $urls = $this->qamarParser->discoverBookUrls($qamarLimit > 0 ? $qamarLimit * 2 : null);
 
-            $collected = 0;
+            Cache::put('catalog_parser_progress', [
+                'running' => true,
+                'source' => $source,
+                'total_scanned' => 0,
+                'total_target' => $limit > 0 ? $limit : 'Barchasi',
+                'editions_created' => 0,
+                'isbn_enriched' => 0,
+                'already_matched' => 0,
+                'skipped_no_isbn' => 0,
+                'failed' => 0,
+                'last_title' => "qamar.uz sitemap yuklanmoqda...",
+                'updated_at' => now()->toIso8601String(),
+            ], 7200);
+
+            $urls = $this->qamarParser->discoverBookUrls();
+            $totalUrls = count($urls);
+            $qamarProcessed = 0;
+
             foreach ($urls as $url) {
-                if ($qamarLimit > 0 && $collected >= $qamarLimit) {
+                if ($qamarLimit > 0 && ($results['editions_created'] + $results['isbn_enriched'] + $results['already_matched']) >= $qamarLimit) {
                     break;
                 }
-                $parsed = $this->qamarParser->parseBookPage($url);
-                if ($parsed && ! empty($parsed['isbn13'])) {
-                    $itemsToProcess[] = $parsed;
-                    $collected++;
+
+                try {
+                    $results['total_scanned']++;
+                    $qamarProcessed++;
+
+                    $parsed = $this->qamarParser->parseBookPage($url);
+                    if (! $parsed || empty($parsed['isbn13'])) {
+                        $results['skipped_no_isbn']++;
+                    } else {
+                        $syncRes = $this->syncSingleItem($parsed, $withImages);
+                        $action = $syncRes['action'] ?? 'skipped';
+
+                        if ($action === 'isbn_enriched') {
+                            $results['isbn_enriched']++;
+                        } elseif ($action === 'edition_created') {
+                            $results['editions_created']++;
+                        } elseif ($action === 'already_matched') {
+                            $results['already_matched']++;
+                        } elseif ($action === 'skipped_no_isbn') {
+                            $results['skipped_no_isbn']++;
+                        }
+
+                        if (count($results['items']) < 150) {
+                            $results['items'][] = [
+                                'title' => $parsed['title'] ?? '',
+                                'isbn' => $parsed['isbn13'] ?? '',
+                                'source' => 'qamar_uz',
+                                'action' => $action,
+                                'message' => $syncRes['message'] ?? '',
+                            ];
+                        }
+                    }
+
+                    // Keshni jonli yangilab boramiz
+                    if ($qamarProcessed % 2 === 0 || $qamarProcessed === 1) {
+                        Cache::put('catalog_parser_progress', [
+                            'running' => true,
+                            'source' => $source,
+                            'total_scanned' => $results['total_scanned'],
+                            'total_target' => $limit > 0 ? $limit : $totalUrls,
+                            'editions_created' => $results['editions_created'],
+                            'isbn_enriched' => $results['isbn_enriched'],
+                            'already_matched' => $results['already_matched'],
+                            'skipped_no_isbn' => $results['skipped_no_isbn'],
+                            'failed' => $results['failed'],
+                            'last_title' => $parsed['title'] ?? "Kitob #{$qamarProcessed}",
+                            'updated_at' => now()->toIso8601String(),
+                        ], 7200);
+                    }
+
+                    if ($logger && ($qamarProcessed % 5 === 0 || $qamarProcessed === 1)) {
+                        $title = $parsed['title'] ?? 'Noma\'lum';
+                        $act = $syncRes['action'] ?? 'o\'tkazildi';
+                        $logger("Qamar.uz [{$qamarProcessed}/{$totalUrls}]: {$title} ({$act})");
+                    }
+
+                    // Qamar.uz serveriga ortiqcha yuk tushmasligi uchun 0.15s tanaffus
+                    usleep(150000);
+                } catch (\Throwable $e) {
+                    $results['failed']++;
+                    Log::warning('Qamar.uz parse xatosi: ' . $e->getMessage(), ['url' => $url]);
                 }
             }
         }
 
-        // 2. Book.uz dan yig'ish
+        // 2. Book.uz dan oqimli sinxronlash
         if ($source === 'book_uz' || $source === 'all') {
             $bookUzLimit = ($source === 'all' && $limit > 0) ? (int) floor($limit / 2) : $limit;
             if ($logger) {
                 $logger("book.uz kitoblari tekshirilmoqda...");
             }
 
-            // Avval keshdagi CatalogParserItem tekshiriladi
-            $cachedItems = CatalogParserItem::query()
+            $query = CatalogParserItem::query()
                 ->where('provider', BookUzParserService::PROVIDER)
                 ->whereNotNull('isbn')
-                ->latest('id')
-                ->when($bookUzLimit > 0, fn ($q) => $q->limit($bookUzLimit))
-                ->get();
+                ->latest('id');
 
-            if ($cachedItems->isNotEmpty()) {
-                foreach ($cachedItems as $item) {
+            if ($bookUzLimit > 0) {
+                $query->limit($bookUzLimit);
+            }
+
+            $cachedItems = $query->get();
+            $totalBookUz = $cachedItems->count();
+
+            foreach ($cachedItems as $bIdx => $item) {
+                if ($bookUzLimit > 0 && ($results['editions_created'] + $results['isbn_enriched'] + $results['already_matched']) >= ($qamarLimit ?? 0) + $bookUzLimit) {
+                    break;
+                }
+
+                try {
+                    $results['total_scanned']++;
                     $isbn13 = Isbn::toIsbn13($item->isbn);
-                    if ($isbn13) {
-                        $itemsToProcess[] = [
-                            'source' => 'book_uz',
-                            'source_url' => $item->source_url,
-                            'external_id' => $item->external_id,
-                            'title' => $item->title,
-                            'author' => $item->author,
+
+                    if (! $isbn13) {
+                        $results['skipped_no_isbn']++;
+                        continue;
+                    }
+
+                    $itemPayload = [
+                        'source' => 'book_uz',
+                        'source_url' => $item->source_url,
+                        'external_id' => $item->external_id,
+                        'title' => $item->title,
+                        'author' => $item->author,
+                        'isbn' => $isbn13,
+                        'isbn13' => $isbn13,
+                        'isbn10' => Isbn::toIsbn10($isbn13),
+                        'publisher' => $item->publisher,
+                        'pages' => $item->pages,
+                        'cover_type' => $item->cover_type,
+                        'language' => $item->language,
+                        'image_url' => $item->primary_image_url,
+                        'description' => $item->description,
+                        'price_uzs' => $item->price_uzs,
+                        'category_raw' => $item->source_category ?? $item->suggested_category_name ?? null,
+                        'suggested_category_id' => $item->suggested_category_id ? (int) $item->suggested_category_id : null,
+                        'raw_tags' => data_get($item->payload, 'tags', []),
+                        'suggested_tag_ids' => is_array($item->suggested_tag_ids) ? $item->suggested_tag_ids : null,
+                    ];
+
+                    $syncRes = $this->syncSingleItem($itemPayload, $withImages);
+                    $action = $syncRes['action'] ?? 'skipped';
+
+                    if ($action === 'isbn_enriched') {
+                        $results['isbn_enriched']++;
+                    } elseif ($action === 'edition_created') {
+                        $results['editions_created']++;
+                    } elseif ($action === 'already_matched') {
+                        $results['already_matched']++;
+                    } elseif ($action === 'skipped_no_isbn') {
+                        $results['skipped_no_isbn']++;
+                    }
+
+                    if (count($results['items']) < 150) {
+                        $results['items'][] = [
+                            'title' => $item->title ?? '',
                             'isbn' => $isbn13,
-                            'isbn13' => $isbn13,
-                            'isbn10' => Isbn::toIsbn10($isbn13),
-                            'publisher' => $item->publisher,
-                            'pages' => $item->pages,
-                            'cover_type' => $item->cover_type,
-                            'language' => $item->language,
-                            'image_url' => $item->primary_image_url,
-                            'description' => $item->description,
-                            'price_uzs' => $item->price_uzs,
-                            'category_raw' => $item->source_category ?? $item->suggested_category_name ?? null,
-                            'suggested_category_id' => $item->suggested_category_id ? (int) $item->suggested_category_id : null,
-                            'raw_tags' => data_get($item->payload, 'tags', []),
-                            'suggested_tag_ids' => is_array($item->suggested_tag_ids) ? $item->suggested_tag_ids : null,
+                            'source' => 'book_uz',
+                            'action' => $action,
+                            'message' => $syncRes['message'] ?? '',
                         ];
                     }
+
+                    if (($bIdx + 1) % 2 === 0 || $bIdx === 0) {
+                        Cache::put('catalog_parser_progress', [
+                            'running' => true,
+                            'source' => $source,
+                            'total_scanned' => $results['total_scanned'],
+                            'total_target' => $limit > 0 ? $limit : ($totalUrls ?? 0) + $totalBookUz,
+                            'editions_created' => $results['editions_created'],
+                            'isbn_enriched' => $results['isbn_enriched'],
+                            'already_matched' => $results['already_matched'],
+                            'skipped_no_isbn' => $results['skipped_no_isbn'],
+                            'failed' => $results['failed'],
+                            'last_title' => $item->title,
+                            'updated_at' => now()->toIso8601String(),
+                        ], 7200);
+                    }
+
+                    if ($logger && ($bIdx % 5 === 0)) {
+                        $logger("Book.uz [{$bIdx}/{$totalBookUz}]: {$item->title} ({$action})");
+                    }
+                } catch (\Throwable $e) {
+                    $results['failed']++;
+                    Log::warning('Book.uz parse xatosi: ' . $e->getMessage(), ['item_id' => $item->id]);
                 }
-            }
-        }
-
-        // Agar umumiy limit belgilangan bo'lsa
-        if ($limit > 0 && count($itemsToProcess) > $limit) {
-            $itemsToProcess = array_slice($itemsToProcess, 0, $limit);
-        }
-
-        $results['total_scanned'] = count($itemsToProcess);
-
-        // Boshlang'ich holatni keshga saqlaymiz
-        Cache::put('catalog_parser_progress', [
-            'running' => true,
-            'source' => $source,
-            'total_scanned' => 0,
-            'total_target' => count($itemsToProcess),
-            'editions_created' => 0,
-            'isbn_enriched' => 0,
-            'already_matched' => 0,
-            'skipped_no_isbn' => 0,
-            'failed' => 0,
-            'last_title' => count($itemsToProcess) > 0 ? "Kitoblar qayta ishlanmoqda..." : "Kitoblar qidirilmoqda...",
-            'updated_at' => now()->toIso8601String(),
-        ], 7200);
-
-        // 3. Har bir kitobni qayta ishlash va DB'ga kiritish / yangilash
-        foreach ($itemsToProcess as $idx => $item) {
-            try {
-                $syncRes = $this->syncSingleItem($item, $withImages);
-                $action = $syncRes['action'] ?? 'skipped';
-
-                if ($action === 'isbn_enriched') {
-                    $results['isbn_enriched']++;
-                } elseif ($action === 'edition_created') {
-                    $results['editions_created']++;
-                } elseif ($action === 'already_matched') {
-                    $results['already_matched']++;
-                } elseif ($action === 'skipped_no_isbn') {
-                    $results['skipped_no_isbn']++;
-                }
-
-                if (count($results['items']) < 150) {
-                    $results['items'][] = [
-                        'title' => $item['title'] ?? '',
-                        'isbn' => $item['isbn13'] ?? '',
-                        'source' => $item['source'] ?? '',
-                        'action' => $action,
-                        'message' => $syncRes['message'] ?? '',
-                    ];
-                }
-
-                if (($idx + 1) % 5 === 0 || $idx === 0 || ($idx + 1) === count($itemsToProcess)) {
-                    Cache::put('catalog_parser_progress', [
-                        'running' => ($idx + 1) < count($itemsToProcess),
-                        'source' => $source,
-                        'total_scanned' => $idx + 1,
-                        'total_target' => count($itemsToProcess),
-                        'editions_created' => $results['editions_created'],
-                        'isbn_enriched' => $results['isbn_enriched'],
-                        'already_matched' => $results['already_matched'],
-                        'skipped_no_isbn' => $results['skipped_no_isbn'],
-                        'failed' => $results['failed'],
-                        'last_title' => $item['title'] ?? null,
-                        'updated_at' => now()->toIso8601String(),
-                    ], 7200);
-                }
-
-                if ($logger && ($idx + 1) % 10 === 0) {
-                    $logger(($idx + 1) . " / " . count($itemsToProcess) . " kitob ko'rib chiqildi...");
-                }
-            } catch (\Throwable $e) {
-                $results['failed']++;
-                Log::warning('ExternalCatalogSync xatosi: ' . $e->getMessage(), ['item' => $item]);
             }
         }
 
@@ -222,7 +279,7 @@ class ExternalCatalogSyncService
             'running' => false,
             'source' => $source,
             'total_scanned' => $results['total_scanned'],
-            'total_target' => count($itemsToProcess),
+            'total_target' => $results['total_scanned'],
             'editions_created' => $results['editions_created'],
             'isbn_enriched' => $results['isbn_enriched'],
             'already_matched' => $results['already_matched'],

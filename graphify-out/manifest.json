@@ -1044,9 +1044,9 @@
     "semantic_hash": "25ad84eb7154236e8f2415a9c416ac4c"
   },
   "app/Http/Controllers/Boshqaruv/AdminController.php": {
-    "mtime": 1790505363.7124286,
-    "seen": 1790506544.492356,
-    "ast_hash": "78016048c19a95e39b786ce7ee716792",
+    "mtime": 1790507222.8531408,
+    "seen": 1790507408.718278,
+    "ast_hash": "8595de76487e1cdbb57b77229b82ef1b",
     "semantic_hash": ""
   },
   "app/Http/Controllers/CareersController.php": {
@@ -3000,8 +3000,8 @@
     "semantic_hash": "b7b09d68f8893547a7e5fbd5207fc8fa"
   },
   "config/fcm.php": {
-    "mtime": 1790506526.1385777,
-    "seen": 1790506544.492531,
+    "mtime": 1790507395.3127248,
+    "seen": 1790507408.7184901,
     "ast_hash": "5ba2ac32c04d161d99057e23212f34b1",
     "semantic_hash": "5ba2ac32c04d161d99057e23212f34b1"
   },
@@ -4836,9 +4836,9 @@
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/Settings.tsx": {
-    "mtime": 1790506950.9189239,
-    "seen": 1790506981.0367072,
-    "ast_hash": "320333a2a6a715ea46e8619526280204",
+    "mtime": 1790507330.6906075,
+    "seen": 1790507408.718691,
+    "ast_hash": "010405208144cd2cc6499f614aad8297",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/Shikoyatlar.tsx": {
@@ -5364,9 +5364,9 @@
     "semantic_hash": ""
   },
   "routes/boshqaruv.php": {
-    "mtime": 1790506508.7561998,
-    "seen": 1790506544.492766,
-    "ast_hash": "ec6cb2d04a2c335aaaa49c6286cd52af",
+    "mtime": 1790507210.295932,
+    "seen": 1790507408.7187479,
+    "ast_hash": "79c57d3830b592c48e6269221ffb3883",
     "semantic_hash": ""
   },
   "routes/channels.php": {
@@ -7110,9 +7110,9 @@
     "semantic_hash": ""
   },
   "app/Http/Controllers/Boshqaruv/CatalogParserController.php": {
-    "mtime": 1790506881.1106606,
-    "seen": 1790506981.036314,
-    "ast_hash": "6b34a1851693f3bae83e4d1b1b1d998b",
+    "mtime": 1790507200.7566428,
+    "seen": 1790507408.718282,
+    "ast_hash": "0c94c684a14aa73610b131164fb0b242",
     "semantic_hash": ""
   },
   "app/Models/BookVideoSet.php": {
@@ -7128,9 +7128,9 @@
     "semantic_hash": ""
   },
   "app/Services/CatalogParsers/ExternalCatalogSyncService.php": {
-    "mtime": 1790506905.2408512,
-    "seen": 1790506981.0364459,
-    "ast_hash": "7373bc5328d6430c4439a3675908f241",
+    "mtime": 1790507100.0548208,
+    "seen": 1790507408.718421,
+    "ast_hash": "876c1bfb19939270bcfa53469b628c17",
     "semantic_hash": ""
   },
   "app/Services/CatalogParsers/QamarUzParserService.php": {
@@ -7167,6 +7167,12 @@
     "mtime": 1790505363.597855,
     "seen": 1790506544.4928262,
     "ast_hash": "edb81e441d50078cfe2720d32e0fc59c",
+    "semantic_hash": ""
+  },
+  "app/Console/Commands/CatalogEnrichDescriptions.php": {
+    "mtime": 1790507048.08029,
+    "seen": 1790507408.718169,
+    "ast_hash": "260fddf09f9bd0688805996907bb49ad",
     "semantic_hash": ""
   }
 }

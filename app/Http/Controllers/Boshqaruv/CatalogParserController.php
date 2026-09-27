@@ -45,14 +45,17 @@ class CatalogParserController extends Controller
             $artisan = base_path('artisan');
             $withImagesFlag = $withImages ? '--with-images' : '';
             $limitFlag = $limit > 0 ? "--limit={$limit}" : '--limit=0';
+            $phpBinary = $this->getCliPhpBinary();
+            $logFile = storage_path('logs/catalog-parser.log');
 
             $cmd = sprintf(
-                '%s %s catalog:sync-external --source=%s %s %s > /dev/null 2>&1 &',
-                escapeshellcmd(PHP_BINARY),
+                '%s %s catalog:sync-external --source=%s %s %s >> %s 2>&1 &',
+                escapeshellcmd($phpBinary),
                 escapeshellarg($artisan),
                 escapeshellarg($source),
                 $limitFlag,
-                $withImagesFlag
+                $withImagesFlag,
+                escapeshellarg($logFile)
             );
 
             @exec($cmd);
@@ -138,12 +141,15 @@ class CatalogParserController extends Controller
         if ($limit === 0 || $limit > 15) {
             $artisan = base_path('artisan');
             $limitFlag = $limit > 0 ? "--limit={$limit}" : '--limit=0';
+            $phpBinary = $this->getCliPhpBinary();
+            $logFile = storage_path('logs/catalog-enrich.log');
 
             $cmd = sprintf(
-                '%s %s catalog:enrich-descriptions %s > /dev/null 2>&1 &',
-                escapeshellcmd(PHP_BINARY),
+                '%s %s catalog:enrich-descriptions %s >> %s 2>&1 &',
+                escapeshellcmd($phpBinary),
                 escapeshellarg($artisan),
-                $limitFlag
+                $limitFlag,
+                escapeshellarg($logFile)
             );
 
             @exec($cmd);
@@ -185,6 +191,26 @@ class CatalogParserController extends Controller
                 'message' => "Xatolik yuz berdi: " . $e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * Veb-server muhitida (FPM/CGI/CLI) haqiqiy CLI PHP binarini aniqlaydi.
+     */
+    private function getCliPhpBinary(): string
+    {
+        $finder = new \Symfony\Component\Process\PhpExecutableFinder();
+        $php = $finder->find(false);
+        if ($php && ! str_contains($php, 'fpm')) {
+            return $php;
+        }
+
+        foreach (['/opt/homebrew/bin/php', '/usr/local/bin/php', '/usr/bin/php', 'php'] as $candidate) {
+            if ($candidate === 'php' || @is_executable($candidate)) {
+                return $candidate;
+            }
+        }
+
+        return 'php';
     }
 }
 
