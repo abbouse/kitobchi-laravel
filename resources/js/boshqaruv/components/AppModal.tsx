@@ -147,13 +147,14 @@ function TitleText({ children }: { children?: ReactNode }) {
   return <CrumbCtx.Provider value>{children}</CrumbCtx.Provider>;
 }
 
-function Title({ children, className, as }: { children?: ReactNode; className?: string; as?: 'h4' | 'h5' | 'div' }) {
+function Title({ children, className, as, style }: { children?: ReactNode; className?: string; as?: 'h4' | 'h5' | 'div'; style?: CSSProperties }) {
   const ctx = useContext(PageCtx);
   const inCrumb = useContext(CrumbCtx);
   if (inCrumb) return <>{children}</>;
-  if (!ctx) return <BsModal.Title as={as || 'h5'} className={`modal-title ${className || ''}`}>{children}</BsModal.Title>;
-  return <h4 className="main-title mb-0 txt-ellipsis-1">{children}</h4>;
+  if (!ctx) return <BsModal.Title as={as || 'h5'} className={`modal-title ${className || ''}`} style={style}>{children}</BsModal.Title>;
+  return <h4 className="main-title mb-0 txt-ellipsis-1" style={style}>{children}</h4>;
 }
+
 
 function Body({ children, className, style }: { children?: ReactNode; className?: string; style?: CSSProperties }) {
   const ctx = useContext(PageCtx);

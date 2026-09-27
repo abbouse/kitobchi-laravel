@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "ESNext",
     "module": "ESNext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "strict": false,
     "jsx": "react-jsx",
     "sourceMap": true,
@@ -11,13 +11,12 @@
     "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,
     "allowJs": true,
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["resources/js/*"]
+      "@/*": ["./resources/js/*"]
     }
   },
   "include": [
-    "resources/js/boshqaruv/pages/SecurityDashboard.tsx"
+    "resources/js/**/*"
   ],
   "exclude": [
     "node_modules",
@@ -25,3 +24,4 @@
     "web"
   ]
 }
+

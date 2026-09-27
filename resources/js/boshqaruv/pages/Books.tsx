@@ -609,8 +609,10 @@ export default function Books() {
       <Modal show={showView} onHide={() => setShowView(false)} centered size="xl" scrollable>
         <Modal.Header closeButton className="pb-2">
           <div className="d-flex align-items-center gap-2 flex-wrap min-w-0">
-            <Modal.Title className="f-s-18 f-w-700 text-truncate mb-0" style={{ maxWidth: 650 }}>
-              {selectedBook?.title}
+            <Modal.Title className="f-s-18 f-w-700 text-truncate mb-0">
+              <span className="d-inline-block text-truncate" style={{ maxWidth: 650 }}>
+                {selectedBook?.title}
+              </span>
             </Modal.Title>
             <span className="badge bg-light-secondary text-dark font-monospace">#{selectedBook?.id}</span>
             {selectedBook?.featured ? (
@@ -618,6 +620,7 @@ export default function Books() {
             ) : null}
           </div>
         </Modal.Header>
+
 
         <Modal.Body className="p-4">
           {selectedBook ? (
