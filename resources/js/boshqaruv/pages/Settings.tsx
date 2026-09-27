@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { PageCrumbs } from '../Layout';
 import { router, usePage } from '@inertiajs/react';
 import { tiIcon } from '../utils/icons';
@@ -36,6 +36,20 @@ type ParserReport = {
   skipped_no_isbn: number;
   failed: number;
   items: ParserItemResult[];
+};
+
+type ParserProgress = {
+  running: boolean;
+  source: string;
+  total_scanned: number;
+  total_target: number;
+  editions_created: number;
+  isbn_enriched: number;
+  already_matched: number;
+  skipped_no_isbn: number;
+  failed: number;
+  last_title: string | null;
+  updated_at: string;
 };
 
 type SettingsPayload = {
@@ -463,6 +477,8 @@ function CatalogParserSection({
   const [withImages, setWithImages] = useState(true);
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState<ParserReport | null>(null);
+  const [progress, setProgress] = useState<ParserProgress | null>(null);
+  const [backgroundMsg, setBackgroundMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const getCsrfToken = () => document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content || '';
@@ -474,14 +490,34 @@ function CatalogParserSection({
         headers: { Accept: 'application/json' },
         credentials: 'same-origin',
       });
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) return;
       const data = await res.json();
-      if (data.success && data.stats) {
-        setStats(data.stats);
+      if (data.success) {
+        if (data.stats) setStats(data.stats);
+        if (data.progress) {
+          setProgress(data.progress);
+          if (!data.progress.running) {
+            setBackgroundMsg(null);
+          }
+        }
       }
     } catch {
       // ignore
     }
   };
+
+  useEffect(() => {
+    let interval: any = null;
+    if (progress?.running || backgroundMsg) {
+      interval = setInterval(() => {
+        refreshStats();
+      }, 3500);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [progress?.running, backgroundMsg]);
 
   const handleRun = async (e: FormEvent) => {
     e.preventDefault();
@@ -508,12 +544,31 @@ function CatalogParserSection({
         }),
       });
 
-      const data = await res.json();
+      const contentType = res.headers.get('content-type') || '';
+      let data: any = null;
+      if (contentType.includes('application/json')) {
+        data = await res.json();
+      } else {
+        const text = await res.text();
+        if (res.status === 504 || res.status === 502) {
+          throw new Error("Server vaqti tugadi (504 Gateway Timeout). Barcha kitoblarni yuklash juda ko'p vaqt (30-60 daqiqa) olgani uchun, terminalda 'php artisan catalog:sync-external --source=all --limit=0' buyrug'ini bering.");
+        }
+        throw new Error(`Server xatosi (${res.status}): ${text.slice(0, 100)}`);
+      }
+
       if (!res.ok || !data.success) {
         throw new Error(data.message || 'Sinxronlashda xatolik yuz berdi');
       }
 
-      setReport(data.report);
+      if (data.is_background) {
+        setBackgroundMsg(data.message);
+        if (data.progress) setProgress(data.progress);
+        setReport(null);
+      } else {
+        setBackgroundMsg(null);
+        setReport(data.report);
+      }
+
       if (data.stats) {
         setStats(data.stats);
       }
@@ -608,9 +663,7 @@ function CatalogParserSection({
                 <option value="25">25 ta kitob (Tezkor tekshiruv)</option>
                 <option value="50">50 ta kitob</option>
                 <option value="100">100 ta kitob</option>
-                <option value="250">250 ta kitob</option>
-                <option value="500">500 ta kitob</option>
-                <option value="0">Barcha kitoblar (Ko'p vaqt olishi mumkin)</option>
+                <option value="0">Barcha kitoblar (Orqa fonda avtomatik ishlaydi)</option>
               </select>
             </div>
 
@@ -644,6 +697,16 @@ function CatalogParserSection({
                 )}
               </button>
             </div>
+
+            <div className="mt-3 p-2 b-r-6 bg-light text-muted f-s-12">
+              <div className="d-flex align-items-center gap-1 mb-1">
+                <i className="ti ti-terminal text-primary"></i>
+                <strong className="text-dark">Terminaldan to'liq sinxronlash (Tavsiya etiladi):</strong>
+              </div>
+              <code className="d-block user-select-all bg-white p-1 border b-r-4 text-dark f-s-11">
+                php artisan catalog:sync-external --source=all --limit=0 --with-images
+              </code>
+            </div>
           </form>
         </SectionCard>
       </div>
@@ -655,6 +718,37 @@ function CatalogParserSection({
             <div className="alert alert-danger d-flex align-items-center gap-2 mb-3">
               <i className="ti ti-alert-triangle f-s-18"></i>
               <div>{error}</div>
+            </div>
+          )}
+
+          {backgroundMsg && (
+            <div className="alert alert-success d-flex align-items-center gap-2 mb-3">
+              <i className="ti ti-circle-check f-s-18"></i>
+              <div>{backgroundMsg}</div>
+            </div>
+          )}
+
+          {progress && progress.running && (
+            <div className="alert alert-info mb-3">
+              <div className="d-flex align-items-center justify-content-between mb-2">
+                <div className="d-flex align-items-center gap-2">
+                  <span className="spinner-border spinner-border-sm text-info" role="status" aria-hidden="true"></span>
+                  <strong>Orqa fonda sinxronlash bormoqda ({progress.source})...</strong>
+                </div>
+                <button type="button" className="btn btn-outline-info btn-xs py-0 px-2 f-s-11" onClick={refreshStats}>
+                  Yangilash
+                </button>
+              </div>
+              <div className="f-s-13">
+                Skanerlandi: <strong>{progress.total_scanned}</strong> {progress.total_target > 0 ? `/ ${progress.total_target}` : 'ta kitob'} | 
+                Yangi ochildi: <strong className="text-success">+{progress.editions_created}</strong> | 
+                ISBN to'ldirildi: <strong className="text-primary">+{progress.isbn_enriched}</strong>
+              </div>
+              {progress.last_title && (
+                <div className="f-s-12 text-muted mt-1 text-truncate">
+                  Hozir ko'rilmoqda: <em>{progress.last_title}</em>
+                </div>
+              )}
             </div>
           )}
 

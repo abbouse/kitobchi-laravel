@@ -151,6 +151,21 @@ class ExternalCatalogSyncService
 
         $results['total_scanned'] = count($itemsToProcess);
 
+        // Boshlang'ich holatni keshga saqlaymiz
+        Cache::put('catalog_parser_progress', [
+            'running' => true,
+            'source' => $source,
+            'total_scanned' => 0,
+            'total_target' => count($itemsToProcess),
+            'editions_created' => 0,
+            'isbn_enriched' => 0,
+            'already_matched' => 0,
+            'skipped_no_isbn' => 0,
+            'failed' => 0,
+            'last_title' => count($itemsToProcess) > 0 ? "Kitoblar qayta ishlanmoqda..." : "Kitoblar qidirilmoqda...",
+            'updated_at' => now()->toIso8601String(),
+        ], 7200);
+
         // 3. Har bir kitobni qayta ishlash va DB'ga kiritish / yangilash
         foreach ($itemsToProcess as $idx => $item) {
             try {
@@ -177,6 +192,22 @@ class ExternalCatalogSyncService
                     ];
                 }
 
+                if (($idx + 1) % 5 === 0 || $idx === 0 || ($idx + 1) === count($itemsToProcess)) {
+                    Cache::put('catalog_parser_progress', [
+                        'running' => ($idx + 1) < count($itemsToProcess),
+                        'source' => $source,
+                        'total_scanned' => $idx + 1,
+                        'total_target' => count($itemsToProcess),
+                        'editions_created' => $results['editions_created'],
+                        'isbn_enriched' => $results['isbn_enriched'],
+                        'already_matched' => $results['already_matched'],
+                        'skipped_no_isbn' => $results['skipped_no_isbn'],
+                        'failed' => $results['failed'],
+                        'last_title' => $item['title'] ?? null,
+                        'updated_at' => now()->toIso8601String(),
+                    ], 7200);
+                }
+
                 if ($logger && ($idx + 1) % 10 === 0) {
                     $logger(($idx + 1) . " / " . count($itemsToProcess) . " kitob ko'rib chiqildi...");
                 }
@@ -185,6 +216,20 @@ class ExternalCatalogSyncService
                 Log::warning('ExternalCatalogSync xatosi: ' . $e->getMessage(), ['item' => $item]);
             }
         }
+
+        Cache::put('catalog_parser_progress', [
+            'running' => false,
+            'source' => $source,
+            'total_scanned' => $results['total_scanned'],
+            'total_target' => count($itemsToProcess),
+            'editions_created' => $results['editions_created'],
+            'isbn_enriched' => $results['isbn_enriched'],
+            'already_matched' => $results['already_matched'],
+            'skipped_no_isbn' => $results['skipped_no_isbn'],
+            'failed' => $results['failed'],
+            'last_title' => "Yakunlandi",
+            'updated_at' => now()->toIso8601String(),
+        ], 7200);
 
         return $results;
     }

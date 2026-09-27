@@ -14,13 +14,14 @@ class CatalogParserController extends Controller
     ) {}
 
     /**
-     * Parser statistikasi.
+     * Parser statistikasi va fondagi jarayon holati.
      */
     public function stats(): JsonResponse
     {
         return response()->json([
             'success' => true,
             'stats' => $this->syncService->getStats(),
+            'progress' => \Illuminate\Support\Facades\Cache::get('catalog_parser_progress'),
         ]);
     }
 
@@ -37,11 +38,56 @@ class CatalogParserController extends Controller
         $limit = (int) $request->input('limit', 50);
         $withImages = (bool) $request->input('with_images', true);
 
+        // Agar limit 0 (barcha kitoblar) bo'lsa yoki 100 dan ortiq bo'lsa:
+        // Veb brauzer 60 soniyada timeout bermasligi uchun orqa fonda (CLI background) ishga tushiramiz!
+        if ($limit === 0 || $limit > 100) {
+            $artisan = base_path('artisan');
+            $withImagesFlag = $withImages ? '--with-images' : '';
+            $limitFlag = $limit > 0 ? "--limit={$limit}" : '--limit=0';
+
+            $cmd = sprintf(
+                '%s %s catalog:sync-external --source=%s %s %s > /dev/null 2>&1 &',
+                escapeshellcmd(PHP_BINARY),
+                escapeshellarg($artisan),
+                escapeshellarg($source),
+                $limitFlag,
+                $withImagesFlag
+            );
+
+            @exec($cmd);
+
+            $progressData = [
+                'running' => true,
+                'source' => $source,
+                'total_scanned' => 0,
+                'total_target' => 0,
+                'editions_created' => 0,
+                'isbn_enriched' => 0,
+                'already_matched' => 0,
+                'skipped_no_isbn' => 0,
+                'failed' => 0,
+                'last_title' => "Fonda ish boshlanmoqda...",
+                'started_at' => now()->toIso8601String(),
+                'updated_at' => now()->toIso8601String(),
+            ];
+
+            \Illuminate\Support\Facades\Cache::put('catalog_parser_progress', $progressData, 7200);
+
+            return response()->json([
+                'success' => true,
+                'is_background' => true,
+                'message' => "Barcha kitoblarni sinxronlash orqa fonda (background rejimida) ishga tushirildi! Veb-sahifa qotib qolmaydi. Jarayonni quyidagi ko'rsatkichlar orqali real vaqtda kuzatib turishingiz mumkin.",
+                'stats' => $this->syncService->getStats(),
+                'progress' => $progressData,
+            ]);
+        }
+
         try {
             $report = $this->syncService->runSync($source, $limit, $withImages);
 
             return response()->json([
                 'success' => true,
+                'is_background' => false,
                 'message' => "Sinxronlash muvaffaqiyatli yakunlandi.",
                 'report' => $report,
                 'stats' => $this->syncService->getStats(),
