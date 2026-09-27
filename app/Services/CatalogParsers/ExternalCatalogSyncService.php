@@ -346,6 +346,12 @@ class ExternalCatalogSyncService
                     }
                 }
 
+                // Parserdan tasdiqlangan ma'lumot kelganda kartani ham faol va tasdiqlangan qilamiz
+                if ($matchedEdition->status === BookEdition::STATUS_PENDING || $matchedEdition->verified_at === null) {
+                    $matchedEdition->status = BookEdition::STATUS_ACTIVE;
+                    $matchedEdition->verified_at = now();
+                }
+
                 $matchedEdition->save();
 
                 // Unga ulangan barcha do'kon takliflaridagi ISBN'ni ham yangilaymiz
@@ -396,6 +402,12 @@ class ExternalCatalogSyncService
                     $enriched = true;
                 }
             }
+            if ($matchedEdition->status === BookEdition::STATUS_PENDING || $matchedEdition->verified_at === null) {
+                $matchedEdition->status = BookEdition::STATUS_ACTIVE;
+                $matchedEdition->verified_at = now();
+                $enriched = true;
+            }
+
             if ($enriched) {
                 $matchedEdition->save();
             }
