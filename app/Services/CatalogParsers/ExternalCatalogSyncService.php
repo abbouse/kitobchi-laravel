@@ -9,9 +9,11 @@ use App\Models\CatalogParserItem;
 use App\Models\Publisher;
 use App\Services\AuthorDirectoryService;
 use App\Services\Catalog\CatalogService;
+use App\Services\OpenAIService;
 use App\Support\Isbn;
 use App\Support\ProductImageVariantGenerator;
 use GuzzleHttp\Client;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -131,6 +133,8 @@ class ExternalCatalogSyncService
                             'image_url' => $item->primary_image_url,
                             'description' => $item->description,
                             'price_uzs' => $item->price_uzs,
+                            'category_raw' => $item->source_category ?? $item->suggested_category_name ?? null,
+                            'suggested_category_id' => $item->suggested_category_id ? (int) $item->suggested_category_id : null,
                         ];
                     }
                 }
@@ -259,6 +263,19 @@ class ExternalCatalogSyncService
                 $matchedEdition->pages = (int) $item['pages'];
                 $enriched = true;
             }
+            if (empty($matchedEdition->category_id) || (int) $matchedEdition->category_id === 1) {
+                $resolvedCatId = $this->resolveCategoryWithAi(
+                    title: $matchedEdition->title,
+                    author: $matchedEdition->author ?: ($item['author'] ?? null),
+                    description: $matchedEdition->description ?: ($item['description'] ?? null),
+                    rawCategory: $item['category_raw'] ?? ($item['category'] ?? null),
+                    suggestedId: $item['suggested_category_id'] ?? null
+                );
+                if ($resolvedCatId > 0 && $resolvedCatId !== (int) $matchedEdition->category_id) {
+                    $matchedEdition->category_id = $resolvedCatId;
+                    $enriched = true;
+                }
+            }
             if ($enriched) {
                 $matchedEdition->save();
             }
@@ -285,7 +302,13 @@ class ExternalCatalogSyncService
         // 3. Bizda bu kitob umuman yo'q — YANGI GLOBAL KARTA OCHAMIZ
         $author = $this->authorDirectory->resolveOrCreateByName($item['author'] ?? null);
         $publisherId = $this->resolvePublisherId($item['publisher'] ?? null);
-        $categoryId = $this->resolveDefaultCategory();
+        $categoryId = $this->resolveCategoryWithAi(
+            title: $title,
+            author: $author?->name ?: ($item['author'] ?? null),
+            description: $item['description'] ?? null,
+            rawCategory: $item['category_raw'] ?? ($item['category'] ?? null),
+            suggestedId: $item['suggested_category_id'] ?? null
+        );
 
         $imagePath = null;
         if ($withImages && ! empty($item['image_url'])) {
@@ -329,6 +352,7 @@ class ExternalCatalogSyncService
             $unlinkedBook->forceFill([
                 'edition_id' => $newEdition->id,
                 'isbn' => $isbn13,
+                'category_id' => $categoryId,
             ])->saveQuietly();
         }
 
@@ -405,11 +429,229 @@ class ExternalCatalogSyncService
     }
 
     /**
+     * Kitob uchun mos toifani AI va ko'p bosqichli leksik tahlil orqali aniqlash.
+     *
+     * Bosqichlar:
+     * 1. Agar oldindan aniqlangan suggested_category_id mavjud va DBda bor bo'lsa -> shuni qaytaradi.
+     * 2. Agar tashqi saytdan aniq kategoriya kelgan bo'lsa -> DBdagi toifalar bilan bevosita solishtiradi (tezkor heuristic).
+     * 3. Cache'ni tekshiradi (md5(title|author|raw_category)) -> 30 kun saqlanadi.
+     * 4. OpenAI gpt-4o-mini'ga kitob nomi, muallifi, tashqi toifasi va tavsifini yuborib,
+     *    mavjud faol kategoriyalar orasidan yagona to'g'ri category_id ni tanlashni topshiradi.
+     * 5. OpenAI ulanishi xato bersa yoki token tugasa -> kalit so'zlar bo'yicha aqlli fallback ishlaydi.
+     */
+    public function resolveCategoryWithAi(
+        string $title,
+        ?string $author = null,
+        ?string $description = null,
+        ?string $rawCategory = null,
+        ?int $suggestedId = null
+    ): int {
+        $categories = BookCategories::query()
+            ->where('is_active', true)
+            ->get(['id', 'name_uz', 'name_ru', 'name_en', 'name_ja']);
+
+        if ($categories->isEmpty()) {
+            return 1;
+        }
+
+        // 1. Agar aniq ishonchli suggested ID berilgan bo'lsa
+        if ($suggestedId && $categories->contains('id', $suggestedId)) {
+            return (int) $suggestedId;
+        }
+
+        // 2. Tashqi toifa nomi bilan bevosita moslikni tekshirish
+        $normalizedRaw = mb_strtolower(trim((string) $rawCategory));
+        if ($normalizedRaw !== '') {
+            foreach ($categories as $cat) {
+                $names = array_filter([$cat->name_uz, $cat->name_ru, $cat->name_en]);
+                foreach ($names as $name) {
+                    $normName = mb_strtolower(trim($name));
+                    if ($normName !== '' && ($normName === $normalizedRaw || str_contains($normalizedRaw, $normName) || str_contains($normName, $normalizedRaw))) {
+                        return (int) $cat->id;
+                    }
+                }
+            }
+        }
+
+        // 3. AI orqali kesh bilan aniqlash
+        $cacheKey = 'catalog_cat_ai:' . md5(mb_strtolower(trim($title . '|' . ($author ?? '') . '|' . $normalizedRaw)));
+
+        return (int) Cache::remember($cacheKey, now()->addDays(30), function () use ($title, $author, $description, $rawCategory, $categories) {
+            try {
+                if (! config('services.openai.key')) {
+                    throw new \RuntimeException('OpenAI API key not configured.');
+                }
+
+                /** @var OpenAIService $ai */
+                $ai = app(OpenAIService::class);
+
+                $categoryList = $categories->map(fn ($category) => [
+                    'id' => (int) $category->id,
+                    'name_uz' => $category->name_uz,
+                    'name_ru' => $category->name_ru,
+                ])->values()->all();
+
+                $prompt = json_encode([
+                    'task' => 'Kitob uchun eng mos keluvchi yagona category_id ni tanlang.',
+                    'book' => [
+                        'title' => $title,
+                        'author' => $author,
+                        'external_category' => $rawCategory,
+                        'description' => Str::limit(strip_tags((string) $description), 500, ''),
+                    ],
+                    'available_categories' => $categoryList,
+                    'rules' => [
+                        'Faqat available_categories ro\'yxatidagi "id" lardan birini tanlang.',
+                        'Diniy, ma\'rifiy, islomiy kitoblar uchun tegishli diniy toifani tanlang.',
+                        'Roman, qissa, she\'riyat, detektiv, fantastika uchun badiiy adabiyot toifasini tanlang.',
+                        'Biznes, moliya, iqtisod, boshqaruv uchun biznes toifasini tanlang.',
+                        'Psixologiya, o\'zini rivojlantirish, motivatsiya uchun psixologiya toifasini tanlang.',
+                        'Bolalar ertaklari, bolalar kitoblari uchun bolalar adabiyotini tanlang.',
+                        'Agar to\'g\'ridan-to\'g\'ri mos toifa bo\'lmasa, mavjudlari ichidan eng yaqin toifani tanlang.',
+                        'Qat\'iy ravishda faqat toza JSON formatida javob bering.',
+                    ],
+                    'output_format' => [
+                        'category_id' => 'int (mavjud id lardan biri)',
+                        'category_name' => 'string',
+                        'confidence' => 'float (0.0 - 1.0)',
+                        'reason' => 'string',
+                    ],
+                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+                $result = $ai->askJsonWithMessages([
+                    [
+                        'role' => 'system',
+                        'content' => "Sen kitoblar marketpleysi katalogi uchun professional klassifikator AI san. Faqat toza JSON qaytar. Mavjud category_id lardan eng munosibini tanla.",
+                    ],
+                    [
+                        'role' => 'user',
+                        'content' => $prompt,
+                    ],
+                ], 300, 0.1);
+
+                $selectedId = (int) ($result['category_id'] ?? 0);
+                if ($selectedId > 0 && $categories->contains('id', $selectedId)) {
+                    Log::info("AI Category aniqlandi: [{$title}] -> ID {$selectedId} ({$result['category_name']})", [
+                        'confidence' => $result['confidence'] ?? null,
+                        'reason' => $result['reason'] ?? null,
+                    ]);
+
+                    return $selectedId;
+                }
+            } catch (\Throwable $e) {
+                Log::warning('AI category resolution xatolik: ' . $e->getMessage());
+            }
+
+            // Fallback: Agar AI ishlamasa yoki xato bersa, leksik qoidalar
+            return $this->resolveFallbackCategoryByKeywords($title, $description, $categories);
+        });
+    }
+
+    /**
+     * AI ishlamagan taqdirda kalit so'zlar bo'yicha eng yaqin toifani aniqlash.
+     */
+    private function resolveFallbackCategoryByKeywords(string $title, ?string $description, $categories): int
+    {
+        $text = mb_strtolower($title . ' ' . strip_tags((string) $description));
+
+        $rules = [
+            'diniy' => ['islom', 'qur\'on', 'quron', 'hadis', 'namoz', 'sahoba', 'zikr', 'aqida', 'fiqh', 'siyrat', 'olloh', 'payg\'ambar', 'tafseer', 'tafsir', 'duo', 'jannat', 'shariat'],
+            'bolalar' => ['bolalar', 'ertak', 'alifbo', 'rangli', 'kichkintoy', 'she\'rlar bolalar'],
+            'biznes' => ['biznes', 'moliya', 'iqtisod', 'marketing', 'menejment', 'startap', 'startup', 'investitsiya', 'pul', 'savdo', 'daromad', 'kapital', 'menejer'],
+            'psixologiya' => ['psixologiya', 'shaxsiy rivojlanish', 'muvaffaqiyat', 'ong osti', 'odat', 'motivatsiya', 'baxt', 'tushkunlik', 'depressiya', 'emotsional'],
+            'tarix' => ['tarix', 'sulola', 'imperiya', 'temur', 'bobur', 'sulton', 'jang', 'urush', 'davlat', 'xonlik', 'shajarasi'],
+            'lug\'at' => ['lug\'at', 'dictionary', 'grammatika', 'til o\'rganish', 'grammar', 'ruscha', 'inglizcha'],
+            'badiiy' => ['roman', 'qissa', 'hikoya', 'doston', 'she\'r', 'asar', 'detektiv', 'fantastika', 'novella', 'triller', 'afsona'],
+        ];
+
+        foreach ($rules as $catKeyword => $keywords) {
+            foreach ($keywords as $kw) {
+                if (str_contains($text, $kw)) {
+                    $matched = $categories->first(function ($c) use ($catKeyword) {
+                        return str_contains(mb_strtolower($c->name_uz ?? ''), $catKeyword)
+                            || str_contains(mb_strtolower($c->name_ru ?? ''), $catKeyword);
+                    });
+                    if ($matched) {
+                        return (int) $matched->id;
+                    }
+                }
+            }
+        }
+
+        // Badiiy toifasi mavjud bo'lsa shuni, aks holda birinchi toifani oladi
+        $badiiy = $categories->first(fn ($c) => str_contains(mb_strtolower($c->name_uz ?? ''), 'badiiy'));
+
+        return (int) ($badiiy?->id ?? $categories->first()?->id ?? 1);
+    }
+
+    /**
+     * Mavjud kitob nashrlarining kategoriyalarini AI yordamida ommaviy aniqlash / qayta yangilash.
+     */
+    public function categorizeExistingEditions(int $limit = 50, bool $onlyUncategorized = true, ?callable $logger = null): array
+    {
+        @set_time_limit(0);
+
+        $query = BookEdition::query()
+            ->where('status', '!=', BookEdition::STATUS_MERGED)
+            ->when($onlyUncategorized, function ($q) {
+                $q->where(function ($sub) {
+                    $sub->whereNull('category_id')->orWhere('category_id', 1);
+                });
+            })
+            ->latest('id');
+
+        if ($limit > 0) {
+            $query->limit($limit);
+        }
+
+        $editions = $query->get();
+        $updated = 0;
+        $failed = 0;
+
+        foreach ($editions as $edition) {
+            try {
+                if ($logger) {
+                    $logger("AI klassifikatsiya: {$edition->title}");
+                }
+
+                $newCatId = $this->resolveCategoryWithAi(
+                    title: $edition->title,
+                    author: $edition->author,
+                    description: $edition->description
+                );
+
+                if ($newCatId && (int) $edition->category_id !== $newCatId) {
+                    $edition->category_id = $newCatId;
+                    $edition->save();
+
+                    // Bog'langan takliflarni ham sinxronlaymiz
+                    try {
+                        CatalogService::syncOffers($edition->id);
+                    } catch (\Throwable) {
+                        // ignore
+                    }
+
+                    $updated++;
+                }
+            } catch (\Throwable $e) {
+                $failed++;
+                Log::warning("Editsiya kategoriyasini yangilashda xato: {$edition->id}", ['error' => $e->getMessage()]);
+            }
+        }
+
+        return [
+            'total_scanned' => $editions->count(),
+            'updated' => $updated,
+            'failed' => $failed,
+        ];
+    }
+
+    /**
      * Asosiy standart kategoriyani aniqlash.
      */
     private function resolveDefaultCategory(): int
     {
-        return (int) (BookCategories::query()->value('id') ?? 1);
+        return (int) (BookCategories::query()->where('is_active', true)->value('id') ?? 1);
     }
 
     /**

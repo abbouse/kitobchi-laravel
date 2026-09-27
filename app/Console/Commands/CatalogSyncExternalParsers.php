@@ -10,14 +10,38 @@ class CatalogSyncExternalParsers extends Command
     protected $signature = 'catalog:sync-external
                             {--source=all : Manba: all, qamar_uz, yoki book_uz}
                             {--limit=50 : Kitoblar soni (0 = barchasi)}
-                            {--with-images : Muqova rasmlarini yuklab olish}';
+                            {--with-images : Muqova rasmlarini yuklab olish}
+                            {--categorize-existing : Mavjud kitob nashrlarining kategoriyalarini AI yordamida aniqlash/yangilash}';
 
-    protected $description = "Qamar.uz va Book.uz saytlaridan ISBN'li kitoblarni global katalogga sinxronlash va ISBN'ni boyitish";
+    protected $description = "Qamar.uz va Book.uz saytlaridan ISBN'li kitoblarni global katalogga sinxronlash va AI orqali kategoriyalarini aniqlash";
 
     public function handle(ExternalCatalogSyncService $syncService): int
     {
-        $source = (string) $this->option('source');
         $limit = (int) $this->option('limit');
+
+        if ($this->option('categorize-existing')) {
+            $this->info("=== Mavjud kitoblarni AI orqali kategoriyalash ===");
+            $this->info("Limit: {$limit}");
+
+            $report = $syncService->categorizeExistingEditions($limit, true, function ($message) {
+                $this->line("  > {$message}");
+            });
+
+            $this->newLine();
+            $this->info("=== Natijalar ===");
+            $this->table(
+                ['Ko\'rsatkich', 'Soni'],
+                [
+                    ['Ko\'rib chiqildi', $report['total_scanned']],
+                    ['Kategoriyasi yangilandi', $report['updated']],
+                    ['Xatoliklar', $report['failed']],
+                ]
+            );
+
+            return self::SUCCESS;
+        }
+
+        $source = (string) $this->option('source');
         $withImages = (bool) $this->option('with-images');
 
         $this->info("=== External Catalog Parser ===");

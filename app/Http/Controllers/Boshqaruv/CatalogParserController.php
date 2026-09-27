@@ -53,4 +53,29 @@ class CatalogParserController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Mavjud kitoblarning kategoriyasini AI orqali aniqlash / qayta yangilash.
+     */
+    public function categorizeExisting(Request $request): JsonResponse
+    {
+        $limit = (int) $request->input('limit', 50);
+        $onlyUncategorized = (bool) $request->input('only_uncategorized', true);
+
+        try {
+            $report = $this->syncService->categorizeExistingEditions($limit, $onlyUncategorized);
+
+            return response()->json([
+                'success' => true,
+                'message' => "AI klassifikatsiya yakunlandi: {$report['updated']} ta kitob yangilandi.",
+                'report' => $report,
+                'stats' => $this->syncService->getStats(),
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => "Xatolik yuz berdi: " . $e->getMessage(),
+            ], 500);
+        }
+    }
 }

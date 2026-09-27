@@ -113,6 +113,36 @@ class QamarUzParserService
             $description = trim((string) ($bookData['description'] ?? ''));
             $price = isset($bookData['offers']['price']) ? (int) $bookData['offers']['price'] : null;
 
+            $categoryRaw = null;
+            foreach ($matches[1] as $jsonStr) {
+                $decoded = json_decode($jsonStr, true);
+                if (is_array($decoded) && ($decoded['@type'] ?? '') === 'BreadcrumbList' && ! empty($decoded['itemListElement'])) {
+                    $items = collect($decoded['itemListElement'])->sortBy('position')->values();
+                    if ($items->count() >= 2) {
+                        $catItem = $items[$items->count() - 2];
+                        $catName = is_array($catItem) ? ($catItem['name'] ?? data_get($catItem, 'item.name')) : null;
+                        if ($catName && ! in_array(mb_strtolower(trim((string) $catName)), ['bosh sahifa', 'glavnaya', 'home', 'katalog', 'kitoblar'], true)) {
+                            $categoryRaw = trim((string) $catName);
+                        }
+                    }
+                }
+            }
+
+            if (! $categoryRaw && ! empty($bookData['genre'])) {
+                $categoryRaw = is_array($bookData['genre']) ? implode(', ', $bookData['genre']) : (string) $bookData['genre'];
+            }
+
+            if (! $categoryRaw && preg_match('/class=["\'][^"\']*breadcrumb[^"\']*["\']>(.*?)<\/(?:nav|ul|ol|div)>/is', $html, $bMatch)) {
+                if (preg_match_all('/<a[^>]*>(.*?)<\/a>/is', $bMatch[1], $aMatches)) {
+                    $crumbs = array_map('strip_tags', $aMatches[1]);
+                    $crumbs = array_values(array_filter(array_map('trim', $crumbs)));
+                    $crumbs = array_values(array_filter($crumbs, fn ($c) => ! in_array(mb_strtolower($c), ['bosh sahifa', 'glavnaya', 'home', 'katalog', 'bosh sahifaga'], true)));
+                    if (! empty($crumbs)) {
+                        $categoryRaw = end($crumbs);
+                    }
+                }
+            }
+
             return [
                 'source' => 'qamar_uz',
                 'source_url' => $url,
@@ -129,6 +159,7 @@ class QamarUzParserService
                 'image_url' => $imageUrl,
                 'description' => $description,
                 'price_uzs' => $price,
+                'category_raw' => $categoryRaw,
             ];
         } catch (\Throwable $e) {
             Log::warning('QamarUzParser: kitobni o\'qishda xatolik ' . $url, ['error' => $e->getMessage()]);
