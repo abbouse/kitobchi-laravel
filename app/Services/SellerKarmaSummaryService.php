@@ -112,7 +112,8 @@ class SellerKarmaSummaryService
             ->sum('netAmount');
 
         $totalIncome = max(0, $approvedSales - $approvedReversals);
-        $withdrawableBalance = max(0, (int) ($seller->balance ?? 0));
+        // Oxirgi 14 kundagi buyurtmalar puli ushlab turiladi (SellerPayoutService)
+        $withdrawableBalance = (int) app(SellerPayoutService::class)->summary($seller)['withdrawable'];
         $totalWithdrawal = max(0, (int) ($seller->total_withdrawal ?? 0));
 
         $productScore = round(max(45, min(100, ($productRating / 5) * 100)), 2);

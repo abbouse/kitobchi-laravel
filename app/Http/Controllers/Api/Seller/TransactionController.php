@@ -8,13 +8,14 @@ use App\Models\Seller;
 use App\Models\SellerLocation;
 use App\Models\SellerStaffLog;
 use App\Models\SellerTransaction; // ✅ LOG MODEL
+use App\Services\SellerPayoutService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class TransactionController extends Controller
 {
-    public function __construct()
+    public function __construct(private readonly SellerPayoutService $payouts)
     {
         $this->middleware('auth:seller');
     }
@@ -125,7 +126,38 @@ class TransactionController extends Controller
         return null;
     }
 
-    public function requestWithdrawal()
+    /** Ilovada ko'rsatish uchun: karta yoki hisob raqamining oxirgi raqamlari. */
+    private function maskedWithdrawalMethod(Seller $seller): ?array
+    {
+        if (filled($seller->payment_card)) {
+            $digits = preg_replace('/\D+/', '', (string) $seller->payment_card);
+
+            return [
+                'type' => 'card',
+                'label' => 'Karta',
+                'masked' => $digits !== '' ? '•••• '.substr($digits, -4) : (string) $seller->payment_card,
+            ];
+        }
+
+        if (filled($seller->bank_account)) {
+            return [
+                'type' => 'bank',
+                'label' => filled($seller->bank_name) ? trim((string) $seller->bank_name) : 'Bank hisobi',
+                'masked' => (string) ($seller->masked_bank_account ?: $seller->bank_account),
+            ];
+        }
+
+        return null;
+    }
+
+    /**
+     * Balansdan yechish so'rovi.
+     *
+     * Faqat "yechish mumkin" qismi yechiladi: oxirgi `hold_days` kunda
+     * yakunlangan buyurtmalar puli ushlab turiladi (SellerPayoutService).
+     * `amount` berilmasa — yechish mumkin bo'lgan butun summa.
+     */
+    public function requestWithdrawal(Request $request)
     {
         $seller = Auth::guard('seller')->user();
         if (! $seller) {
@@ -140,13 +172,49 @@ class TransactionController extends Controller
             ], 403);
         }
 
+        $request->validate([
+            'amount' => ['nullable', 'integer', 'min:1'],
+        ]);
+        $requestedAmount = $request->filled('amount') ? (int) $request->input('amount') : null;
+
         $storeSellerId = $this->getStoreSellerId($seller);
-        $transaction = DB::transaction(function () use ($storeSellerId, $seller) {
+        $transaction = DB::transaction(function () use ($storeSellerId, $seller, $requestedAmount) {
             $storeSeller = Seller::query()->lockForUpdate()->find($storeSellerId);
-            if (! $storeSeller || (int) $storeSeller->balance <= 0) {
+            if (! $storeSeller) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Yechib olish uchun balans yetarli emas',
+                    'message' => 'Do\'kon topilmadi',
+                ], 404);
+            }
+
+            $summary = $this->payouts->summary($storeSeller);
+            $withdrawable = (int) $summary['withdrawable'];
+            $minimum = (int) $summary['min_withdrawal'];
+            $amount = $requestedAmount ?? $withdrawable;
+
+            if ($withdrawable <= 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $summary['held'] > 0
+                        ? "Hozircha yechish mumkin bo'lgan summa yo'q. Buyurtma puli yakunlangandan {$summary['hold_days']} kun o'tib yechishga ochiladi."
+                        : 'Yechib olish uchun balans yetarli emas',
+                    'data' => $summary,
+                ], 400);
+            }
+
+            if ($amount > $withdrawable) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Eng ko\'pi bilan '.number_format($withdrawable, 0, '.', ' ').' so\'m yechish mumkin',
+                    'data' => $summary,
+                ], 400);
+            }
+
+            if ($amount < $minimum) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Eng kam yechish summasi '.number_format($minimum, 0, '.', ' ').' so\'m',
+                    'data' => $summary,
                 ], 400);
             }
 
@@ -157,8 +225,6 @@ class TransactionController extends Controller
                     'message' => 'Avval to‘lov kartasi yoki bank hisob raqamini kiriting',
                 ], 400);
             }
-
-            $amount = (int) $storeSeller->balance;
 
             $transaction = SellerTransaction::create([
                 'seller_id' => $storeSellerId,
@@ -175,7 +241,7 @@ class TransactionController extends Controller
                     : "Balansdan yechish so'rovi",
             ]);
 
-            $storeSeller->balance = 0;
+            $storeSeller->balance = (int) $storeSeller->balance - $amount;
             $storeSeller->save();
 
             $this->writeLog($seller, 'Pul yechib olish so\'rovi yubordi',
@@ -193,6 +259,7 @@ class TransactionController extends Controller
             'success' => true,
             'message' => 'Yechib olish so\'rovi muvaffaqiyatli yuborildi',
             'transaction_id' => $transaction->id,
+            'amount' => (int) $transaction->amount,
         ], 200);
     }
 
@@ -213,9 +280,22 @@ class TransactionController extends Controller
             ->limit(50)
             ->get();
 
+        // Buyurtma daromadi qachon yechishga ochiladi
+        $now = now();
+        $data = $transactions->map(function (SellerTransaction $transaction) use ($now) {
+            $availableAt = $transaction->status === SellerTransaction::STATUS_APPROVED
+                ? $this->payouts->availableAt($transaction)
+                : null;
+
+            return $transaction->toArray() + [
+                'available_at' => $availableAt?->toIso8601String(),
+                'on_hold' => $availableAt !== null && $availableAt->greaterThan($now),
+            ];
+        });
+
         return response()->json([
             'success' => true,
-            'data' => $transactions,
+            'data' => $data,
         ], 200);
     }
 
@@ -255,11 +335,21 @@ class TransactionController extends Controller
             ], 200);
         }
 
+        $summary = $this->payouts->summary($storeSeller);
+
         return response()->json([
             'success' => true,
             'data' => [
-                'total_paid' => (int) $storeSeller->total_withdrawal,
-                'balance' => (int) $storeSeller->balance,
+                'total_paid' => $summary['total_withdrawn'],
+                'balance' => $summary['balance'],
+                'withdrawable_balance' => $summary['withdrawable'],
+                'held_balance' => $summary['held'],
+                'pending_withdrawal' => $summary['pending_withdrawal'],
+                'hold_days' => $summary['hold_days'],
+                'min_withdrawal' => $summary['min_withdrawal'],
+                'next_release' => $summary['next_release'],
+                'upcoming_releases' => $summary['upcoming'],
+                'withdrawal_method' => $this->maskedWithdrawalMethod($storeSeller),
                 'can_withdraw' => $this->canManageWithdrawals($seller),
                 'is_store_total' => (bool) $seller->parent_id,
             ],

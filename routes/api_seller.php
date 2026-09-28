@@ -106,7 +106,8 @@ Route::middleware('auth:seller')->group(function () {
     Route::post('premium/cancel', [PremiumController::class, 'cancel']);
 
     Route::get('transactions/latest', [TransactionController::class, 'getTransactions']);
-    Route::get('transactions/withdrawal', [TransactionController::class, 'requestWithdrawal']);
+    Route::get('transactions/withdrawal', [TransactionController::class, 'requestWithdrawal']); // eski ilova versiyalari
+    Route::post('transactions/withdrawal', [TransactionController::class, 'requestWithdrawal'])->middleware('throttle:10,1');
     Route::get('transactions/count', [TransactionController::class, 'getTotal']);
     Route::get('transactions/cancel/{transactionId}', [TransactionController::class, 'cancelTransaction']);
 

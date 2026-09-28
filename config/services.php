@@ -104,6 +104,13 @@ return [
         'key' => env('OPENAI_API_KEY'),
     ],
 
+    // Do'kon balansidan yechish: buyurtma puli yakunlangandan keyin necha
+    // kun ushlab turiladi (qaytarish muddati) va eng kam yechish summasi.
+    'seller_payouts' => [
+        'hold_days' => (int) env('SELLER_PAYOUT_HOLD_DAYS', 14),
+        'min_withdrawal' => (int) env('SELLER_MIN_WITHDRAWAL', 100000),
+    ],
+
     // Yandex Geocoder HTTP API — ilovalar manzilni server orqali oladi.
     // Bir nechta akkauntdan olingan kalitlar: biri ishlamasa (limit tugagan,
     // bloklangan) keyingisiga o'tiladi. .env: YANDEX_GEOCODER_API_KEY_1..10
