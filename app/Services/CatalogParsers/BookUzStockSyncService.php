@@ -561,14 +561,22 @@ class BookUzStockSyncService
                     $bookUpdates['discountPrice'] = $remoteDiscountPrice;
                 }
 
-                // Agar kitobning mavjud rasmi bo'sh bo'lsa yoki eski dd9xb0bqw (bloklangan Cloudinary) bo'lsa, Book.uz ning yangi rasmi bilan almashtiramiz
+                // Agar kitobning mavjud rasmi bo'sh bo'lsa yoki eski dd9xb0bqw (bloklangan Cloudinary) bo'lsa, Book.uz ning yangi/kesh rasmi bilan almashtiramiz
                 $remoteImage = $matchedProduct['image'] ?? null;
-                $hasWorkingRemoteImage = is_string($remoteImage) && filled($remoteImage) && ! str_contains($remoteImage, 'dd9xb0bqw');
-                if ($hasWorkingRemoteImage) {
+                $effectiveRemoteImage = null;
+                if (is_string($remoteImage) && filled($remoteImage)) {
+                    if (str_contains($remoteImage, 'dd9xb0bqw')) {
+                        $effectiveRemoteImage = 'https://book.uz/_next/image?url='.urlencode($remoteImage).'&w=640&q=75';
+                    } else {
+                        $effectiveRemoteImage = $remoteImage;
+                    }
+                }
+
+                if ($effectiveRemoteImage) {
                     $currentImages = is_array($book->images) ? $book->images : [];
                     $firstImg = (string) ($currentImages[0] ?? '');
                     if (empty($currentImages) || str_contains($firstImg, 'dd9xb0bqw')) {
-                        $bookUpdates['images'] = Arr::wrap($remoteImage);
+                        $bookUpdates['images'] = Arr::wrap($effectiveRemoteImage);
                     }
                 }
 
@@ -593,13 +601,13 @@ class BookUzStockSyncService
                     }
                 } else {
                     // Agar mavjud global edition ning ham rasmi dd9xb0bqw bo'lsa, yangi rasm bilan to'g'irlaymiz
-                    if ($hasWorkingRemoteImage) {
+                    if ($effectiveRemoteImage) {
                         try {
                             $edition = $book->edition;
                             if ($edition && (empty($edition->front_image) || str_contains((string) $edition->front_image, 'dd9xb0bqw'))) {
                                 $edition->update([
-                                    'front_image' => $remoteImage,
-                                    'images' => Arr::wrap($remoteImage),
+                                    'front_image' => $effectiveRemoteImage,
+                                    'images' => Arr::wrap($effectiveRemoteImage),
                                 ]);
                             }
                         } catch (\Throwable) {

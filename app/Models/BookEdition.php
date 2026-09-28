@@ -95,7 +95,7 @@ class BookEdition extends Model
 
     public function getFrontImageAttribute($value): ?string
     {
-        if (is_string($value) && str_contains($value, 'res.cloudinary.com/dd9xb0bqw/')) {
+        if (is_string($value) && str_contains($value, 'res.cloudinary.com/dd9xb0bqw/') && ! str_contains($value, 'book.uz/_next/image')) {
             return 'https://book.uz/_next/image?url='.urlencode($value).'&w=640&q=75';
         }
 
@@ -110,7 +110,7 @@ class BookEdition extends Model
         }
 
         return array_values(array_filter(array_map(function ($img) {
-            if (is_string($img) && str_contains($img, 'res.cloudinary.com/dd9xb0bqw/')) {
+            if (is_string($img) && str_contains($img, 'res.cloudinary.com/dd9xb0bqw/') && ! str_contains($img, 'book.uz/_next/image')) {
                 return 'https://book.uz/_next/image?url='.urlencode($img).'&w=640&q=75';
             }
 

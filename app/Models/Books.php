@@ -242,7 +242,7 @@ class Books extends Model
         }
 
         return array_values(array_filter(array_map(function ($img) {
-            if (is_string($img) && str_contains($img, 'res.cloudinary.com/dd9xb0bqw/')) {
+            if (is_string($img) && str_contains($img, 'res.cloudinary.com/dd9xb0bqw/') && ! str_contains($img, 'book.uz/_next/image')) {
                 return 'https://book.uz/_next/image?url='.urlencode($img).'&w=640&q=75';
             }
 
