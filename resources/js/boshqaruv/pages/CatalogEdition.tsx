@@ -100,6 +100,36 @@ export default function CatalogEdition() {
   const [activeTab, setActiveTab] = useState<'offers' | 'about' | 'submissions' | 'merge'>('offers');
   const [copiedIsbn, setCopiedIsbn] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(edition.frontUrl || edition.cover || null);
+  const [autoCoverLoading, setAutoCoverLoading] = useState(false);
+  const [autoCoverMsg, setAutoCoverMsg] = useState<string | null>(null);
+
+  const handleAutoCover = async () => {
+    setAutoCoverLoading(true);
+    setAutoCoverMsg(null);
+    try {
+      const csrf = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content
+        || ((window as unknown as { csrfToken?: string }).csrfToken || '');
+      const res = await fetch(`${base}/auto-cover`, {
+        method: 'POST',
+        headers: {
+          'X-CSRF-TOKEN': csrf,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAutoCoverMsg(data.message || "Muqova o'rnatildi!");
+        router.reload({ preserveScroll: true });
+      } else {
+        alert(data.message || 'Internetdan mos muqova topilmadi');
+      }
+    } catch {
+      alert('Xatolik yuz berdi');
+    } finally {
+      setAutoCoverLoading(false);
+    }
+  };
 
   const totalSold = offers.reduce((sum, o) => sum + (o.sold || 0), 0);
   const totalStock = offers.reduce((sum, o) => sum + (o.stock || 0), 0);
@@ -195,6 +225,19 @@ export default function CatalogEdition() {
               onClick={() => router.post(`${base}/verify`, {}, { preserveScroll: true })}
             >
               <i className="ti ti-circle-check me-1"></i>Katalogda Tasdiqlash
+            </button>
+          ) : null}
+
+          {!edition.deleted && edition.status !== 'merged' ? (
+            <button
+              type="button"
+              className="btn btn-outline-primary btn-sm d-inline-flex align-items-center"
+              onClick={handleAutoCover}
+              disabled={autoCoverLoading}
+              title="Internetdan (Book.uz, Asaxiy) kitob muqovasini avtomatik qidirib topish va o'rnatish"
+            >
+              <i className={`ti ${autoCoverLoading ? 'ti-loader rotate' : 'ti-wand'} me-1`}></i>
+              {autoCoverLoading ? 'Qidirilmoqda...' : 'Avto-muqova'}
             </button>
           ) : null}
 

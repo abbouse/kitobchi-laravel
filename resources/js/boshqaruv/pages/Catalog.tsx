@@ -49,6 +49,8 @@ export default function Catalog() {
   const { editions = [], pagination, filters = {}, counts = {}, formOptions } = usePage<Props>().props;
   const [search, setSearch] = useState(filters.search || '');
   const [copiedIsbn, setCopiedIsbn] = useState<string | null>(null);
+  const [batchLoading, setBatchLoading] = useState(false);
+  const [fixingId, setFixingId] = useState<number | null>(null);
   const tab = filters.tab || 'all';
 
   const load = (params: Record<string, string | number>) => {
@@ -59,6 +61,59 @@ export default function Catalog() {
     navigator.clipboard.writeText(isbn);
     setCopiedIsbn(isbn);
     setTimeout(() => setCopiedIsbn(null), 2000);
+  };
+
+  const handleAutoFixBatch = async () => {
+    if (!confirm('Muammoli kitoblarning muqovalarini Book.uz va Asaxiy orqali avtomatik qidirib o\'rnatilsinmi?')) {
+      return;
+    }
+    setBatchLoading(true);
+    try {
+      const csrf = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content
+        || ((window as unknown as { csrfToken?: string }).csrfToken || '');
+      const res = await fetch('/boshqaruv/catalog/auto-fix-batch', {
+        method: 'POST',
+        headers: {
+          'X-CSRF-TOKEN': csrf,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ limit: 30 }),
+      });
+      const data = await res.json();
+      alert(data.message || 'Muqovalar yangilandi!');
+      router.reload({ preserveScroll: true });
+    } catch {
+      alert('Xatolik yuz berdi');
+    } finally {
+      setBatchLoading(false);
+    }
+  };
+
+  const handleSingleAutoCover = async (editionId: number) => {
+    setFixingId(editionId);
+    try {
+      const csrf = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content
+        || ((window as unknown as { csrfToken?: string }).csrfToken || '');
+      const res = await fetch(`/boshqaruv/catalog/${editionId}/auto-cover`, {
+        method: 'POST',
+        headers: {
+          'X-CSRF-TOKEN': csrf,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+      });
+      const data = await res.json();
+      if (data.success) {
+        router.reload({ preserveScroll: true });
+      } else {
+        alert(data.message || 'Muqova topilmadi');
+      }
+    } catch {
+      alert('Xatolik yuz berdi');
+    } finally {
+      setFixingId(null);
+    }
   };
 
   const submitCreate = (event: FormEvent<HTMLFormElement>) => {
@@ -115,6 +170,18 @@ export default function Catalog() {
               <span className="badge bg-danger rounded-pill f-s-10 ms-1">{counts.submissions}</span>
             ) : null}
           </Link>
+
+          {/* Muqovalarni avto-tuzatish */}
+          <button
+            type="button"
+            className="btn btn-sm btn-outline-warning d-inline-flex align-items-center gap-1"
+            onClick={handleAutoFixBatch}
+            disabled={batchLoading}
+            title="Book.uz va Asaxiy orqali muqovasiz yoki noto'g'ri rasmli kitoblarni avtomatik tuzatish"
+          >
+            <i className={`ti ${batchLoading ? 'ti-loader rotate' : 'ti-wand'}`}></i>
+            <span>{batchLoading ? 'Qidirilmoqda...' : 'Avto-muqova'}</span>
+          </button>
 
           {/* Yangi kitob qo'shish modal */}
           <FormAction
@@ -219,23 +286,37 @@ export default function Catalog() {
                     <tr key={edition.id}>
                       {/* Muqova */}
                       <td>
-                        <Link href={edition.url} className="d-block text-decoration-none">
-                          <div
-                            className="b-r-8 overflow-hidden d-flex-center bg-light-primary flex-shrink-0 position-relative shadow-sm"
-                            style={{ width: 48, height: 66, border: '1px solid rgba(0,0,0,0.06)' }}
-                          >
-                            {edition.cover ? (
-                              <img
-                                className="w-100 h-100 object-fit-cover"
-                                src={edition.cover}
-                                alt={edition.title}
-                                loading="lazy"
-                              />
-                            ) : (
-                              <i className="ti ti-book text-primary f-s-20"></i>
-                            )}
-                          </div>
-                        </Link>
+                        <div className="position-relative d-inline-block">
+                          <Link href={edition.url} className="d-block text-decoration-none">
+                            <div
+                              className="b-r-8 overflow-hidden d-flex-center bg-light-primary flex-shrink-0 position-relative shadow-sm"
+                              style={{ width: 48, height: 66, border: '1px solid rgba(0,0,0,0.06)' }}
+                            >
+                              {edition.cover ? (
+                                <img
+                                  className="w-100 h-100 object-fit-cover"
+                                  src={edition.cover}
+                                  alt={edition.title}
+                                  loading="lazy"
+                                />
+                              ) : (
+                                <i className="ti ti-book text-primary f-s-20"></i>
+                              )}
+                            </div>
+                          </Link>
+                          {(!edition.cover || edition.cover.includes('1790422172657') || edition.cover.includes('Screenshot_2026_09_26_072402')) && (
+                            <button
+                              type="button"
+                              className="btn btn-primary icon-btn w-20 h-20 b-r-22 position-absolute bottom-0 end-0 m-0 shadow-sm p-0 d-flex-center"
+                              title="Muqovani internetdan avtomatik topish"
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleSingleAutoCover(edition.id); }}
+                              disabled={fixingId === edition.id}
+                              style={{ transform: 'translate(25%, 25%)', zIndex: 2 }}
+                            >
+                              <i className={`ti ${fixingId === edition.id ? 'ti-loader rotate' : 'ti-wand'} f-s-10`}></i>
+                            </button>
+                          )}
+                        </div>
                       </td>
 
                       {/* Kitob va muallif */}

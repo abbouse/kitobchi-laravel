@@ -11,9 +11,11 @@ use App\Models\Publisher;
 use App\Models\Seller;
 use App\Services\AuthorDirectoryService;
 use App\Services\BranchStockService;
+use App\Services\Catalog\BookCoverResolverService;
 use App\Services\Catalog\BuyBoxService;
 use App\Services\Catalog\CatalogService;
 use App\Services\VectorSearchService;
+use Illuminate\Support\Arr;
 use App\Support\Isbn;
 use App\Support\ProductArtikul;
 use App\Support\ProductImageUrls;
@@ -195,6 +197,118 @@ class CatalogController extends Controller
         $this->buyBox->touch((int) $model->id);
 
         return back()->with('success', "Kitob kartasi saqlandi" . ($synced ? " va {$synced} ta taklifga ko'chirildi." : '.'));
+    }
+
+    /**
+     * Bitta kitob uchun mos muqovani internetdan (Book.uz, Asaxiy, Google Books)
+     * avtomatik qidirib topish va o'rnatish.
+     */
+    public function autoCover(int $edition, BookCoverResolverService $resolver): JsonResponse
+    {
+        $model = BookEdition::withTrashed()->findOrFail($edition);
+
+        $workingUrl = $resolver->resolveAndStore(
+            $model->title,
+            $model->isbn13 ?: $model->isbn10,
+            $model->getRawOriginal('front_image') ?: $model->getRawOriginal('images'),
+            'ed_'.$model->id
+        );
+
+        if (! $workingUrl) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internetdan ushbu kitob uchun mos muqova topilmadi.',
+            ], 404);
+        }
+
+        $images = array_values(array_filter((array) ($model->images ?? []), 'is_string'));
+        // Eski nosoz yoki dublikat rasmlarni tozalaymiz
+        $images = array_values(array_filter($images, fn ($img) => ! str_contains($img, '1790422172657') && ! str_contains($img, 'Screenshot_2026_09_26_072402') && ! str_contains($img, 'dd9xb0bqw')));
+        if (! in_array($workingUrl, $images, true)) {
+            array_unshift($images, $workingUrl);
+        }
+
+        $model->update([
+            'front_image' => $workingUrl,
+            'images' => $images,
+        ]);
+
+        $synced = $this->catalog->syncOffers($model->fresh());
+        $this->buyBox->touch((int) $model->id);
+
+        return response()->json([
+            'success' => true,
+            'cover' => ProductImageUrls::originalUrl($workingUrl),
+            'frontImage' => $workingUrl,
+            'images' => array_map(fn ($p) => ProductImageUrls::originalUrl($p), $images),
+            'rawImages' => $images,
+            'synced' => $synced,
+            'message' => 'Muqova topildi va o\'rnatildi' . ($synced ? " ({$synced} ta taklifga ko'chirildi)." : '.'),
+        ]);
+    }
+
+    /**
+     * Muammoli yoki rasmsiz kitoblar to'plamini (batch) avtomatik tuzatish.
+     */
+    public function autoFixBatch(Request $request, BookCoverResolverService $resolver): JsonResponse
+    {
+        $limit = min(50, max(1, (int) $request->input('limit', 20)));
+
+        $query = BookEdition::query()
+            ->usable()
+            ->where(function ($q) {
+                $q->whereNull('front_image')
+                    ->orWhere('front_image', '')
+                    ->orWhere('front_image', 'like', '%1790422172657%')
+                    ->orWhere('front_image', 'like', '%Screenshot_2026_09_26_072402%')
+                    ->orWhere('front_image', 'like', '%dd9xb0bqw%');
+            })
+            ->orderByDesc('id')
+            ->limit($limit);
+
+        $editions = $query->get();
+        $fixed = 0;
+        $failed = 0;
+
+        foreach ($editions as $edition) {
+            $workingUrl = $resolver->resolveAndStore(
+                $edition->title,
+                $edition->isbn13 ?: $edition->isbn10,
+                $edition->getRawOriginal('front_image') ?: $edition->getRawOriginal('images'),
+                'ed_'.$edition->id
+            );
+
+            if ($workingUrl) {
+                $edition->update([
+                    'front_image' => $workingUrl,
+                    'images' => Arr::wrap($workingUrl),
+                ]);
+                $this->catalog->syncOffers($edition->fresh());
+                $fixed++;
+            } else {
+                $failed++;
+            }
+        }
+
+        $remaining = BookEdition::query()
+            ->usable()
+            ->where(function ($q) {
+                $q->whereNull('front_image')
+                    ->orWhere('front_image', '')
+                    ->orWhere('front_image', 'like', '%1790422172657%')
+                    ->orWhere('front_image', 'like', '%Screenshot_2026_09_26_072402%')
+                    ->orWhere('front_image', 'like', '%dd9xb0bqw%');
+            })
+            ->count();
+
+        return response()->json([
+            'success' => true,
+            'fixed' => $fixed,
+            'failed' => $failed,
+            'processed' => $editions->count(),
+            'remaining' => $remaining,
+            'message' => "{$fixed} ta kitob muqovasi o'rnatildi. Qolgan muammolilar: {$remaining} ta.",
+        ]);
     }
 
     public function verify(int $edition): RedirectResponse
