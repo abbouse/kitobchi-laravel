@@ -75,4 +75,22 @@ class SellerWaitingProductsTest extends TestCase
             ->assertJsonPath('data.waiting_total', 0);
         $this->assertNotNull($quiet);
     }
+
+    public function test_statistics_include_comparison_and_stock_health(): void
+    {
+        $cat = $this->makeCategory();
+        $shop = $this->makeSeller();
+        $this->makeBook($shop, $cat, ['isbn' => '9780306406157'], 0);
+        $this->makeBook($shop, $cat, ['isbn' => '9780262033848'], 2);
+        $this->makeBook($shop, $cat, ['isbn' => '9780131103627'], 9);
+        Sanctum::actingAs($shop, ['*'], 'seller');
+
+        $this->getJson('/api/v1/seller/statistics/data?period=30d')
+            ->assertOk()
+            ->assertJsonPath('data.stock_health.out_of_stock', 1)
+            ->assertJsonPath('data.stock_health.low_stock', 1)
+            ->assertJsonPath('data.stock_health.active', 1)
+            ->assertJsonPath('data.previous.sales_count', 0)
+            ->assertJsonPath('data.cancelled_count', 0);
+    }
 }

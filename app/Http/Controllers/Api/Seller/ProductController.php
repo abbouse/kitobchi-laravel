@@ -1071,12 +1071,30 @@ public function updateProductStatus(Request $request)
     // ulangan taklifda do'kon faqat narx, chegirma va qoldiqni boshqaradi. Kartada
     // xato bo'lsa: POST catalog/editions/{id}/correction (tuzatish taklifi).
     if ($product->edition_id) {
-        $product->update([
+        $offerUpdate = [
             'artikul' => $product->artikul ?: ProductArtikul::generate('book', (int) $product->id),
             'price' => $request->price,
             'discountPrice' => $request->discountPrice ?? 0,
             'discountExpiresAt' => $request->filled('discountExpiresAt') ? $request->discountExpiresAt : null,
-        ]);
+        ];
+
+        // Oldindan buyurtma: maydon yuborilsa o'rnatiladi/o'chiriladi (eski
+        // ilova yubormaydi — holat o'zgarmaydi)
+        if ($request->exists('preorder_release_date')) {
+            [$preorderDate, $preorderError] = app(\App\Services\Catalog\BookPreorderPolicy::class)->resolve(
+                $request->input('preorder_release_date'),
+                \App\Models\BookEdition::query()->find($product->edition_id),
+                (int) $storeSellerId
+            );
+            // Allaqachon oldindan buyurtmadagi kitob sanasini o'zgartirish —
+            // boshqa do'konlar sotuvga chiqargan bo'lsa ham o'chirishga ruxsat
+            if ($preorderError && $request->filled('preorder_release_date')) {
+                return response()->json(['success' => false, 'code' => 'preorder_not_allowed', 'message' => $preorderError], 422);
+            }
+            $offerUpdate['preorder_release_date'] = $preorderDate?->toDateString();
+        }
+
+        $product->update($offerUpdate);
         app(\App\Services\BranchStockService::class)->setTotalFromLegacy(
             'book', (int) $product->id, 0, (int) $storeSellerId,
             (int) $request->count,

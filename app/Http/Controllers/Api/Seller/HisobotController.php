@@ -260,6 +260,41 @@ class HisobotController extends Controller
             );
             $this->applyBranchFilterToSellerOrders($previousOrdersQuery, $selectedLocation);
             $previousSalesPrice = (int) ((clone $previousOrdersQuery)->sum('seller_orders.amount') ?? 0);
+            $previousSalesCount = (int) (clone $previousOrdersQuery)->count();
+            $previousClients = (int) (clone $previousOrdersQuery)
+                ->distinct('seller_orders.client_id')
+                ->count('seller_orders.client_id');
+
+            // Sotilgan dona — joriy va o'tgan davr uchun bir xil qoida
+            $itemsSoldFor = function (Carbon $from, Carbon $to) use ($sellerScopeIds, $selectedLocation): int {
+                $query = SellerOrderItem::query()
+                    ->join('seller_orders', 'seller_orders.id', '=', 'seller_order_items.order_id')
+                    ->join('solds', 'solds.id', '=', 'seller_orders.order_id')
+                    ->whereIn('seller_order_items.seller_id', $sellerScopeIds)
+                    ->whereNull('seller_order_items.cancelled_at')
+                    ->whereNotNull('solds.completed_at')
+                    ->whereBetween('solds.completed_at', [$from, $to]);
+                $this->applyCompletedPaidSoldFilter($query);
+                $this->applyBranchFilterToSellerOrders($query, $selectedLocation, 'seller_orders');
+
+                return (int) $query->sum('seller_order_items.quantity');
+            };
+
+            // Bekor qilingan do'kon buyurtmalari (davrda yaratilganlar ichida)
+            $cancellationsFor = function (Carbon $from, Carbon $to) use ($sellerScopeIds, $selectedLocation): array {
+                $base = SellerOrder::query()
+                    ->whereIn('seller_orders.seller_id', $sellerScopeIds)
+                    ->whereBetween('seller_orders.created_at', [$from, $to]);
+                $this->applyBranchFilterToSellerOrders($base, $selectedLocation);
+                $all = (int) (clone $base)->count();
+                $cancelled = (int) (clone $base)
+                    ->where(fn ($q) => $q->where('seller_orders.status_code', 'cancelled')->orWhereNotNull('seller_orders.cancelled_at'))
+                    ->count();
+
+                return [$all, $cancelled];
+            };
+            [$ordersCreated, $cancelledCount] = $cancellationsFor($period['start'], $period['end']);
+            [$previousOrdersCreated, $previousCancelledCount] = $cancellationsFor($period['previous_start'], $period['previous_end']);
             $sellerBalance = (int) optional(Seller::find($storeSellerId))->balance;
             $sellerClients = (clone $ordersQuery)
                 ->distinct('seller_orders.client_id')
@@ -274,6 +309,7 @@ class HisobotController extends Controller
             $this->applyCompletedPaidSoldFilter($itemsSoldQuery);
             $this->applyBranchFilterToSellerOrders($itemsSoldQuery, $selectedLocation, 'seller_orders');
             $itemsSold = (int) $itemsSoldQuery->sum('seller_order_items.quantity');
+            $previousItemsSold = $itemsSoldFor($period['previous_start'], $period['previous_end']);
 
             $repeatClientsQuery = SellerOrder::query()
                 ->join('solds', 'solds.id', '=', 'seller_orders.order_id')
@@ -294,6 +330,22 @@ class HisobotController extends Controller
                 ->whereBetween('created_at', [$period['start'], $period['end']]);
 
             $totalViews = (int) (clone $viewLogsQuery)->count();
+            $previousTotalViews = (int) ProductViewLog::query()
+                ->whereIn('seller_id', $sellerScopeIds)
+                ->whereBetween('created_at', [$period['previous_start'], $period['previous_end']])
+                ->count();
+
+            // Ombor holati — hozirgi (davrga bog'liq emas)
+            $bookStock = Books::query()->where('seller_id', $storeSellerId)->where('is_hidden', false)->whereNull('archived_at');
+            $stationeryStock = Stationery::query()->where('seller_id', $storeSellerId)->where('is_hidden', false);
+            $stockHealth = [
+                'active' => (int) (clone $bookStock)->where('status', true)->whereStockAvailable('>', 3)->count()
+                    + (int) (clone $stationeryStock)->where('status', true)->whereStockAvailable('>', 3)->count(),
+                'low_stock' => (int) (clone $bookStock)->stockBetween(1, 3)->count()
+                    + (int) (clone $stationeryStock)->stockBetween(1, 3)->count(),
+                'out_of_stock' => (int) (clone $bookStock)->whereStockAvailable('<=', 0)->count()
+                    + (int) (clone $stationeryStock)->whereStockAvailable('<=', 0)->count(),
+            ];
             $recommendedViews = (int) (clone $viewLogsQuery)
                 ->where('recommendation_active', true)
                 ->count();
@@ -510,6 +562,20 @@ class HisobotController extends Controller
                 'repeat_clients' => $repeatClients,
                 'total_views' => $totalViews,
                 'recommended_views' => $recommendedViews,
+                // O'tgan davr bilan solishtirish uchun
+                'previous' => [
+                    'sales_count' => $previousSalesCount,
+                    'sales_price' => $previousSalesPrice,
+                    'items_sold' => $previousItemsSold,
+                    'seller_clients' => $previousClients,
+                    'average_order_value' => $previousSalesCount > 0 ? (int) round($previousSalesPrice / $previousSalesCount) : 0,
+                    'total_views' => $previousTotalViews,
+                    'orders_created' => $previousOrdersCreated,
+                    'cancelled_count' => $previousCancelledCount,
+                ],
+                'orders_created' => $ordersCreated,
+                'cancelled_count' => $cancelledCount,
+                'stock_health' => $stockHealth,
                 'top_sellers_label' => $period['start']->format('d.m.Y')
                     .' – '
                     .$period['end']->format('d.m.Y'),

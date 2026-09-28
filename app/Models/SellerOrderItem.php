@@ -22,6 +22,7 @@ class SellerOrderItem extends Model
 
     protected $fillable = [
         'seller_id', 'order_id', 'product_id', 'variant_id', 'type', 'quantity', 'price',
+        'preorder_release_date',
         'cancelled_at', 'cancelled_by_seller_id', 'cancel_reason_code',
         'cancel_note_uz', 'cancel_note_ru', 'cancel_note_en', 'cancel_note_ja',
         'custom_cancel_note', 'refund_status', 'refunded_at',
@@ -29,6 +30,7 @@ class SellerOrderItem extends Model
     ];
 
     protected $casts = [
+        'preorder_release_date' => 'date:Y-m-d',
         'cancelled_at' => 'datetime',
         'refunded_at' => 'datetime',
         'cancel_requested_at' => 'datetime',

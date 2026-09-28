@@ -128,6 +128,8 @@ class CatalogController extends ProductController
             'coverType' => 'nullable|string|in:soft,hard',
             'language' => 'nullable|string|in:uz,ru,en,qq',
             'languageWrite' => 'nullable|string|in:cyrillic,latin',
+            // Oldindan buyurtma: jo'natish kuni (bo'sh — oddiy savdo)
+            'preorder_release_date' => 'nullable|date',
         ]);
         if ($validator->fails()) {
             return response()->json(['success' => false, 'message' => 'Validation failed', 'errors' => $validator->errors()], 422);
@@ -136,6 +138,12 @@ class CatalogController extends ProductController
         $edition = $this->selectableEdition($catalog, (int) $request->input('edition_id'));
         if (! $edition) {
             return response()->json(['success' => false, 'message' => 'Kitob katalogda topilmadi'], 404);
+        }
+
+        [$preorderDate, $preorderError] = app(\App\Services\Catalog\BookPreorderPolicy::class)
+            ->resolve($request->input('preorder_release_date'), $edition, $this->storeSellerId());
+        if ($preorderError) {
+            return response()->json(['success' => false, 'code' => 'preorder_not_allowed', 'message' => $preorderError], 422);
         }
 
         // Do'kondagi kitob boshqa nashr bo'lsa (masalan qattiq muqova, karta esa
@@ -168,13 +176,14 @@ class CatalogController extends ProductController
             ], 409);
         }
 
-        $book = DB::transaction(function () use ($request, $catalog, $stock, $edition, $staff, $storeSellerId) {
+        $book = DB::transaction(function () use ($request, $catalog, $stock, $edition, $staff, $storeSellerId, $preorderDate) {
             $book = Books::create($catalog->offerAttributes($edition) + [
                 'edition_id' => $edition->id,
                 'seller_id' => $storeSellerId,
                 'price' => (int) $request->input('price'),
                 'discountPrice' => (int) $request->input('discountPrice', 0),
                 'discountExpiresAt' => $request->input('discountExpiresAt'),
+                'preorder_release_date' => $preorderDate?->toDateString(),
                 'status' => true,
                 'is_hidden' => false,
             ]);
@@ -786,6 +795,8 @@ class CatalogController extends ProductController
             'is_approved' => (int) $book->is_approved,
             'status' => (bool) $book->status,
             'catalog_featured' => (bool) ($book->catalog_featured ?? true),
+            'preorder_release_date' => $book->preorder_release_date?->toDateString(),
+            'is_preorder' => $book->isPreorderActive(),
         ];
     }
 

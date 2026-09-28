@@ -55,6 +55,11 @@ class ProductPayloadFormatter
             'stock_display' => self::stockDisplayLabel($isBook ? ($product->count ?? 0) : ($product->stock ?? 0)),
             'sales' => $product->totalSales ?? 0,
             'weekly_sales' => $product->totalSalesWeek ?? 0,
+            // Oldindan buyurtma: jo'natish kuni (faqat hali amalda bo'lsa)
+            'is_preorder' => $isBook && $product instanceof Books && $product->isPreorderActive(),
+            'preorder_release_date' => $isBook && $product instanceof Books && $product->isPreorderActive()
+                ? $product->preorder_release_date->toDateString()
+                : null,
             'ugc_aggregate_score' => (float) ($product->ugc_aggregate_score ?? 0),
             'ugc_reviews_count' => (int) ($product->ugc_reviews_count ?? 0),
             'ugc_last_scored_at' => optional($product->ugc_last_scored_at)?->toIso8601String(),

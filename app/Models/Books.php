@@ -21,6 +21,7 @@ class Books extends Model
 
     protected $fillable = [
         'edition_id',
+        'preorder_release_date',
         'name',
         'artikul',
         'author',
@@ -203,6 +204,7 @@ class Books extends Model
     }
 
     protected $casts = [
+        'preorder_release_date' => 'date:Y-m-d',
         'images' => 'json',
         'status' => 'boolean',
         'recommended' => 'boolean',
@@ -361,6 +363,17 @@ class Books extends Model
             'edition_id'     => (int) ($this->edition_id ?? 0),
             'catalog_featured' => (bool) ($this->catalog_featured ?? true),
         ];
+    }
+
+    /**
+     * Oldindan buyurtma hozir amaldami: jo'natish kuni hali kelmagan.
+     * Kun kelgach taklif oddiy savdoga o'tadi (ustun tarix uchun qoladi).
+     */
+    public function isPreorderActive(): bool
+    {
+        $date = $this->preorder_release_date;
+
+        return $date !== null && $date->copy()->startOfDay()->isAfter(today());
     }
 
     /**

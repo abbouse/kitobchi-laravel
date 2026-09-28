@@ -1322,6 +1322,9 @@ class PurchaseController extends Controller
 
                 if ($cartItem->product_type === 'book') {
                     $item['author'] = $product->author;
+                    if ($product instanceof Books && $product->isPreorderActive()) {
+                        $item['preorder_release_date'] = $product->preorder_release_date->toDateString();
+                    }
                 }
                 if ($cartItem->product_type === 'stationery') {
                     $item['material'] = $product->material;
@@ -1786,6 +1789,9 @@ class PurchaseController extends Controller
                         'quantity' => $qty,
                         'price' => (int) round($price),
                         'variant_id' => $item->variant_id ? (int) $item->variant_id : null,
+                        'preorder_release_date' => $product instanceof Books && $product->isPreorderActive()
+                            ? $product->preorder_release_date->toDateString()
+                            : null,
                     ]);
                 }
 

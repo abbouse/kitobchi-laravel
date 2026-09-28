@@ -191,6 +191,8 @@ class OrderController extends Controller
             'type' => (string) $item->type,
             'quantity' => (int) $item->quantity,
             'price' => (int) $item->price,
+            // Oldindan buyurtma: kitob shu kundan jo'natiladi
+            'preorder_release_date' => $item->preorder_release_date?->toDateString(),
             'created_at' => optional($item->created_at)?->toISOString(),
             'updated_at' => optional($item->updated_at)?->toISOString(),
             'book' => $item->book?->toArray(),
