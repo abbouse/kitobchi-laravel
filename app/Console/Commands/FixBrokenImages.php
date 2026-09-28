@@ -20,6 +20,10 @@ class FixBrokenImages extends Command
                             {--missing : Rasmi umuman yo\'q (bo\'sh / muqovasiz) kitoblarni ham qidirib rasm o\'rnatish}
                             {--all-duplicated : 2 va undan ko\'p kitobda bir xil takrorlanib qolgan rasmli kitoblarni ham qayta qidirib to\'g\'irlash}
                             {--duplicate-substring= : Takrorlanib qolgan rasm havolasining bir qismi (masalan: 1790422172657)}
+                            {--latest-first : Yangi kitoblardan boshlab (id DESC) tekshirish (standart: ha)}
+                            {--oldest-first : Eski kitoblardan boshlab (id ASC) tekshirish}
+                            {--resume : Avval tekshirilgan kitoblarni qayta ko\'rmasdan, to\'xtagan joyidan davom ettirish}
+                            {--clear-checkpoint : Oldingi sessiya xotirasini (checkpoint) tozalab, noldan boshlash}
                             {--dry-run : Bazaga yozmasdan faqat tekshiruv rejimida ishlash}';
 
     protected $description = 'Nosoz Cloudinary, noto\'g\'ri takrorlangan yoki muqovasiz kitob rasmlarini Book.uz, Asaxiy yoki Google Books orqali tiklash';
@@ -30,6 +34,8 @@ class FixBrokenImages extends Command
         'Screenshot_2026_09_26_072402',
     ];
 
+    private const CHECKPOINT_FILE = 'fix_images_checkpoint.json';
+
     public function __construct(
         private readonly CatalogService $catalogService,
         private readonly BookCoverResolverService $resolver,
@@ -39,6 +45,10 @@ class FixBrokenImages extends Command
 
     public function handle(): int
     {
+        ini_set('memory_limit', '1024M');
+        set_time_limit(0);
+        DB::disableQueryLog();
+
         $limit = (int) $this->option('limit');
         $download = (bool) $this->option('download');
         $dryRun = (bool) $this->option('dry-run');
@@ -46,13 +56,24 @@ class FixBrokenImages extends Command
         $missing = (bool) $this->option('missing') || $all;
         $allDuplicated = (bool) $this->option('all-duplicated') || $all;
         $dupSubstring = trim((string) $this->option('duplicate-substring'));
+        $oldestFirst = (bool) $this->option('oldest-first');
+        $sortOrder = $oldestFirst ? 'asc' : 'desc';
+
+        if ($this->option('clear-checkpoint')) {
+            $this->clearCheckpoint();
+            $this->info("🧹 Oldingi tekshiruv xotirasi (checkpoint) tozalandi.");
+        }
+
+        $checkpoint = $this->loadCheckpoint();
+        $resume = (bool) $this->option('resume') || count($checkpoint['editions']) > 0 || count($checkpoint['books']) > 0;
 
         $this->info('=================================================================');
         $this->info('           KITOB RASMLARINI TIKLASH VA TO\'G\'IRLASH               ');
         $this->info('=================================================================');
         $this->line('Rejim: '.($dryRun ? '<fg=yellow>DRY-RUN (tekshiruv, bazaga yozilmaydi)</>' : '<fg=green>Haqiqiy tuzatish (bazadagi rasmlar yangilanadi)</>'));
         $this->line('Lokal saqlash: '.($download ? '<fg=cyan>Ha (rasmlar storage/books ga yuklab olinadi)</>' : '<fg=gray>Yo\'q (ishlaydigan tashqi havola saqlanadi)</>'));
-        $this->line('Muqovasizlar: '.($missing ? '<fg=cyan>Ha (rasmi bo\'sh kitoblar ham kiritildi)</>' : '<fg=gray>Yo\'q (faqat nosoz va dublikatlar)</>'));
+        $this->line('Tartib: '.($sortOrder === 'desc' ? '<fg=cyan>Eng yangi kitoblardan (id DESC)</>' : '<fg=gray>Eski kitoblardan (id ASC)</>'));
+        $this->line('Davom ettirish: '.($resume ? '<fg=green>Ha (avval ko\'rilgan kitoblar o\'tkazib yuboriladi)</>' : '<fg=gray>Yo\'q</>'));
         $this->newLine();
 
         // 1. Books takliflarini aniqlaymiz
@@ -90,8 +111,13 @@ class FixBrokenImages extends Command
                         ->orWhere('images', '[]')
                         ->orWhere('images', '[""]');
                 }
-            })
-            ->orderBy('id');
+            });
+
+        if ($resume && ! empty($checkpoint['books'])) {
+            $brokenBooksQuery->whereNotIn('id', array_keys($checkpoint['books']));
+        }
+
+        $brokenBooksQuery->orderBy('id', $sortOrder);
 
         if ($limit > 0) {
             $brokenBooksQuery->limit($limit);
@@ -141,8 +167,13 @@ class FixBrokenImages extends Command
                             ->orWhere('front_image', '[]')
                             ->orWhere('front_image', '[""]');
                     }
-                })
-                ->orderBy('id');
+                });
+
+            if ($resume && ! empty($checkpoint['editions'])) {
+                $brokenEditionsQuery->whereNotIn('id', array_keys($checkpoint['editions']));
+            }
+
+            $brokenEditionsQuery->orderBy('id', $sortOrder);
 
             if ($limit > 0) {
                 $brokenEditionsQuery->limit($limit);
@@ -155,7 +186,7 @@ class FixBrokenImages extends Command
 
         $totalCount = $brokenBooks->count() + $brokenEditions->count();
         if ($totalCount === 0) {
-            $this->info("✅ Bazada muammoli kitoblar topilmadi!");
+            $this->info("✅ Bazada tekshirilishi kerak bo'lgan muammoli kitoblar qolmadi!");
 
             return Command::SUCCESS;
         }
@@ -163,43 +194,12 @@ class FixBrokenImages extends Command
         $fixedBooks = 0;
         $fixedEditions = 0;
         $notFound = 0;
+        $processed = 0;
 
-        $bar = $this->output->createProgressBar($totalCount);
-        $bar->start();
-
-        // 1. Books takliflarini tuzatish
-        foreach ($brokenBooks as $book) {
-            $workingUrl = $download
-                ? $this->resolver->resolveAndStore($book->name, $book->isbn, $book->getRawOriginal('images'), 'b_'.$book->id)
-                : $this->resolver->resolveRemoteCover($book->name, $book->isbn, $book->getRawOriginal('images'));
-
-            if ($workingUrl) {
-                if (! $dryRun) {
-                    Books::writingFromCatalog(function () use ($book, $workingUrl) {
-                        $book->update([
-                            'images' => Arr::wrap($workingUrl),
-                        ]);
-                    });
-
-                    if ($book->edition_id && $book->edition) {
-                        $edition = $book->edition;
-                        $edition->update([
-                            'front_image' => $workingUrl,
-                            'images' => Arr::wrap($workingUrl),
-                        ]);
-                        $this->catalogService->syncOffers($edition);
-                    }
-                }
-                $fixedBooks++;
-            } else {
-                $notFound++;
-            }
-
-            $bar->advance();
-        }
-
-        // 2. Global kartalarni (BookEdition) tuzatish
+        // 1. Global kartalarni (BookEdition) BIRINCHI tuzatish (chunki ular asosiy manba)
+        $this->info("--- GLOBAL KARTALARNI (BookEdition) TEKSHIRISH ---");
         foreach ($brokenEditions as $edition) {
+            $processed++;
             $rawFront = $edition->getRawOriginal('front_image');
             $rawImages = $edition->getRawOriginal('images');
             $workingUrl = $download
@@ -215,21 +215,69 @@ class FixBrokenImages extends Command
                     $this->catalogService->syncOffers($edition);
                 }
                 $fixedEditions++;
+                $this->line(sprintf("[%d/%d] #%d \"%s\" -> <fg=green>TOPILDI VA SAQLANDI</>", $processed, $totalCount, $edition->id, $edition->title));
+                $checkpoint['editions'][$edition->id] = 'found';
             } else {
                 $notFound++;
+                $this->line(sprintf("[%d/%d] #%d \"%s\" -> <fg=yellow>INTERNETDAN TOPILMADI</>", $processed, $totalCount, $edition->id, $edition->title));
+                $checkpoint['editions'][$edition->id] = 'not_found';
             }
 
-            $bar->advance();
+            if ($processed % 10 === 0) {
+                $this->saveCheckpoint($checkpoint);
+            }
         }
 
-        $bar->finish();
+        // 2. Books takliflarini tuzatish
+        if ($brokenBooks->isNotEmpty()) {
+            $this->newLine();
+            $this->info("--- DO'KON TAKLIFLARINI (Books) TEKSHIRISH ---");
+            foreach ($brokenBooks as $book) {
+                $processed++;
+                $workingUrl = $download
+                    ? $this->resolver->resolveAndStore($book->name, $book->isbn, $book->getRawOriginal('images'), 'b_'.$book->id)
+                    : $this->resolver->resolveRemoteCover($book->name, $book->isbn, $book->getRawOriginal('images'));
+
+                if ($workingUrl) {
+                    if (! $dryRun) {
+                        Books::writingFromCatalog(function () use ($book, $workingUrl) {
+                            $book->update([
+                                'images' => Arr::wrap($workingUrl),
+                            ]);
+                        });
+
+                        if ($book->edition_id && $book->edition) {
+                            $edition = $book->edition;
+                            $edition->update([
+                                'front_image' => $workingUrl,
+                                'images' => Arr::wrap($workingUrl),
+                            ]);
+                            $this->catalogService->syncOffers($edition);
+                        }
+                    }
+                    $fixedBooks++;
+                    $this->line(sprintf("[%d/%d] #%d \"%s\" -> <fg=green>TOPILDI VA SAQLANDI</>", $processed, $totalCount, $book->id, $book->name));
+                    $checkpoint['books'][$book->id] = 'found';
+                } else {
+                    $notFound++;
+                    $this->line(sprintf("[%d/%d] #%d \"%s\" -> <fg=yellow>INTERNETDAN TOPILMADI</>", $processed, $totalCount, $book->id, $book->name));
+                    $checkpoint['books'][$book->id] = 'not_found';
+                }
+
+                if ($processed % 10 === 0) {
+                    $this->saveCheckpoint($checkpoint);
+                }
+            }
+        }
+
+        $this->saveCheckpoint($checkpoint);
         $this->newLine(2);
 
         $this->table(
             ['Ko\'rsatkich', 'Soni'],
             [
-                ['Tuzatilgan kitoblar (Books)', $fixedBooks],
                 ['Tuzatilgan global kartalar (BookEdition)', $fixedEditions],
+                ['Tuzatilgan do\'kon takliflari (Books)', $fixedBooks],
                 ['Yangi rasmi topilmaganlar', $notFound],
             ]
         );
@@ -237,5 +285,45 @@ class FixBrokenImages extends Command
         $this->info('✅ Jarayon muvaffaqiyatli yakunlandi!');
 
         return Command::SUCCESS;
+    }
+
+    private function checkpointPath(): string
+    {
+        return storage_path('app/'.self::CHECKPOINT_FILE);
+    }
+
+    private function loadCheckpoint(): array
+    {
+        $path = $this->checkpointPath();
+        if (file_exists($path)) {
+            $data = json_decode((string) file_get_contents($path), true);
+            if (is_array($data)) {
+                return [
+                    'editions' => $data['editions'] ?? [],
+                    'books' => $data['books'] ?? [],
+                ];
+            }
+        }
+
+        return ['editions' => [], 'books' => []];
+    }
+
+    private function saveCheckpoint(array $data): void
+    {
+        try {
+            $dir = storage_path('app');
+            if (! is_dir($dir)) {
+                @mkdir($dir, 0755, true);
+            }
+            file_put_contents($this->checkpointPath(), json_encode($data));
+        } catch (\Throwable) {}
+    }
+
+    private function clearCheckpoint(): void
+    {
+        $path = $this->checkpointPath();
+        if (file_exists($path)) {
+            @unlink($path);
+        }
     }
 }

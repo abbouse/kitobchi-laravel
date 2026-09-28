@@ -3000,8 +3000,8 @@
     "semantic_hash": "b7b09d68f8893547a7e5fbd5207fc8fa"
   },
   "config/fcm.php": {
-    "mtime": 1790586261.5622907,
-    "seen": 1790586270.559159,
+    "mtime": 1790598099.8956327,
+    "seen": 1790598121.354958,
     "ast_hash": "5ba2ac32c04d161d99057e23212f34b1",
     "semantic_hash": "5ba2ac32c04d161d99057e23212f34b1"
   },
@@ -5364,9 +5364,9 @@
     "semantic_hash": ""
   },
   "routes/boshqaruv.php": {
-    "mtime": 1790536368.3796737,
-    "seen": 1790536945.939355,
-    "ast_hash": "ce979001a008f20223b70a8d62d6e475",
+    "mtime": 1790597961.9414458,
+    "seen": 1790598121.355201,
+    "ast_hash": "e55289ee8a8c2acfaacc7986b3c1bec2",
     "semantic_hash": ""
   },
   "routes/channels.php": {
@@ -6780,9 +6780,9 @@
     "semantic_hash": ""
   },
   "app/Http/Controllers/Boshqaruv/CatalogController.php": {
-    "mtime": 1790505363.7146258,
-    "seen": 1790506544.492357,
-    "ast_hash": "caffb8e0541496ca3042935a5d77fe4d",
+    "mtime": 1790597952.1942203,
+    "seen": 1790598121.354762,
+    "ast_hash": "cb26eaf6ecfd523c7ae814c0ea447d0d",
     "semantic_hash": ""
   },
   "app/Http/Controllers/Boshqaruv/CatalogSlotController.php": {
@@ -6948,15 +6948,15 @@
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/Catalog.tsx": {
-    "mtime": 1790505363.7291226,
-    "seen": 1790506544.492688,
-    "ast_hash": "a968df8ef6955ff2be4874746f0e68a0",
+    "mtime": 1790598074.8565135,
+    "seen": 1790598121.355127,
+    "ast_hash": "34cd28db63fa6543ecd257e6aa8aa4d6",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/CatalogEdition.tsx": {
-    "mtime": 1790505363.7296693,
-    "seen": 1790506544.492689,
-    "ast_hash": "840d1bbf4bedb946da0eb046afd903fa",
+    "mtime": 1790598016.2295933,
+    "seen": 1790598121.355128,
+    "ast_hash": "10430fa9208d7c50995560b52f985f6e",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/CatalogSubmissions.tsx": {
@@ -7188,9 +7188,15 @@
     "semantic_hash": ""
   },
   "app/Console/Commands/FixBrokenImages.php": {
-    "mtime": 1790586252.6906078,
-    "seen": 1790586270.5588899,
-    "ast_hash": "f25079a5ea30fe07514c35a435eb31a5",
+    "mtime": 1790597916.4862516,
+    "seen": 1790598121.354666,
+    "ast_hash": "5dd883fea14ac09ef85d9a298d29e26e",
+    "semantic_hash": ""
+  },
+  "app/Services/Catalog/BookCoverResolverService.php": {
+    "mtime": 1790597900.752571,
+    "seen": 1790598121.354888,
+    "ast_hash": "f6a0148b10ff9e3b802a099201ba17dc",
     "semantic_hash": ""
   }
 }
