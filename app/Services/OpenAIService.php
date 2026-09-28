@@ -470,6 +470,17 @@ EOT;
 
     // ─── Mahsulot embed matni ────────────────────────────────────────────────
 
+    /**
+     * Embedding matni — mahsulot MAZMUNI.
+     *
+     * Narx, sotuv soni, do'kon nomi va artikul bu yerda YO'Q:
+     *  - ular vaqt o'tishi bilan o'zgaradi — matn o'zgarsa vektor qayta yasaladi
+     *    (ilgari aniq sotuv soni yozilgani uchun har sotuv OpenAI chaqiruvi edi);
+     *  - bitta kitob har do'konda boshqa narx/nomga ega — ular vektorga kirsa,
+     *    bir kitob o'nlab har xil vektor olardi;
+     *  - "arzon", "eng ko'p sotilgan" kabi so'rovlar SQL filtrlari bilan hal
+     *    qilinadi (ChatBot: detectPriceRange, period → orderBy), vektor bilan emas.
+     */
     public function buildProductEmbedText(array $data): string
     {
         $parts = [];
@@ -478,50 +489,12 @@ EOT;
         if (!empty($data['author']))      $parts[] = 'Muallif: ' . $data['author'];
         if (!empty($data['category']))    $parts[] = 'Kategoriya: ' . $data['category'];
         if (!empty($data['tags']))        $parts[] = 'Teglar: ' . implode(', ', (array) $data['tags']);
-        if (!empty($data['artikul']))     $parts[] = 'Artikul: ' . $data['artikul'];
         if (!empty($data['lang']))        $parts[] = 'Tili: ' . $data['lang'];
         if (!empty($data['year']))        $parts[] = 'Yili: ' . $data['year'];
         if (!empty($data['coverType']))   $parts[] = 'Muqova: ' . $data['coverType'];
         if (!empty($data['material']))    $parts[] = 'Material: ' . $data['material'];
         if (!empty($data['publisher']))   $parts[] = 'Nashriyot: ' . $data['publisher'];
-        if (!empty($data['shop_name']))   $parts[] = "Do'kon: " . $data['shop_name'];
-        if (!empty($data['description'])) $parts[] = 'Tavsif: ' . mb_substr($data['description'], 0, 500);
-
-        // Narx darajasi — "arzon kitob" kabi so'rovlar uchun semantik signal
-        $price = (float) ($data['price'] ?? 0);
-        if ($price > 0) {
-            $priceLabel = match (true) {
-                $price < 30000  => 'juda arzon',
-                $price < 60000  => 'arzon',
-                $price < 120000 => "o'rtacha narx",
-                $price < 250000 => 'qimmatroq',
-                default         => 'premium narx',
-            };
-            $parts[] = 'Narx: ' . number_format($price) . " so'm ({$priceLabel})";
-        }
-
-        $sales     = (int) ($data['totalSales']     ?? 0);
-        $salesWeek = (int) ($data['totalSalesWeek'] ?? 0);
-
-        if ($sales > 0) {
-            $label = match (true) {
-                $sales > 1000 => 'juda mashhur bestseller',
-                $sales > 500  => "ko'p sotilgan",
-                $sales > 100  => "o'rtacha mashhur",
-                default       => 'yangi mahsulot',
-            };
-            $parts[] = "Jami savdo: {$sales} ta ({$label})";
-        }
-
-        if ($salesWeek > 0) {
-            $weekLabel = match (true) {
-                $salesWeek > 100 => 'haftalik trendda',
-                $salesWeek > 30  => 'haftalik mashhur',
-                $salesWeek > 10  => 'haftalik faol',
-                default          => 'haftalik savdo bor',
-            };
-            $parts[] = "Haftalik savdo: {$salesWeek} ta ({$weekLabel})";
-        }
+        if (!empty($data['description'])) $parts[] = 'Tavsif: ' . mb_substr($data['description'], 0, 1500);
 
         return implode('. ', $parts);
     }

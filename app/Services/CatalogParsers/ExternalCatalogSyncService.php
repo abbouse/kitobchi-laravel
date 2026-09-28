@@ -795,10 +795,17 @@ class ExternalCatalogSyncService
                     $edition->save();
 
                     // Bog'langan takliflarni ham sinxronlaymiz
+                    // Ilgari `CatalogService::syncOffers($edition->id)` edi: oddiy
+                    // metodni statik chaqirish PHP 8 da Error beradi va u shu
+                    // yerda jim yutilardi — o'zgarish takliflarga (mijoz ko'radigan
+                    // `books` ga) faqat kechki `catalog:sync-offers` bilan yetardi.
                     try {
-                        CatalogService::syncOffers($edition->id);
-                    } catch (\Throwable) {
-                        // ignore
+                        app(CatalogService::class)->syncOffers($edition);
+                    } catch (\Throwable $e) {
+                        \Illuminate\Support\Facades\Log::warning('Catalog offer sync failed', [
+                            'edition_id' => $edition->id,
+                            'error' => $e->getMessage(),
+                        ]);
                     }
 
                     $updated++;
@@ -1097,10 +1104,17 @@ EOT;
                     $edition->save();
 
                     // Bog'langan takliflarga ham sinxronlaymiz
+                    // Ilgari `CatalogService::syncOffers($edition->id)` edi: oddiy
+                    // metodni statik chaqirish PHP 8 da Error beradi va u shu
+                    // yerda jim yutilardi — o'zgarish takliflarga (mijoz ko'radigan
+                    // `books` ga) faqat kechki `catalog:sync-offers` bilan yetardi.
                     try {
-                        CatalogService::syncOffers($edition->id);
-                    } catch (\Throwable) {
-                        // ignore
+                        app(CatalogService::class)->syncOffers($edition);
+                    } catch (\Throwable $e) {
+                        \Illuminate\Support\Facades\Log::warning('Catalog offer sync failed', [
+                            'edition_id' => $edition->id,
+                            'error' => $e->getMessage(),
+                        ]);
                     }
 
                     $updated++;

@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Models\BookEdition;
+use App\Models\BookEditionVector;
 use App\Models\Books;
 use App\Models\Stationery;
 use Illuminate\Database\Eloquent\Builder;
@@ -13,23 +15,14 @@ class ProductVectorService
 {
     private const VECTOR_DIMENSIONS = 1536;
 
-    private const BOOK_FIELDS = [
-        'name',
-        'author',
-        'author_id',
-        'description',
-        'category_id',
-        'seller_id',
-        'lang',
-        'year',
-        'coverType',
-        'status',
-        'is_hidden',
-        'is_approved',
-        'totalSales',
-        'totalSalesWeek',
-    ];
-
+    /**
+     * Kanselyariya vektorini qayta yasashga sabab bo'ladigan maydonlar.
+     *
+     * Narx, qoldiq va sotuv soni bu yerda YO'Q: ular vektorga kirmaydi (saralash
+     * va filtr SQL'da). Ilgari embed matniga aniq sotuv soni yozilardi va har
+     * sotuv OpenAI'ga yangi so'rov yuborardi. Holat maydonlari qoladi —
+     * mahsulot yashirilsa vektori tozalanadi.
+     */
     private const STATIONERY_FIELDS = [
         'name',
         'description',
@@ -39,9 +32,6 @@ class ProductVectorService
         'status',
         'is_hidden',
         'is_approved',
-        'stock',
-        'totalSales',
-        'totalSalesWeek',
     ];
 
     public function __construct(
@@ -51,17 +41,39 @@ class ProductVectorService
 
     public function shouldQueueSync(Books|Stationery $product): bool
     {
+        // Kitob vektori kitob KARTASIGA tegishli va karta o'zgarganda yangilanadi
+        // (BookEdition::booted). Do'kon taklifidagi narx, qoldiq yoki sotuv
+        // vektorga ta'sir qilmaydi — bu yerda hech narsa navbatga qo'yilmaydi.
+        if ($product instanceof Books) {
+            return false;
+        }
+
         if ($product->wasRecentlyCreated) {
             return true;
         }
 
-        $fields = $product instanceof Books ? self::BOOK_FIELDS : self::STATIONERY_FIELDS;
-
-        return $product->wasChanged($fields);
+        return $product->wasChanged(self::STATIONERY_FIELDS);
     }
 
     public function syncByTypeAndId(string $type, int $id): bool
     {
+        $normalized = strtolower(trim($type));
+
+        if ($normalized === 'edition') {
+            $edition = BookEdition::query()->find($id);
+
+            return $edition ? $this->syncEdition($edition) : false;
+        }
+
+        // Deploy paytida navbatda qolgan eski ('book', <taklif id>) ishlar:
+        // taklifning kartasi qayta hisoblanadi.
+        if (in_array($normalized, ['book', 'books'], true)) {
+            $editionId = (int) Books::query()->whereKey($id)->value('edition_id');
+            $edition = $editionId > 0 ? BookEdition::query()->find($editionId) : null;
+
+            return $edition ? $this->syncEdition($edition) : false;
+        }
+
         $product = $this->loadProduct($type, $id);
 
         if (! $product) {
@@ -71,13 +83,103 @@ class ProductVectorService
         return $this->syncProduct($product);
     }
 
+    /**
+     * Kitob kartasining vektorini yangilaydi. Matn o'zgarmagan bo'lsa (hash
+     * bir xil) OpenAI'ga borilmaydi.
+     *
+     * Kartaning sotuvdagi taklifi bor-yo'qligi bu yerda TEKSHIRILMAYDI: vektor
+     * kitob matnining xususiyati. Qaysi kitob qidiruvda chiqishini indeks va
+     * natijalarni yuklash bosqichi hal qiladi (`offers_count` va taklifning
+     * holati) — do'kon kitobni vaqtincha yashirib, qayta chiqarsa, vektor uchun
+     * qayta pul to'lanmaydi.
+     */
+    public function syncEdition(BookEdition $edition): bool
+    {
+        if ($edition->trashed() || in_array($edition->status, [BookEdition::STATUS_MERGED, BookEdition::STATUS_REJECTED], true)) {
+            return $this->clearEditionVector((int) $edition->id);
+        }
+
+        $text = $this->buildEditionEmbedText($edition);
+
+        if (trim($text) === '') {
+            Log::warning('Edition vector skipped because embed text is empty', ['edition_id' => $edition->id]);
+
+            return false;
+        }
+
+        $hash = md5($text);
+        $existing = BookEditionVector::query()->find($edition->id);
+
+        if ($existing && $existing->text_hash === $hash) {
+            return true;
+        }
+
+        $vector = $this->openAI->getVector($text);
+
+        if (! $this->isValidVector($vector)) {
+            Log::warning('Edition vector generation returned invalid payload', ['edition_id' => $edition->id]);
+
+            return false;
+        }
+
+        BookEditionVector::query()->updateOrCreate(
+            ['edition_id' => $edition->id],
+            ['vector' => $vector, 'text_hash' => $hash]
+        );
+
+        $this->invalidateSearchIndex('book');
+
+        return true;
+    }
+
+    private function clearEditionVector(int $editionId): bool
+    {
+        $deleted = BookEditionVector::query()->whereKey($editionId)->delete();
+
+        if ($deleted > 0) {
+            $this->invalidateSearchIndex('book');
+        }
+
+        return $deleted > 0;
+    }
+
+    /**
+     * Kitob MAZMUNI: nom, muallif, kategoriya, teglar, til, yil, muqova,
+     * nashriyot, tavsif. Do'kon, narx va sotuv soni yo'q — ular har do'konda
+     * boshqa va vaqt o'tishi bilan o'zgaradi; vektorga kirsa, bir kitob 20 ta
+     * har xil vektor olardi va har sotuvda qayta yasalardi.
+     */
+    private function buildEditionEmbedText(BookEdition $edition): string
+    {
+        $edition->loadMissing(['authorProfile', 'category', 'publisher']);
+
+        $tagIds = array_values(array_filter(array_map('intval', (array) ($edition->tag_ids ?? []))));
+        $tags = $tagIds === []
+            ? []
+            : \App\Models\BookTag::query()->whereIn('id', $tagIds)->pluck('tag_name_uz')->filter()->values()->all();
+
+        return $this->openAI->buildProductEmbedText([
+            'name' => $edition->title,
+            'author' => $edition->authorProfile?->name ?: $edition->author,
+            'category' => $edition->category?->name_uz ?? $edition->category?->title,
+            'tags' => $tags,
+            'lang' => $edition->lang,
+            'year' => $edition->year,
+            'coverType' => $edition->coverType,
+            'publisher' => $edition->publisher?->name,
+            'description' => $edition->description,
+        ]);
+    }
+
     public function syncProduct(Books|Stationery $product): bool
     {
-        $product->loadMissing(['category', 'seller', 'tags']);
-
         if ($product instanceof Books) {
-            $product->loadMissing('authorProfile');
+            $edition = $product->edition_id ? BookEdition::query()->find($product->edition_id) : null;
+
+            return $edition ? $this->syncEdition($edition) : false;
         }
+
+        $product->loadMissing(['category', 'seller', 'tags']);
 
         if (! $this->isEligible($product)) {
             return $this->clearVector($product);
@@ -135,6 +237,10 @@ class ProductVectorService
 
     public function rebuildType(string $type, bool $force = false, int $limit = 0): array
     {
+        if ($this->normalizeType($type) === 'book') {
+            return $this->rebuildEditions($force, $limit);
+        }
+
         $cleared = $this->clearInactiveVectors($type, $limit);
         $synced = 0;
 
@@ -172,6 +278,74 @@ class ProductVectorService
             'cleared' => $cleared,
             'synced' => $synced,
         ];
+    }
+
+    /**
+     * Kitob kartalari vektorini to'ldiradi / yangilaydi.
+     *
+     * Navbat: sotuvdagi taklifi bor kartalar (`offers_count > 0`), vektori
+     * yo'q yoki hash'i bo'sh (matn o'zgargan / eski formatdan ko'chirilgan).
+     * Ko'p sotiladiganlar birinchi — qidiruvda eng ko'p ko'rinadiganlari avval
+     * to'g'rilanadi.
+     *
+     * Birlashtirilgan, rad etilgan va o'chirilgan kartalarning vektori
+     * tozalanadi — ular qidiruvga tushmasligi kerak.
+     *
+     * @return array{cleared:int, synced:int}
+     */
+    private function rebuildEditions(bool $force, int $limit): array
+    {
+        $cleared = $this->clearDeadEditionVectors();
+        $synced = 0;
+
+        $query = BookEdition::query()
+            ->whereIn('status', [BookEdition::STATUS_ACTIVE, BookEdition::STATUS_PENDING])
+            ->where('offers_count', '>', 0);
+
+        if (! $force) {
+            $query->whereNotExists(fn ($sub) => $sub
+                ->selectRaw('1')
+                ->from('book_edition_vectors')
+                ->whereColumn('book_edition_vectors.edition_id', 'book_editions.id')
+                ->whereNotNull('book_edition_vectors.text_hash'));
+        }
+
+        $ids = $query
+            ->orderByDesc('sales_total')
+            ->orderBy('id')
+            ->when($limit > 0, fn ($q) => $q->limit($limit))
+            ->pluck('id');
+
+        foreach ($ids->chunk(100) as $chunk) {
+            $editions = BookEdition::query()
+                ->with(['authorProfile', 'category', 'publisher'])
+                ->whereIn('id', $chunk->all())
+                ->get();
+
+            foreach ($editions as $edition) {
+                if ($this->syncEdition($edition)) {
+                    $synced++;
+                }
+            }
+        }
+
+        if ($synced > 0 || $cleared > 0) {
+            $this->invalidateSearchIndex('book');
+        }
+
+        return ['cleared' => $cleared, 'synced' => $synced];
+    }
+
+    private function clearDeadEditionVectors(): int
+    {
+        return BookEditionVector::query()
+            ->whereIn('edition_id', fn ($sub) => $sub
+                ->select('id')
+                ->from('book_editions')
+                ->where(fn ($w) => $w
+                    ->whereNotNull('deleted_at')
+                    ->orWhereIn('status', [BookEdition::STATUS_MERGED, BookEdition::STATUS_REJECTED])))
+            ->delete();
     }
 
     private function clearInactiveVectors(string $type, int $limit = 0): int
@@ -267,37 +441,15 @@ class ProductVectorService
         return true;
     }
 
-    private function buildEmbedText(Books|Stationery $product): string
+    /** Kanselyariya mazmuni. Kitoblar uchun — `buildEditionEmbedText`. */
+    private function buildEmbedText(Stationery $product): string
     {
-        if ($product instanceof Books) {
-            return $this->openAI->buildProductEmbedText([
-                'name' => $product->name,
-                'author' => $product->authorProfile?->name ?: $product->author,
-                'category' => $product->category?->name_uz ?? $product->category?->title,
-                'tags' => $product->tags->pluck('tag_name_uz')->filter()->values()->all(),
-                'artikul' => $product->artikul,
-                'lang' => $product->lang,
-                'year' => $product->year,
-                'coverType' => $product->coverType,
-                'price' => $product->discountPrice ?: $product->price,
-                'shop_name' => $product->seller?->shop_name,
-                'description' => $product->description,
-                'totalSales' => $product->totalSales,
-                'totalSalesWeek' => $product->totalSalesWeek,
-            ]);
-        }
-
         return $this->openAI->buildProductEmbedText([
             'name' => $product->name,
             'category' => $product->category?->name_uz ?? $product->category?->name,
             'tags' => $product->tags->pluck('name_uz')->filter()->values()->all(),
-            'artikul' => $product->artikul,
             'material' => $product->material,
-            'price' => $product->discount_price ?: $product->price,
-            'shop_name' => $product->seller?->shop_name,
             'description' => $product->description,
-            'totalSales' => $product->totalSales,
-            'totalSalesWeek' => $product->totalSalesWeek,
         ]);
     }
 
@@ -316,7 +468,7 @@ class ProductVectorService
         return true;
     }
 
-    private function clearVector(Books|Stationery $product): bool
+    private function clearVector(Stationery $product): bool
     {
         if ($product->getRawOriginal('vectorData') === null) {
             return false;
@@ -328,7 +480,7 @@ class ProductVectorService
             'has_vector'       => false,
         ]);
 
-        $this->invalidateSearchIndex($product instanceof Books ? 'book' : 'stationery');
+        $this->invalidateSearchIndex('stationery');
 
         return true;
     }

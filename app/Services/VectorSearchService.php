@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\BookEdition;
 use App\Models\Books;
 use App\Models\Stationery;
 use Illuminate\Support\Collection;
@@ -37,7 +38,10 @@ class VectorSearchService
 
     private static function indexKey(string $type): string
     {
-        return "vector-search-index:{$type}:v1";
+        // v2: kitob indeksi endi KARTA id bo'yicha (ilgari taklif id). Kalit
+        // o'zgarmasa, deploydan keyin 10 daqiqa eski (taklif id'li) indeks
+        // karta id sifatida o'qilib, butunlay boshqa kitoblar chiqardi.
+        return "vector-search-index:{$type}:v2";
     }
 
     public static function invalidateIndex(string $type): void
@@ -85,11 +89,13 @@ class VectorSearchService
 
     private function buildIndex(string $type): array
     {
+        if ($type === 'book') {
+            return $this->buildEditionIndex();
+        }
+
         $index = [];
 
-        $query = $type === 'book'
-            ? Books::query()->activeForVector()->vectorReady()->select(['id', 'vectorData'])
-            : Stationery::query()->activeForVector()->vectorReady()->select(['id', 'vectorData']);
+        $query = Stationery::query()->activeForVector()->vectorReady()->select(['id', 'vectorData']);
 
         // Tezlik (2026-08-20 audit): oldingi ->chunk(500) OFFSET/LIMIT bilan
         // sahifalardi — har keyingi sahifa uchun MySQL avvalgi barcha
@@ -112,6 +118,40 @@ class VectorSearchService
         });
 
         Log::info('Vector search index built', ['type' => $type, 'count' => count($index)]);
+
+        return $index;
+    }
+
+    /**
+     * Kitob indeksi: [karta id => vektor]. Faqat sotuvdagi taklifi bor
+     * kartalar (`offers_count` — buy box hisoblagan ko'rinadigan takliflar).
+     * Bitta kitob — bitta vektor (ilgari har do'kon taklifi alohida edi).
+     */
+    private function buildEditionIndex(): array
+    {
+        $index = [];
+
+        \App\Models\BookEditionVector::query()
+            ->join('book_editions', 'book_editions.id', '=', 'book_edition_vectors.edition_id')
+            ->whereNull('book_editions.deleted_at')
+            ->whereIn('book_editions.status', [BookEdition::STATUS_ACTIVE, BookEdition::STATUS_PENDING])
+            ->where('book_editions.offers_count', '>', 0)
+            ->select(['book_edition_vectors.edition_id', 'book_edition_vectors.vector'])
+            ->chunkById(500, function ($rows) use (&$index) {
+                foreach ($rows as $row) {
+                    $vec = \App\Models\BookEditionVector::decode($row->vector);
+                    if ($vec === null) {
+                        continue;
+                    }
+
+                    $packed = self::packNormalized($vec);
+                    if ($packed !== null) {
+                        $index[(int) $row->edition_id] = $packed;
+                    }
+                }
+            }, 'book_edition_vectors.edition_id', 'edition_id');
+
+        Log::info('Vector search index built', ['type' => 'book', 'count' => count($index)]);
 
         return $index;
     }
@@ -151,7 +191,7 @@ class VectorSearchService
      *
      * @return Collection<Books|Stationery> _similarity va _type atributlari bilan
      */
-    public function search(string $query, string $type = 'both', int $limit = 12, float $minScore = 0.30, bool $inStockOnly = false): Collection
+    public function search(string $query, string $type = 'both', int $limit = 12, float $minScore = 0.30, bool $inStockOnly = false, ?int $sellerId = null): Collection
     {
         $queryVec = $this->openAI->getCachedVector($query);
 
@@ -159,7 +199,7 @@ class VectorSearchService
             return collect();
         }
 
-        return $this->searchByVector($queryVec, $type, $limit, $minScore, $inStockOnly);
+        return $this->searchByVector($queryVec, $type, $limit, $minScore, $inStockOnly, $sellerId);
     }
 
     /**
@@ -167,8 +207,11 @@ class VectorSearchService
      *
      * @param bool $inStockOnly true — faqat sotuvda bor mahsulotlar (asosiy search);
      *                          false — tugaganlar ham (chatbot, stock-alert uchun)
+     * @param int|null $sellerId Do'kon sahifasi ichidagi qidiruv: har kitobdan
+     *                          SHU do'konning taklifi olinadi (tanlangan taklif
+     *                          boshqa do'konniki bo'lishi mumkin)
      */
-    public function searchByVector(array $queryVec, string $type = 'both', int $limit = 12, float $minScore = 0.30, bool $inStockOnly = false): Collection
+    public function searchByVector(array $queryVec, string $type = 'both', int $limit = 12, float $minScore = 0.30, bool $inStockOnly = false, ?int $sellerId = null): Collection
     {
         $packedQuery = self::packNormalized($queryVec);
 
@@ -194,7 +237,7 @@ class VectorSearchService
 
         $top = $results->sortByDesc('_similarity')->take($limit * 2)->values();
 
-        return $this->hydrate($top, $inStockOnly)->take($limit)->values();
+        return $this->hydrate($top, $inStockOnly, $sellerId)->take($limit)->values();
     }
 
     /**
@@ -248,21 +291,35 @@ class VectorSearchService
      * Indeks biroz eskirgan bo'lishi mumkin — shu yerda activeForVector bilan
      * qayta filtrlaymiz (sotuvda yo'q mahsulot mijozga chiqmasin).
      */
-    private function hydrate(Collection $scored, bool $inStockOnly = false): Collection
+    private function hydrate(Collection $scored, bool $inStockOnly = false, ?int $sellerId = null): Collection
     {
         $bookIds = $scored->where('type', 'book')->pluck('id')->all();
         $statIds = $scored->where('type', 'stationery')->pluck('id')->all();
 
+        // Kitob indeksi karta id'larini qaytaradi. Mijozga kartaning TANLANGAN
+        // taklifi ko'rsatiladi (buy box — ro'yxatlardagi bilan bir xil). U
+        // sotuvda yo'q bo'lsa, boshqa hech bir taklif ham yo'q (buy box sotuvda
+        // borini avval tanlaydi), shuning uchun `inStockOnly` to'g'ri ishlaydi.
         $books = empty($bookIds) ? collect() : Books::with(['category', 'seller', 'tags', 'authorProfile'])
             ->activeForVector()
             ->withAvailableTotal()
             ->when($inStockOnly, fn ($q) => $q->inStock())
-            ->whereIn('id', $bookIds)->get()->keyBy('id');
+            ->whereIn('edition_id', $bookIds)
+            ->when(
+                $sellerId,
+                fn ($q) => $q->where('seller_id', $sellerId),
+                fn ($q) => $q->where('catalog_featured', true)
+            )
+            ->orderBy('id')
+            ->get()
+            ->unique('edition_id')
+            ->keyBy('edition_id');
 
         $stats = empty($statIds) ? collect() : Stationery::with(['category', 'seller', 'tags'])
             ->activeForVector()
             ->withAvailableTotal()
             ->when($inStockOnly, fn ($q) => $q->inStock())
+            ->when($sellerId, fn ($q) => $q->where('seller_id', $sellerId))
             ->whereIn('id', $statIds)->get()->keyBy('id');
 
         return $scored->map(function (array $row) use ($books, $stats) {
@@ -278,9 +335,6 @@ class VectorSearchService
             $product->_similarity = $row['_similarity'];
 
             return $product;
-        })->filter()
-            // GLOBAL KATALOG: bir kitobning bir nechta do'kon taklifi — natijada bitta
-            ->unique(fn ($p) => $p->_type === 'book' && $p->edition_id ? 'e' . $p->edition_id : $p->_type . $p->id)
-            ->values();
+        })->filter()->values();
     }
 }

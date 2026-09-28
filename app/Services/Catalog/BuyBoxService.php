@@ -72,7 +72,7 @@ class BuyBoxService
     {
         $offers = Books::query()
             ->where('edition_id', $editionId)
-            ->select(['id', 'seller_id', 'price', 'discountPrice', 'discountExpiresAt', 'status', 'is_approved', 'is_hidden', 'archived_at', 'totalSales', 'catalog_featured'])
+            ->select(['id', 'seller_id', 'price', 'discountPrice', 'discountExpiresAt', 'status', 'is_approved', 'is_hidden', 'archived_at', 'totalSales', 'totalSalesWeek', 'catalog_featured'])
             ->withAvailableTotal()
             ->get();
 
@@ -144,6 +144,11 @@ class BuyBoxService
             'in_stock_offers_count' => $inStock->count(),
             'min_price' => $priced->isNotEmpty() ? $priced->map(fn ($b) => self::effectivePrice($b))->min() : null,
             'featured_book_id' => $featuredId,
+            // Kitobning barcha do'konlardagi sotuvi — bozor ro'yxatlari shu bo'yicha
+            // saralaydi. Sotuvda taklif o'zgarishi bu yerga darhol yetadi;
+            // `products:sales-stats` esa haftalik sonni buyurtmalardan tenglaydi.
+            'sales_week' => (int) $offers->sum(fn (Books $b) => (int) ($b->totalSalesWeek ?? 0)),
+            'sales_total' => (int) $offers->sum(fn (Books $b) => (int) ($b->totalSales ?? 0)),
         ]);
 
         return [

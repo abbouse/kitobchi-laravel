@@ -106,6 +106,14 @@ return Application::configure(basePath: dirname(__DIR__))
                 ->dailyAt('02:10')->timezone($tz);
         }
 
+        // Haftalik sotuv — buyurtmalardan haqiqiy 7 kunlik oyna; kitob kartasiga
+        // umumiy sotuv (bozor ro'yxatlari shu bo'yicha saralaydi)
+        $schedule->command('products:sales-stats')
+            ->hourlyAt(17)
+            ->timezone($tz)
+            ->withoutOverlapping(30)
+            ->runInBackground();
+
         $schedule->command('vectors:rebuild --type=all --limit=120')
             ->everyTenMinutes()
             ->timezone($tz)

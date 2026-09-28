@@ -39,11 +39,39 @@ class BookEdition extends Model
         'offers_count' => 'integer',
         'in_stock_offers_count' => 'integer',
         'min_price' => 'integer',
+        'sales_week' => 'integer',
+        'sales_total' => 'integer',
     ];
+
+    /**
+     * Embeddingga kiradigan maydonlar. Shulardan biri o'zgarsa vektor qayta
+     * yasaladi (`ProductVectorService::syncEdition`, hash bilan himoyalangan).
+     */
+    public const VECTOR_FIELDS = [
+        'title', 'author', 'author_id', 'description', 'category_id', 'tag_ids',
+        'lang', 'langType', 'coverType', 'year', 'publisher_id',
+    ];
+
+    protected static function booted(): void
+    {
+        // Kitob matni qaysi yo'l bilan o'zgarmasin (admin, AI tavsif, birlashtirish,
+        // parser) — vektor yangilanadi. Statistika (`toBase()->update`) bu yerga
+        // tushmaydi va tushmasligi kerak: u vektorga kirmaydi.
+        static::saved(function (BookEdition $edition): void {
+            if ($edition->wasRecentlyCreated || $edition->wasChanged(self::VECTOR_FIELDS)) {
+                \App\Jobs\SyncProductVectorJob::dispatch('edition', (int) $edition->id)->afterCommit();
+            }
+        });
+    }
 
     public function offers(): HasMany
     {
         return $this->hasMany(Books::class, 'edition_id');
+    }
+
+    public function vector(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(BookEditionVector::class, 'edition_id');
     }
 
     public function authorProfile(): BelongsTo

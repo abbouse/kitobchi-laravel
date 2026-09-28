@@ -514,6 +514,13 @@ class ChatBotController extends Controller
             return is_object($item) && filled($item->id);
         })->values();
 
+        // Kitob vektori kartada — o'xshashlik hisobidan oldin bitta so'rovda
+        // yuklaymiz (aks holda har kitob uchun alohida so'rov ketardi).
+        $bookResults = $safeResults->filter(fn ($item) => $item instanceof Books)->values()->all();
+        if ($bookResults !== []) {
+            (new \Illuminate\Database\Eloquent\Collection($bookResults))->loadMissing('editionVector');
+        }
+
         $scored = $safeResults->map(function ($item) use ($queryVec, $user) {
             try {
                 // Vector qidiruvdan kelgan bo'lsa — similarity allaqachon hisoblangan
@@ -786,10 +793,14 @@ class ChatBotController extends Controller
         $tags       = BookTag::all();
         $filters    = $this->extractBookFilters($text, $categories, $tags);
 
+        // Har kitobdan bitta — tanlangan taklif (bozor ro'yxatlari bilan bir xil).
+        // Ilgari takliflar orasidan tasodifiy biri qolardi, 40 ta limitni esa bir
+        // kitobning bir nechta do'kondagi nusxasi band qilardi.
         $q = Books::query()
             ->activeForVector()
             ->vectorReady()
-            ->with(['category', 'seller', 'tags', 'authorProfile']);
+            ->catalogFeatured()
+            ->with(['category', 'seller', 'tags', 'authorProfile', 'editionVector']);
 
         if (!$fallback) {
             $artikulQuery = preg_replace('/\D+/', '', $text);
@@ -804,9 +815,9 @@ class ChatBotController extends Controller
             if ($filters['price_range'])      $q->whereBetween('price', $filters['price_range']);
 
             if ($filters['period'] === 'new')          $q->orderByDesc('created_at');
-            elseif ($filters['period'] === 'bestseller') $q->orderByDesc('totalSales');
-            elseif ($filters['period'] === 'week')     $q->orderByDesc('totalSalesWeek');
-            else $q->orderByDesc('totalSales');
+            elseif ($filters['period'] === 'bestseller') $q->orderByBookSales('total');
+            elseif ($filters['period'] === 'week')     $q->orderByBookSales('week');
+            else $q->orderByBookSales('total');
 
             // MUHIM: limitsiz butun jadval yuklanardi (filtrlar bo'sh bo'lsa) —
             // katta katalogda 500/timeout ning asosiy sababi. Semantik qamrovni

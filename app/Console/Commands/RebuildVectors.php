@@ -9,7 +9,7 @@ class RebuildVectors extends Command
 {
     protected $signature = 'vectors:rebuild {--type=all : book|stationery|all} {--force : Active mahsulotlarning hammasini qayta vector qiladi} {--limit=120 : Bir yurishda nechta mahsulotni sync qilish}';
 
-    protected $description = 'Faol mahsulotlar uchun vectorData yaratadi, nofaol mahsulotlardagi vectorData ni tozalaydi';
+    protected $description = 'Kitob kartalari va faol kanselyariya uchun vektor yaratadi/yangilaydi, keraksizlarini tozalaydi';
 
     public function __construct(
         private readonly ProductVectorService $vectorService,

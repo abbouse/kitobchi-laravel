@@ -55,7 +55,7 @@ class ProductCatalogController extends Controller
                         $q->orWhere('author_id', $book->author_id);
                     }
                 })
-                ->orderByDesc('totalSales')
+                ->orderByBookSales('total')
                 ->take(8)
                 ->get()
                 ->map(function($b) { $b->type_label = 'book'; return $b; });
@@ -193,8 +193,11 @@ class ProductCatalogController extends Controller
             $base->description ?? '',
         ])));
 
+        // Kitobda — har kitobdan bitta taklif (mobil ilovadagi bilan bir xil);
+        // ilgari bir kitobning bir nechta do'kon nusxasi qatorasiga chiqardi.
         $query = $type === 'book'
-            ? $this->visibleBooks(['category', 'tags'])
+            ? $this->visibleBooks(['category', 'tags'])->catalogFeatured()
+                ->when($base->edition_id ?? null, fn ($q) => $q->where(fn ($w) => $w->whereNull('edition_id')->orWhere('edition_id', '!=', $base->edition_id)))
             : $this->visibleStationeries(['category', 'tags']);
 
         $query->where('id', '!=', $base->id);
@@ -225,9 +228,13 @@ class ProductCatalogController extends Controller
             });
         }
 
+        if ($type === 'book') {
+            $query->orderByBookSales('week')->orderByBookSales('total');
+        } else {
+            $query->orderByDesc('totalSalesWeek')->orderByDesc('totalSales');
+        }
+
         $candidates = $query
-            ->orderByDesc('totalSalesWeek')
-            ->orderByDesc('totalSales')
             ->limit(200)
             ->get();
 
@@ -673,7 +680,7 @@ class ProductCatalogController extends Controller
                     });
                 }
 
-                $products = $this->applyCatalogSort($productsQuery, $sort)->paginate(24, ['*'], 'page');
+                $products = $this->applyCatalogSort($productsQuery, $sort, 'book')->paginate(24, ['*'], 'page');
             }
 
             // Filtr paneli variantlari — faqat JORIY turkum (kitob/kanselyariya)
@@ -772,13 +779,14 @@ class ProductCatalogController extends Controller
     }
 
     /** Katalog saralash — piyolamarket uslubidagi filtr panelidan keladi. */
-    private function applyCatalogSort($query, string $sort)
+    private function applyCatalogSort($query, string $sort, string $type = 'stationery')
     {
         return match ($sort) {
             'new' => $query->orderByDesc('created_at'),
             'price_asc' => $query->orderBy('price'),
             'price_desc' => $query->orderByDesc('price'),
-            default => $query->orderByDesc('totalSales'),
+            // Kitob katalogida har kitobdan bitta taklif — kitobning umumiy sotuvi
+            default => $type === 'book' ? $query->orderByBookSales('total') : $query->orderByDesc('totalSales'),
         };
     }
 

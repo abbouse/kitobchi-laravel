@@ -66,17 +66,22 @@ class BookVideoSelectionService
         $since = CarbonImmutable::now()->subDays($days);
 
         // 1) Davr ichida eng ko'p sotilganlar (bekor qilinmagan buyurtmalar)
+        // Kitob bir nechta do'konda sotilsa — sotuvi bitta kartaga yig'iladi va
+        // karta videoda bir marta, uning asosiy (buy box) taklifi bilan chiqadi.
         $sold = DB::table('seller_order_items as i')
             ->join('seller_orders as o', 'o.id', '=', 'i.order_id')
+            ->join('books as b', 'b.id', '=', 'i.product_id')
+            ->leftJoin('book_editions as e', 'e.id', '=', 'b.edition_id')
             ->where('i.type', 'book')
             ->whereNull('i.cancelled_at')
             ->where('o.created_at', '>=', $since)
             ->where(fn ($q) => $q->whereNull('o.status_code')
                 ->orWhere('o.status_code', '!=', SellerOrderStatusCode::CANCELLED->value))
-            ->groupBy('i.product_id')
+            ->selectRaw('COALESCE(e.featured_book_id, b.id) as pid')
+            ->groupByRaw('COALESCE(e.featured_book_id, b.id)')
             ->orderByRaw('SUM(i.quantity) DESC')
             ->limit($count * 4)
-            ->pluck('i.product_id')
+            ->pluck('pid')
             ->map(fn ($id) => (int) $id)
             ->all();
 
@@ -87,9 +92,10 @@ class BookVideoSelectionService
         // 2) Yetmasa — umumiy sotuv reytingi, so'ng eng yangilar
         if (count($ids) < $count) {
             $fill = ProductVisibilityScope::applyBooks(Books::query())
+                ->catalogFeatured()
                 ->whereNotIn('id', $ids ?: [0])
-                ->orderByDesc($period === BookVideoSet::PERIOD_MONTHLY ? 'totalSales' : 'totalSalesWeek')
-                ->orderByDesc('totalSales')
+                ->orderByBookSales($period === BookVideoSet::PERIOD_MONTHLY ? 'total' : 'week')
+                ->orderByBookSales('total')
                 ->orderByDesc('id')
                 ->limit($count - count($ids))
                 ->pluck('id')

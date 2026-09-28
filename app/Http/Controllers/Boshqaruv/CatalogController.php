@@ -736,9 +736,6 @@ class CatalogController extends Controller
                 'is_hidden' => true,
                 'status' => false,
                 'is_approved' => 2,
-                'vectorData' => null,
-                'has_vector' => false,
-                'vector_text_hash' => null,
             ])->save();
 
             $stock->setTotalFromLegacy('book', (int) $book->id, 0, (int) $book->seller_id, 0, null, [

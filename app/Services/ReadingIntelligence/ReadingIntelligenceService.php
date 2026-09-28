@@ -634,7 +634,8 @@ class ReadingIntelligenceService
     {
         $minReviews = (int) config('reading_intelligence.min_reviews_for_quality');
         $reviewsCount = (int) ($product->ugc_reviews_count ?? 0);
-        $sales = (int) ($product->totalSales ?? 0);
+        // Kitob uchun — barcha do'konlardagi sotuv (karta), aks holda taklifniki
+        $sales = (int) (($product instanceof Books ? $product->edition?->sales_total : null) ?? $product->totalSales ?? 0);
 
         if ($reviewsCount < $minReviews && $sales < 5) {
             return null;
@@ -678,27 +679,46 @@ class ReadingIntelligenceService
 
         $topN = (int) config('reading_intelligence.rank_top_n');
         $ttl = (int) config('reading_intelligence.rank_cache_ttl');
-        $cacheKey = "reading-intel:rank:{$type}:{$product->category_id}";
+        $cacheKey = "reading-intel:rank:v2:{$type}:{$product->category_id}";
 
-        $topIds = Cache::remember($cacheKey, $ttl, function () use ($product, $type, $topN) {
+        $topKeys = Cache::remember($cacheKey, $ttl, function () use ($product, $type, $topN) {
             // activeForVector() — status/is_approved/is_hidden/faol sotuvchi
             // shartlarini birlashtiradi (Books.php/Stationery.php da bir xil
             // ta'riflangan), shu orqali yashirin/tasdiqlanmagan mahsulotlar
             // reyting ro'yxatiga tushmaydi.
-            $query = $type === 'book' ? Books::query() : Stationery::query();
+            if ($type === 'book') {
+                // Kitob reytingi karta bo'yicha: bir kitob bir marta, barcha
+                // do'konlardagi sotuvi bilan. Har do'kon taklifi o'sha o'rinni oladi.
+                return Books::query()
+                    ->activeForVector()
+                    ->catalogFeatured()
+                    ->where('category_id', $product->category_id)
+                    ->orderByBookSales('total')
+                    ->limit($topN)
+                    ->get(['id', 'edition_id'])
+                    ->map(fn (Books $b) => self::rankKey($b))
+                    ->all();
+            }
 
-            return $query
+            return Stationery::query()
                 ->activeForVector()
                 ->where('category_id', $product->category_id)
                 ->orderByDesc('totalSales')
                 ->limit($topN)
                 ->pluck('id')
+                ->map(fn ($id) => 's' . $id)
                 ->all();
         });
 
-        $position = array_search($product->id, $topIds, true);
+        $needle = $product instanceof Books ? self::rankKey($product) : 's' . $product->id;
+        $position = array_search($needle, $topKeys, true);
 
         return $position === false ? null : ($position + 1 > 5 ? $topN : $position + 1);
+    }
+
+    private static function rankKey(Books $book): string
+    {
+        return $book->edition_id ? 'e' . $book->edition_id : 'b' . $book->id;
     }
 
     // ─── Holat F — yangi mahsulot (faqat kontent) ──────────────────────
@@ -838,7 +858,7 @@ class ReadingIntelligenceService
         $results = $this->vectorSimilar($product, $type);
 
         if ($results->isEmpty() && $user) {
-            $results = $this->purchaseBasedSimilar($user, $type, (int) $product->id);
+            $results = $this->purchaseBasedSimilar($user, $product, $type);
         }
 
         if ($results->isEmpty()) {
@@ -874,9 +894,14 @@ class ReadingIntelligenceService
             return collect();
         }
 
+        // Vektor kitob kartasida — natijada shu kitobning o'zi boshqa do'kon
+        // taklifi sifatida chiqishi mumkin; o'xshash kitob sifatida ko'rsatilmaydi.
+        $editionId = $type === 'book' ? (int) ($product->edition_id ?? 0) : 0;
+
         return $this->vectorSearch
             ->searchByVector($product->vectorData, $type, limit: 8, minScore: 0.5, inStockOnly: true)
-            ->filter(fn ($item) => (int) $item->id !== (int) $product->id)
+            ->filter(fn ($item) => (int) $item->id !== (int) $product->id
+                && ($editionId === 0 || (int) ($item->edition_id ?? 0) !== $editionId))
             ->take(6);
     }
 
@@ -884,7 +909,7 @@ class ReadingIntelligenceService
      * Foydalanuvchi eng ko'p xarid qilgan kategoriyadan, u ALLAQACHON
      * sotib olmagan, eng ko'p sotilgan mahsulotlar.
      */
-    private function purchaseBasedSimilar(User $user, string $type, int $excludeId): \Illuminate\Support\Collection
+    private function purchaseBasedSimilar(User $user, Books|Stationery $product, string $type): \Illuminate\Support\Collection
     {
         $categoryId = $this->tasteProfile->dominantCategoryId($user->id, $type);
         if (! $categoryId) {
@@ -895,9 +920,11 @@ class ReadingIntelligenceService
 
         return $query
             ->activeForVector()
-            ->when($type === 'book', fn ($q) => $q->catalogFeatured())
+            ->when($type === 'book', fn ($q) => $q->catalogFeatured()->orderByBookSales('total'))
             ->where('category_id', $categoryId)
-            ->where('id', '!=', $excludeId)
+            ->where('id', '!=', $product->id)
+            // Shu kitobning boshqa do'kondagi taklifi "o'xshash" bo'lib chiqmasin
+            ->when($type === 'book' && $product->edition_id, fn ($q) => $q->where(fn ($w) => $w->whereNull('edition_id')->orWhere('edition_id', '!=', $product->edition_id)))
             ->orderByDesc('totalSales')
             ->limit(6)
             ->get();
@@ -921,7 +948,11 @@ class ReadingIntelligenceService
             $query->where('category_id', $product->category_id);
         }
 
-        return $query->orderByDesc('totalSales')->limit(6)->get();
+        return $query
+            ->when($type === 'book', fn ($q) => $q->orderByBookSales('total'))
+            ->orderByDesc('totalSales')
+            ->limit(6)
+            ->get();
     }
 
     private function difficultySummary(Books|Stationery $product, ?BookReadingInsight $insight, string $locale): ?string
@@ -950,7 +981,7 @@ class ReadingIntelligenceService
     private function loadProduct(string $type, int $id): Books|Stationery|null
     {
         return $type === 'book'
-            ? Books::query()->with('category')->find($id)
+            ? Books::query()->with(['category', 'editionVector'])->find($id)
             : Stationery::query()->with('category')->find($id);
     }
 }

@@ -1772,18 +1772,15 @@ class AdminController extends Controller
             // GLOBAL KATALOG: avval karta, keyin uning takliflari (kitob maydoni
             // faqat katalog orqali o'zgaradi). Ulanmagan takliflar odatdagidek.
             \App\Models\BookEdition::query()->where('author_id', $author->id)->update(['author' => $author->name]);
+            // Muallif vektor matnida — shu muallif kitoblari qayta embed qilinadi
+            \App\Models\BookEditionVector::markStale(\App\Models\BookEdition::query()->where('author_id', $author->id)->pluck('id'));
             Books::writingFromCatalog(fn () => Books::query()
                 ->whereNotNull('edition_id')
                 ->where('author_id', $author->id)
                 ->toBase()
-                ->update(['author' => $author->name, 'vector_text_hash' => null]));
+                ->update(['author' => $author->name]));
 
-            // vector_text_hash = null — scheduler (vectors:rebuild) bu kitoblarni
-            // avtomatik qayta embed qiladi (bulk update observer ni chetlab o'tadi)
-            Books::query()->where('author_id', $author->id)->update([
-                'author' => $author->name,
-                'vector_text_hash' => null,
-            ]);
+            Books::query()->where('author_id', $author->id)->update(['author' => $author->name]);
             // Ulangan takliflar kartadan yashaydi — ular qayta moderatsiyaga
             // yuborilmaydi (aks holda bitta tahrir minglab taklifni sotuvdan
             // chiqarib yuborardi). Kartaning o'zini admin tekshiradi.
@@ -1815,15 +1812,16 @@ class AdminController extends Controller
         // yuboriladi — ulangan taklifdagi muallif kartaniki va uni admin
         // atayin o'zgartirdi; ularni ro'yxatdan tushirib yuborish noto'g'ri.
         $affectedBookIds = Books::query()->whereNull('edition_id')->where('author_id', $author->id)->pluck('id');
+        \App\Models\BookEditionVector::markStale(\App\Models\BookEdition::query()->where('author_id', $author->id)->pluck('id'));
         \App\Models\BookEdition::query()->where('author_id', $author->id)->update(['author_id' => null]);
         Books::writingFromCatalog(fn () => Books::query()
             ->whereNotNull('edition_id')
             ->where('author_id', $author->id)
             ->toBase()
-            ->update(['author_id' => null, 'vector_text_hash' => null]));
+            ->update(['author_id' => null]));
         Books::query()
             ->where('author_id', $author->id)
-            ->update(['author_id' => null, 'author' => null, 'vector_text_hash' => null]);
+            ->update(['author_id' => null, 'author' => null]);
         app(ProductModerationStateService::class)->markBooksPendingByIds($affectedBookIds, 'author_removed');
 
         $this->deleteStoredFile($author->image);
@@ -1863,7 +1861,13 @@ class AdminController extends Controller
             unset($data['image']);
         }
 
+        $publisherRenamed = array_key_exists('name', $data) && (string) $data['name'] !== (string) $publisher->name;
         $publisher->update($data);
+        // Nashriyot nomi kitob vektori matnida — nomi o'zgarsa, uning
+        // kitoblari qayta embed qilinadi (moderatsiyaga yuborilmaydi).
+        if ($publisherRenamed) {
+            \App\Models\BookEditionVector::markStale(\App\Models\BookEdition::query()->where('publisher_id', $publisher->id)->pluck('id'));
+        }
         // ESLATMA (bug tuzatildi): bu yerda ilgari har qanday tahrirda
         // (hatto logotip yoki manzil kabi mahsulotga aloqasi yo'q maydonlar
         // uchun ham) nashriyotga bog'liq BARCHA kitoblar avtomatik
@@ -1883,6 +1887,7 @@ class AdminController extends Controller
     {
         // Qayta moderatsiya — faqat ulanmagan takliflar (yuqoridagi izohga qarang)
         $affectedBookIds = Books::query()->whereNull('edition_id')->where('publisher_id', $publisher->id)->pluck('id');
+        \App\Models\BookEditionVector::markStale(\App\Models\BookEdition::query()->where('publisher_id', $publisher->id)->pluck('id'));
         \App\Models\BookEdition::query()->where('publisher_id', $publisher->id)->update(['publisher_id' => null]);
         Books::writingFromCatalog(fn () => Books::query()
             ->whereNotNull('edition_id')
@@ -1916,6 +1921,11 @@ class AdminController extends Controller
         // butun kategoriya ombordan chiqib ketardi — shuning uchun bu
         // qayta-moderatsiyaga yuborish butunlay olib tashlandi.
         $bookCategory->forceFill($this->categoryData($request, 'book_categories'))->save();
+
+        // Kategoriya nomi kitob vektori matnida — nomi o'zgarsa qayta embed
+        if ($bookCategory->wasChanged(['name_uz', 'title'])) {
+            \App\Models\BookEditionVector::markStale(\App\Models\BookEdition::query()->where('category_id', $bookCategory->id)->pluck('id'));
+        }
 
         return back()->with('success', 'Kitob kategoriyasi yangilandi.');
     }

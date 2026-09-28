@@ -424,8 +424,6 @@ class CatalogService
         $row = $attributes;
         $row['images'] = json_encode($attributes['images'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $row['updated_at'] = now();
-        // Vektor matni o'zgardi — scheduler qayta embed qiladi
-        $row['vector_text_hash'] = null;
 
         $query = Books::query()->where('edition_id', $edition->id);
         if ($bookIds !== null) {
@@ -460,11 +458,10 @@ class CatalogService
 
         $this->buyBox->reindex($ids);
 
-        // Vektorlarni darhol qayta hisoblash navbatiga qo'yamiz va qidiruv indeksini yangilaymiz
-        foreach ($ids as $bookId) {
-            SyncProductVectorJob::dispatch('book', (int) $bookId);
-        }
-        VectorSearchService::invalidateIndex('book');
+        // Vektor kitob kartasida — bitta ish yetadi (ilgari har taklif uchun
+        // alohida ish va alohida OpenAI chaqiruvi ketardi). Matn o'zgarmagan
+        // bo'lsa hash tufayli OpenAI'ga borilmaydi.
+        SyncProductVectorJob::dispatch('edition', (int) $edition->id)->afterCommit();
         try {
             Books::query()->whereIn('id', $ids)->get()->searchable();
         } catch (\Throwable) {
@@ -579,9 +576,6 @@ class CatalogService
                             'status' => false,
                             'is_approved' => 2, // rejected
                             'updated_at' => $now,
-                            'vectorData' => null,
-                            'has_vector' => false,
-                            'vector_text_hash' => null,
                         ]);
                     }
                 });
@@ -616,6 +610,9 @@ class CatalogService
             }
         }
 
+        // Taqiqlangan kitob semantik qidiruvga ham tushmasin. Tiklanganda
+        // (`unbanEdition`) karta saqlanadi va vektor qayta yasaladi.
+        \App\Models\BookEditionVector::query()->whereKey($edition->id)->delete();
         VectorSearchService::invalidateIndex('book');
         $this->buyBox->touch((int) $edition->id);
 

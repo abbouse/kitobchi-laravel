@@ -126,8 +126,14 @@ class UserTasteProfileService
 
         // MUHIM: bitta-bitta emas — ikkita `whereIn` so'rov, manbalar soni
         // (xarid/savat/sevimli) qancha bo'lishidan qat'i nazar.
+        // Kitob vektori kartada: har taklif id'siga uning kartasi vektori.
         $bookVectors = ! empty($bookIds)
-            ? Books::query()->whereIn('id', $bookIds)->whereNotNull('vectorData')->pluck('vectorData', 'id')
+            ? Books::query()
+                ->whereIn('books.id', $bookIds)
+                ->join('book_edition_vectors', 'book_edition_vectors.edition_id', '=', 'books.edition_id')
+                ->pluck('book_edition_vectors.vector', 'books.id')
+                ->map(fn ($v) => \App\Models\BookEditionVector::decode($v))
+                ->filter()
             : collect();
         $stationeryVectors = ! empty($stationeryIds)
             ? Stationery::query()->whereIn('id', $stationeryIds)->whereNotNull('vectorData')->pluck('vectorData', 'id')
@@ -528,14 +534,20 @@ class UserTasteProfileService
         $cacheKey = "reading-intel:category-centroid:{$categoryId}";
 
         return Cache::remember($cacheKey, self::CATEGORY_CENTROID_TTL, function () use ($categoryId) {
-            $vectors = Books::query()
-                ->activeForVector()
-                ->where('category_id', $categoryId)
-                ->whereNotNull('vectorData')
-                ->orderByDesc('totalSales')
+            // Kategoriyaning eng ko'p sotilgan KITOBLARI (kartalari) — ilgari
+            // takliflar olinardi va 5 do'konda sotilgan kitob markazga 5 marta
+            // kirib, uni o'ziga tortardi.
+            $vectors = \App\Models\BookEditionVector::query()
+                ->join('book_editions', 'book_editions.id', '=', 'book_edition_vectors.edition_id')
+                ->whereNull('book_editions.deleted_at')
+                ->whereIn('book_editions.status', [\App\Models\BookEdition::STATUS_ACTIVE, \App\Models\BookEdition::STATUS_PENDING])
+                ->where('book_editions.offers_count', '>', 0)
+                ->where('book_editions.category_id', $categoryId)
+                ->orderByDesc('book_editions.sales_total')
                 ->limit(self::CATEGORY_CENTROID_SIZE)
-                ->pluck('vectorData')
-                ->filter(fn ($v) => is_array($v) && ! empty($v))
+                ->pluck('book_edition_vectors.vector')
+                ->map(fn ($v) => \App\Models\BookEditionVector::decode($v))
+                ->filter()
                 ->values()
                 ->all();
 

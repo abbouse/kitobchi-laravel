@@ -47,7 +47,7 @@ trait HasProductVisibility
     {
         $q = Books::query();
         // edition: ro'yxat kartasidagi "N ta do'konda, X so'mdan" uchun (bitta whereIn so'rov)
-        $with = array_values(array_unique(array_merge($with, ['authorProfile', 'edition:id,offers_count,in_stock_offers_count,min_price'])));
+        $with = array_values(array_unique(array_merge($with, ['authorProfile', 'edition:id,offers_count,in_stock_offers_count,min_price,sales_week,sales_total'])));
 
         $q->with($with);
 

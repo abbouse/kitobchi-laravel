@@ -229,6 +229,22 @@ class ProductsController extends Controller
         return $this->bookScope()->catalogFeatured();
     }
 
+    /**
+     * Mashhurlik bo'yicha saralash. Kitob ro'yxatida har kitobdan bitta taklif
+     * ko'rinadi — shuning uchun kitobning BARCHA do'konlardagi sotuvi olinadi
+     * (`Books::orderByBookSales`). Kanselyariya — mahsulotning o'z soni.
+     */
+    private function orderByPopularity($query, string $type): void
+    {
+        if ($type === 'book') {
+            $query->orderByBookSales('week')->orderByBookSales('total');
+
+            return;
+        }
+
+        $query->orderByDesc('totalSalesWeek')->orderByDesc('totalSales');
+    }
+
     // ── Stationery uchun base scope ───────────────────────────────
     private function stationeryScope()
     {
@@ -364,7 +380,7 @@ class ProductsController extends Controller
         // ── 1. Recommended (true + muddati o'tmagan) ─────────────
         $recBooks = $this->isRecommended($this->bookListScope())
             ->with(['category', 'tags', 'seller'])
-            ->orderByDesc('totalSalesWeek')
+            ->orderByBookSales('week')
             ->limit($limit)
             ->get()
             ->map(fn($b) => $this->formatProduct($b, $user, 'book'));
@@ -385,7 +401,7 @@ class ProductsController extends Controller
             $discBooks = $this->hasActiveDiscount($this->bookListScope(), true)
                 ->whereNotIn('id', $existIds)
                 ->with(['category', 'tags', 'seller'])
-                ->orderByDesc('totalSalesWeek')
+                ->orderByBookSales('week')
                 ->limit($limit - $result->count())
                 ->get()
                 ->map(fn($b) => $this->formatProduct($b, $user, 'book'));
@@ -401,8 +417,8 @@ class ProductsController extends Controller
             $trendBooks = $this->bookListScope()
                 ->whereNotIn('id', $existIds)
                 ->with(['category', 'tags', 'seller'])
-                ->orderByDesc('totalSalesWeek')
-                ->orderByDesc('totalSales')
+                ->orderByBookSales('week')
+                ->orderByBookSales('total')
                 ->limit($need)
                 ->get()
                 ->map(fn($b) => $this->formatProduct($b, $user, 'book'));
@@ -581,8 +597,8 @@ class ProductsController extends Controller
         // 1. Recommended mahsulotlar
         $pushBooks(
             $this->isRecommended($this->bookListScope())
-                ->orderByDesc('totalSalesWeek')
-                ->orderByDesc('totalSales'),
+                ->orderByBookSales('week')
+                ->orderByBookSales('total'),
             $limit
         );
         $pushStationery(
@@ -599,8 +615,8 @@ class ProductsController extends Controller
                 $this->bookListScope()
                     ->whereHas('seller', fn($q) => $this->premiumSellerScope($q))
                     ->orderByDesc('recommended')
-                    ->orderByDesc('totalSalesWeek')
-                    ->orderByDesc('totalSales'),
+                    ->orderByBookSales('week')
+                    ->orderByBookSales('total'),
                 $need
             );
             $pushStationery(
@@ -620,8 +636,8 @@ class ProductsController extends Controller
                     $this->bookListScope()
                         ->whereIn('category_id', $cartBookCategoryIds)
                         ->orderByDesc('recommended')
-                        ->orderByDesc('totalSalesWeek')
-                        ->orderByDesc('totalSales'),
+                        ->orderByBookSales('week')
+                        ->orderByBookSales('total'),
                     $limit - $result->count()
                 );
             }
@@ -642,8 +658,8 @@ class ProductsController extends Controller
         if ($result->count() < $limit) {
             $pushBooks(
                 $this->bookListScope()
-                    ->orderByDesc('totalSalesWeek')
-                    ->orderByDesc('totalSales')
+                    ->orderByBookSales('week')
+                    ->orderByBookSales('total')
                     ->orderByDesc('views'),
                 $limit - $result->count()
             );
@@ -691,7 +707,7 @@ class ProductsController extends Controller
         $perPage = max(3, min(40, (int) $request->input('per_page', 20)));
 
         $base = $type === 'book'
-            ? $this->bookScope()->addSelect('books.vectorData')->with(['category', 'tags', 'seller'])->find($id)
+            ? $this->bookScope()->with(['category', 'tags', 'seller', 'editionVector'])->find($id)
             : $this->stationeryScope()->addSelect('stationeries.vectorData')->with(['category', 'tags', 'variants', 'seller'])->find($id);
 
         if (! $base) {
@@ -746,7 +762,7 @@ class ProductsController extends Controller
 
         $candidateLimit = min(700, max(160, ($page * $perPage) + 160));
         $query = $type === 'book'
-            ? $this->bookListScope()->addSelect('books.vectorData')->with(['category', 'tags', 'seller'])
+            ? $this->bookListScope()->with(['category', 'tags', 'seller', 'editionVector'])
             : $this->stationeryScope()->addSelect('stationeries.vectorData')->with(['category', 'tags', 'variants', 'seller']);
 
         $query->where('id', '!=', $base->id);
@@ -785,21 +801,20 @@ class ProductsController extends Controller
             });
         }
 
+        $this->orderByPopularity($query, $type);
         $candidates = $query
-            ->orderByDesc('totalSalesWeek')
-            ->orderByDesc('totalSales')
             ->limit($candidateLimit)
             ->get();
 
         if ($candidates->count() < ($page * $perPage)) {
             $existingIds = $candidates->pluck('id')->push($base->id)->all();
-            $fallback = ($type === 'book'
-                ? $this->bookListScope()->addSelect('books.vectorData')->with(['category', 'tags', 'seller'])
+            $fallbackQuery = ($type === 'book'
+                ? $this->bookListScope()->with(['category', 'tags', 'seller', 'editionVector'])
                     ->when($base->edition_id, fn ($q) => $q->where(fn ($w) => $w->whereNull('edition_id')->orWhere('edition_id', '!=', $base->edition_id)))
                 : $this->stationeryScope()->addSelect('stationeries.vectorData')->with(['category', 'tags', 'variants', 'seller']))
-                ->whereNotIn('id', $existingIds)
-                ->orderByDesc('totalSalesWeek')
-                ->orderByDesc('totalSales')
+                ->whereNotIn('id', $existingIds);
+            $this->orderByPopularity($fallbackQuery, $type);
+            $fallback = $fallbackQuery
                 ->limit($candidateLimit - $candidates->count())
                 ->get();
             $candidates = $candidates->merge($fallback);
@@ -850,8 +865,10 @@ class ProductsController extends Controller
         $tokenOverlap = count(array_intersect($baseTokens, $productTokens));
         $score += min(32, $tokenOverlap * 8);
 
-        $score += min(8, ((int) ($product->totalSalesWeek ?? 0)) * 0.15);
-        $score += min(6, ((int) ($product->totalSales ?? 0)) * 0.03);
+        // Kitob — barcha do'konlardagi sotuvi (karta), kanselyariya — o'zi
+        $card = $type === 'book' && $product->relationLoaded('edition') ? $product->edition : null;
+        $score += min(8, ((int) ($card?->sales_week ?? $product->totalSalesWeek ?? 0)) * 0.15);
+        $score += min(6, ((int) ($card?->sales_total ?? $product->totalSales ?? 0)) * 0.03);
 
         if ((bool) ($product->recommended ?? false)) {
             $score += 3;
@@ -1019,7 +1036,7 @@ class ProductsController extends Controller
                     $books = $this->bookListScope()
                         ->where('category_id', $catId)
                         ->with(['seller', 'category', 'tags'])
-                        ->orderByDesc('totalSales')
+                        ->orderByBookSales('total')
                         ->orderByDesc('created_at')
                         ->take($perCategory)
                         ->get();

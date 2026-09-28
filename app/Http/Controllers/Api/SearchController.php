@@ -345,8 +345,11 @@ class SearchController extends Controller
                 ->when($minPrice !== null, fn ($q) => $q->where('price', '>=', $minPrice))
                 ->when($maxPrice !== null, fn ($q) => $q->where('price', '<=', $maxPrice))
                 ->select('id', 'artikul', 'name', 'author_id', 'totalSalesWeek', 'totalSales')
-                ->orderByDesc('totalSalesWeek')
-                ->orderByDesc('totalSales')
+                ->when(
+                    $sellerId,
+                    fn ($q) => $q->orderByDesc('totalSalesWeek')->orderByDesc('totalSales'),
+                    fn ($q) => $q->orderByBookSales('week')->orderByBookSales('total')
+                )
                 ->limit(2500)
                 ->get()
                 ->map(function ($item) {
@@ -903,10 +906,10 @@ class SearchController extends Controller
                 try {
                     $vectorType = in_array($type, ['book', 'stationery'], true) ? $type : 'both';
 
+                    // Do'kon sahifasida — har kitobdan SHU do'konning taklifi
+                    // (vektor kitob kartasida, tanlangan taklif boshqa do'konniki bo'lishi mumkin)
                     $semantic = app(\App\Services\VectorSearchService::class)
-                        ->search($query, $vectorType, 12, 0.35, inStockOnly: true);
-
-                    if ($sellerId)          $semantic = $semantic->where('seller_id', $sellerId)->values();
+                        ->search($query, $vectorType, 12, 0.35, inStockOnly: true, sellerId: $sellerId ? (int) $sellerId : null);
                     if ($categoryId)        $semantic = $semantic->where('category_id', (int) $categoryId)->values();
                     if ($minPrice !== null) $semantic = $semantic->filter(fn ($p) => (float) $p->price >= $minPrice)->values();
                     if ($maxPrice !== null) $semantic = $semantic->filter(fn ($p) => (float) $p->price <= $maxPrice)->values();
@@ -1115,7 +1118,7 @@ class SearchController extends Controller
         // Hech qanday qidiruv yo'q bo'lsa (faqat category/seller filter)
         // → hamma ko'rinuvchi mahsulot
 
-        $this->applySortToQuery($q, $sort, 'book');
+        $this->applySortToQuery($q, $sort, 'book', $wholeMarket);
 
         return $q->paginate($perPage, ['*'], 'page', $page);
     }
@@ -1404,7 +1407,11 @@ class SearchController extends Controller
                 });
             })
             ->select('name', 'artikul', 'author_id')
-            ->orderByDesc('totalSalesWeek')
+            ->when(
+                $sellerId,
+                fn ($q) => $q->orderByDesc('totalSalesWeek'),
+                fn ($q) => $q->orderByBookSales('week')
+            )
             ->limit(8)
             ->get();
 
@@ -1758,7 +1765,7 @@ class SearchController extends Controller
                           ->orWhere('artikul', 'LIKE', "%{$combinedQuery}%")
                           ->orWhereHas('authorProfile', fn ($authorQuery) => $authorQuery->where('name', 'LIKE', "%{$combinedQuery}%"));
                     })
-                    ->orderByDesc('totalSalesWeek')
+                    ->orderByBookSales('week')
                     ->limit(14)
                     ->get();
             }
@@ -1993,10 +2000,21 @@ class SearchController extends Controller
         });
     }
 
-    private function applySortToQuery($q, string $sort, string $type): void
+    /**
+     * @param  bool  $bookLevel  Bozor bo'yicha kitob ro'yxati (har kitobdan bitta
+     *                           taklif): "mashhur" — kitobning barcha do'konlardagi
+     *                           sotuvi. Do'kon ichida — do'konning o'z sotuvi.
+     */
+    private function applySortToQuery($q, string $sort, string $type, bool $bookLevel = false): void
     {
         if ($sort === 'relevance') {
             $q->orderByDesc('relevance_score');
+            return;
+        }
+
+        $isPopularity = ! in_array($sort, ['price_asc', 'price_desc', 'alpha_asc', 'alpha_desc', 'newest', 'discount'], true);
+        if ($type === 'book' && $bookLevel && $isPopularity) {
+            $q->orderByBookSales('week');
             return;
         }
 
@@ -2021,7 +2039,8 @@ class SearchController extends Controller
     {
         return $this->visibleBooks(['category', 'seller', 'tags'])
             ->catalogFeatured()
-            ->orderByDesc('totalSalesWeek')
+            ->orderByBookSales('week')
+            ->orderByBookSales('total')
             ->limit($limit)
             ->get();
     }

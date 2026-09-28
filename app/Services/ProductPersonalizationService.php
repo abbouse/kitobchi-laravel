@@ -306,8 +306,8 @@ class ProductPersonalizationService
                 }
                 $query->orWhere('recommended', true);
             })
-            ->orderByDesc('totalSalesWeek')
-            ->orderByDesc('totalSales')
+            ->orderByBookSales('week')
+            ->orderByBookSales('total')
             ->limit($limit * 3)
             ->get()
             ->map(fn (Books $book) => [
@@ -356,8 +356,11 @@ class ProductPersonalizationService
         $score += 10 * (int) ($signals['author_name_weights'][(string) $book->author] ?? 0);
         $score += 3 * (int) ($signals['seller_weights'][(string) $book->seller_id] ?? 0);
         $score += (bool) ($book->recommended ?? false) ? 8 : 0;
-        $score += min(8, ((int) ($book->totalSalesWeek ?? 0)) / 5);
-        $score += min(4, ((int) ($book->totalSales ?? 0)) / 50);
+        // Kitobning barcha do'konlardagi sotuvi (ro'yxatda kitobdan bitta taklif)
+        $salesWeek = $book->edition ? (int) $book->edition->sales_week : (int) ($book->totalSalesWeek ?? 0);
+        $salesTotal = $book->edition ? (int) $book->edition->sales_total : (int) ($book->totalSales ?? 0);
+        $score += min(8, $salesWeek / 5);
+        $score += min(4, $salesTotal / 50);
 
         return $score;
     }

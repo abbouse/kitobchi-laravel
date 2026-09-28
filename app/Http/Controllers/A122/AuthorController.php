@@ -111,16 +111,15 @@ class AuthorController extends Controller
         if ($nameChanged) {
             // GLOBAL KATALOG: avval karta, keyin uning takliflari; ulanmaganlar odatdagidek
             \App\Models\BookEdition::query()->where('author_id', $author->id)->update(['author' => $author->name]);
+            \App\Models\BookEditionVector::markStale(\App\Models\BookEdition::query()->where('author_id', $author->id)->pluck('id'));
             Books::writingFromCatalog(fn () => Books::query()
                 ->whereNotNull('edition_id')
                 ->where('author_id', $author->id)
                 ->toBase()
-                ->update(['author' => $author->name, 'vector_text_hash' => null]));
-            // vector_text_hash = null — scheduler qayta embed qiladi (Boshqaruv
-            // paneldagi updateAuthor bilan bir xil xulq-atvor)
+                ->update(['author' => $author->name]));
             Books::query()
                 ->where('author_id', $author->id)
-                ->update(['author' => $author->name, 'vector_text_hash' => null]);
+                ->update(['author' => $author->name]);
         }
 
         return redirect()->route('admin.authors.index')->with('success', 'Muallif yangilandi.');

@@ -57,9 +57,6 @@ class Books extends Model
         'totalSalesWeek',
         'totalRevenueWeek',
         'totalClientsWeek',
-        'vectorData',
-        'vector_text_hash',
-        'has_vector',
         'ofd_ikpu_code',
         'ofd_package_code',
         'recommended',
@@ -78,12 +75,10 @@ class Books extends Model
     protected $appends = ['count', 'first_image'];
 
     /**
-     * JSON javoblarda KERAKSIZ og'ir maydonlar chiqmasin:
-     * - vectorData: 1536 ta float (embedding) — har mahsulotda ulkan payload
-     * - vector_text_hash / branch_available_total: ichki texnik maydonlar
-     * Bu API kontraktni buzmaydi (bu maydonlar app'ga hech qachon kerak emas edi).
+     * JSON javoblarda ichki texnik maydon chiqmasin. Vektor endi kitob
+     * kartasida (`book_edition_vectors`) — bu yerda ustun sifatida yo'q.
      */
-    protected $hidden = ['vectorData', 'vector_text_hash', 'has_vector', 'branch_available_total'];
+    protected $hidden = ['branch_available_total', 'editionVector'];
 
     /**
      * KITOBNING O'ZINIKI bo'lgan maydonlar — ular katalog kartasiga (book_editions)
@@ -211,8 +206,6 @@ class Books extends Model
         'images' => 'json',
         'status' => 'boolean',
         'recommended' => 'boolean',
-        'vectorData' => 'json',
-        'has_vector' => 'boolean',
         'ai_moderation_checked_at' => 'datetime',
         'ai_moderation_next_retry_at' => 'datetime',
         'ai_moderation_meta' => 'array',
@@ -371,29 +364,62 @@ class Books extends Model
     }
 
     /**
-     * Tezlik (2026-08-20 audit): oldin `whereRaw('JSON_LENGTH(vectorData) = 1536')`
-     * ishlatilardi — funksiya ustunga qo'llanganda MySQL indeksdan foydalana
-     * olmaydi, har so'rovda butun jadval skan qilinardi. `has_vector` —
-     * yozish paytida (ProductVectorService) hisoblab qo'yiladigan indekslangan
-     * boolean ustun, shu tekshiruvni bitta arzon indeks lookup'ga aylantiradi.
+     * Bozor ro'yxatlari uchun: kitobni BARCHA do'konlardagi sotuvi bo'yicha
+     * saralash.
+     *
+     * Ro'yxatlar har kitobdan bitta taklifni (buy box) ko'rsatadi. Ilgari
+     * saralash o'sha bitta taklifning o'z sotuvi bo'yicha edi: A do'kon kitobni
+     * haftada 100 ta, tanlangan B esa 2 ta sotsa, kitob trendda "2 ta" bilan
+     * pastga tushib ketardi. Endi kartadagi umumiy son (`sales_week`,
+     * `sales_total`) olinadi; kartaga ulanmagan taklif — o'z soni.
+     *
+     * Do'kon sahifasi va do'kon hisobotlarida BU EMAS, taklifning o'z
+     * `totalSalesWeek` / `totalSales` ustuni ishlatiladi — u yerda do'konning
+     * o'z sotuvi kerak.
+     *
+     * @param  'week'|'total'  $period
      */
-    public function scopeVectorReady(Builder $query): Builder
+    public function scopeOrderByBookSales(Builder $query, string $period = 'week', string $direction = 'desc'): Builder
     {
-        return $query
-            ->whereNotNull('vectorData')
-            ->where('has_vector', true);
+        $table = $this->getTable();
+        [$cardColumn, $offerColumn] = $period === 'total'
+            ? ['sales_total', 'totalSales']
+            : ['sales_week', 'totalSalesWeek'];
+        $direction = strtolower($direction) === 'asc' ? 'asc' : 'desc';
+
+        return $query->orderByRaw(
+            "COALESCE((SELECT be.{$cardColumn} FROM book_editions be WHERE be.id = {$table}.edition_id), {$table}.{$offerColumn}) {$direction}"
+        );
     }
 
-    public function scopeVectorNeedsSync(Builder $query): Builder
+    public function scopeVectorReady(Builder $query): Builder
     {
-        return $query->where(function (Builder $innerQuery) {
-            $innerQuery
-                ->whereNull('vectorData')
-                ->orWhere('has_vector', false)
-                // Bulk yangilanishlar (masalan, admin muallif nomini o'zgartirsa)
-                // hash ni null qiladi — scheduler qayta embed qiladi
-                ->orWhereNull('vector_text_hash');
-        });
+        // Vektor kitob kartasida: taklif kartasining vektori bo'lsa tayyor.
+        return $query->whereExists(fn ($sub) => $sub
+            ->selectRaw('1')
+            ->from('book_edition_vectors')
+            ->whereColumn('book_edition_vectors.edition_id', $this->getTable() . '.edition_id'));
+    }
+
+    /**
+     * Kitob kartasining vektori. Barcha takliflar bitta vektorni ulashadi.
+     */
+    public function editionVector(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(BookEditionVector::class, 'edition_id', 'edition_id');
+    }
+
+    /**
+     * `$book->vectorData` — eski chaqiruvlar uchun: kartaning vektori.
+     * Ro'yxatlarda N+1 bo'lmasligi uchun `with('editionVector')` bilan yuklang.
+     */
+    public function getVectorDataAttribute(): ?array
+    {
+        if (! $this->edition_id) {
+            return null;
+        }
+
+        return BookEditionVector::decode($this->editionVector?->vector);
     }
 
     public static function hasAuthorColumn(): bool

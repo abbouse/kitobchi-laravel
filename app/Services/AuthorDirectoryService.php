@@ -148,7 +148,10 @@ class AuthorDirectoryService
                         Books::writingFromCatalog(fn () => Books::query()
                             ->whereKey($book->id)
                             ->toBase()
-                            ->update(['author_id' => $author->id, 'author' => $author->name, 'vector_text_hash' => null]));
+                            ->update(['author_id' => $author->id, 'author' => $author->name]));
+                        // So'rov orqali yangilangani uchun model hodisasi ishlamaydi —
+                        // muallif vektor matnida, kartaning vektori qayta yasalsin.
+                        \App\Jobs\SyncProductVectorJob::dispatch('edition', (int) $book->edition_id);
                         $linked++;
 
                         continue;
