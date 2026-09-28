@@ -274,6 +274,8 @@ interface Ord {
   postalReturnUrl?: string;
   dataUrl?: string;
   canRefundPayment?: boolean;
+  /** Pul haqiqatdan olinganmi (karta bilan to'langan). Naqdda false. */
+  moneyCaptured?: boolean;
   refundConfirmationPhrase?: string | null;
   refundCancelUrl?: string;
   refundReasonCatalog?: {
@@ -603,6 +605,10 @@ export default function Orders() {
 
   const showItemRefundColumn = (selectedOrd?.itemsList || []).some((item) => item.canRefund && item.refundUrl);
   const showSellerOrderRefundColumn = (selectedOrd?.sellerOrders || []).some((row) => row.canRefund && row.refundUrl);
+  // Naqd buyurtmada mijoz hali to'lamagan — "refund" emas, "bekor qilish".
+  // Amal bir xil (qism bekor qilinadi), faqat so'z va tushuntirish boshqa.
+  const money = selectedOrd?.moneyCaptured === true;
+  const refundWord = money ? 'Qaytarish' : 'Bekor qilish';
 
   // Do'kon-egalik almashtirish (2026-09) — SellerOrders.tsx dagi bilan bir
   // xil pattern: tanlangan do'kon o'zgargandan keyin buyurtma tafsilotini
@@ -1099,7 +1105,7 @@ export default function Orders() {
                             <th>Narx</th>
                             <th>Jami</th>
                             <th>Holat</th>
-                            {showItemRefundColumn ? <th>Refund</th> : null}
+                            {showItemRefundColumn ? <th>{refundWord}</th> : null}
                           </tr>
                         </thead>
                         <tbody>
@@ -1134,12 +1140,14 @@ export default function Orders() {
                                 <td>
                                   {item.canRefund && item.refundUrl ? (
                                     <FormAction
-                                      label="Refund"
+                                      label={refundWord}
                                       icon="ti ti-receipt-refund"
                                       variant="light-danger"
-                                      title={`Refund: ${item.name}`}
-                                      description="Faqat shu mahsulot refund qilinadi."
-                                      submitLabel="Refund qilish"
+                                      title={`${refundWord}: ${item.name}`}
+                                      description={money
+                                        ? 'Faqat shu mahsulot bekor qilinadi va puli mijozga qaytariladi.'
+                                        : "Faqat shu mahsulot bekor qilinadi. Buyurtma naqd — mijoz hali to'lamagan, shuning uchun pul qaytarilmaydi, kuryer undiradigan summa kamayadi."}
+                                      submitLabel={refundWord}
                                       submitVariant="danger"
                                       onSubmit={(event) => submitForm(event, item.refundUrl)}
                                     >
@@ -1156,7 +1164,7 @@ export default function Orders() {
                                     </FormAction>
                                   ) : (
                                     <div className="text-muted f-s-13">
-                                      {item.isCancelled ? "Bu mahsulot allaqachon bekor qilingan." : 'Refund mumkin emas.'}
+                                      {item.isCancelled ? "Bu mahsulot allaqachon bekor qilingan." : `${refundWord} mumkin emas.`}
                                     </div>
                                   )}
                                 </td>
@@ -1269,7 +1277,7 @@ export default function Orders() {
                   </div></div>
 
                 <div className="card"><div className="card-header"><h5 className="mb-0">Seller orderlar</h5></div><div className="card-body">
-                    <SellerOrdersTable rows={selectedOrd.sellerOrders || []} reasonOptions={selectedOrd.refundReasonCatalog?.order || []} onSubmit={submitForm} showRefundColumn={showSellerOrderRefundColumn} isSuperAdmin={isSuperAdmin} onReassign={setReassignOrder} />
+                    <SellerOrdersTable rows={selectedOrd.sellerOrders || []} reasonOptions={selectedOrd.refundReasonCatalog?.order || []} onSubmit={submitForm} showRefundColumn={showSellerOrderRefundColumn} moneyCaptured={money} isSuperAdmin={isSuperAdmin} onReassign={setReassignOrder} />
                   </div></div>
 
                 <div className="card"><div className="card-header"><h5 className="mb-0">Refund jurnali</h5></div><div className="card-body">
@@ -1808,6 +1816,7 @@ function SellerOrdersTable({
   reasonOptions,
   onSubmit,
   showRefundColumn,
+  moneyCaptured,
   isSuperAdmin,
   onReassign,
 }: {
@@ -1815,6 +1824,7 @@ function SellerOrdersTable({
   reasonOptions: RefundReasonOption[];
   onSubmit: (event: FormEvent<HTMLFormElement>, url: string | undefined, method?: 'post' | 'patch') => void;
   showRefundColumn: boolean;
+  moneyCaptured: boolean;
   isSuperAdmin: boolean;
   onReassign: (row: SellerOrder) => void;
 }) {
@@ -1864,12 +1874,14 @@ function SellerOrdersTable({
                 <td>
                   {row.canRefund && row.refundUrl ? (
                     <FormAction
-                      label="Refund"
+                      label={moneyCaptured ? 'Qaytarish' : 'Bekor qilish'}
                       icon="ti ti-receipt-refund"
                       variant="light-danger"
-                      title={`Seller order #${row.id} refund`}
-                      description="Butun seller order refund qilinadi."
-                      submitLabel="Refund qilish"
+                      title={`Seller order #${row.id} — ${moneyCaptured ? 'qaytarish' : 'bekor qilish'}`}
+                      description={moneyCaptured
+                        ? "Shu do'konning butun qismi bekor qilinadi va puli mijozga qaytariladi."
+                        : "Shu do'konning butun qismi bekor qilinadi. Buyurtma naqd — mijoz hali to'lamagan, shuning uchun pul qaytarilmaydi."}
+                      submitLabel={moneyCaptured ? 'Qaytarish' : 'Bekor qilish'}
                       submitVariant="danger"
                       onSubmit={(event) => onSubmit(event, row.refundUrl)}
                     >
@@ -1886,7 +1898,7 @@ function SellerOrdersTable({
                     </FormAction>
                   ) : (
                     <div className="text-muted f-s-13">
-                      {row.isCancelled ? (row.cancelNotes?.uz || 'Seller order bekor qilingan.') : 'Refund mumkin emas.'}
+                      {row.isCancelled ? (row.cancelNotes?.uz || 'Seller order bekor qilingan.') : `${moneyCaptured ? 'Qaytarish' : 'Bekor qilish'} mumkin emas.`}
                     </div>
                   )}
                 </td>

@@ -13401,6 +13401,19 @@ PROMPT;
             && ($paymentTransaction?->provider === 'paylov')
             && in_array(PaymentStatusCode::fromLegacy($order->payment_status_code ?? $order->paymentStatus), [PaymentStatusCode::HELD, PaymentStatusCode::PAID], true)
             && ! in_array((string) ($order->status_code ?? $order->status), [OrderStatusCode::CANCELLED->value, OrderStatusCode::CANCELLED->legacy()], true);
+
+        // PUL HAQIQATDAN OLINGANMI?
+        //
+        // Naqd buyurtmada mijoz hali hech narsa to'lamagan — u yerda "refund"
+        // so'zining ma'nosi yo'q, qilinadigan amal aslida BEKOR QILISH (kuryer
+        // undiradigan summa kamayadi). Interfeys shu bayroqqa qarab so'zni
+        // to'g'ri tanlaydi, aks holda admin mijozga pul qaytayotgandek
+        // tushunardi.
+        $moneyCaptured = in_array(
+            PaymentStatusCode::fromLegacy($order->payment_status_code ?? $order->paymentStatus),
+            [PaymentStatusCode::HELD, PaymentStatusCode::PAID],
+            true
+        );
         $refundConfirmationPhrase = null;
         if ($canRefundPayment) {
             $refundConfirmationPhrase = 'QAYTAR-'.Str::upper(Str::random(3)).'-'.random_int(10, 99);
@@ -13536,6 +13549,7 @@ PROMPT;
             'split' => $this->orderSplitDetailPayload($order),
             'settlementOverview' => $settlementOverview,
             'canRefundPayment' => (bool) $canRefundPayment,
+            'moneyCaptured' => $moneyCaptured,
             'refundConfirmationPhrase' => $refundConfirmationPhrase,
             'refundReasonCatalog' => [
                 'item' => SellerCancellationReasonCatalog::itemOptions(),
