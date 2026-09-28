@@ -9,7 +9,9 @@ use App\Support\Isbn;
 use GuzzleHttp\Client;
 use Illuminate\Console\Command;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -69,25 +71,29 @@ class FixBrokenImages extends Command
         $this->newLine();
 
         // 1. Qidiriladigan Books takliflarini aniqlaymiz
+        $dupBookIds = collect();
+        if ($allDuplicated) {
+            $dupBookIds = DB::table('books')
+                ->whereIn('images', function ($sub) {
+                    $sub->select('images')
+                        ->from('books')
+                        ->whereNotNull('images')
+                        ->groupBy('images')
+                        ->havingRaw('count(*) > 1');
+                })
+                ->pluck('id');
+        }
+
         $brokenBooksQuery = Books::query()
-            ->where(function ($q) use ($allDuplicated, $dupSubstring) {
+            ->where(function ($q) use ($dupSubstring, $dupBookIds) {
                 $q->where('images', 'like', '%'.self::BROKEN_SUBSTRING.'%');
 
                 if ($dupSubstring !== '') {
                     $q->orWhere('images', 'like', '%'.$dupSubstring.'%');
                 }
 
-                if ($allDuplicated) {
-                    $dupImages = Books::query()
-                        ->select('images')
-                        ->whereNotNull('images')
-                        ->groupBy('images')
-                        ->havingRaw('count(*) > 1')
-                        ->pluck('images');
-
-                    if ($dupImages->isNotEmpty()) {
-                        $q->orWhereIn('images', $dupImages);
-                    }
+                if ($dupBookIds->isNotEmpty()) {
+                    $q->orWhereIn('id', $dupBookIds);
                 }
             })
             ->orderBy('id');
@@ -101,15 +107,34 @@ class FixBrokenImages extends Command
 
         // 2. Qidiriladigan BookEdition global kartalarini aniqlaymiz (agar jadval mavjud bo'lsa)
         $brokenEditions = collect();
-        if (\Illuminate\Support\Facades\Schema::hasTable('book_editions')) {
+        if (Schema::hasTable('book_editions')) {
+            $dupEditionIds = collect();
+            if ($allDuplicated) {
+                $dupEditionIds = DB::table('book_editions')
+                    ->whereNull('deleted_at')
+                    ->whereIn('front_image', function ($sub) {
+                        $sub->select('front_image')
+                            ->from('book_editions')
+                            ->whereNull('deleted_at')
+                            ->whereNotNull('front_image')
+                            ->groupBy('front_image')
+                            ->havingRaw('count(*) > 1');
+                    })
+                    ->pluck('id');
+            }
+
             $brokenEditionsQuery = BookEdition::query()
-                ->where(function ($q) use ($dupSubstring) {
+                ->where(function ($q) use ($dupSubstring, $dupEditionIds) {
                     $q->where('front_image', 'like', '%'.self::BROKEN_SUBSTRING.'%')
                         ->orWhere('images', 'like', '%'.self::BROKEN_SUBSTRING.'%');
 
                     if ($dupSubstring !== '') {
                         $q->orWhere('front_image', 'like', '%'.$dupSubstring.'%')
                             ->orWhere('images', 'like', '%'.$dupSubstring.'%');
+                    }
+
+                    if ($dupEditionIds->isNotEmpty()) {
+                        $q->orWhereIn('id', $dupEditionIds);
                     }
                 })
                 ->orderBy('id');
