@@ -7389,6 +7389,7 @@ PROMPT;
                 'price' => (float) ($item['item_price'] ?? $item['price'] ?? 0),
                 'cover' => $item['cover'] ?? null,
                 'author' => $item['author'] ?? null,
+                'preorderDate' => $item['preorder_release_date'] ?? null,
             ]);
         $statusCode = (string) ($order->status_code ?? SellerOrderStatusCode::fromLegacy($order->status ?? null)->value);
         $statusMeta = AdminOrderStatusSyncService::SELLER_STATUSES[$statusCode] ?? ['label' => $statusCode, 'badge' => 'badge-muted'];
@@ -13815,6 +13816,7 @@ PROMPT;
             'quantity' => $quantity,
             'price' => $price,
             'total' => $price * $quantity,
+            'preorderDate' => $item['preorder_release_date'] ?? null,
             'sellerId' => $sellerId ?: null,
             'seller' => $seller?->shop_name ?? $product?->seller?->shop_name ?? ($item['seller'] ?? $item['seller_name'] ?? null),
             'ownerLabel' => $type === 'gift'
@@ -13854,6 +13856,7 @@ PROMPT;
             'quantity' => (int) ($item->quantity ?? 1),
             'price' => (float) ($item->price ?? 0),
             'total' => (float) (($item->price ?? 0) * ($item->quantity ?? 1)),
+            'preorderDate' => $item->preorder_release_date?->toDateString(),
             'sellerId' => $item->seller_id ? (int) $item->seller_id : null,
             'seller' => $seller?->shop_name,
             'ownerLabel' => $item->type === 'gift'

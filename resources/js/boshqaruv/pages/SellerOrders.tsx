@@ -366,6 +366,9 @@ function OrderModal({
                           <div>
                             <strong>{item.name}</strong>
                             <div className="text-muted f-s-13">{item.author || item.type || '—'}</div>
+                            {item.preorderDate ? (
+                              <span className="badge text-light-warning mt-1">Predzakaz · {item.preorderDate} dan</span>
+                            ) : null}
                           </div>
                           <div className="text-end">
                             <div>

@@ -124,6 +124,7 @@ class CatalogController extends Controller
                 'discountPrice' => (int) ($b->discountPrice ?? 0),
                 'effectivePrice' => BuyBoxService::effectivePrice($b),
                 'stock' => (int) $b->count,
+                'preorderDate' => $b->isPreorderActive() ? $b->preorder_release_date?->toDateString() : null,
                 'featured' => (bool) $b->catalog_featured,
                 'approved' => (int) $b->is_approved,
                 'active' => (bool) $b->status,

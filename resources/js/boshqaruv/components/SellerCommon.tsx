@@ -114,7 +114,7 @@ export interface SellerOrderRow {
   date?: string;
   address?: Record<string, string | null | undefined | Record<string, string>>;
   summary?: { itemsCount?: number; itemsTotal?: number };
-  items?: Array<{ name: string; type?: string; quantity: number; price: number; author?: string | null }>;
+  items?: Array<{ name: string; type?: string; quantity: number; price: number; author?: string | null; preorderDate?: string | null }>;
   statusUrl?: string;
   // Do'kon-egalik almashtirish — faqat superadmin uchun (backend
   // canReassign'ni faqat superadmin bo'lsa hisoblaydi, boshqalarga har doim

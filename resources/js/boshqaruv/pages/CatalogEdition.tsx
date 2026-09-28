@@ -55,6 +55,7 @@ interface Offer {
   discountPrice: number;
   effectivePrice: number;
   stock: number;
+  preorderDate?: string | null;
   featured: boolean;
   approved: number;
   active: boolean;
@@ -690,6 +691,9 @@ export default function CatalogEdition() {
                                   {fmt(offer.stock)} dona
                                 </span>
                               )}
+                              {offer.preorderDate ? (
+                                <div><span className="badge text-light-warning mt-1">Predzakaz · {offer.preorderDate} dan</span></div>
+                              ) : null}
                             </td>
 
                             <td>

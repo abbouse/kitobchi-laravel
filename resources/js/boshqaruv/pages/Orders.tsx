@@ -27,6 +27,7 @@ interface OrderItem {
   quantity: number;
   price: number;
   total: number;
+  preorderDate?: string | null;
   sellerId?: number | null;
   seller?: string | null;
   ownerLabel?: string | null;
@@ -1119,6 +1120,9 @@ export default function Orders() {
                                   ) : (
                                     <span className="f-w-600">{item.name}</span>
                                   )}
+                                  {item.preorderDate ? (
+                                    <span className="badge text-light-warning ms-2">Predzakaz · {item.preorderDate} dan</span>
+                                  ) : null}
                                 </div>
                               </td>
                               <td>{item.seller || '—'}</td>
