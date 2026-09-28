@@ -54,6 +54,7 @@ Route::middleware('auth:seller')->group(function () {
     Route::get('products/products-count', [ProductController::class, 'productsCount']);
     Route::post('products/product-status', [ProductController::class, 'updateProductStatus']);
     Route::post('products/remove-product', [ProductController::class, 'removeProduct']);
+    Route::post('products/bulk', [ProductController::class, 'bulkAction'])->middleware('throttle:30,1');
     Route::post('products/create', [ProductController::class, 'createProduct']);
     Route::post('products/update', [ProductController::class, 'updateProduct']);
     Route::get('products/authors/suggestions', [ProductController::class, 'getAuthorSuggestions']);

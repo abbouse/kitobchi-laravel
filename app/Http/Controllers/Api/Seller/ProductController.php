@@ -27,6 +27,7 @@ use App\Services\SellerPremiumService;
 use App\Services\ProductModerationStateService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
@@ -118,6 +119,28 @@ class ProductController extends Controller
     }
     
     /**
+     * Ro'yxat tartibi. Narx — amaldagi (chegirma bo'lsa chegirmali) narx.
+     */
+    protected function applyListSort($query, string $sort, string $discountColumn): void
+    {
+        $table = $query->getModel()->getTable();
+        $effectivePrice = "CASE WHEN {$table}.{$discountColumn} > 0 AND {$table}.{$discountColumn} < {$table}.price THEN {$table}.{$discountColumn} ELSE {$table}.price END";
+
+        match ($sort) {
+            'oldest' => $query->oldest("{$table}.created_at"),
+            'price_asc' => $query->orderByRaw("{$effectivePrice} asc"),
+            'price_desc' => $query->orderByRaw("{$effectivePrice} desc"),
+            'stock_asc' => $query->orderByStock('asc'),
+            'stock_desc' => $query->orderByStock('desc'),
+            'sales' => $query->orderByDesc("{$table}.totalSales"),
+            'name' => $query->orderBy("{$table}.name"),
+            default => $query->latest("{$table}.updated_at"),
+        };
+
+        $query->orderByDesc("{$table}.id"); // barqaror sahifalash
+    }
+
+    /**
  * Sellerning kitoblari va kanselyariya mahsulotlarini pagination bilan qaytarish
  */
 public function lastProductsBS(Request $request)
@@ -143,8 +166,17 @@ public function lastProductsBS(Request $request)
     $stationeryFilter = $request->input('stationery_filter', 'all');
 
     // YANGI: alohida search parametrlari
-    $booksSearch = $request->input('books_search', '');
-    $stationerySearch = $request->input('stationery_search', '');
+    $booksSearch = trim((string) $request->input('books_search', ''));
+    $stationerySearch = trim((string) $request->input('stationery_search', ''));
+    // `%`/`_` foydalanuvchi matnida — qidiruv belgisi emas
+    $likeBooks = '%'.addcslashes($booksSearch, '%_\\').'%';
+    $likeStationery = '%'.addcslashes($stationerySearch, '%_\\').'%';
+
+    // Faqat kerakli tur (ilova ochiq tabni so'raydi); eski ilova — ikkalasi
+    $type = (string) $request->input('type', '');
+    $wantBooks = $type === '' || $type === 'books' || $type === 'book';
+    $wantStationery = $type === '' || $type === 'stationery';
+    $sort = (string) $request->input('sort', 'newest');
 
     $bookBase = Books::query()->where('seller_id', $storeSellerId)->where('is_hidden', false);
     $stationeryBase = Seller::find($storeSellerId)->stationeries()->where('is_hidden', false);
@@ -157,6 +189,7 @@ public function lastProductsBS(Request $request)
         'low_stock' => (clone $bookBase)->where('is_approved', 1)->stockBetween(1, 3)->count(),
         'pending' => (clone $bookBase)->where(fn ($query) => $query->whereNull('is_approved')->orWhere('is_approved', 0))->count(),
         'rejected' => (clone $bookBase)->where('is_approved', 2)->count(),
+        'inactive' => (clone $bookBase)->where('status', false)->count(),
     ];
 
     $stationeryCounts = [
@@ -166,6 +199,7 @@ public function lastProductsBS(Request $request)
         'low_stock' => (clone $stationeryBase)->where('is_approved', 1)->stockBetween(1, 3)->count(),
         'pending' => (clone $stationeryBase)->where(fn ($query) => $query->whereNull('is_approved')->orWhere('is_approved', 0))->count(),
         'rejected' => (clone $stationeryBase)->where('is_approved', 2)->count(),
+        'inactive' => (clone $stationeryBase)->where('status', false)->count(),
     ];
 
     // Asosiy querylar
@@ -181,20 +215,20 @@ public function lastProductsBS(Request $request)
 
     // Books search
     if ($booksSearch !== '') {
-        $booksQuery->where(function ($query) use ($booksSearch) {
-            $query->where('name', 'like', "%{$booksSearch}%")
-                ->orWhere('artikul', 'like', "%{$booksSearch}%")
-                ->orWhere('isbn', 'like', "%{$booksSearch}%")
-                ->orWhere('author', 'like', "%{$booksSearch}%");
+        $booksQuery->where(function ($query) use ($likeBooks) {
+            $query->where('name', 'like', $likeBooks)
+                ->orWhere('artikul', 'like', $likeBooks)
+                ->orWhere('isbn', 'like', $likeBooks)
+                ->orWhere('author', 'like', $likeBooks);
         });
     }
 
     // Stationery search
     if ($stationerySearch !== '') {
-        $stationeryQuery->where(function ($query) use ($stationerySearch) {
-            $query->where('name', 'like', "%{$stationerySearch}%")
-                ->orWhere('artikul', 'like', "%{$stationerySearch}%")
-                ->orWhere('barcode', 'like', "%{$stationerySearch}%");
+        $stationeryQuery->where(function ($query) use ($likeStationery) {
+            $query->where('name', 'like', $likeStationery)
+                ->orWhere('artikul', 'like', $likeStationery)
+                ->orWhere('barcode', 'like', $likeStationery);
         });
     }
 
@@ -209,6 +243,8 @@ public function lastProductsBS(Request $request)
         $booksQuery->where(fn ($query) => $query->whereNull('is_approved')->orWhere('is_approved', 0));
     } elseif ($booksFilter === 'rejected') {
         $booksQuery->where('is_approved', 2);
+    } elseif ($booksFilter === 'inactive') {
+        $booksQuery->where('status', false);
     }
 
     // Stationery filter
@@ -222,10 +258,20 @@ public function lastProductsBS(Request $request)
         $stationeryQuery->where(fn ($query) => $query->whereNull('is_approved')->orWhere('is_approved', 0));
     } elseif ($stationeryFilter === 'rejected') {
         $stationeryQuery->where('is_approved', 2);
+    } elseif ($stationeryFilter === 'inactive') {
+        $stationeryQuery->where('status', false);
     }
 
-    $books = $booksQuery->latest('updated_at')->paginate($perPage, ['*'], 'books_page', $booksPage);
-    $stationery = $stationeryQuery->latest('updated_at')->paginate($perPage, ['*'], 'stationery_page', $stationeryPage);
+    $this->applyListSort($booksQuery, $sort, 'discountPrice');
+    $this->applyListSort($stationeryQuery, $sort, 'discount_price');
+
+    $perPage = max(1, min(50, (int) $perPage));
+    $books = $wantBooks
+        ? $booksQuery->paginate($perPage, ['*'], 'books_page', $booksPage)
+        : new \Illuminate\Pagination\LengthAwarePaginator([], $booksCounts['all'], $perPage, $booksPage);
+    $stationery = $wantStationery
+        ? $stationeryQuery->paginate($perPage, ['*'], 'stationery_page', $stationeryPage)
+        : new \Illuminate\Pagination\LengthAwarePaginator([], $stationeryCounts['all'], $perPage, $stationeryPage);
 
     return response()->json([
         'success' => true,
@@ -749,6 +795,109 @@ public function removeProduct(Request $request)
     $product->save();
 
     return response()->json(['success' => true, 'message' => 'Product removed successfully'], 200);
+}
+
+/**
+ * OMMAVIY AMALLAR: bir nechta mahsulotni birdaniga sotuvga chiqarish /
+ * sotuvdan olish / o'chirish / narxini foizga o'zgartirish.
+ *
+ * Har mahsulot modeli orqali saqlanadi — oddiy tahrirdagi hodisalar (buy box,
+ * qidiruv indeksi) ishlaydi. Admin arxivlagan mahsulotlar o'tkazib yuboriladi.
+ */
+public function bulkAction(Request $request)
+{
+    $seller = Auth::guard('seller')->user();
+    if (!$seller) {
+        return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+    }
+    if (!$this->hasProductAccess($seller)) {
+        return response()->json(['success' => false, 'message' => 'Access denied.'], 403);
+    }
+
+    $data = $request->validate([
+        'type' => 'required|in:book,books,stationery',
+        'action' => 'required|in:activate,deactivate,remove,price_percent',
+        'ids' => 'required|array|min:1|max:100',
+        'ids.*' => 'integer|min:1',
+        'value' => 'required_if:action,price_percent|nullable|numeric|min:-90|max:300',
+    ]);
+
+    $isStationery = $data['type'] === 'stationery';
+    $storeSellerId = $this->getStoreSellerId($seller);
+    $model = $isStationery ? \App\Models\Stationery::class : Books::class;
+    $discountColumn = $isStationery ? 'discount_price' : 'discountPrice';
+    $percent = (float) ($data['value'] ?? 0);
+
+    $products = $model::query()
+        ->where('seller_id', $storeSellerId)
+        ->whereIn('id', array_unique($data['ids']))
+        ->where('is_hidden', false)
+        ->get();
+
+    $updated = 0;
+    $skipped = count(array_unique($data['ids'])) - $products->count();
+
+    DB::transaction(function () use ($products, $data, $percent, $discountColumn, &$updated, &$skipped) {
+        foreach ($products as $product) {
+            if ($product->archived_at !== null && $data['action'] !== 'remove') {
+                $skipped++;
+
+                continue;
+            }
+
+            switch ($data['action']) {
+                case 'activate':
+                case 'deactivate':
+                    $target = $data['action'] === 'activate';
+                    if ((bool) $product->status === $target) {
+                        $skipped++;
+
+                        continue 2;
+                    }
+                    $product->status = $target;
+                    break;
+
+                case 'remove':
+                    $product->is_hidden = true;
+                    break;
+
+                case 'price_percent':
+                    // 100 so'mga yaxlitlanadi; chegirma ham shu nisbatda
+                    $factor = 1 + $percent / 100;
+                    $scale = fn ($value) => max(100, (int) (round(((int) $value) * $factor / 100) * 100));
+                    $product->price = $scale($product->price);
+                    if ((int) $product->{$discountColumn} > 0) {
+                        $discount = $scale($product->{$discountColumn});
+                        $product->{$discountColumn} = $discount < (int) $product->price ? $discount : 0;
+                    }
+                    break;
+            }
+
+            $product->save();
+            $updated++;
+        }
+    });
+
+    $label = match ($data['action']) {
+        'activate' => 'sotuvga chiqardi',
+        'deactivate' => 'sotuvdan oldi',
+        'remove' => "o'chirdi",
+        'price_percent' => 'narxini '.($percent > 0 ? '+' : '').$percent.'% o\'zgartirdi',
+    };
+    $this->writeLog(
+        $seller,
+        "Ommaviy amal: {$updated} ta mahsulotni {$label}",
+        ($isStationery ? '[Kanselyariya] ' : '[Kitob] ').'ID: '.$products->pluck('id')->implode(', ')
+    );
+
+    return response()->json([
+        'success' => true,
+        'updated' => $updated,
+        'skipped' => max(0, $skipped),
+        'message' => $updated > 0
+            ? "{$updated} ta mahsulot yangilandi".($skipped > 0 ? ", {$skipped} tasi o'tkazib yuborildi" : '')
+            : "Hech bir mahsulot o'zgarmadi",
+    ], 200);
 }
 
 /**
