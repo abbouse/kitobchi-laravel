@@ -16,13 +16,14 @@ class FixBrokenImages extends Command
     protected $signature = 'catalog:fix-broken-images
                             {--limit=0 : Maksimal tekshiriladigan kitoblar soni (0 = barchasi)}
                             {--download : Rasmlarni tashqi serverga bog\'lanmasdan o\'zimizning local serverga (storage/books) yuklab olish}
-                            {--all : Barcha muammoli (nosoz, bir xil takrorlangan va muqovasiz) kitoblarni birvarakayiga to\'g\'irlash}
-                            {--missing : Rasmi umuman yo\'q (bo\'sh / muqovasiz) kitoblarni ham qidirib rasm o\'rnatish}
+                            {--all : Barcha muammoli (nosoz, bir xil takrorlangan va muqovasiz) kitoblarni birvarakayiga to\'g\'irlash (standart: ha)}
+                            {--missing : Faqat rasmi umuman yo\'q (bo\'sh / muqovasiz) kitoblarni qidirib rasm o\'rnatish}
                             {--all-duplicated : 2 va undan ko\'p kitobda bir xil takrorlanib qolgan rasmli kitoblarni ham qayta qidirib to\'g\'irlash}
                             {--duplicate-substring= : Takrorlanib qolgan rasm havolasining bir qismi (masalan: 1790422172657)}
                             {--latest-first : Yangi kitoblardan boshlab (id DESC) tekshirish (standart: ha)}
                             {--oldest-first : Eski kitoblardan boshlab (id ASC) tekshirish}
                             {--resume : Avval tekshirilgan kitoblarni qayta ko\'rmasdan, to\'xtagan joyidan davom ettirish}
+                            {--no-resume : Avval tekshirilgan xotirani chetlab o\'tib, barcha kitoblarni qaytadan ko\'rib chiqish}
                             {--clear-checkpoint : Oldingi sessiya xotirasini (checkpoint) tozalab, noldan boshlash}
                             {--dry-run : Bazaga yozmasdan faqat tekshiruv rejimida ishlash}';
 
@@ -53,11 +54,18 @@ class FixBrokenImages extends Command
         $download = (bool) $this->option('download');
         $dryRun = (bool) $this->option('dry-run');
         $all = (bool) $this->option('all');
-        $missing = (bool) $this->option('missing') || $all;
-        $allDuplicated = (bool) $this->option('all-duplicated') || $all;
+        $missing = (bool) $this->option('missing');
+        $allDuplicated = (bool) $this->option('all-duplicated');
         $dupSubstring = trim((string) $this->option('duplicate-substring'));
         $oldestFirst = (bool) $this->option('oldest-first');
         $sortOrder = $oldestFirst ? 'asc' : 'desc';
+
+        // Standart holatda: barcha muammoli (nosoz + dublikat + muqovasiz) kitoblar kiritiladi!
+        if ($all || (! $missing && empty($dupSubstring)) || $allDuplicated) {
+            $missing = true;
+            $allDuplicated = true;
+            $all = true;
+        }
 
         if ($this->option('clear-checkpoint')) {
             $this->clearCheckpoint();
@@ -65,15 +73,20 @@ class FixBrokenImages extends Command
         }
 
         $checkpoint = $this->loadCheckpoint();
-        $resume = (bool) $this->option('resume') || count($checkpoint['editions']) > 0 || count($checkpoint['books']) > 0;
+        $resume = ! (bool) $this->option('no-resume') && ((bool) $this->option('resume') || count($checkpoint['editions']) > 0 || count($checkpoint['books']) > 0);
 
         $this->info('=================================================================');
         $this->info('           KITOB RASMLARINI TIKLASH VA TO\'G\'IRLASH               ');
         $this->info('=================================================================');
         $this->line('Rejim: '.($dryRun ? '<fg=yellow>DRY-RUN (tekshiruv, bazaga yozilmaydi)</>' : '<fg=green>Haqiqiy tuzatish (bazadagi rasmlar yangilanadi)</>'));
         $this->line('Lokal saqlash: '.($download ? '<fg=cyan>Ha (rasmlar storage/books ga yuklab olinadi)</>' : '<fg=gray>Yo\'q (ishlaydigan tashqi havola saqlanadi)</>'));
+        $this->line('Muqovasizlar: '.($missing ? '<fg=cyan>Ha (rasmi bo\'sh kitoblar ham kiritildi)</>' : '<fg=gray>Yo\'q</>'));
+        $this->line('Dublikat va nosozlar: '.($allDuplicated ? '<fg=cyan>Ha (takrorlangan va buzilgan rasmlar)</>' : '<fg=gray>Yo\'q</>'));
         $this->line('Tartib: '.($sortOrder === 'desc' ? '<fg=cyan>Eng yangi kitoblardan (id DESC)</>' : '<fg=gray>Eski kitoblardan (id ASC)</>'));
-        $this->line('Davom ettirish: '.($resume ? '<fg=green>Ha (avval ko\'rilgan kitoblar o\'tkazib yuboriladi)</>' : '<fg=gray>Yo\'q</>'));
+        $this->line('Davom ettirish: '.($resume ? '<fg=green>Ha (avval ko\'rilgan kitoblar o\'tkazib yuboriladi)</>' : '<fg=gray>Yo\'q (barchasi ko\'rib chiqiladi)</>'));
+        if ($resume && (count($checkpoint['editions']) > 0 || count($checkpoint['books']) > 0)) {
+            $this->line("Xotiradagi ko'rilgan kitoblar soni: <comment>".count($checkpoint['editions'])." ta global karta, ".count($checkpoint['books'])." ta do'kon taklifi</comment>");
+        }
         $this->newLine();
 
         // 1. Books takliflarini aniqlaymiz
