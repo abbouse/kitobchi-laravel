@@ -131,6 +131,7 @@ Route::middleware('auth:seller')->group(function () {
 
     Route::get('statistics/data', [HisobotController::class, 'index'])->name('sales_data_index');
     Route::get('statistics/sales_chart_data', [HisobotController::class, 'getSalesStats'])->name('saleschart_data');
+    Route::get('statistics/waiting-products', [HisobotController::class, 'waitingProducts'])->name('waiting_products');
 
     Route::get('staff', [SellerStaffController::class, 'index']);
     Route::post('staff', [SellerStaffController::class, 'store']);

@@ -525,6 +525,29 @@ class HisobotController extends Controller
         ], 200);
     }
 
+    /**
+     * Mijozlar kutayotgan mahsulotlar: do'konda tugagan, lekin sevimlilarda,
+     * "kelganda xabar bering" ro'yxatida yoki savatda turgan. Davrga
+     * bog'liq emas — hozirgi holat.
+     */
+    public function waitingProducts(Request $request)
+    {
+        $seller = Auth::guard('seller')->user();
+        if (! $seller) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+        if (! $this->hasDashboardAccess($seller)) {
+            return response()->json(['success' => true, 'data' => ['out_of_stock' => 0, 'waiting_total' => 0, 'items' => []]], 200);
+        }
+
+        $limit = max(1, min(50, (int) $request->input('limit', 20)));
+
+        return response()->json([
+            'success' => true,
+            'data' => app(\App\Services\SellerDemandService::class)->waitingProducts($this->getStoreSellerId($seller), $limit),
+        ], 200);
+    }
+
     public function getSalesStats(Request $request)
     {
         $seller = Auth::guard('seller')->user();

@@ -1347,6 +1347,14 @@ public function productStatistics(Request $request, $id)
         $result['author'] = $product->author;
     }
 
+    // Talab: sevimlilarda, "kelganda xabar bering" ro'yxatida, savatda
+    if (in_array($type, ['book', 'stationery'], true)) {
+        $demand = app(\App\Services\SellerDemandService::class)->demandFor($type, collect([$product]))[(int) $product->id] ?? [];
+        $result['favourites_count'] = (int) ($demand['favourites'] ?? 0);
+        $result['waiting_count'] = (int) ($demand['waiting'] ?? 0);
+        $result['in_cart_count'] = (int) ($demand['in_cart'] ?? 0);
+    }
+
     return response()->json(['success' => true, 'data' => [$result]], 200);
 }
 
