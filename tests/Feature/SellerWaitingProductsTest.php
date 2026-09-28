@@ -93,4 +93,35 @@ class SellerWaitingProductsTest extends TestCase
             ->assertJsonPath('data.previous.sales_count', 0)
             ->assertJsonPath('data.cancelled_count', 0);
     }
+
+    public function test_sales_chart_includes_previous_period_shadow(): void
+    {
+        $cat = $this->makeCategory();
+        $shop = $this->makeSeller();
+        $shop->forceFill(['created_at' => now()->subYear()])->save();
+        $this->makeBook($shop, $cat, ['isbn' => '9780306406157'], 3);
+
+        $sale = function (\Carbon\Carbon $at, int $amount) use ($shop) {
+            $orderId = DB::table('solds')->insertGetId([
+                'amount' => $amount, 'status' => 'C', 'status_code' => 'delivered',
+                'paymentStatus' => 2, 'payment_status_code' => 'paid',
+                'completed_at' => $at, 'created_at' => $at, 'updated_at' => $at,
+            ]);
+            DB::table('seller_orders')->insert([
+                'seller_id' => $shop->id, 'order_id' => $orderId, 'amount' => $amount,
+                'created_at' => $at, 'updated_at' => $at,
+            ]);
+        };
+        $today = now()->startOfDay()->addHours(12);
+        $sale($today, 50000);
+        $sale($today->copy()->subDays(7), 30000); // 7 kunlik grafikda oxirgi kunning "soyasi"
+
+        Sanctum::actingAs($shop, ['*'], 'seller');
+        $res = $this->getJson('/api/v1/seller/statistics/sales_chart_data?period=7d')->assertOk();
+        $last = collect($res->json('data'))->last();
+        $this->assertSame(50000, $last['value']);
+        $this->assertSame(30000, $last['previous_value']);
+        $this->assertSame(1, $last['previous_orders']);
+        $this->assertSame($today->copy()->subDays(7)->toDateString(), $last['previous_time']);
+    }
 }

@@ -327,6 +327,7 @@ class OrderController extends Controller
             'main_order_status' => $this->resolveMainOrderStatus($order),
             'lifecycle_status' => $lifecycleStatus,
             'delivery_type' => $order->delivery_type,
+            'payment_kind' => $this->resolvePaymentKind($order->order, $fulfillment),
             'fulfillment_mode' => $fulfillment?->fulfillment_mode,
             'fulfillment_status' => $fulfillment?->status_code,
             'fulfillment_hint' => $this->buildFulfillmentHint($fulfillment),
@@ -346,6 +347,23 @@ class OrderController extends Controller
             ],
             'refund_status' => $order->refund_status,
         ];
+    }
+
+    /**
+     * Ro'yxat uchun yengil to'lov belgisi: cash (naqd, kuryer undiradi) |
+     * paid (onlayn to'langan) | pending (to'lov kutilmoqda).
+     */
+    private function resolvePaymentKind($sold, $fulfillment): ?string
+    {
+        if (! $sold) {
+            return null;
+        }
+        $payment = \App\Enums\PaymentStatusCode::fromLegacy($sold->payment_status_code ?? $sold->paymentStatus);
+        if ($payment === \App\Enums\PaymentStatusCode::CASH_PENDING || (bool) ($fulfillment?->is_cod)) {
+            return 'cash';
+        }
+
+        return $payment === \App\Enums\PaymentStatusCode::PAID ? 'paid' : 'pending';
     }
 
     public function lastOrders(Request $request)
@@ -383,40 +401,16 @@ class OrderController extends Controller
                 SellerOrderStatusCode::HANDED_TO_COURIER,
             );
         } else {
-            $query->when($statusFilter !== 'all', function ($q) use ($statusFilter) {
-                $map = [
-                    'new' => SellerOrderStatusCode::NEW,
-                    'accepted' => SellerOrderStatusCode::ACCEPTED,
-                    'handed' => SellerOrderStatusCode::HANDED_TO_COURIER,
-                    'cancelled' => SellerOrderStatusCode::CANCELLED,
-                ];
-
-                if ($statusFilter === 'delivered') {
-                    $q->whereHas('order', function ($orderQuery) {
-                        $orderQuery->whereIn('status_code', [
-                            OrderStatusCode::DELIVERED->value,
-                            OrderStatusCode::CUSTOMER_RECEIVED->value,
-                        ])
-                            ->orWhere(function ($fallback) {
-                                $fallback->whereNull('status_code')
-                                    ->whereIn('status', [
-                                        OrderStatusCode::DELIVERED->legacy(),
-                                        OrderStatusCode::CUSTOMER_RECEIVED->legacy(),
-                                    ]);
-                            });
-                    });
-                } elseif ($statusFilter === 'returned') {
-                    $q->whereHas('order', function ($orderQuery) {
-                        $orderQuery->where('status_code', OrderStatusCode::RETURNED->value)
-                            ->orWhere(function ($fallback) {
-                                $fallback->whereNull('status_code')
-                                    ->where('status', OrderStatusCode::RETURNED->legacy());
-                            });
-                    });
-                } elseif (array_key_exists($statusFilter, $map)) {
-                    $this->applySellerStatusFilter($q, $map[$statusFilter]);
+            // Yangi ilova (page yuboradi): har holat bo'yicha serverdagi aniq sonlar
+            if ($request->filled('page')) {
+                $counts = [];
+                foreach (['all', 'new', 'accepted', 'handed', 'delivered', 'returned', 'cancelled'] as $key) {
+                    $countQuery = clone $query;
+                    $this->applyListStatusFilter($countQuery, $key);
+                    $counts[$key] = $countQuery->count();
                 }
-            });
+            }
+            $this->applyListStatusFilter($query, $statusFilter);
         }
 
         $orders = $query
@@ -429,13 +423,73 @@ class OrderController extends Controller
                 END
             ")
             ->orderByDesc('created_at')
-            ->limit($scope === 'home' ? 20 : 100)
-            ->get();
+            ->orderByDesc('id');
+
+        // Sahifalash: yangi ilova `page` yuboradi; eski ilova — oxirgi 100 ta
+        $page = max(1, (int) $request->query('page', 0));
+        $perPage = 30;
+        if ($scope !== 'home' && $request->filled('page')) {
+            $orders = $orders->forPage($page, $perPage + 1)->get();
+            $hasMore = $orders->count() > $perPage;
+            $orders = $orders->take($perPage);
+        } else {
+            $orders = $orders->limit($scope === 'home' ? 20 : 100)->get();
+            $hasMore = false;
+        }
 
         return response()->json([
             'success' => true,
             'data' => $orders->map(fn ($order) => $this->formatSellerOrder($order))->values(),
+            'has_more' => $hasMore,
+            'counts' => $counts ?? null,
         ]);
+    }
+
+    /**
+     * Ro'yxat filtri: all | new | accepted | handed | delivered | returned | cancelled.
+     */
+    private function applyListStatusFilter($q, string $statusFilter): void
+    {
+        if ($statusFilter === 'all') {
+            return;
+        }
+
+        $map = [
+            'new' => SellerOrderStatusCode::NEW,
+            'accepted' => SellerOrderStatusCode::ACCEPTED,
+            'handed' => SellerOrderStatusCode::HANDED_TO_COURIER,
+            'cancelled' => SellerOrderStatusCode::CANCELLED,
+        ];
+
+        if ($statusFilter === 'delivered') {
+            $q->whereHas('order', function ($orderQuery) {
+                $orderQuery->where(function ($statusQuery) {
+                    $statusQuery->whereIn('status_code', [
+                        OrderStatusCode::DELIVERED->value,
+                        OrderStatusCode::CUSTOMER_RECEIVED->value,
+                    ])
+                        ->orWhere(function ($fallback) {
+                            $fallback->whereNull('status_code')
+                                ->whereIn('status', [
+                                    OrderStatusCode::DELIVERED->legacy(),
+                                    OrderStatusCode::CUSTOMER_RECEIVED->legacy(),
+                                ]);
+                        });
+                });
+            });
+        } elseif ($statusFilter === 'returned') {
+            $q->whereHas('order', function ($orderQuery) {
+                $orderQuery->where(function ($statusQuery) {
+                    $statusQuery->where('status_code', OrderStatusCode::RETURNED->value)
+                        ->orWhere(function ($fallback) {
+                            $fallback->whereNull('status_code')
+                                ->where('status', OrderStatusCode::RETURNED->legacy());
+                        });
+                });
+            });
+        } elseif (array_key_exists($statusFilter, $map)) {
+            $this->applySellerStatusFilter($q, $map[$statusFilter]);
+        }
     }
 
     /**

@@ -764,12 +764,55 @@ class HisobotController extends Controller
                 }
             }
 
-            return $data;
+            return $this->attachPreviousBuckets($data, $period['group'], $sellerScopeIds, $selectedLocation);
         })();
 
         return response()->json([
             'success' => true,
             'data' => $data,
         ], 200);
+    }
+
+    /**
+     * Har ustunga o'tgan davrning mos ustunini qo'shadi (grafikdagi "soya"):
+     * 30 kunlik grafikda 1-kun ↔ 31 kun oldingi kun, oylikda — N oy oldingi oy.
+     *
+     * @param  list<array<string,mixed>>  $data
+     * @return list<array<string,mixed>>
+     */
+    private function attachPreviousBuckets(array $data, string $group, $sellerScopeIds, ?SellerLocation $location): array
+    {
+        $count = count($data);
+        if ($count === 0) {
+            return $data;
+        }
+
+        [$expr, $format, $shift] = match ($group) {
+            'month' => ["DATE_FORMAT(solds.completed_at, '%Y-%m')", 'Y-m', 'subMonths'],
+            'week' => ['YEARWEEK(solds.completed_at, 1)', 'oW', 'subWeeks'],
+            default => ['DATE(solds.completed_at)', 'Y-m-d', 'subDays'],
+        };
+
+        $firstBucket = Carbon::parse($data[0]['time'])->startOfDay();
+        $previousStart = $firstBucket->copy()->{$shift}($count);
+        $previousEnd = $firstBucket->copy()->subSecond();
+
+        $rows = $this->baseCompletedOrders($sellerScopeIds, $previousStart, $previousEnd)
+            ->selectRaw("{$expr} as bucket_key")
+            ->selectRaw('SUM(seller_orders.amount) as total_amount')
+            ->selectRaw('COUNT(*) as total_orders')
+            ->groupBy('bucket_key');
+        $this->applyBranchFilterToSellerOrders($rows, $location);
+        $rows = $rows->get()->keyBy(fn ($row) => (string) $row->bucket_key);
+
+        foreach ($data as $i => $bucket) {
+            $previousTime = Carbon::parse($bucket['time'])->{$shift}($count);
+            $row = $rows->get($previousTime->format($format));
+            $data[$i]['previous_time'] = $previousTime->toDateString();
+            $data[$i]['previous_value'] = (int) ($row->total_amount ?? 0);
+            $data[$i]['previous_orders'] = (int) ($row->total_orders ?? 0);
+        }
+
+        return $data;
     }
 }
