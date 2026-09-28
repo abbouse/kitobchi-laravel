@@ -282,6 +282,7 @@ class SplitProfileService
             $reasons = $this->hardBlockReasons(
                 user: $user,
                 verifiedCardsCount: $verifiedCardsCount,
+                codReturnStrikes: $codReturnStrikes,
                 manualBlocked: $manualBlocked,
                 manualBlockReason: $manualBlockReason,
                 splitHistory: $splitHistory,
@@ -392,6 +393,7 @@ class SplitProfileService
         bool $manualBlocked,
         string $manualBlockReason,
         array $splitHistory,
+        int $codReturnStrikes = 0,
     ): array {
         $reasons = [];
 
@@ -411,6 +413,12 @@ class SplitProfileService
 
         if ($user->isBlocked()) {
             $reasons[] = 'Foydalanuvchi bloklangan.';
+        }
+
+        // Naqd buyurtmani qaytargan mijoz — faqat kartadan to'lov. Admin
+        // qo'lda bergan limit ham buni chetlab o'tmaydi.
+        if ($codReturnStrikes > 0) {
+            $reasons[] = 'Naqd buyurtma qaytarilgan — muddatli to\'lov yopiq.';
         }
 
         // Manual limit faqat skoringni override qiladi. Shaxsni va to'lov

@@ -572,7 +572,7 @@ export default function Orders() {
     }
     if (
       nextStatus === 'returned'
-      && !confirm("Buyurtma qaytgan deb belgilansinmi?\n\nAgar bu naqd buyurtma bo'lsa, mijoz uchun naqd to'lov vaqtincha yopilishi mumkin.")
+      && !confirm("Buyurtma qaytgan deb belgilansinmi?\n\nAgar bu naqd buyurtma bo'lsa, mijozga naqd to'lov yopiladi — keyingi buyurtmalarni faqat karta orqali to'lay oladi.")
     ) return;
     const currentOrder = selectedOrd;
     setSelectedOrd({ ...currentOrder, status: nextStatus });

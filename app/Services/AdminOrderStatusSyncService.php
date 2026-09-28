@@ -72,6 +72,13 @@ class AdminOrderStatusSyncService
 
             $previousStatus = (string) $order->status;
             $previousCompletedPaid = $order->isCompletedAndPaid();
+            // Naqd buyurtma qaytdi: kuryer "yetkazildi" bosgan bo'lsa ham pul
+            // olinmagan — to'lov holati orqaga qaytadi (pastda), shuning
+            // uchun "to'langan buyurtma" to'sig'i bu yerda qo'llanmaydi.
+            $cashReturn = $statusCode === OrderStatusCode::RETURNED && $this->isCashOnDeliveryOrder($order);
+            if ($cashReturn) {
+                $options['allow_paid_rollback'] = true;
+            }
             $this->guardMainTransition($order, $statusCode, $options);
 
             if ($statusCode === OrderStatusCode::CANCELLED) {
@@ -93,6 +100,10 @@ class AdminOrderStatusSyncService
                 && $order->payment_status_code !== PaymentStatusCode::PAID->value) {
                 $order->paymentStatus = PaymentStatusCode::PAID->legacy();
                 $order->payment_status_code = PaymentStatusCode::PAID->value;
+            }
+
+            if ($cashReturn) {
+                $this->markCashNotCollected($order);
             }
 
             $order->status = $statusCode->legacy();
@@ -181,6 +192,11 @@ class AdminOrderStatusSyncService
         DB::transaction(function () use ($courierOrder, $status, $options) {
             $courierOrder = CourierOrder::query()->lockForUpdate()->findOrFail($courierOrder->id);
             $statusCode = CourierOrderStatusCode::fromLegacy($status);
+            $cashReturnOrder = $statusCode === CourierOrderStatusCode::RETURNED ? $courierOrder->order()->first() : null;
+            $cashReturn = $cashReturnOrder !== null && $this->isCashOnDeliveryOrder($cashReturnOrder);
+            if ($cashReturn) {
+                $options['allow_paid_rollback'] = true;
+            }
             $this->guardCourierTransition($courierOrder, $statusCode, $options);
             $courierOrder->update([
                 'status' => $statusCode->legacy(),
@@ -226,6 +242,10 @@ class AdminOrderStatusSyncService
                 && $order->payment_status_code !== PaymentStatusCode::PAID->value) {
                 $order->paymentStatus = PaymentStatusCode::PAID->legacy();
                 $order->payment_status_code = PaymentStatusCode::PAID->value;
+            }
+
+            if ($cashReturn) {
+                $this->markCashNotCollected($order);
             }
 
             $this->syncCompletionState($order);
@@ -522,6 +542,51 @@ class AdminOrderStatusSyncService
             default => $fulfillment->status_code,
         };
         $fulfillment->save();
+    }
+
+    /**
+     * Mijoz yetkazilganda naqd to'lashi kerak bo'lgan buyurtmami?
+     *
+     * To'lanmagan naqd buyurtma — aniq. "To'langan" bo'lsa ham naqd bo'lishi
+     * mumkin: kuryer "yetkazildi" bosganda naqd buyurtma avtomatik "to'langan"
+     * bo'ladi. Uni karta/split to'lovidan ajratish: kuryer naqd undirishi
+     * belgilangan (is_cod) yoki buyurtmaga karta ham, split ham to'lanmagan.
+     */
+    public function isCashOnDeliveryOrder(Sold $order): bool
+    {
+        $payment = PaymentStatusCode::fromLegacy($order->payment_status_code ?? $order->paymentStatus);
+
+        if ($payment === PaymentStatusCode::CASH_PENDING) {
+            return true;
+        }
+
+        if ($payment !== PaymentStatusCode::PAID) {
+            return false;
+        }
+
+        if ((bool) $order->fulfillment()->value('is_cod')) {
+            return true;
+        }
+
+        $paidByCard = DB::table('transactions')
+            ->where('order_id', $order->id)
+            ->where('payment_type', 'order')
+            ->exists();
+        $paidBySplit = DB::getSchemaBuilder()->hasTable('split_contracts')
+            && DB::table('split_contracts')->where('order_id', $order->id)->exists();
+
+        return ! $paidByCard && ! $paidBySplit && (int) ($order->amount ?? 0) > 0;
+    }
+
+    /**
+     * Qaytgan naqd buyurtma: pul olinmagan. To'lov holati "naqd, to'lanmagan"
+     * ga qaytadi — shu orqali mijozning reytingida qaytarilgan naqd buyurtma
+     * sifatida sanaladi va unga naqd to'lov yopiladi (UserReputationService).
+     */
+    private function markCashNotCollected(Sold $order): void
+    {
+        $order->paymentStatus = PaymentStatusCode::CASH_PENDING->legacy();
+        $order->payment_status_code = PaymentStatusCode::CASH_PENDING->value;
     }
 
     private function guardMainTransition(Sold $order, OrderStatusCode $target, array $options = []): void

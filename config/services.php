@@ -104,6 +104,20 @@ return [
         'key' => env('OPENAI_API_KEY'),
     ],
 
+    // Yandex Geocoder HTTP API — ilovalar manzilni server orqali oladi.
+    // Bir nechta akkauntdan olingan kalitlar: biri ishlamasa (limit tugagan,
+    // bloklangan) keyingisiga o'tiladi. .env: YANDEX_GEOCODER_API_KEY_1..10
+    'yandex_geocoder' => [
+        'keys' => array_values(array_filter(
+            array_map(
+                fn (int $i) => trim((string) env("YANDEX_GEOCODER_API_KEY_{$i}", '')),
+                range(1, 10)
+            ),
+            fn (string $key) => $key !== '' && $key !== 'your_key'
+        )),
+        'timeout' => (float) env('YANDEX_GEOCODER_TIMEOUT', 5),
+    ],
+
     // Yandex Maps JS API 2.1 — logistika zonalari xaritasi (polygon chizish)
     'yandex_maps' => [
         'key' => env('YANDEX_MAPS_API_KEY', ''),

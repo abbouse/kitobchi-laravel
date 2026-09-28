@@ -260,4 +260,6 @@ Route::middleware('auth:user')->group(function () {
         Route::get('select/{id}', [UserController::class, 'select_location']);
         Route::get('delete/{location}', [UserController::class, 'delete_location']);
     });
+    // Manzilni aniqlash — Yandex kaliti serverda (kalitlar navbat bilan)
+    Route::get('geocode/reverse', [\App\Http\Controllers\Api\GeocodeController::class, 'reverse'])->middleware('throttle:60,1');
 });

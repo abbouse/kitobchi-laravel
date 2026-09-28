@@ -28,6 +28,8 @@ Route::post('forgot', [SellerAuthController::class, 'forgot'])->middleware('thro
 // Avtorizatsiyadan o'tgan sotuvchilar
 Route::middleware('auth:seller')->group(function () {
     Route::get('session/config', [SellerController::class, 'sessionConfig']);
+    // Manzilni aniqlash — Yandex kaliti serverda (kalitlar navbat bilan)
+    Route::get('geocode/reverse', [\App\Http\Controllers\Api\GeocodeController::class, 'reverse'])->middleware('throttle:60,1');
     Route::post('update/fcm', [SellerController::class, 'updateFcm']);
     Route::post('update/profile', [SellerController::class, 'updateProfile']);
     Route::get('update/password', [SellerController::class, 'updatePassword']);

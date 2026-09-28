@@ -247,36 +247,37 @@ class MapErrorBoundary extends Component<{ height: number; children: ReactNode }
   }
 }
 
-/** Manzil bo'yicha qidiruv — Yandex geocoder. */
+/**
+ * Manzil bo'yicha qidiruv — server orqali (Yandex Geocoder kalitlari serverda,
+ * biri ishlamasa keyingisi ishlatiladi; natijalar keshlanadi).
+ */
 function GeocodeSearch({ onPick }: { onPick: (coords: LatLon, label: string) => void }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Array<{ label: string; coords: LatLon }>>([]);
   const [busy, setBusy] = useState(false);
+  const [notFound, setNotFound] = useState(false);
 
-  const run = () => {
+  const run = async () => {
     const text = query.trim();
-    if (!text || !window.ymaps) return;
+    if (text.length < 2) return;
     setBusy(true);
-    // MUHIM: Yandex geocode "vow" promise qaytaradi — unda .catch/.finally YO'Q.
-    // Faqat .then(onOk, onErr) ishlaydi; busy'ni ikkala tarmoqda ham o'chiramiz.
+    setNotFound(false);
     try {
-      window.ymaps.geocode(text, { results: 5 }).then(
-        (res: any) => {
-          const list: Array<{ label: string; coords: LatLon }> = [];
-          res.geoObjects.each((obj: any) => {
-            const coords = obj.geometry.getCoordinates();
-            list.push({ label: obj.getAddressLine ? obj.getAddressLine() : obj.properties.get('text'), coords: [coords[0], coords[1]] });
-          });
-          setResults(list);
-          setBusy(false);
-        },
-        () => {
-          setResults([]);
-          setBusy(false);
-        },
-      );
+      const response = await fetch(`/boshqaruv/geocode/search?q=${encodeURIComponent(text)}&limit=5`, {
+        headers: { Accept: 'application/json' },
+        credentials: 'same-origin',
+      });
+      const payload = response.ok ? await response.json() : null;
+      const list: Array<{ label: string; coords: LatLon }> = (payload?.data || []).map((item: { formatted?: string; name?: string; lat: number; lon: number }) => ({
+        label: item.formatted || item.name || `${item.lat}, ${item.lon}`,
+        coords: [item.lat, item.lon] as LatLon,
+      }));
+      setResults(list);
+      setNotFound(list.length === 0);
     } catch {
       setResults([]);
+      setNotFound(true);
+    } finally {
       setBusy(false);
     }
   };
@@ -289,15 +290,15 @@ function GeocodeSearch({ onPick }: { onPick: (coords: LatLon, label: string) => 
           className="form-control"
           placeholder="Manzil qidirish (masalan: Chilonzor, Toshkent)"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => { setQuery(e.target.value); setNotFound(false); }}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               e.preventDefault();
-              run();
+              void run();
             }
           }}
         />
-        <button type="button" className="btn btn-primary" onClick={run} disabled={busy}>
+        <button type="button" className="btn btn-primary" onClick={() => void run()} disabled={busy}>
           {busy ? <span className="spinner-border spinner-border-sm" /> : 'Qidirish'}
         </button>
       </div>
@@ -319,6 +320,8 @@ function GeocodeSearch({ onPick }: { onPick: (coords: LatLon, label: string) => 
             </button>
           ))}
         </div>
+      ) : notFound ? (
+        <div className="f-s-12 text-secondary mt-1">Manzil topilmadi — boshqacha yozib ko'ring.</div>
       ) : null}
     </div>
   );

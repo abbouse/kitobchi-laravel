@@ -37,6 +37,9 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
         Route::get('/dashboard/export', [AdminController::class, 'exportReport'])->name('dashboard.export');
         Route::get('/live', [AdminController::class, 'live'])->name('live');
         Route::get('/live/data', [AdminController::class, 'liveData'])->name('live.data');
+        // Xaritalardagi manzil qidiruvi — Yandex kaliti serverda
+        Route::get('/geocode/search', [\App\Http\Controllers\Api\GeocodeController::class, 'search'])->middleware('throttle:120,1')->name('geocode.search');
+        Route::get('/geocode/reverse', [\App\Http\Controllers\Api\GeocodeController::class, 'reverse'])->middleware('throttle:120,1')->name('geocode.reverse');
 
         // ══════════════════════════ KATALOG ══════════════════════════
         Route::middleware('panel.permission:catalog')->group(function () {

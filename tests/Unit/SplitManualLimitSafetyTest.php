@@ -43,6 +43,14 @@ class SplitManualLimitSafetyTest extends TestCase
         $verified->shouldReceive('hasVerifiedPhone')->once()->andReturnTrue();
 
         $this->assertSame([], $method->invoke($service, $verified, 1, false, '', []));
+
+        // Naqd buyurtmani qaytargan mijozga qo'lda berilgan limit ham ochilmaydi
+        $returned = Mockery::mock(User::class)->makePartial();
+        $returned->id = 43;
+        $returned->shouldReceive('isBlocked')->once()->andReturnFalse();
+        $returned->shouldReceive('hasVerifiedPhone')->once()->andReturnTrue();
+
+        $this->assertNotSame([], $method->invoke($service, $returned, 1, false, '', [], 1));
     }
 
     public function test_manual_limit_bypasses_plan_score_but_not_available_limit(): void
