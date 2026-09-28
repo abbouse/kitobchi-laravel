@@ -6626,6 +6626,52 @@ PROMPT;
         };
     }
 
+    /**
+     * Ro'yxatdan o'tish arizasidagi javoblar — menejer shartnomadan oldin ko'radi.
+     *
+     * @return list<array{0:string,1:string}>
+     */
+    private function sellerApplicationRows(Seller $seller): array
+    {
+        $data = is_array($seller->application_data ?? null) ? $seller->application_data : [];
+        if ($data === []) {
+            return [];
+        }
+
+        $map = [
+            'books_status' => ['Kitob holati', ['published' => 'Nashr etilgan', 'upcoming' => 'Nashrga tayyorlanmoqda', 'manuscript' => "Qo'lyozma"]],
+            'titles_count' => ['Kitoblar soni', ['1' => '1 ta', '2_5' => '2–5 ta', '6_plus' => '6 va undan ko\'p']],
+            'publishing' => ['Nashr usuli', ['self' => "O'zi nashr qilgan", 'publisher' => 'Nashriyot orqali']],
+            'assortment' => ['Assortiment', ['lt_100' => '100 tagacha', '100_1000' => '100–1000', 'gt_1000' => "1000 dan ko'p"]],
+        ];
+        $genres = ['fiction' => 'Badiiy', 'children' => 'Bolalar', 'nonfiction' => 'Ilmiy-ommabop', 'business' => 'Biznes',
+            'self_help' => "Shaxsiy rivojlanish", 'religion' => 'Diniy', 'education' => "O'quv", 'poetry' => "She'riyat", 'other' => 'Boshqa'];
+
+        $rows = [];
+        foreach ($map as $key => [$label, $values]) {
+            if (! empty($data[$key])) {
+                $rows[] = [$label, $values[$data[$key]] ?? (string) $data[$key]];
+            }
+        }
+        if (! empty($data['publisher_name'])) {
+            $rows[] = ['Nashriyot', (string) $data['publisher_name']];
+        }
+        if (! empty($data['genres'])) {
+            $rows[] = ['Janrlar', implode(', ', array_map(fn ($g) => $genres[$g] ?? $g, (array) $data['genres']))];
+        }
+        if (array_key_exists('has_store', $data) && $data['has_store'] !== null) {
+            $rows[] = ["Offline do'kon", $data['has_store'] ? 'Bor' : "Yo'q"];
+        }
+        if (! empty($data['link'])) {
+            $rows[] = ['Havola', (string) $data['link']];
+        }
+        if (! empty($data['rights_confirmed'])) {
+            $rows[] = ['Mualliflik huquqi', 'Tasdiqlagan'];
+        }
+
+        return $rows;
+    }
+
     private function sellerLegalTypeLabel(?string $type): string
     {
         return match ($type) {
@@ -6747,6 +6793,7 @@ PROMPT;
             'businessRole' => $seller->business_role ?? 'seller',
             'businessRoleLabel' => $seller->business_role_label ?? ($seller->business_role === 'author' ? 'Muallif' : 'Do\'kon'),
             'isAuthor' => ($seller->business_role ?? 'seller') === 'author',
+            'applicationRows' => $this->sellerApplicationRows($seller),
             'firstName' => $seller->firstname,
             'lastName' => $seller->lastname,
             'ownerName' => trim(($seller->firstname ?? '').' '.($seller->lastname ?? '')) ?: '—',

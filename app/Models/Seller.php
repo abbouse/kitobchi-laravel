@@ -41,6 +41,7 @@ class Seller extends Authenticatable
         'status', 'is_hidden', 'isVerified', 'isPremiumShop', 'isPremiumExpiresAt',
         'activity_types', 'successful_orders',
         'parent_id', 'seller_location_id', 'role', 'business_role', 'staff_status', 'can_withdraw_balance',
+        'application_data',
         'commission_percent', 'fcm_token',
         'response_time_hours',
         // Do'kon kuryeri tanlansa mijoz to'laydigan flat yetkazish narxi (null/0 = bepul).
@@ -84,6 +85,7 @@ class Seller extends Authenticatable
         'password_reset_limit_reset_at' => 'datetime',
         'password' => 'hashed',
 
+        'application_data' => 'array',
         'contract_signed' => 'boolean',
         'contract_signed_at' => 'date',
         'contract_expires_at' => 'date',

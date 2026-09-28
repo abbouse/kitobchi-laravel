@@ -88,11 +88,22 @@ class SellerAuthController extends Controller
                 $error = 'Faoliyat turlari bo‘sh bo‘lmasligi kerak';
             }
         }
+        // Yangi ilova: kengaytirilgan ariza (aloqa shaxsi, rol bo'yicha savollar).
+        // Eski ilova bu maydonlarni yubormaydi — avvalgidek qabul qilinadi.
+        $application = null;
+        $legalType = null;
+        $contactName = '';
+        if (! $error && $request->has('contact_name')) {
+            [$application, $legalType, $contactName, $error] = $this->parseApplication($request, $business_role);
+        }
+
         if ($error) {
             return response()->json([
                 'message' => $error,
             ], 422);
         }
+
+        [$firstname, $lastname] = array_pad(preg_split('/\s+/u', $contactName, 2) ?: [], 2, null);
 
         // OWNER yaratiladi (parent_id = NULL)
         $seller = Seller::create([
@@ -105,6 +116,10 @@ class SellerAuthController extends Controller
             'role' => 1, // OWNER = Admin role
             'parent_id' => 0, // OWNER
             'password' => (string) Str::random(10),
+            'firstname' => $firstname ?: null,
+            'lastname' => $lastname ?: null,
+            'legal_type' => $legalType,
+            'application_data' => $application,
         ]);
 
         return response()->json([
@@ -112,6 +127,73 @@ class SellerAuthController extends Controller
             'business_role' => $seller->business_role,
             'seller' => 'Biz siz bilan aloqaga chiqamiz',
         ], 201);
+    }
+
+    /**
+     * Hamkorlik arizasi: ro'yxatdan o'tishda faqat eng zarur savollar.
+     * Pasport, STIR, bank rekvizitlari — shartnoma bosqichida (KDP, Kobo,
+     * Litres Avtorlar kabi platformalar ham shunday qiladi).
+     *
+     * @return array{0: array<string,mixed>, 1: ?string, 2: string, 3: string} [application, legal_type, contact_name, error]
+     */
+    private function parseApplication(Request $request, string $role): array
+    {
+        $in = fn (string $key, array $allowed) => in_array((string) $request->input($key), $allowed, true)
+            ? (string) $request->input($key)
+            : null;
+        $link = trim((string) $request->input('link', ''));
+        $contactName = trim(preg_replace('/\s+/u', ' ', (string) $request->input('contact_name', '')));
+
+        if (mb_strlen($contactName) < 3 || mb_strlen($contactName) > 100) {
+            return [[], null, '', 'Ism va familiyangizni kiriting'];
+        }
+        if (! filter_var($request->input('terms_accepted'), FILTER_VALIDATE_BOOLEAN)) {
+            return [[], null, '', 'Shartlarga rozilik bildiring'];
+        }
+        if (mb_strlen($link) > 255) {
+            return [[], null, '', 'Havola juda uzun'];
+        }
+
+        $data = [
+            'link' => $link !== '' ? $link : null,
+            'terms_accepted_at' => now()->toIso8601String(),
+        ];
+
+        if ($role === Seller::ROLE_AUTHOR) {
+            $status = $in('books_status', ['published', 'upcoming', 'manuscript']);
+            $count = $in('titles_count', ['1', '2_5', '6_plus']);
+            $publishing = $in('publishing', ['self', 'publisher']);
+            if (! $status || ! $count || ! $publishing) {
+                return [[], null, '', 'Kitoblaringiz haqidagi savollarga javob bering'];
+            }
+            if (! filter_var($request->input('rights_confirmed'), FILTER_VALIDATE_BOOLEAN)) {
+                return [[], null, '', 'Kitoblarni sotish huquqingizni tasdiqlang'];
+            }
+            $genres = collect((array) $request->input('genres', []))
+                ->map(fn ($g) => (string) $g)
+                ->intersect(['fiction', 'children', 'nonfiction', 'business', 'self_help', 'religion', 'education', 'poetry', 'other'])
+                ->unique()->take(5)->values()->all();
+
+            return [$data + [
+                'books_status' => $status,
+                'titles_count' => $count,
+                'publishing' => $publishing,
+                'publisher_name' => $publishing === 'publisher'
+                    ? (mb_substr(trim((string) $request->input('publisher_name', '')), 0, 120) ?: null)
+                    : null,
+                'genres' => $genres,
+                'rights_confirmed' => true,
+            ], null, $contactName, ''];
+        }
+
+        $legal = $in('legal_type', ['entrepreneur', 'llc', 'individual']);
+
+        return [$data + [
+            'assortment' => $in('assortment', ['lt_100', '100_1000', 'gt_1000']),
+            'has_store' => $request->has('has_store')
+                ? filter_var($request->input('has_store'), FILTER_VALIDATE_BOOLEAN)
+                : null,
+        ], $legal, $contactName, ''];
     }
 
     /**

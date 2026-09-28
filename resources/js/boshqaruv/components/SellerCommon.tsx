@@ -25,6 +25,7 @@ export interface Seller {
   address?: string;
   activityTypes?: string[];
   activityTypeLabels?: string[];
+  applicationRows?: [string, string][];
   status?: string;
   verified?: boolean;
   hidden?: boolean;

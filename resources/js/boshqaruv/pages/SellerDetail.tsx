@@ -200,6 +200,9 @@ function OverviewTab({ seller, onSeeOrders }: { seller: DetailProps; onSeeOrders
         ['Egasi', seller.ownerName || '—'], ['Telefon', seller.phone || '—'], ['Hudud', [seller.region, seller.district].filter(Boolean).join(', ') || '—'],
         ['Status', sellerLabel(seller.status)], ['Reyting', `${seller.rating || 0} (${seller.ratingReviewsCount || 0} sharh)`], ['Reputatsiya', String(seller.reputationScore || 0)],
       ]} />
+      {(seller.applicationRows || []).length ? (
+        <Info title={seller.businessRole === 'author' ? 'Muallif arizasi' : "Do'kon arizasi"} rows={seller.applicationRows || []} />
+      ) : null}
       <Info title="Moliya va komissiya" rows={[
         ['Balans', `${fmt(seller.balance || 0)} so'm`], ['Umumiy tushum', `${fmt(seller.totalRevenue || 0)} so'm`],
         ['Komissiya', seller.commission?.activePromotion
