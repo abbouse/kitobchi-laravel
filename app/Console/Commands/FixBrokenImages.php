@@ -28,6 +28,12 @@ class FixBrokenImages extends Command
 
     private const BROKEN_SUBSTRING = 'dd9xb0bqw';
 
+    private const KNOWN_BAD_PATTERNS = [
+        'dd9xb0bqw',
+        '1790422172657',
+        'Screenshot_2026_09_26_072402',
+    ];
+
     private const BOOKUZ_API = 'https://backend.book.uz/api/v1';
 
     private Client $http;
@@ -62,12 +68,6 @@ class FixBrokenImages extends Command
         $this->info('=================================================================');
         $this->line('Rejim: '.($dryRun ? '<fg=yellow>DRY-RUN (tekshiruv, bazaga yozilmaydi)</>' : '<fg=green>Haqiqiy tuzatish (bazadagi rasmlar yangilanadi)</>'));
         $this->line('Lokal saqlash: '.($download ? '<fg=cyan>Ha (rasmlar storage/books ga yuklab olinadi)</>' : '<fg=gray>Yo\'q (ishlaydigan Book.uz kesh havolasi saqlanadi)</>'));
-        if ($allDuplicated) {
-            $this->line('Takrorlangan rasmlar: <fg=yellow>Barcha dublikat rasmli kitoblar qayta qidiriladi</>');
-        }
-        if ($dupSubstring !== '') {
-            $this->line("Filtr belgisi: <fg=yellow>{$dupSubstring}</>");
-        }
         $this->newLine();
 
         // 1. Qidiriladigan Books takliflarini aniqlaymiz
@@ -86,7 +86,10 @@ class FixBrokenImages extends Command
 
         $brokenBooksQuery = Books::query()
             ->where(function ($q) use ($dupSubstring, $dupBookIds) {
-                $q->where('images', 'like', '%'.self::BROKEN_SUBSTRING.'%');
+                // Ma'lum nosoz va bir xil bo'lib ketgan rasm shablonlari
+                foreach (self::KNOWN_BAD_PATTERNS as $pattern) {
+                    $q->orWhere('images', 'like', '%'.$pattern.'%');
+                }
 
                 if ($dupSubstring !== '') {
                     $q->orWhere('images', 'like', '%'.$dupSubstring.'%');
@@ -125,8 +128,10 @@ class FixBrokenImages extends Command
 
             $brokenEditionsQuery = BookEdition::query()
                 ->where(function ($q) use ($dupSubstring, $dupEditionIds) {
-                    $q->where('front_image', 'like', '%'.self::BROKEN_SUBSTRING.'%')
-                        ->orWhere('images', 'like', '%'.self::BROKEN_SUBSTRING.'%');
+                    foreach (self::KNOWN_BAD_PATTERNS as $pattern) {
+                        $q->orWhere('front_image', 'like', '%'.$pattern.'%')
+                            ->orWhere('images', 'like', '%'.$pattern.'%');
+                    }
 
                     if ($dupSubstring !== '') {
                         $q->orWhere('front_image', 'like', '%'.$dupSubstring.'%')
@@ -181,13 +186,11 @@ class FixBrokenImages extends Command
                     // Agar global kartaga ulangan bo'lsa, uni ham sinxronlaymiz
                     if ($book->edition_id && $book->edition) {
                         $edition = $book->edition;
-                        if (empty($edition->front_image) || str_contains((string) $edition->front_image, self::BROKEN_SUBSTRING) || ($dupSubstring && str_contains((string) $edition->front_image, $dupSubstring))) {
-                            $edition->update([
-                                'front_image' => $workingUrl,
-                                'images' => Arr::wrap($workingUrl),
-                            ]);
-                            $this->catalogService->syncOffers($edition);
-                        }
+                        $edition->update([
+                            'front_image' => $workingUrl,
+                            'images' => Arr::wrap($workingUrl),
+                        ]);
+                        $this->catalogService->syncOffers($edition);
                     }
                 }
                 $fixedBooks++;
@@ -243,24 +246,24 @@ class FixBrokenImages extends Command
 
     /**
      * Kitob uchun mos va ishlaydigan rasm havolasini topish:
-     * 1. Agar avvalgi asl dd9xb0bqw havolasi bo'lsa, Book.uz kesh serveridan to'g'ridan-to'g'ri olamiz.
+     * 1. Agar kitobning avvalgi asl dd9xb0bqw havolasi bo'lsa (va u takrorlangan xato rasm bo'lmasa), Book.uz kesh serveridan to'g'ridan-to'g'ri olamiz.
      * 2. Aks holda Book.uz API dan keyword (ISBN yoki aniq sarlavha) orqali izlaymiz va nomini tekshiramiz.
      * 3. Google Books orqali ISBN bo'yicha izlaymiz.
      */
     private function resolveBookCover(string $title, ?string $rawIsbn, mixed $rawStoredImage): ?string
     {
-        // 1. Agar kitobning avvalgi asl rasmi saqlanib qolgan bo'lsa:
-        $originalCloudinaryUrl = $this->extractCloudinaryUrl($rawStoredImage);
+        // 1. Agar kitobning avvalgi asl rasmi saqlanib qolgan bo'lsa (faqat u xato takrorlangan rasm bo'lmasa):
+        $originalCloudinaryUrl = $this->extractOriginalCloudinaryUrl($rawStoredImage);
         if ($originalCloudinaryUrl) {
             $cachedProxyUrl = 'https://book.uz/_next/image?url='.urlencode($originalCloudinaryUrl).'&w=640&q=75';
 
-            // Tekshirib ko'ramiz (keshda bormi)
+            // Keshda mavjudligini tekshiramiz
             if ($this->verifyUrlWorks($cachedProxyUrl)) {
                 return $cachedProxyUrl;
             }
         }
 
-        // 2. Book.uz API orqali qidiramiz (aniq nom va ISBN bilan)
+        // 2. Book.uz API orqali qidiramiz (avval ISBN, so'ng nomi bilan)
         $cleanIsbn = $rawIsbn ? Isbn::clean($rawIsbn) : null;
         if ($cleanIsbn) {
             $url = $this->searchBookUzByIsbn($cleanIsbn);
@@ -288,24 +291,29 @@ class FixBrokenImages extends Command
     }
 
     /**
-     * Saqlangan ma'lumotdan asl Cloudinary manzilini ajratib olish.
+     * Saqlangan ma'lumotdan haqiqiy asl Cloudinary manzilini ajratib olish (xato takrorlangan rasmlarni chetlab o'tadi).
      */
-    private function extractCloudinaryUrl(mixed $raw): ?string
+    private function extractOriginalCloudinaryUrl(mixed $raw): ?string
     {
         if (is_array($raw)) {
             $first = $raw[0] ?? null;
 
-            return is_string($first) ? $this->extractCloudinaryUrl($first) : null;
+            return is_string($first) ? $this->extractOriginalCloudinaryUrl($first) : null;
         }
 
         if (! is_string($raw) || trim($raw) === '') {
             return null;
         }
 
+        // Agar bu bir xil bo'lib yozilib qolgan xato rasm bo'lsa, uni hisobga olmaymiz
+        if (str_contains($raw, '1790422172657') || str_contains($raw, 'Screenshot_2026_09_26_072402')) {
+            return null;
+        }
+
         if (str_starts_with($raw, '[')) {
             $decoded = json_decode($raw, true);
             if (is_array($decoded)) {
-                return $this->extractCloudinaryUrl($decoded);
+                return $this->extractOriginalCloudinaryUrl($decoded);
             }
         }
 
@@ -362,6 +370,7 @@ class FixBrokenImages extends Command
 
     /**
      * Book.uz API dan kitob nomi orqali qidirish va nom mosligini qat'iy tekshirish.
+     * Lotin va Kirill yozuvlaridagi farqlarni avtomatik hisobga oladi.
      */
     private function searchBookUzByTitle(string $expectedTitle): ?string
     {
@@ -370,39 +379,48 @@ class FixBrokenImages extends Command
             return null;
         }
 
-        try {
-            $response = $this->http->get(self::BOOKUZ_API.'/products', [
-                'query' => [
-                    'keyword' => $cleanSearch,
-                    'limit' => 5,
-                ],
-            ]);
+        // Qidiruv so'zlari: asl tozalangan nom, agar natija chiqmasa Kirill varianti
+        $queries = [$cleanSearch];
+        $cyrillic = $this->latinToCyrillic($cleanSearch);
+        if ($cyrillic !== $cleanSearch) {
+            $queries[] = $cyrillic;
+        }
 
-            if ($response->getStatusCode() !== 200) {
-                return null;
-            }
+        foreach ($queries as $query) {
+            try {
+                $response = $this->http->get(self::BOOKUZ_API.'/products', [
+                    'query' => [
+                        'keyword' => $query,
+                        'limit' => 5,
+                    ],
+                ]);
 
-            $data = json_decode((string) $response->getBody(), true);
-            $products = $data['data']['products'] ?? [];
-
-            foreach ($products as $p) {
-                $rawTitle = $p['title'] ?? null;
-                $foundTitle = is_array($rawTitle) ? ($rawTitle['uz'] ?? reset($rawTitle)) : (string) $rawTitle;
-
-                // Nom mosligini qat'iy tekshiramiz — noto'g'ri kitob olinmasin!
-                if (! $this->isTitleMatch($expectedTitle, (string) $foundTitle)) {
+                if ($response->getStatusCode() !== 200) {
                     continue;
                 }
 
-                $img = $p['image'] ?? null;
-                if (! is_string($img) || blank($img)) {
-                    continue;
-                }
+                $data = json_decode((string) $response->getBody(), true);
+                $products = $data['data']['products'] ?? [];
 
-                return $this->formatRemoteImage($img);
+                foreach ($products as $p) {
+                    $rawTitle = $p['title'] ?? null;
+                    $foundTitle = is_array($rawTitle) ? ($rawTitle['uz'] ?? reset($rawTitle)) : (string) $rawTitle;
+
+                    // Nom mosligini qat'iy tekshiramiz — noto'g'ri kitob olinmasin!
+                    if (! $this->isTitleMatch($expectedTitle, (string) $foundTitle)) {
+                        continue;
+                    }
+
+                    $img = $p['image'] ?? null;
+                    if (! is_string($img) || blank($img)) {
+                        continue;
+                    }
+
+                    return $this->formatRemoteImage($img);
+                }
+            } catch (\Throwable $e) {
+                Log::debug("[fix_broken_images] Book.uz Title search error: {$e->getMessage()}");
             }
-        } catch (\Throwable $e) {
-            Log::debug("[fix_broken_images] Book.uz Title search error: {$e->getMessage()}");
         }
 
         return null;
@@ -413,7 +431,6 @@ class FixBrokenImages extends Command
      */
     private function formatRemoteImage(string $url): string
     {
-        // Agar eski dd9xb0bqw bo'lsa, Book.uz ning kesh proksisiga o'giramiz
         if (str_contains($url, self::BROKEN_SUBSTRING) && ! str_contains($url, 'book.uz/_next/image')) {
             return 'https://book.uz/_next/image?url='.urlencode($url).'&w=640&q=75';
         }
@@ -451,12 +468,12 @@ class FixBrokenImages extends Command
     }
 
     /**
-     * Ikki kitob nomining o'zaro mosligini hisoblash.
+     * Ikki kitob nomining o'zaro mosligini hisoblash (Lotin va Kirillni birxillashtirgan holda).
      */
     public function isTitleMatch(string $expectedTitle, string $actualTitle): bool
     {
-        $c1 = $this->cleanTitle($expectedTitle);
-        $c2 = $this->cleanTitle($actualTitle);
+        $c1 = $this->toComparableLatin($expectedTitle);
+        $c2 = $this->toComparableLatin($actualTitle);
 
         if ($c1 === '' || $c2 === '') {
             return false;
@@ -485,7 +502,43 @@ class FixBrokenImages extends Command
     }
 
     /**
-     * Kitob nomini taqqoslash uchun tozalash.
+     * Taqqoslash uchun Lotin yozuviga keltirish va tozalash.
+     */
+    private function toComparableLatin(string $title): string
+    {
+        $clean = $this->cleanTitle($title);
+
+        $map = [
+            'ш' => 'sh', 'ч' => 'ch', 'ё' => 'yo', 'ю' => 'yu', 'я' => 'ya', 'ў' => 'o', 'ғ' => 'g',
+            'а' => 'a', 'б' => 'b', 'в' => 'v', 'г' => 'g', 'д' => 'd', 'ж' => 'j', 'з' => 'z', 'и' => 'i',
+            'й' => 'y', 'к' => 'k', 'л' => 'l', 'м' => 'm', 'н' => 'n', 'о' => 'o', 'р' => 'r',
+            'с' => 's', 'т' => 't', 'у' => 'u', 'ф' => 'f', 'х' => 'x', 'ҳ' => 'h', 'ц' => 'ts', 'щ' => 'sh',
+            'ъ' => '', 'ь' => '', 'э' => 'e', 'е' => 'e', 'қ' => 'q',
+        ];
+
+        $translit = strtr($clean, $map);
+
+        return trim(preg_replace('/\s+/', ' ', $translit));
+    }
+
+    /**
+     * Lotindan Kirillga o'girish.
+     */
+    private function latinToCyrillic(string $text): string
+    {
+        $map = [
+            'sh' => 'ш', 'ch' => 'ч', 'yo' => 'ё', 'yu' => 'ю', 'ya' => 'я', 'ye' => 'е',
+            'o‘' => 'ў', 'o\'' => 'ў', 'g‘' => 'ғ', 'g\'' => 'ғ',
+            'a' => 'а', 'b' => 'б', 'd' => 'д', 'e' => 'е', 'f' => 'ф', 'g' => 'г', 'h' => 'ҳ', 'i' => 'и',
+            'j' => 'ж', 'k' => 'к', 'l' => 'л', 'm' => 'м', 'n' => 'н', 'o' => 'о', 'p' => 'п', 'q' => 'қ',
+            'r' => 'р', 's' => 'с', 't' => 'т', 'u' => 'у', 'v' => 'в', 'x' => 'х', 'y' => 'й', 'z' => 'з',
+        ];
+
+        return strtr(mb_strtolower($text), $map);
+    }
+
+    /**
+     * Kitob nomini tozalash.
      */
     private function cleanTitle(string $title): string
     {
