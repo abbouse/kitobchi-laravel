@@ -41,6 +41,19 @@ class HomeLayoutTest extends TestCase
         $this->assertNotContains('new_arrivals', $keys);
     }
 
+    public function test_titles_follow_app_locale_header(): void
+    {
+        $this->makeBook($this->makeSeller(), $this->makeCategory());
+
+        $title = fn (string $locale) => collect(
+            $this->withHeader('X-App-Locale', $locale)->getJson('/api/v1/kitobchi/home/layout')->json('data.sections')
+        )->firstWhere('key', 'new_arrivals')['title'] ?? null;
+
+        $this->assertSame('新着', $title('ja'));
+        $this->assertSame('Новинки', $title('ru'));
+        $this->assertSame('Yangi kitoblar', $title('uz'));
+    }
+
     public function test_shops_are_paged(): void
     {
         $category = $this->makeCategory();

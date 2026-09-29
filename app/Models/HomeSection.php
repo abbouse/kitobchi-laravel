@@ -29,7 +29,7 @@ class HomeSection extends Model
     ];
 
     protected $fillable = [
-        'key', 'type', 'title_uz', 'title_ru', 'title_en',
+        'key', 'type', 'title_uz', 'title_ru', 'title_en', 'title_ja',
         'is_active', 'position', 'item_limit', 'settings',
     ];
 
@@ -52,6 +52,7 @@ class HomeSection extends Model
         $value = match ($locale) {
             'ru' => $this->title_ru,
             'en' => $this->title_en,
+            'ja' => $this->title_ja,
             default => $this->title_uz,
         };
 

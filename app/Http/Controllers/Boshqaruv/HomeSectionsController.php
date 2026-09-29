@@ -36,6 +36,7 @@ class HomeSectionsController extends Controller
                 'titleUz' => $s->title_uz,
                 'titleRu' => $s->title_ru,
                 'titleEn' => $s->title_en,
+                'titleJa' => $s->title_ja,
                 'isActive' => (bool) $s->is_active,
                 'position' => (int) $s->position,
                 'itemLimit' => (int) $s->item_limit,
@@ -62,6 +63,7 @@ class HomeSectionsController extends Controller
             'title_uz' => ['required', 'string', 'max:120'],
             'title_ru' => ['nullable', 'string', 'max:120'],
             'title_en' => ['nullable', 'string', 'max:120'],
+            'title_ja' => ['nullable', 'string', 'max:120'],
             'item_limit' => ['nullable', 'integer', 'min:4', 'max:30'],
             'category_id' => ['required_if:type,category', 'nullable', 'integer', 'exists:book_categories,id'],
             'collection_id' => ['required_if:type,collection', 'nullable', 'integer'],
@@ -81,6 +83,7 @@ class HomeSectionsController extends Controller
             'title_uz' => $data['title_uz'],
             'title_ru' => $data['title_ru'] ?? null,
             'title_en' => $data['title_en'] ?? null,
+            'title_ja' => $data['title_ja'] ?? null,
             'is_active' => true,
             'position' => min($shopsPos - 1, $maxPos + 10),
             'item_limit' => (int) ($data['item_limit'] ?? 12),
@@ -96,13 +99,14 @@ class HomeSectionsController extends Controller
             'title_uz' => ['nullable', 'string', 'max:120'],
             'title_ru' => ['nullable', 'string', 'max:120'],
             'title_en' => ['nullable', 'string', 'max:120'],
+            'title_ja' => ['nullable', 'string', 'max:120'],
             'is_active' => ['nullable', 'boolean'],
             'item_limit' => ['nullable', 'integer', 'min:4', 'max:30'],
             'category_id' => ['nullable', 'integer', 'exists:book_categories,id'],
             'collection_id' => ['nullable', 'integer'],
         ]);
 
-        $fill = collect($data)->only(['title_uz', 'title_ru', 'title_en', 'is_active', 'item_limit'])
+        $fill = collect($data)->only(['title_uz', 'title_ru', 'title_en', 'title_ja', 'is_active', 'item_limit'])
             ->filter(fn ($v) => $v !== null)->all();
         if ($section->type === 'category' && ! empty($data['category_id'])) {
             $fill['settings'] = ['category_id' => (int) $data['category_id']];

@@ -11,6 +11,7 @@ type Section = {
   titleUz?: string | null;
   titleRu?: string | null;
   titleEn?: string | null;
+  titleJa?: string | null;
   isActive: boolean;
   position: number;
   itemLimit: number;
@@ -114,6 +115,10 @@ export default function HomeSections() {
       <div className="col-md-4">
         <label className="form-label">Sarlavha (en)</label>
         <input name="title_en" className="form-control" defaultValue={s.titleEn || ''} />
+      </div>
+      <div className="col-md-4">
+        <label className="form-label">Sarlavha (ja)</label>
+        <input name="title_ja" className="form-control" defaultValue={s.titleJa || ''} />
       </div>
       {!NO_LIMIT.includes(s.type) ? (
         <div className="col-md-4">
@@ -254,6 +259,10 @@ export default function HomeSections() {
               <div className="col-md-4">
                 <label className="form-label">Sarlavha (en)</label>
                 <input name="title_en" className="form-control" />
+              </div>
+              <div className="col-md-4">
+                <label className="form-label">Sarlavha (ja)</label>
+                <input name="title_ja" className="form-control" />
               </div>
               <div className="col-md-4">
                 <label className="form-label">Nechta ko'rsatilsin</label>

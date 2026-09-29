@@ -168,7 +168,7 @@ class HomeLayoutController extends Controller
             return BookCategories::query()
                 ->where('is_active', 1)
                 ->whereIn('id', $counts->keys()->all())
-                ->get(['id', 'name_uz', 'name_ru', 'name_en', 'icon'])
+                ->get(['id', 'name_uz', 'name_ru', 'name_en', 'name_ja', 'icon'])
                 ->sortByDesc(fn ($c) => (int) ($counts[$c->id] ?? 0))
                 ->take($limit)
                 ->map(fn ($c) => [
@@ -224,8 +224,18 @@ class HomeLayoutController extends Controller
 
     private function locale(Request $request): string
     {
-        $raw = strtolower((string) ($request->query('lang') ?: $request->header('Accept-Language', 'uz')));
+        // Ilova tilni X-App-Locale da yuboradi (uz-Cyrl ham 'uz' bo'lib keladi —
+        // kirillga o'girish ilovaning o'zida). SetApiLocale ham shu tartibda.
+        $raw = strtolower((string) ($request->query('lang')
+            ?: $request->header('X-App-Locale')
+            ?: $request->header('Accept-Language')
+            ?: app()->getLocale()));
+        foreach (['ru', 'en', 'ja'] as $code) {
+            if (str_starts_with($raw, $code)) {
+                return $code;
+            }
+        }
 
-        return str_starts_with($raw, 'ru') ? 'ru' : (str_starts_with($raw, 'en') ? 'en' : 'uz');
+        return 'uz';
     }
 }
