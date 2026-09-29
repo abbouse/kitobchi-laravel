@@ -66,6 +66,22 @@ class ProcessEditionVideo implements ShouldQueue
                 '-frames:v', '1', '-vf', 'scale=-2:min(720\\,ih)', '-q:v', '4', $disk->path($poster),
             ], 300);
 
+            // Ishlov davomida admin videoni o'chirgan yoki almashtirgan bo'lsa —
+            // tayyorlangan fayllar yetim qolmasin
+            $fresh = BookEditionVideo::query()->find($video->id);
+            if (! $fresh || $fresh->original_path !== $video->original_path) {
+                $disk->delete([$sd, $hd, $poster]);
+                if (! $fresh) {
+                    $disk->delete($video->original_path);
+                    if ($disk->exists($dir) && empty($disk->allFiles($dir))) {
+                        $disk->deleteDirectory($dir);
+                    }
+                }
+
+                return;
+            }
+            $video = $fresh;
+
             $old = [$video->sd_path, $video->hd_path, $video->poster_path, $video->original_path];
             $sdMeta = $this->probe($ffprobe, $disk->path($sd));
 

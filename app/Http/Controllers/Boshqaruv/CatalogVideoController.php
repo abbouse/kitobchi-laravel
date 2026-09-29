@@ -65,11 +65,11 @@ class CatalogVideoController extends Controller
     {
         $video = BookEditionVideo::query()->where('edition_id', $edition)->first();
         if ($video) {
-            Storage::disk('public')->delete(array_filter([
-                $video->original_path, $video->sd_path, $video->hd_path, $video->poster_path,
-            ]));
             $video->delete();
         }
+        // Papka bilan birga: asl fayl, 480p, 720p, poster va ishlov jarayonida
+        // qolgan har qanday oraliq fayl
+        Storage::disk('public')->deleteDirectory("edition-videos/{$edition}");
 
         return back()->with('success', "Video o'chirildi");
     }

@@ -55,5 +55,9 @@ class EditionVideoTest extends TestCase
 
         $this->actingAs($admin, 'panel')->delete("/boshqaruv/catalog/{$book->edition_id}/video")->assertSessionHas('success');
         $this->assertNull($this->getJson("/api/v1/kitobchi/share/product/{$book->id}?type=book")->json('data.video'));
+        $this->assertDatabaseMissing('book_edition_videos', ['edition_id' => $book->edition_id]);
+        // Tag-tugi bilan: papkada hech narsa qolmaydi
+        $this->assertFalse(Storage::disk('public')->exists("edition-videos/{$book->edition_id}"));
+        Storage::disk('public')->assertMissing([$video->sd_path, $video->hd_path, $video->poster_path]);
     }
 }
