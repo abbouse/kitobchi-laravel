@@ -52,6 +52,7 @@ class EditionVideoTest extends TestCase
         $this->assertNotNull($data);
         $this->assertStringContainsString('sd_', $data['sd']);
         $this->assertStringContainsString('poster_', $data['poster']);
+        $this->assertTrue($this->getJson("/api/v1/kitobchi/share/product/{$book->id}?type=book")->json('data.has_video'));
 
         $this->actingAs($admin, 'panel')->delete("/boshqaruv/catalog/{$book->edition_id}/video")->assertSessionHas('success');
         $this->assertNull($this->getJson("/api/v1/kitobchi/share/product/{$book->id}?type=book")->json('data.video'));

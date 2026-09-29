@@ -33,6 +33,8 @@ class ProductPayloadFormatter
             'product_type' => $type,
             'name' => $product->name,
             'author' => $isBook ? ($product->author ?? null) : null,
+            // Kartadagi "video" belgisi uchun (bitta keshlangan ro'yxatdan, so'rovsiz)
+            'has_video' => $isBook && \App\Models\BookEditionVideo::editionHasVideo($product->edition_id ?? null),
             'material' => $isBook ? null : ($product->material ?? null),
             'category_id' => $product->category_id ?? null,
             'images' => !empty($imageUrls['original']) ? $imageUrls['original'] : $normalizedImages,

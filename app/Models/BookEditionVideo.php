@@ -35,7 +35,11 @@ class BookEditionVideo extends Model
 
     protected static function booted(): void
     {
-        $forget = fn (BookEditionVideo $v) => Cache::forget(self::cacheKey((int) $v->edition_id));
+        $forget = function (BookEditionVideo $v) {
+            Cache::forget(self::cacheKey((int) $v->edition_id));
+            Cache::forget(self::READY_IDS_KEY);
+            self::$readyIds = null;
+        };
         static::saved($forget);
         static::deleted($forget);
     }
@@ -43,6 +47,33 @@ class BookEditionVideo extends Model
     public function edition(): BelongsTo
     {
         return $this->belongsTo(BookEdition::class, 'edition_id');
+    }
+
+    public const READY_IDS_KEY = 'edition_video:ready_ids';
+
+    /** Jarayon ichida qisqa muddat eslab qolinadi (uzoq ishlaydigan worker'larda ham eskirmaydi) */
+    private static ?array $readyIds = null;
+    private static int $readyIdsAt = 0;
+
+    /** Tayyor videosi bor nashrlar (kartalardagi belgi uchun, 10 daqiqa kesh) */
+    public static function editionHasVideo($editionId): bool
+    {
+        if (! $editionId) {
+            return false;
+        }
+        if (self::$readyIds === null || time() - self::$readyIdsAt > 60) {
+            self::$readyIdsAt = time();
+            try {
+                self::$readyIds = Cache::remember(self::READY_IDS_KEY, 600, fn () => array_fill_keys(
+                    self::query()->where('status', self::STATUS_READY)->pluck('edition_id')->map(fn ($id) => (int) $id)->all(),
+                    true
+                ));
+            } catch (\Throwable) {
+                self::$readyIds = [];
+            }
+        }
+
+        return isset(self::$readyIds[(int) $editionId]);
     }
 
     public static function cacheKey(int $editionId): string
