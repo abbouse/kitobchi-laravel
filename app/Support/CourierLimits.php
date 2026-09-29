@@ -18,6 +18,15 @@ class CourierLimits
 
     public const MAX_ACTIVE_ORDERS = 10;
 
+    /** Kuryer shuncha soatdan beri "yetkazilmoqda"da tursa — qotib qolgan. */
+    public const STUCK_IN_DELIVERY_HOURS = 24;
+
+    /** Buyurtma shuncha soat kuryersiz kutsa — qotib qolgan. */
+    public const STUCK_PENDING_HOURS = 3;
+
+    /** Kuryer shuncha daqiqa ichida joylashuv/holat yubormasa — online emas. */
+    public const ONLINE_FRESH_MINUTES = 15;
+
     private static ?int $cached = null;
 
     /** Bir vaqtda ruxsat etilgan faol buyurtmalar soni. */
@@ -40,6 +49,7 @@ class CourierLimits
     public static function flush(): void
     {
         self::$cached = null;
+        self::$attemptColumns = null;
     }
 
     /** Kuryerning hozirgi faol (yetkazilayotgan) buyurtmalari soni. */
@@ -54,6 +64,56 @@ class CourierLimits
                             ->where('status', CourierOrderStatusCode::IN_DELIVERY->legacy());
                     });
             })
+            // Ertaga qayta yetkaziladigan kitoblar bugungi limitni band qilmaydi
+            ->when(self::hasAttemptColumns(), fn ($q) => $q->where(fn ($n) => $n
+                ->whereNull('next_attempt_at')
+                ->orWhere('next_attempt_at', '<=', now())))
             ->count();
+    }
+
+    /**
+     * Qotib qolgan kuryer buyurtmalari: uzoq vaqt kuryerda turgan yoki
+     * kuryersiz kutib qolganlar.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder<CourierOrder>  $query
+     */
+    public static function applyStuckScope($query)
+    {
+        return $query->where(function ($outer) {
+            $outer->where(function ($q) {
+                $q->where('status_code', CourierOrderStatusCode::IN_DELIVERY->value)
+                    ->where('updated_at', '<', now()->subHours(self::STUCK_IN_DELIVERY_HOURS));
+                if (self::hasAttemptColumns()) {
+                    // Ertaga qayta urinish belgilangan buyurtma vaqti kelmaguncha qotgan emas
+                    $q->where(fn ($n) => $n->whereNull('next_attempt_at')->orWhere('next_attempt_at', '<', now()));
+                }
+            })->when(self::hasAttemptColumns(), fn ($o) => $o->orWhere(fn ($q) => $q
+                ->where('status_code', CourierOrderStatusCode::IN_DELIVERY->value)
+                ->whereNotNull('return_required_at')))
+            ->orWhere(function ($q) {
+                $q->whereNull('courier_id')
+                    ->where('status_code', CourierOrderStatusCode::PENDING->value)
+                    ->where('created_at', '<', now()->subHours(self::STUCK_PENDING_HOURS));
+            });
+        });
+    }
+
+    /** Haqiqatan online kuryerlar (tasdiqlangan, online va yaqinda signal bergan). */
+    public static function onlineCouriersQuery()
+    {
+        $since = now()->subMinutes(self::ONLINE_FRESH_MINUTES);
+
+        return \App\Models\Couriers::query()
+            ->where('status', 'approved')
+            ->where('is_online', true)
+            ->where(fn ($q) => $q->where('location_updated_at', '>=', $since)
+                ->orWhere('availability_updated_at', '>=', $since));
+    }
+
+    private static ?bool $attemptColumns = null;
+
+    public static function hasAttemptColumns(): bool
+    {
+        return self::$attemptColumns ??= Schema::hasColumn('courier_orders', 'next_attempt_at');
     }
 }

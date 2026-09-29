@@ -28,6 +28,9 @@ class CourierOrder extends Model
 
     protected $casts = [
         'picked_up_at' => 'datetime',
+        'next_attempt_at' => 'datetime',
+        'return_required_at' => 'datetime',
+        'delivery_attempts' => 'integer',
         'settled_amount' => 'integer',
         'settled_at' => 'datetime',
     ];

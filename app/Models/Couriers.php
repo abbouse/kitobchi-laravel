@@ -13,6 +13,32 @@ class Couriers extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
+    /**
+     * Ishlashga ruxsat: tasdiqlangan va (do'kon kuryeri bo'lsa) do'kon
+     * tomonidan olib tashlanmagan.
+     */
+    public function canWork(): bool
+    {
+        if ($this->status !== 'approved') {
+            return false;
+        }
+
+        return ! ($this->seller_id && $this->store_courier_hidden_at !== null);
+    }
+
+    protected static function booted(): void
+    {
+        // Bloklansa / rad etilsa: darhol oflayn va barcha sessiyalar yopiladi
+        static::updated(function (Couriers $courier) {
+            if (($courier->wasChanged('status') || $courier->wasChanged('store_courier_hidden_at')) && ! $courier->canWork()) {
+                $courier->tokens()->delete();
+                if ($courier->is_online) {
+                    $courier->forceFill(['is_online' => false, 'availability_updated_at' => now()])->saveQuietly();
+                }
+            }
+        });
+    }
+
     protected $table = 'couriers';
 
     protected $fillable = [

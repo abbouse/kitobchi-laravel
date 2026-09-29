@@ -8,7 +8,7 @@ Route::post('forgot', [CourierAuthController::class, 'forgot'])->middleware('thr
 Route::post('contact-request', [CourierAuthController::class, 'contactRequest'])->middleware('throttle:registration-light');
 
 // Kuryer funksiyalari
-Route::middleware('auth:courier')->group(function () {
+Route::middleware(['auth:courier', \App\Http\Middleware\EnsureCourierActive::class])->group(function () {
     Route::post('logout', [CourierAuthController::class, 'logout']);
     Route::get('devices', [CourierController::class, 'getDevices']);
     Route::post('devices/remove-device', [CourierController::class, 'removeDevice']);
@@ -34,6 +34,9 @@ Route::middleware('auth:courier')->group(function () {
 
     Route::get('orders/available', [CourierOrderController::class, 'getAvailableOrders']);
     Route::post('orders/confirm/{id}', [CourierOrderController::class, 'confirmOrder']);
+    Route::post('orders/{id}/release', [CourierOrderController::class, 'releaseOrder'])->middleware('throttle:20,1');
+    Route::post('orders/{id}/attempt-failed', [CourierOrderController::class, 'attemptFailed'])->middleware('throttle:20,1');
+    Route::get('orders/attempt-reasons', [CourierOrderController::class, 'attemptReasons']);
     Route::get('orders/view/{id}', [CourierOrderController::class, 'showOrder']);
     Route::get('orders/my', [CourierOrderController::class, 'myOrders']);
     Route::get('orders/history', [CourierOrderController::class, 'orderHistory']);

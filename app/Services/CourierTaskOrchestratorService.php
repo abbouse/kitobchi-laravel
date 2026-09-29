@@ -182,6 +182,92 @@ class CourierTaskOrchestratorService
         return [];
     }
 
+    /**
+     * Buyurtmaning ochiq topshiriqlarini bekor qiladi va har biri uchun
+     * kuryerning naqd (COD) bandligini bo'shatadi. Avval ommaviy UPDATE
+     * ishlatilib, band qilingan summa kuryerda abadiy "osilib" qolardi.
+     */
+    public function cancelOpenTasks(Sold $order): void
+    {
+        $tasks = CourierTask::query()
+            ->where('order_id', $order->id)
+            ->whereNotIn('status_code', [
+                CourierTaskStatusCode::COMPLETED->value,
+                CourierTaskStatusCode::CANCELLED->value,
+                CourierTaskStatusCode::FAILED->value,
+            ])
+            ->get();
+
+        foreach ($tasks as $task) {
+            if ($task->is_cod && $task->cod_reserved_at && ! $task->cod_released_at) {
+                $this->codCapacityService->releaseReservation($task);
+                $task->refresh();
+            }
+            $task->forceFill(['status_code' => CourierTaskStatusCode::CANCELLED->value])->save();
+        }
+    }
+
+    /**
+     * Kuryerni buyurtmadan bo'shatadi: uning (hali olib ketilmagan)
+     * topshiriqlari ochiq holatga qaytadi, COD bandligi bo'shaydi.
+     *
+     * @return Collection<int, CourierTask> bo'shatilgan topshiriqlar
+     *
+     * @throws \RuntimeException kuryer mahsulotni allaqachon olib ketgan bo'lsa
+     */
+    public function releaseCourierTasks(Sold $order, int $courierId, bool $allowPickedUp = false, array $audit = []): Collection
+    {
+        return DB::transaction(function () use ($order, $courierId, $allowPickedUp, $audit) {
+            $tasks = CourierTask::query()
+                ->where('order_id', $order->id)
+                ->where('courier_id', $courierId)
+                ->whereIn('status_code', [
+                    CourierTaskStatusCode::ACCEPTED->value,
+                    CourierTaskStatusCode::ARRIVED_AT_PICKUP->value,
+                    CourierTaskStatusCode::PICKED_UP->value,
+                ])
+                ->lockForUpdate()
+                ->get();
+
+            if (! $allowPickedUp && $tasks->contains(fn (CourierTask $t) => $t->status_code === CourierTaskStatusCode::PICKED_UP->value)) {
+                throw new \RuntimeException("Buyurtma allaqachon olib ketilgan — uni bo'shatib bo'lmaydi.");
+            }
+
+            foreach ($tasks as $task) {
+                if ($task->is_cod && $task->cod_reserved_at && ! $task->cod_released_at) {
+                    $this->codCapacityService->releaseReservation($task);
+                    $task->refresh();
+                }
+
+                $history = $task->meta['releases'] ?? [];
+                $history[] = array_merge([
+                    'courier_id' => $courierId,
+                    'status' => $task->status_code,
+                    'at' => now()->toIso8601String(),
+                ], $audit);
+                $task->meta = array_merge($task->meta ?? [], ['releases' => array_slice($history, -10)]);
+                $this->resetToOpen($task);
+                $task->save();
+            }
+
+            return $tasks;
+        });
+    }
+
+    private function resetToOpen(CourierTask $task): void
+    {
+        $task->courier_id = null;
+        $task->status_code = CourierTaskStatusCode::ASSIGNED->value;
+        $task->assigned_at = now();
+        $task->accepted_at = null;
+        $task->arrived_at = null;
+        $task->picked_up_at = null;
+        $task->dropped_off_at = null;
+        $task->completed_at = null;
+        $task->cod_reserved_at = null;
+        $task->cod_released_at = null;
+    }
+
     public function markSellerHandover(Sold $order, ?int $sellerId = null, ?int $courierId = null): void
     {
         $order->loadMissing('fulfillment');
@@ -211,6 +297,28 @@ class CourierTaskOrchestratorService
             $task->status_code = CourierTaskStatusCode::PICKED_UP->value;
             $task->picked_up_at = now();
             $task->save();
+        }
+
+        // Ko'p do'konli buyurtma: hamma do'kon topshirmaguncha bosqich
+        // oldinga siljimaydi; hub allaqachon qabul qilgan bo'lsa ortga ham
+        // qaytmaydi (avval ikkinchi do'kon skanerlaganda holat
+        // "do'kondan olindi"ga qaytib qolardi).
+        $stillWaiting = CourierTask::query()
+            ->where('order_id', $order->id)
+            ->whereIn('leg', [CourierTaskLeg::FIRST_MILE->value, CourierTaskLeg::DIRECT_DELIVERY->value])
+            ->whereIn('status_code', [
+                CourierTaskStatusCode::ASSIGNED->value,
+                CourierTaskStatusCode::ACCEPTED->value,
+                CourierTaskStatusCode::ARRIVED_AT_PICKUP->value,
+            ])
+            ->exists();
+        $earlyStatuses = [
+            null,
+            FulfillmentStatusCode::AWAITING_SELLER_PREP->value,
+            FulfillmentStatusCode::READY_FOR_PICKUP->value,
+        ];
+        if ($stillWaiting || ! in_array($fulfillment->status_code, $earlyStatuses, true)) {
+            return;
         }
 
         if ($fulfillment->fulfillment_mode === FulfillmentMode::DIRECT_COURIER->value) {
@@ -271,6 +379,38 @@ class CourierTaskOrchestratorService
         if (! $order) {
             return;
         }
+
+        // Kitob hubda — do'konlar topshirgan hisoblanadi. Aks holda keyin
+        // "yuborish"da buyurtma "yetkazilmoqda"ga o'tmay qolardi.
+        \App\Models\SellerOrder::query()
+            ->where('order_id', $order->id)
+            ->whereIn('status_code', [
+                \App\Enums\SellerOrderStatusCode::NEW->value,
+                \App\Enums\SellerOrderStatusCode::ACCEPTED->value,
+            ])
+            ->update([
+                'status' => \App\Enums\SellerOrderStatusCode::HANDED_TO_COURIER->legacy(),
+                'status_code' => \App\Enums\SellerOrderStatusCode::HANDED_TO_COURIER->value,
+                'updated_at' => now(),
+            ]);
+
+        // Hech kim olmagan first-mile topshiriqlar (kitobni do'kon o'zi
+        // olib kelgan) endi kerak emas — kuryer ro'yxatida qolib ketmasin
+        CourierTask::query()
+            ->where('order_id', $order->id)
+            ->where('leg', CourierTaskLeg::FIRST_MILE->value)
+            ->whereNull('courier_id')
+            ->where('status_code', CourierTaskStatusCode::ASSIGNED->value)
+            ->update(['status_code' => CourierTaskStatusCode::CANCELLED->value, 'updated_at' => now()]);
+        CourierOrder::query()
+            ->where('order_id', $order->id)
+            ->whereNull('courier_id')
+            ->where('status_code', CourierOrderStatusCode::PENDING->value)
+            ->update([
+                'status' => CourierOrderStatusCode::CANCELLED->legacy(),
+                'status_code' => CourierOrderStatusCode::CANCELLED->value,
+                'updated_at' => now(),
+            ]);
 
         $tasks = CourierTask::query()
             ->where('order_id', $order->id)
@@ -366,6 +506,34 @@ class CourierTaskOrchestratorService
         }
     }
 
+    /**
+     * Hub kitobni last-mile kuryerga topshirdi: topshiriq "olindi",
+     * fulfillment "yetkazilmoqda".
+     */
+    public function markLastMilePickedUp(OrderFulfillment $fulfillment): ?CourierTask
+    {
+        $task = CourierTask::query()
+            ->where('order_id', $fulfillment->order_id)
+            ->where('fulfillment_id', $fulfillment->id)
+            ->where('leg', CourierTaskLeg::LAST_MILE->value)
+            ->whereNotNull('courier_id')
+            ->whereIn('status_code', [
+                CourierTaskStatusCode::ACCEPTED->value,
+                CourierTaskStatusCode::ARRIVED_AT_PICKUP->value,
+            ])
+            ->latest('id')
+            ->first();
+
+        if ($task) {
+            $task->forceFill([
+                'status_code' => CourierTaskStatusCode::PICKED_UP->value,
+                'picked_up_at' => now(),
+            ])->save();
+        }
+
+        return $task;
+    }
+
     public function ensureLastMileTask(OrderFulfillment $fulfillment): ?CourierTask
     {
         $fulfillment->loadMissing('order', 'hub');
@@ -444,6 +612,18 @@ class CourierTaskOrchestratorService
             'leg' => $leg->value,
         ]);
 
+        $revive = $task->exists && $task->status_code === CourierTaskStatusCode::CANCELLED->value;
+        $open = ! $task->exists || $revive || (
+            $task->status_code === CourierTaskStatusCode::ASSIGNED->value && $task->courier_id === null
+        );
+
+        // Kuryer qabul qilgan (yoki yakunlangan) topshiriq qayta yozilmaydi:
+        // avval har GET so'rovda COD summasi va to'lov qayta hisoblanib,
+        // band qilingan summa bilan bo'shatiladigan summa farq qilib qolardi.
+        if (! $open) {
+            return $task;
+        }
+
         $task->hub_id = $fulfillment->hub_id;
         $task->pickup_address = $pickupAddress;
         $task->dropoff_address = $dropoffAddress;
@@ -456,18 +636,13 @@ class CourierTaskOrchestratorService
             'legacy_requested_fee_amount' => $feeAmount,
         ]);
 
-        if (! $task->exists || $task->status_code === CourierTaskStatusCode::CANCELLED->value) {
-            $task->courier_id = null;
-            $task->status_code = CourierTaskStatusCode::ASSIGNED->value;
-            $task->assigned_at = now();
-            $task->accepted_at = null;
-            $task->arrived_at = null;
-            $task->picked_up_at = null;
-            $task->dropped_off_at = null;
-            $task->completed_at = null;
+        if (! $task->exists || $revive) {
+            $this->resetToOpen($task);
         }
 
-        $task->save();
+        if ($task->isDirty()) {
+            $task->save();
+        }
 
         return $task;
     }

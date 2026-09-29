@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Boshqaruv;
 
 use App\Enums\CourierOrderStatusCode;
+use App\Enums\CourierTaskStatusCode;
 use App\Enums\FulfillmentMode;
 use App\Enums\HubStaffRole;
 use App\Enums\OrderStatusCode;
@@ -7574,7 +7575,12 @@ PROMPT;
             'photo' => $this->assetFromStorage($courier->photo),
             'region' => $courier->region,
             'status' => $courier->status,
-            'isOnline' => (bool) ($courier->is_online ?? false),
+            'isOnline' => (bool) ($courier->is_online ?? false)
+                && (($courier->location_updated_at?->gte(now()->subMinutes(\App\Support\CourierLimits::ONLINE_FRESH_MINUTES)) ?? false)
+                    || ($courier->availability_updated_at?->gte(now()->subMinutes(\App\Support\CourierLimits::ONLINE_FRESH_MINUTES)) ?? false)),
+            'activeOrders' => Schema::hasTable('courier_orders') ? \App\Support\CourierLimits::activeOrdersCount((int) $courier->id) : 0,
+            'maxActiveOrders' => \App\Support\CourierLimits::maxActiveOrders(),
+            'locationAgeMinutes' => $courier->location_updated_at ? (int) $courier->location_updated_at->diffInMinutes(now()) : null,
             'availabilityUpdatedAt' => $this->dateTime($courier->availability_updated_at),
             'verificationStatus' => $courier->verification_status,
             'verificationLabel' => $courier->verification_label,
@@ -7678,6 +7684,15 @@ PROMPT;
             'pending' => (int) Couriers::query()->where('status', 'pending')->count(),
             'rejected' => (int) Couriers::query()->where('status', 'rejected')->count(),
             'blocked' => (int) Couriers::query()->where('status', 'blocked')->count(),
+            // Butun flot bo'yicha (faqat joriy sahifa emas), eskirgan "online"larsiz
+            'online' => (int) \App\Support\CourierLimits::onlineCouriersQuery()->count(),
+            'busy' => Schema::hasTable('courier_orders') ? (int) CourierOrder::query()
+                ->where('status_code', CourierOrderStatusCode::IN_DELIVERY->value)
+                ->whereNotNull('courier_id')
+                ->distinct()
+                ->count('courier_id') : 0,
+            'codReserved' => Schema::hasColumn('couriers', 'cod_reserved_amount')
+                ? (float) Couriers::query()->sum('cod_reserved_amount') : 0,
         ];
     }
 
@@ -7712,7 +7727,8 @@ PROMPT;
         $digits = preg_replace('/\D+/', '', $search) ?: $search;
         $query = CourierOrder::query()
             ->with(['courier:id,first_name,last_name,phone_number,region,status,photo', 'user:id,name,lastname,phone_number', 'order:id,amount,status,paymentStatus,deliveryPrice,deliveryType,address,items,created_at'])
-            ->when($tab !== 'all', fn ($builder) => $builder->where(fn ($nested) => $nested
+            ->when($tab === 'stuck', fn ($builder) => \App\Support\CourierLimits::applyStuckScope($builder))
+            ->when(! in_array($tab, ['all', 'stuck'], true), fn ($builder) => $builder->where(fn ($nested) => $nested
                 ->where('status_code', $tab)
                 ->orWhere(fn ($fallback) => $fallback->whereNull('status_code')->where('status', CourierOrderStatusCode::fromLegacy($tab)->legacy()))))
             ->when($search !== '', fn ($builder) => $builder->where(fn ($nested) => $nested
@@ -7734,6 +7750,7 @@ PROMPT;
             'courierOrders' => $orders->getCollection()->map(fn (CourierOrder $order) => $this->courierOrderPayload($order))->values()->all(),
             'courierOrderPagination' => $this->paginationMeta($orders),
             'courierOrderFilters' => ['tab' => $tab, 'search' => $search],
+            'assignableCouriers' => $this->assignableCouriersPayload(),
         ];
     }
 
@@ -7795,7 +7812,154 @@ PROMPT;
             'penaltyRules' => $this->courierPenaltySuggestions($order),
             'items' => $items->all(),
             'statusUrl' => route('boshqaruv.courier-orders.status', $order),
+            'releaseUrl' => route('boshqaruv.courier-orders.release', $order),
+            'assignUrl' => route('boshqaruv.courier-orders.assign', $order),
+            'canRelease' => $statusCode === CourierOrderStatusCode::IN_DELIVERY->value && $order->courier_id !== null,
+            'canAssign' => in_array($statusCode, [CourierOrderStatusCode::PENDING->value, CourierOrderStatusCode::PAYMENT_PENDING->value], true) && $order->courier_id === null,
+            'taskStatus' => $activeTask?->status_code,
+            'bookWithCourier' => in_array($activeTask?->status_code, [CourierTaskStatusCode::PICKED_UP->value], true),
+            'hoursInStatus' => $order->updated_at ? (int) $order->updated_at->diffInHours(now()) : null,
+            'returnRequired' => ($order->return_required_at ?? null) !== null && $statusCode === CourierOrderStatusCode::IN_DELIVERY->value,
+            'retryUrl' => route('boshqaruv.courier-orders.retry', $order),
+            'isStuck' => (($order->return_required_at ?? null) !== null && $statusCode === CourierOrderStatusCode::IN_DELIVERY->value)
+                || ($statusCode === CourierOrderStatusCode::IN_DELIVERY->value
+                    && $order->updated_at?->lt(now()->subHours(\App\Support\CourierLimits::STUCK_IN_DELIVERY_HOURS))
+                    && ! ($order->next_attempt_at ?? null)?->isFuture())
+                || ($statusCode === CourierOrderStatusCode::PENDING->value && $order->courier_id === null
+                    && $order->created_at?->lt(now()->subHours(\App\Support\CourierLimits::STUCK_PENDING_HOURS))),
+            'deliveryAttempts' => (int) ($order->delivery_attempts ?? 0),
+            'nextAttemptAt' => $this->dateTime($order->next_attempt_at ?? null),
+            'lastAttemptReason' => $order->last_attempt_reason ?? null,
+            'attempts' => Schema::hasTable('courier_delivery_attempts')
+                ? DB::table('courier_delivery_attempts')->where('courier_order_id', $order->id)->orderBy('id')->get()
+                    ->map(fn ($row) => [
+                        'no' => (int) $row->attempt_no,
+                        'reason' => $row->reason,
+                        'reasonLabel' => \App\Support\CourierDeliveryAttempts::reasonLabel((string) $row->reason),
+                        'note' => $row->note,
+                        'nextAttemptAt' => $this->dateTime($row->next_attempt_at),
+                        'date' => $this->dateTime($row->created_at),
+                    ])->values()->all()
+                : [],
+            'releases' => collect(data_get($activeTask?->meta, 'releases', []))->values()->all(),
         ];
+    }
+
+    /** Boshqaruvda qo'lda biriktirish uchun faol kuryerlar (avval online, keyin bo'shlari). */
+    private function assignableCouriersPayload(): array
+    {
+        if (! Schema::hasTable('couriers')) {
+            return [];
+        }
+        $since = now()->subMinutes(\App\Support\CourierLimits::ONLINE_FRESH_MINUTES);
+        $active = Schema::hasTable('courier_orders') ? CourierOrder::query()
+            ->selectRaw('courier_id, COUNT(*) as c')
+            ->where('status_code', CourierOrderStatusCode::IN_DELIVERY->value)
+            ->whereNotNull('courier_id')
+            ->groupBy('courier_id')
+            ->pluck('c', 'courier_id') : collect();
+        $max = \App\Support\CourierLimits::maxActiveOrders();
+
+        return Couriers::query()
+            ->where('status', 'approved')
+            ->when(Schema::hasColumn('couriers', 'store_courier_hidden_at'), fn ($q) => $q->whereNull('store_courier_hidden_at'))
+            ->get(['id', 'first_name', 'last_name', 'phone_number', 'region', 'is_online', 'location_updated_at', 'availability_updated_at', 'seller_id'])
+            ->map(function (Couriers $courier) use ($active, $since, $max) {
+                $online = (bool) $courier->is_online
+                    && (($courier->location_updated_at?->gte($since) ?? false) || ($courier->availability_updated_at?->gte($since) ?? false));
+                $count = (int) ($active[$courier->id] ?? 0);
+
+                return [
+                    'id' => $courier->id,
+                    'name' => trim($courier->first_name.' '.$courier->last_name) ?: 'Kuryer #'.$courier->id,
+                    'phone' => $courier->phone_number,
+                    'region' => $courier->region,
+                    'online' => $online,
+                    'active' => $count,
+                    'max' => $max,
+                    'store' => $courier->seller_id !== null,
+                ];
+            })
+            ->sortBy(fn ($c) => [$c['online'] ? 0 : 1, $c['active'], $c['name']])
+            ->values()
+            ->all();
+    }
+
+    public function releaseCourierOrder(Request $request, CourierOrder $courierOrder): \Illuminate\Http\RedirectResponse
+    {
+        $data = $request->validate([
+            'reason' => ['required', 'string', 'max:64'],
+            'note' => ['nullable', 'string', 'max:1000'],
+            'allow_picked_up' => ['nullable', 'boolean'],
+        ]);
+        if (! $courierOrder->courier_id) {
+            return back()->with('error', 'Bu buyurtmada kuryer yo‘q.');
+        }
+        $sold = Sold::query()->find($courierOrder->order_id);
+        if (! $sold) {
+            return back()->with('error', 'Asosiy buyurtma topilmadi.');
+        }
+        $admin = Auth::guard('panel')->user();
+
+        try {
+            app(\App\Services\CourierAssignmentService::class)->release(
+                $sold,
+                (int) $courierOrder->courier_id,
+                $data['reason'],
+                ['actor' => 'admin', 'admin_id' => $admin?->id, 'note' => $data['note'] ?? null],
+                (bool) ($data['allow_picked_up'] ?? false),
+            );
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage().(($data['allow_picked_up'] ?? false) ? '' : ' Kitob kuryerda bo‘lsa, “majburiy” belgisini yoqing.'));
+        }
+
+        return back()->with('success', 'Kuryer buyurtmadan bo‘shatildi, buyurtma yana kuryerlarga ochildi.');
+    }
+
+    public function retryCourierOrder(Request $request, CourierOrder $courierOrder): \Illuminate\Http\RedirectResponse
+    {
+        $data = $request->validate(['next_attempt_at' => ['nullable', 'date', 'after:now']]);
+        if (CourierOrderStatusCode::fromLegacy($courierOrder->status_code ?: $courierOrder->status) !== CourierOrderStatusCode::IN_DELIVERY) {
+            return back()->with('error', 'Faqat yetkazilayotgan buyurtmaga qayta urinish beriladi.');
+        }
+        app(\App\Services\CourierDeliveryAttemptService::class)->grantRetry(
+            $courierOrder,
+            isset($data['next_attempt_at']) ? \Illuminate\Support\Carbon::parse($data['next_attempt_at']) : null,
+        );
+        if ($courierOrder->courier_id) {
+            app(\App\Services\CourierBroadcaster::class)->notifyCourier((int) $courierOrder->courier_id, 'Qayta yetkazish',
+                "Buyurtma #{$courierOrder->order_id}: operator yana bir urinishga ruxsat berdi (".$courierOrder->next_attempt_at?->format('d.m H:i').').',
+                ['type' => 'order_retry', 'sold_id' => (string) $courierOrder->order_id]);
+        }
+
+        return back()->with('success', 'Qayta urinish belgilandi.');
+    }
+
+    public function assignCourierOrder(Request $request, CourierOrder $courierOrder): \Illuminate\Http\RedirectResponse
+    {
+        $data = $request->validate([
+            'courier_id' => ['required', 'integer', 'exists:couriers,id'],
+            'ignore_limit' => ['nullable', 'boolean'],
+        ]);
+        $sold = Sold::query()->find($courierOrder->order_id);
+        if (! $sold) {
+            return back()->with('error', 'Asosiy buyurtma topilmadi.');
+        }
+        $courier = Couriers::query()->findOrFail((int) $data['courier_id']);
+
+        try {
+            app(\App\Services\CourierAssignmentService::class)->assign($sold, $courier, ! (bool) ($data['ignore_limit'] ?? false));
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        try {
+            app(\App\Services\CourierBroadcaster::class)->notifyAssigned($courier, $sold);
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        return back()->with('success', 'Buyurtma '.trim($courier->first_name.' '.$courier->last_name).' ga biriktirildi.');
     }
 
     private function courierPenaltySuggestions(CourierOrder $order): array
@@ -7897,7 +8061,10 @@ PROMPT;
             return ['all' => 0];
         }
 
-        $counts = ['all' => (int) CourierOrder::query()->count()];
+        $counts = [
+            'all' => (int) CourierOrder::query()->count(),
+            'stuck' => (int) \App\Support\CourierLimits::applyStuckScope(CourierOrder::query())->count(),
+        ];
         foreach (array_keys(AdminOrderStatusSyncService::COURIER_STATUSES) as $status) {
             $counts[$status] = (int) CourierOrder::query()
                 ->where(fn ($query) => $query
@@ -10765,6 +10932,7 @@ PROMPT;
                 'courier_min_fee' => (int) ($settings->courier_min_fee ?? 5000),
                 'seller_courier_min_delivery_price' => (int) ($settings->seller_courier_min_delivery_price ?? 0),
                 'courier_max_active_orders' => (int) ($settings->courier_max_active_orders ?? 3),
+                'courier_max_delivery_attempts' => (int) ($settings->courier_max_delivery_attempts ?? 3),
                 'courier_bonus_rules' => $settings->courier_bonus_rules ?? [],
                 'telegram_login_enabled' => (bool) $settings->telegram_login_enabled,
                 'telegram_client_id' => $settings->telegram_client_id,

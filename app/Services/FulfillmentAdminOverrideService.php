@@ -138,7 +138,6 @@ class FulfillmentAdminOverrideService
             CourierTask::query()
                 ->where('fulfillment_id', $fulfillment->id)
                 ->whereIn('status_code', [
-                    CourierTaskStatusCode::PENDING->value,
                     CourierTaskStatusCode::ASSIGNED->value,
                     CourierTaskStatusCode::ACCEPTED->value,
                 ])
@@ -209,7 +208,6 @@ class FulfillmentAdminOverrideService
         CourierTask::query()
             ->where('fulfillment_id', $fulfillment->id)
             ->whereIn('status_code', [
-                CourierTaskStatusCode::PENDING->value,
                 CourierTaskStatusCode::ASSIGNED->value,
                 CourierTaskStatusCode::ACCEPTED->value,
                 CourierTaskStatusCode::ARRIVED_AT_PICKUP->value,

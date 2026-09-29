@@ -84,8 +84,17 @@ class CourierCashOnDeliveryCapacityService
             $amount = max(0, (int) ($freshTask->cash_collect_amount ?? 0));
 
             if ($amount > 0) {
+                // Kuryer kitobni mijozga yetkazib bo'lgan — yetkazishni
+                // to'xtatmaymiz. Balans yetmasa (jarima, qo'lda o'zgartirish)
+                // manfiyga tushadi: bu kuryerning platformaga qarzi, u
+                // yopilmaguncha pul yechish va yangi naqd buyurtma yopiq.
                 if ((int) ($courier->balance ?? 0) < $amount) {
-                    throw new \RuntimeException('Courier balance is insufficient for COD settlement.');
+                    \Illuminate\Support\Facades\Log::warning('COD settlement pushes courier balance negative', [
+                        'courier_id' => $courier->id,
+                        'task_id' => $freshTask->id,
+                        'balance' => (int) $courier->balance,
+                        'amount' => $amount,
+                    ]);
                 }
 
                 $courier->balance = (int) ($courier->balance ?? 0) - $amount;

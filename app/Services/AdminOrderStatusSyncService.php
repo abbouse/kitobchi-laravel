@@ -115,8 +115,12 @@ class AdminOrderStatusSyncService
             $sellerStatus = $this->mapMainToSeller($statusCode->value, $order->payment_status_code);
             $this->updateActiveSellerOrders($order, $sellerStatus);
 
+            if ($statusCode === OrderStatusCode::RETURNED) {
+                app(CourierTaskOrchestratorService::class)->cancelOpenTasks($order);
+            }
+
             $courierStatus = $this->resolveCourierStatusForMainOrder($order, $statusCode->value);
-            CourierOrder::where('order_id', $order->id)->update([
+            $this->activeCourierOrdersQuery($order->id, $courierStatus)->update([
                 'status' => $courierStatus->legacy(),
                 'status_code' => $courierStatus->value,
                 'updated_at' => now(),
@@ -175,7 +179,7 @@ class AdminOrderStatusSyncService
             $this->syncCompletedOrderSideEffects($order, $previousCompletedPaid, 'seller_status_update');
 
             $courierStatus = $this->resolveCourierStatusForSellerUpdate($order, $statusCode);
-            CourierOrder::where('order_id', $order->id)->update([
+            $this->activeCourierOrdersQuery($order->id, $courierStatus)->update([
                 'status' => $courierStatus->legacy(),
                 'status_code' => $courierStatus->value,
                 'updated_at' => now(),
@@ -251,6 +255,19 @@ class AdminOrderStatusSyncService
             $this->syncCompletionState($order);
             $order->save();
             $this->syncFulfillmentFromCourierStatus($order, $statusCode);
+
+            // Admin "yetkazildi" desa kuryer topshirig'i ham yopiladi va naqd
+            // hisob-kitob o'tadi — avval topshiriq ochiq qolib, kuryer "band"
+            // hisoblanardi va COD bandligi abadiy qolardi.
+            if (in_array($statusCode, [CourierOrderStatusCode::DELIVERED, CourierOrderStatusCode::CUSTOMER_RECEIVED], true)
+                && $courierOrder->courier_id) {
+                app(CourierTaskOrchestratorService::class)->markDeliveredToCustomer($order, (int) $courierOrder->courier_id);
+            }
+
+            // Kitob qaytdi — kuryer topshiriqlari yopiladi, naqd bandlik bo'shaydi
+            if ($statusCode === CourierOrderStatusCode::RETURNED) {
+                app(CourierTaskOrchestratorService::class)->cancelOpenTasks($order);
+            }
 
             // BUG TUZATILDI (2026-09): ilgari BARCHA seller orderlar
             // (hatto allaqachon 'cancelled' bo'lganlari ham) kuryer
@@ -779,6 +796,33 @@ class AdminOrderStatusSyncService
             });
     }
 
+    /**
+     * Buyurtmaning hali yakunlanmagan kuryer qatorlari. Avval barcha qatorlar
+     * ommaviy yangilanib, first-mile kuryerning yakunlangan qatori qayta
+     * ochilar, egasiz last-mile qatori esa "pending"dan chiqib ro'yxatdan
+     * yo'qolardi.
+     */
+    private function activeCourierOrdersQuery(int $orderId, ?CourierOrderStatusCode $target = null)
+    {
+        return CourierOrder::query()
+            ->where('order_id', $orderId)
+            // Egasiz (hali hech kim olmagan) qator faqat bekor qilinishi yoki
+            // kutish holatida qolishi mumkin — "yetkazilmoqda" bo'lib ro'yxatdan
+            // yo'qolib qolmasin
+            ->when(
+                $target !== null && ! in_array($target, [CourierOrderStatusCode::CANCELLED, CourierOrderStatusCode::PENDING], true),
+                fn ($query) => $query->whereNotNull('courier_id')
+            )
+            ->where(function ($query) {
+                $query->whereNotIn('status_code', [
+                    CourierOrderStatusCode::DELIVERED->value,
+                    CourierOrderStatusCode::CUSTOMER_RECEIVED->value,
+                    CourierOrderStatusCode::CANCELLED->value,
+                    CourierOrderStatusCode::RETURNED->value,
+                ])->orWhereNull('status_code');
+            });
+    }
+
     private function syncFulfillmentCancellation(Sold $order): void
     {
         $fulfillment = OrderFulfillment::query()->where('order_id', $order->id)->first();
@@ -787,17 +831,7 @@ class AdminOrderStatusSyncService
             $fulfillment->save();
         }
 
-        CourierTask::query()
-            ->where('order_id', $order->id)
-            ->whereNotIn('status_code', [
-                CourierTaskStatusCode::COMPLETED->value,
-                CourierTaskStatusCode::CANCELLED->value,
-                CourierTaskStatusCode::FAILED->value,
-            ])
-            ->update([
-                'status_code' => CourierTaskStatusCode::CANCELLED->value,
-                'updated_at' => now(),
-            ]);
+        app(CourierTaskOrchestratorService::class)->cancelOpenTasks($order);
     }
 
     private function isMainRollback(OrderStatusCode $current, OrderStatusCode $target): bool

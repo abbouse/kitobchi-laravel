@@ -366,6 +366,7 @@ export default function Settings() {
               <div className="col-md-4"><TextInput name="courier_min_fee" label="Minimal payout" type="number" min={0} max={1000000} required defaultValue={value(project, 'courier_min_fee', '5000')} /></div>
               <div className="col-md-4"><TextInput name="seller_courier_min_delivery_price" label="Seller kuryeri minimal narxi" type="number" min={0} max={1000000} required defaultValue={value(project, 'seller_courier_min_delivery_price', '0')} /></div>
               <div className="col-md-4"><TextInput name="courier_max_active_orders" label="Bir vaqtdagi maksimal buyurtma" type="number" min={1} max={10} required defaultValue={value(project, 'courier_max_active_orders', '3')} /></div>
+              <div className="col-md-4"><TextInput name="courier_max_delivery_attempts" label="Yetkazish urinishlari (keyin qaytariladi)" type="number" min={1} max={5} required defaultValue={value(project, 'courier_max_delivery_attempts', '3')} /></div>
               <div className="col-md-4 d-flex align-items-end">
                 <div className="f-s-13 text-muted b-r-8 b-1-light p-3 w-100">
                   Seller o'z kuryeri uchun filial narxini bundan arzon qo'ya olmaydi. Narx filialga biriktiriladi, shu filialdagi barcha do'kon kuryerlari bir xil narxda ishlaydi.

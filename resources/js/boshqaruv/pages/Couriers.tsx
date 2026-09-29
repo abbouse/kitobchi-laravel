@@ -23,6 +23,9 @@ interface Courier {
   region?: string;
   status?: string;
   isOnline?: boolean;
+  activeOrders?: number;
+  maxActiveOrders?: number;
+  locationAgeMinutes?: number | null;
   availabilityUpdatedAt?: string;
   verificationStatus?: string;
   verificationLabel?: string;
@@ -108,10 +111,8 @@ export default function Couriers() {
     () => couriers.reduce((sum, courier) => sum + (courier.balance || 0), 0),
     [couriers]
   );
-  const onlineCount = useMemo(
-    () => couriers.filter((courier) => courier.isOnline).length,
-    [couriers]
-  );
+  // Butun flot bo'yicha (serverdan) — faqat joriy sahifa emas
+  const onlineCount = courierCounts.online ?? couriers.filter((courier) => courier.isOnline).length;
 
   const load = (extra: Record<string, string | number> = {}) =>
     router.get(
@@ -169,7 +170,7 @@ export default function Couriers() {
         {[
           { label: 'Kutilayotgan arizalar', value: courierCounts.pending || 0, icon: 'ti-hourglass' },
           { label: 'Faol kuryerlar', value: courierCounts.approved || 0, icon: 'ti-bike' },
-          { label: 'Hozir online', value: onlineCount, icon: 'ti-broadcast' },
+          { label: 'Hozir online', value: `${onlineCount} · band ${courierCounts.busy || 0}`, icon: 'ti-broadcast' },
           { label: 'Kuryerlar balansi', value: `${fmt(totalBalance)} so'm`, icon: 'ti-wallet' },
         ].map((item, kpiIndex) => (
           <div className="col-xl-3 col-sm-6" key={item.label}>
@@ -256,7 +257,9 @@ export default function Couriers() {
                           {courier.isOnline ? 'Online' : 'Offline'}
                         </span>
                         <small className="d-block text-muted f-s-11 mt-1">
-                          {courier.availabilityUpdatedAt || courier.location?.updatedAt || '—'}
+                          {courier.locationAgeMinutes != null
+                            ? `GPS ${courier.locationAgeMinutes < 60 ? `${courier.locationAgeMinutes} daq` : `${Math.floor(courier.locationAgeMinutes / 60)} soat`} oldin`
+                            : courier.availabilityUpdatedAt || '—'}
                         </small>
                       </td>
                       <td>{courier.region || '—'}</td>
@@ -264,8 +267,20 @@ export default function Couriers() {
                         <div className="f-w-500">{courier.transportLabel || courier.transport || '—'}</div>
                         <small className="text-muted font-monospace">{courier.plate || courier.vehicle || 'Raqam kiritilmagan'}</small>
                       </td>
-                      <td className="text-end f-w-600 text-nowrap">{courier.orders || 0} ta</td>
-                      <td className="text-end f-w-600 text-dark">{fmt(courier.balance || 0)} so'm</td>
+                      <td className="text-end f-w-600 text-nowrap">
+                        {courier.orders || 0} ta
+                        {courier.activeOrders ? (
+                          <small className={`d-block f-s-11 ${courier.activeOrders >= (courier.maxActiveOrders || 3) ? 'text-danger' : 'text-warning'}`}>
+                            faol {courier.activeOrders}/{courier.maxActiveOrders || 3}
+                          </small>
+                        ) : null}
+                      </td>
+                      <td className="text-end f-w-600 text-dark">
+                        {fmt(courier.balance || 0)} so'm
+                        {courier.reserved ? (
+                          <small className="d-block text-muted f-s-11">naqd band: {fmt(courier.reserved)}</small>
+                        ) : null}
+                      </td>
                       <td>
                         <span className={`badge border-0 ${(courier.warningCount || 0) > 0 ? 'text-light-warning' : 'text-light-secondary'}`}>
                           {courier.warningCount || 0} / 3

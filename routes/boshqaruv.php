@@ -205,6 +205,9 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
             Route::delete('/couriers/{courier}/documents/{document}', [\App\Http\Controllers\A122\CourierController::class, 'deleteDocument'])->name('couriers.documents.destroy');
             Route::patch('/courier-orders/{courierOrder}/status', [\App\Http\Controllers\A122\CourierOrderController::class, 'updateStatus'])->name('courier-orders.status');
             Route::post('/courier-orders/{courierOrder}/penalty', [AdminController::class, 'applyCourierPenalty'])->name('courier-orders.penalty');
+            Route::post('/courier-orders/{courierOrder}/release', [AdminController::class, 'releaseCourierOrder'])->name('courier-orders.release');
+            Route::post('/courier-orders/{courierOrder}/assign', [AdminController::class, 'assignCourierOrder'])->name('courier-orders.assign');
+            Route::post('/courier-orders/{courierOrder}/retry', [AdminController::class, 'retryCourierOrder'])->name('courier-orders.retry');
         });
 
         // ══════════════════════════ HUB FULFILLMENT ══════════════════════════

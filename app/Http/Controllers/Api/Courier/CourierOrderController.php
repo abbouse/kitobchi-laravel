@@ -76,6 +76,21 @@ class CourierOrderController extends Controller
             ], 200);
         }
 
+        // Kuryer hali olib ketmagan faol buyurtmalarining olish nuqtalari
+        $pendingPickupOrderIds = CourierTask::query()
+            ->where('courier_id', $courier->id)
+            ->whereIn('status_code', [CourierTaskStatusCode::ACCEPTED->value, CourierTaskStatusCode::ARRIVED_AT_PICKUP->value])
+            ->pluck('order_id')
+            ->all();
+        $activePickupLocations = $pendingPickupOrderIds === [] ? [] : CourierOrderItem::query()
+            ->whereIn('order_id', $pendingPickupOrderIds)
+            ->whereNotNull('seller_location_id')
+            ->pluck('seller_location_id')
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+
         $orders = CourierOrder::query()
             ->whereNull('courier_id')
             ->when($storeSellerId, function ($query) use ($storeSellerId, $courier) {
@@ -196,7 +211,7 @@ class CourierOrderController extends Controller
                 return $codExposure === 0
                     || $this->courierCashOnDeliveryCapacityService->canTakeCashOrder($courier, $codExposure);
             })
-            ->map(function ($order) use ($courier) {
+            ->map(function ($order) use ($courier, $activePickupLocations) {
                 $soldOrder = $order->order()->first();
                 if (
                     in_array($order->status_code, [
@@ -238,10 +253,16 @@ class CourierOrderController extends Controller
                 $order->hub = $taskSummary['hub'];
                 $order->available_collateral = $this->courierCashOnDeliveryCapacityService->availableCollateral($courier);
                 $this->normalizeCourierOrderStatusForPayload($order);
+                // Kitob buzilmaydi — bir do'kondan bir nechta buyurtmani
+                // birga olib ketish (batching) foydali: kuryer hozir boradigan
+                // filialdan chiqadigan buyurtmalar "yo'lingizda" deb belgilanadi.
+                $order->on_the_way = $activePickupLocations !== []
+                    && $order->items->contains(fn ($item) => in_array((int) $item->seller_location_id, $activePickupLocations, true));
 
                 return $this->hydrateCourierOrderItems($order, Auth::guard('courier')->id());
             })
             ->filter(fn (CourierOrder $order) => $order->items->isNotEmpty())
+            ->sortByDesc(fn (CourierOrder $order) => $order->on_the_way ? 1 : 0)
             ->values();
 
         Log::info('Courier available orders fetched', [
@@ -319,6 +340,7 @@ class CourierOrderController extends Controller
         $show->hub = $taskSummary['hub'];
         $show->available_collateral = $this->courierCashOnDeliveryCapacityService->availableCollateral($courier);
         $this->normalizeCourierOrderStatusForPayload($show);
+        $this->attachCourierActionFlags($show, (int) $courier->id);
 
         return response()->json([
             'success' => true,
@@ -340,14 +362,20 @@ class CourierOrderController extends Controller
             return response()->json(['success' => false, 'message' => __('courier_api.order_invalid_qr')], 404);
         }
         $order = CourierOrder::where('order_id', $orderCustomer->id)
-            ->where('status', 'in_delivery')
+            ->where('status_code', CourierOrderStatusCode::IN_DELIVERY->value)
             ->where('courier_id', $courier->id)
             ->first();
         if (! $order) {
             return response()->json(['success' => false, 'message' => __('courier_api.order_not_found')], 404);
         }
         try {
-            DB::transaction(function () use ($order, $orderCustomer, $courier) {
+            DB::transaction(function () use (&$order, $orderCustomer, $courier) {
+                // Ikki marta skanerlash (ikki parallel so'rov) to'lovni ikki
+                // marta yechmasin: qatorni qulflab, holatni qayta tekshiramiz
+                $order = CourierOrder::query()->lockForUpdate()->findOrFail($order->id);
+                if ($order->status_code !== CourierOrderStatusCode::IN_DELIVERY->value) {
+                    throw new \RuntimeException('Buyurtma allaqachon yakunlangan.');
+                }
                 $previousStatus = (string) $orderCustomer->status;
 
                 $order->status = CourierOrderStatusCode::CUSTOMER_RECEIVED->legacy();
@@ -616,23 +644,7 @@ class CourierOrderController extends Controller
                 }
 
                 $acceptedTasks = $this->courierTaskOrchestratorService->acceptAvailableTasksForCourier($sold, $courier, $eligibleTaskIds);
-                $taskBonus = (int) $acceptedTasks->sum('bonus_amount');
-                $taskBasePayout = (int) $acceptedTasks->sum(
-                    fn (CourierTask $task) => max(0, (int) $task->fee_amount - (int) $task->bonus_amount)
-                );
-
-                $sold->courier_id = $courier->id;
-                $sold->courierName = $courier->first_name.' '.$courier->last_name;
-                $sold->status = OrderStatusCode::PACKING->legacy();
-                $sold->status_code = OrderStatusCode::PACKING->value;
-                $sold->save();
-
-                $order->courier_id = $courier->id;
-                $order->status = CourierOrderStatusCode::IN_DELIVERY->legacy();
-                $order->status_code = CourierOrderStatusCode::IN_DELIVERY->value;
-                $order->courierPrice = $taskBasePayout;
-                $order->courierBonus = $taskBonus;
-                $order->save();
+                app(\App\Services\CourierAssignmentService::class)->attach($sold, $order, $courier, $acceptedTasks);
 
                 return response()->json([
                     'success' => true,
@@ -656,6 +668,108 @@ class CourierOrderController extends Controller
 
             return response()->json(['success' => false, 'message' => 'Xatolik: '.$th->getMessage()], $code);
         }
+    }
+
+    /**
+     * Kuryer buyurtmadan voz kechadi (kitobni hali olib ketmagan bo'lsa).
+     * Buyurtma yana umumiy ro'yxatga chiqadi.
+     */
+    public function releaseOrder(Request $request, $id)
+    {
+        $courier = Auth::guard('courier')->user();
+        $data = $request->validate([
+            'reason' => ['required', 'string', 'in:cannot_reach_pickup,seller_not_ready,vehicle_problem,too_far,personal,other'],
+            'note' => ['nullable', 'string', 'max:300'],
+        ]);
+
+        $sold = Sold::query()->find($id);
+        if (! $sold) {
+            return response()->json(['success' => false, 'message' => __('courier_api.order_not_found')], 404);
+        }
+
+        $service = app(\App\Services\CourierAssignmentService::class);
+        if (! $service->canCourierSelfRelease($sold, (int) $courier->id)) {
+            return response()->json([
+                'success' => false,
+                'error_code' => 'already_picked_up',
+                'message' => "Kitobni olib bo'lgansiz — endi voz kechib bo'lmaydi. Muammo bo'lsa operator bilan bog'laning.",
+            ], 422);
+        }
+
+        try {
+            $service->release($sold, (int) $courier->id, $data['reason'], [
+                'actor' => 'courier',
+                'actor_id' => (int) $courier->id,
+                'note' => $data['note'] ?? null,
+            ]);
+        } catch (\RuntimeException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "Buyurtmadan voz kechdingiz. U boshqa kuryerlarga ko'rsatiladi.",
+        ]);
+    }
+
+    /**
+     * "Yetkazib bo'lmadi": mijoz topilmadi / boshqa vaqt so'radi. Kitob
+     * buzilmaydi — buyurtma bekor qilinmaydi, keyingi urinishga qoldiriladi.
+     */
+    public function attemptFailed(Request $request, $id)
+    {
+        $courier = Auth::guard('courier')->user();
+        $data = $request->validate([
+            'reason' => ['required', 'string', \Illuminate\Validation\Rule::in(array_keys(\App\Support\CourierDeliveryAttempts::REASONS))],
+            'note' => ['nullable', 'string', 'max:300'],
+            'next_attempt_at' => ['nullable', 'date'],
+            'lat' => ['nullable', 'numeric', 'between:-90,90'],
+            'lon' => ['nullable', 'numeric', 'between:-180,180'],
+        ]);
+
+        $sold = Sold::query()->find($id);
+        if (! $sold) {
+            return response()->json(['success' => false, 'message' => __('courier_api.order_not_found')], 404);
+        }
+
+        try {
+            $result = app(\App\Services\CourierDeliveryAttemptService::class)->recordFailed(
+                $sold,
+                $courier,
+                $data['reason'],
+                $data['note'] ?? null,
+                isset($data['next_attempt_at']) ? Carbon::parse($data['next_attempt_at']) : null,
+                isset($data['lat']) ? (float) $data['lat'] : null,
+                isset($data['lon']) ? (float) $data['lon'] : null,
+            );
+        } catch (\RuntimeException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'return_required' => $result['return_required'],
+            'attempt_no' => $result['attempt_no'],
+            'max_attempts' => \App\Support\CourierDeliveryAttempts::maxAttempts(),
+            'next_attempt_at' => $result['next_attempt_at']?->toIso8601String(),
+            'message' => $result['return_required']
+                ? "Qayd etildi. Kitobni qaytarish bo'yicha operator siz bilan bog'lanadi."
+                : "Qayd etildi. Keyingi urinish: ".$result['next_attempt_at']->format('d.m H:i').". Kitob sizda qoladi.",
+        ]);
+    }
+
+    /** Yetkazib bo'lmadi sabablari (ilova uchun). */
+    public function attemptReasons(Request $request)
+    {
+        $locale = str_starts_with((string) $request->header('Accept-Language', 'uz'), 'ru') ? 'ru' : 'uz';
+
+        return response()->json([
+            'success' => true,
+            'max_attempts' => \App\Support\CourierDeliveryAttempts::maxAttempts(),
+            'data' => collect(\App\Support\CourierDeliveryAttempts::REASONS)
+                ->map(fn ($labels, $key) => ['key' => $key, 'label' => \App\Support\CourierDeliveryAttempts::reasonLabel($key, $locale)])
+                ->values(),
+        ]);
     }
 
     /**
@@ -735,6 +849,7 @@ class CourierOrderController extends Controller
                 $order->hub = $taskSummary['hub'];
                 $order->available_collateral = $this->courierCashOnDeliveryCapacityService->availableCollateral($courier);
                 $this->normalizeCourierOrderStatusForPayload($order);
+                $this->attachCourierActionFlags($order, (int) $courier->id);
 
                 return $this->hydrateCourierOrderItems($order, $order->courier_id);
             })
@@ -962,7 +1077,25 @@ class CourierOrderController extends Controller
         ]);
     }
 
-    private function normalizeCourierOrderStatusForPayload(CourierOrder $order): void
+    /**
+     * Ilova tugmalari uchun: kuryer o'zi voz kecha oladimi (kitob hali
+     * olinmagan) va "yetkazib bo'lmadi" qayd eta oladimi (kitob qo'lida).
+     */
+    private function attachCourierActionFlags(CourierOrder $order, int $courierId): void
+    {
+        $active = CourierOrderStatusCode::fromLegacy($order->status_code ?: $order->status) === CourierOrderStatusCode::IN_DELIVERY
+            && (int) $order->courier_id === $courierId;
+        $holds = $active && app(\App\Services\CourierDeliveryAttemptService::class)->courierHoldsBook((int) $order->order_id, $courierId);
+        $order->can_release = $active && ! $holds && ! CourierTask::query()
+            ->where('order_id', $order->order_id)
+            ->where('courier_id', $courierId)
+            ->whereIn('status_code', [CourierTaskStatusCode::PICKED_UP->value, CourierTaskStatusCode::DROPPED_OFF->value])
+            ->exists();
+        $order->can_report_failed_attempt = $holds && ! $order->return_required_at;
+        $order->max_delivery_attempts = \App\Support\CourierDeliveryAttempts::maxAttempts();
+    }
+
+        private function normalizeCourierOrderStatusForPayload(CourierOrder $order): void
     {
         $statusCode = CourierOrderStatusCode::fromLegacy($order->status_code ?: $order->status);
         $order->status_code = $statusCode->value;
@@ -1352,28 +1485,42 @@ class CourierOrderController extends Controller
 
     private function resolveCustomerOrderByQr(string $qr, int $courierId): ?Sold
     {
+        $deliverable = function ($query) use ($courierId) {
+            $query->where('status_code', OrderStatusCode::IN_DELIVERY->value)
+                ->orWhere(function ($fallback) {
+                    $fallback->whereNull('status_code')
+                        ->where('status', OrderStatusCode::IN_DELIVERY->legacy());
+                })
+                // Hubdan olingan last-mile: buyurtma hali "yig'ilmoqda"da
+                // qolgan bo'lishi mumkin (ko'p do'konli yoki eski oqim) —
+                // kuryerda ochiq last-mile topshiriq bo'lsa yetkazishga ruxsat
+                ->orWhere(function ($lastMile) use ($courierId) {
+                    $lastMile->where('status_code', OrderStatusCode::PACKING->value)
+                        ->whereExists(function ($task) use ($courierId) {
+                            $task->selectRaw('1')
+                                ->from('courier_tasks')
+                                ->whereColumn('courier_tasks.order_id', 'solds.id')
+                                ->where('courier_tasks.courier_id', $courierId)
+                                ->where('courier_tasks.leg', CourierTaskLeg::LAST_MILE->value)
+                                ->whereIn('courier_tasks.status_code', [
+                                    CourierTaskStatusCode::ACCEPTED->value,
+                                    CourierTaskStatusCode::ARRIVED_AT_PICKUP->value,
+                                    CourierTaskStatusCode::PICKED_UP->value,
+                                ]);
+                        });
+                });
+        };
+
         $signed = $this->qrTokenService->parseDeliveryToken($qr);
         if ($signed) {
-            return Sold::where(function ($query) {
-                $query->where('status_code', OrderStatusCode::IN_DELIVERY->value)
-                    ->orWhere(function ($fallback) {
-                        $fallback->whereNull('status_code')
-                            ->where('status', OrderStatusCode::IN_DELIVERY->legacy());
-                    });
-            })
+            return Sold::where($deliverable)
                 ->where('id', $signed['sold_id'])
                 ->where('user_id', $signed['user_id'])
                 ->where('courier_id', $courierId)
                 ->first();
         }
 
-        return Sold::where(function ($query) {
-            $query->where('status_code', OrderStatusCode::IN_DELIVERY->value)
-                ->orWhere(function ($fallback) {
-                    $fallback->whereNull('status_code')
-                        ->where('status', OrderStatusCode::IN_DELIVERY->legacy());
-                });
-        })
+        return Sold::where($deliverable)
             ->where('qr', $qr)
             ->where('courier_id', $courierId)
             ->first();

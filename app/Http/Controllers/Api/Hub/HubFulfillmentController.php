@@ -65,9 +65,7 @@ class HubFulfillmentController extends Controller
                         FulfillmentStatusCode::DISPATCHED_TO_POST->value,
                         FulfillmentStatusCode::ASSIGNED_LAST_MILE->value,
                     ])->count(),
-                    'exceptions' => $this->baseQuery($hubId)
-                        ->whereNotNull('meta->exception->code')
-                        ->count(),
+                    'exceptions' => $this->openExceptions($this->baseQuery($hubId))->count(),
                     'active_couriers' => CourierTask::query()
                         ->where('hub_id', $hubId)
                         ->whereNotNull('courier_id')
@@ -124,7 +122,7 @@ class HubFulfillmentController extends Controller
                 });
             })
             ->when($request->boolean('cod_only'), fn ($query) => $query->where('is_cod', true))
-            ->when($request->boolean('exceptions_only'), fn ($query) => $query->whereNotNull('meta->exception->code'))
+            ->when($request->boolean('exceptions_only'), fn ($query) => $this->openExceptions($query))
             ->when($request->filled('mode'), fn ($query) => $query->where('fulfillment_mode', (string) $request->string('mode')))
             ->latest('updated_at')
             ->paginate((int) min(50, max(10, (int) $request->input('limit', 20))))
@@ -509,12 +507,23 @@ class HubFulfillmentController extends Controller
         if ($response = $this->ensureSameHub($staff, $fulfillment)) {
             return $response;
         }
-        if ($fulfillment->status_code !== FulfillmentStatusCode::PICKED_FROM_SELLER->value) {
+        // Kitob jismonan hubda — kuryer QR'ni skanerlamagan yoki do'kon
+        // "topshirdim" bosmagan bo'lsa ham qabul qilinadi (avval bu holatda
+        // buyurtmani oldinga surishning hech qanday yo'li yo'q edi).
+        $arrivable = [
+            FulfillmentStatusCode::AWAITING_SELLER_PREP->value,
+            FulfillmentStatusCode::READY_FOR_PICKUP->value,
+            FulfillmentStatusCode::PICKED_FROM_SELLER->value,
+        ];
+        if (! in_array($fulfillment->status_code, $arrivable, true)) {
             return response()->json(['status' => 'error', 'message' => 'Bu fulfillment hali hubga qabul qilish bosqichida emas.'], 422);
         }
+        $skippedHandover = $fulfillment->status_code !== FulfillmentStatusCode::PICKED_FROM_SELLER->value;
 
         $fulfillment = $this->statusSync->updateFulfillmentStatus($fulfillment, FulfillmentStatusCode::ARRIVED_AT_HUB);
-        $this->appendTimeline($fulfillment, $staff, 'arrived_at_hub', 'Hubga qabul qilindi');
+        $this->appendTimeline($fulfillment, $staff, 'arrived_at_hub', $skippedHandover
+            ? "Hubga qabul qilindi (do'kon/kuryer skanerisiz)"
+            : 'Hubga qabul qilindi');
         $this->clearException($fulfillment);
         $fulfillment->save();
         $this->courierTaskOrchestratorService->markArrivedAtHub($fulfillment->fresh());
@@ -593,6 +602,8 @@ class HubFulfillmentController extends Controller
         $staff = $this->staff($request);
         $validated = $request->validate([
             'dispatch_method' => ['nullable', Rule::in(['postal', 'courier'])],
+            'postal_tracking_number' => ['nullable', 'string', 'max:64'],
+            'postal_provider' => ['nullable', 'string', 'max:32'],
         ]);
         if (! $this->hubRoleAccessService->can($staff, 'queue.dispatch.send')) {
             return response()->json(['status' => 'error', 'message' => 'Bu action sizga ruxsat etilmagan.'], 403);
@@ -605,7 +616,21 @@ class HubFulfillmentController extends Controller
         }
 
         $dispatchMethod = $validated['dispatch_method'] ?? null;
-        $useCourier = $dispatchMethod === 'courier' || ($dispatchMethod === null && $fulfillment->last_mile_mode !== 'postal_dispatch');
+        $postalOnly = $fulfillment->fulfillment_mode === \App\Enums\FulfillmentMode::POSTAL_ONLY_VIA_HUB->value;
+        if ($postalOnly && $dispatchMethod === 'courier') {
+            // Bu rejimda last-mile kuryer topshirig'i hech kimga ko'rinmaydi —
+            // buyurtma osilib qolardi
+            return response()->json(['status' => 'error', 'message' => 'Bu buyurtma faqat pochta orqali yuboriladi.'], 422);
+        }
+        $useCourier = ! $postalOnly && ($dispatchMethod === 'courier' || ($dispatchMethod === null && $fulfillment->last_mile_mode !== 'postal_dispatch'));
+        if (! $useCourier) {
+            if (! empty($validated['postal_tracking_number'])) {
+                $fulfillment->postal_tracking_number = $validated['postal_tracking_number'];
+            }
+            if (! empty($validated['postal_provider'])) {
+                $fulfillment->postal_provider = $validated['postal_provider'];
+            }
+        }
 
         if (! $useCourier) {
             $fulfillment->last_mile_mode = 'postal_dispatch';
@@ -619,6 +644,38 @@ class HubFulfillmentController extends Controller
             $fulfillment = $this->statusSync->updateFulfillmentStatus($fulfillment, FulfillmentStatusCode::ASSIGNED_LAST_MILE);
             $this->appendTimeline($fulfillment, $staff, 'assigned_last_mile', 'Last-mile kuryerga uzatildi');
         }
+        $this->clearException($fulfillment);
+        $fulfillment->save();
+
+        return response()->json(['status' => 'success', 'fulfillment' => $this->serializeFulfillment($fulfillment->fresh())]);
+    }
+
+    /**
+     * Hub kitobni last-mile kuryerga qo'lma-qo'l topshirdi.
+     * Topshiriq "olindi", buyurtma "yetkazilmoqda" bo'ladi.
+     */
+    public function handoverLastMile(Request $request, OrderFulfillment $fulfillment)
+    {
+        $staff = $this->staff($request);
+        if (! $this->hubRoleAccessService->can($staff, 'queue.dispatch.send')) {
+            return response()->json(['status' => 'error', 'message' => 'Bu action sizga ruxsat etilmagan.'], 403);
+        }
+        if ($response = $this->ensureSameHub($staff, $fulfillment)) {
+            return $response;
+        }
+        if ($fulfillment->status_code !== FulfillmentStatusCode::ASSIGNED_LAST_MILE->value) {
+            return response()->json(['status' => 'error', 'message' => 'Buyurtma kuryerga topshirish bosqichida emas.'], 422);
+        }
+
+        $task = $this->courierTaskOrchestratorService->markLastMilePickedUp($fulfillment);
+        if (! $task) {
+            return response()->json(['status' => 'error', 'message' => "Hali hech bir kuryer bu buyurtmani qabul qilmagan."], 422);
+        }
+
+        $fulfillment = $this->statusSync->updateFulfillmentStatus($fulfillment->fresh(), FulfillmentStatusCode::OUT_FOR_DELIVERY);
+        $this->appendTimeline($fulfillment, $staff, 'out_for_delivery', 'Kuryerga topshirildi', [
+            'courier_id' => $task->courier_id,
+        ]);
         $this->clearException($fulfillment);
         $fulfillment->save();
 
@@ -744,6 +801,13 @@ class HubFulfillmentController extends Controller
             CourierTaskStatusCode::PICKED_UP->value,
             CourierTaskStatusCode::DROPPED_OFF->value,
         ];
+    }
+
+    /** Hali yopilmagan muammolar (yopilganlari hisoblagichda qolib ketardi). */
+    private function openExceptions($query)
+    {
+        return $query->whereNotNull('meta->exception->code')
+            ->whereNull('meta->exception->resolved_at');
     }
 
     private function clearException(OrderFulfillment $fulfillment): void
@@ -1009,7 +1073,7 @@ class HubFulfillmentController extends Controller
 
         $total = (int) (clone $base)->count();
         $codCount = (int) (clone $base)->where('is_cod', true)->count();
-        $exceptionCount = (int) (clone $base)->whereNotNull('meta->exception->code')->count();
+        $exceptionCount = (int) $this->openExceptions(clone $base)->count();
         $recent = (clone $base)->get();
         $labelPrints = 0;
         $receiptPrints = 0;

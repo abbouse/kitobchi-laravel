@@ -488,6 +488,45 @@ class OrderStatusPushService
         ];
     }
 
+    /**
+     * Kuryer mijozni topa olmadi — kitob kuryerda qoladi, qayta urinish sanasi
+     * bilan xabar beriladi (kitob buzilmaydi, buyurtma bekor qilinmaydi).
+     */
+    public function sendDeliveryAttemptFailedNotice(Sold $order, ?\DateTimeInterface $nextAttemptAt, bool $returning = false): void
+    {
+        try {
+            $user = $order->user()->first(['id', 'locale']);
+            if (! $user) {
+                return;
+            }
+            $tokens = $this->tokensForUser($user->id);
+            if ($tokens->isEmpty()) {
+                return;
+            }
+            $locale = $this->resolveLocale($user->locale ?? null);
+            $date = $nextAttemptAt ? \Illuminate\Support\Carbon::instance($nextAttemptAt)->format('d.m H:i') : null;
+            $texts = [
+                'uz' => $returning
+                    ? ["Buyurtma #{$order->id} qaytarilmoqda", "Kuryer sizga yetkaza olmadi. Savollar bo'lsa qo'llab-quvvatlash xizmatiga yozing."]
+                    : ["Kuryer sizni topa olmadi 📦", "Kitoblaringiz xavfsiz. Kuryer qayta urinadi".($date ? ": {$date}" : '').". Telefoningizni ochiq tuting."],
+                'ru' => $returning
+                    ? ["Заказ #{$order->id} возвращается", 'Курьер не смог доставить заказ. Напишите в поддержку, если есть вопросы.']
+                    : ['Курьер не смог вас найти 📦', 'Ваши книги в сохранности. Курьер попробует ещё раз'.($date ? ": {$date}" : '').'. Держите телефон рядом.'],
+                'en' => $returning
+                    ? ["Order #{$order->id} is being returned", 'The courier could not deliver your order. Contact support if you have questions.']
+                    : ["The courier couldn't reach you 📦", 'Your books are safe. The courier will try again'.($date ? ": {$date}" : '').'. Please keep your phone nearby.'],
+            ];
+            [$title, $body] = $texts[$locale] ?? $texts['uz'];
+            (new FCMService('kitobchi'))->send($tokens->all(), $title, $body, [
+                'type' => 'delivery_attempt_failed',
+                'order_id' => (string) $order->id,
+                'next_attempt_at' => $nextAttemptAt ? \Illuminate\Support\Carbon::instance($nextAttemptAt)->toIso8601String() : '',
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('Delivery attempt push failed: '.$e->getMessage(), ['order_id' => $order->id]);
+        }
+    }
+
     private function tokensForUser(int $userId): Collection
     {
         return ConnectedDevice::query()

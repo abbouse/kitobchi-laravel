@@ -32,6 +32,7 @@ Route::middleware('auth:hub')->group(function () {
     Route::post('fulfillments/{fulfillment}/pack', [HubFulfillmentController::class, 'pack']);
     Route::post('fulfillments/{fulfillment}/label', [HubFulfillmentController::class, 'label']);
     Route::post('fulfillments/{fulfillment}/dispatch', [HubFulfillmentController::class, 'dispatch']);
+    Route::post('fulfillments/{fulfillment}/handover-last-mile', [HubFulfillmentController::class, 'handoverLastMile']);
     Route::post('fulfillments/{fulfillment}/exception', [HubFulfillmentController::class, 'reportException']);
     Route::post('fulfillments/{fulfillment}/resolve-exception', [HubFulfillmentController::class, 'resolveException']);
 });

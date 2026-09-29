@@ -13,6 +13,17 @@ const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n || 0);
 type Counts = Record<string, number>;
 type StatusMeta = { label: string; badge?: string };
 type PenaltyRule = { key: string; label: string; description: string; amount: number };
+type AssignableCourier = { id: number; name: string; phone?: string; region?: string; online: boolean; active: number; max: number; store?: boolean };
+type Attempt = { no: number; reason: string; reasonLabel: string; note?: string | null; nextAttemptAt?: string | null; date?: string | null };
+
+const RELEASE_REASONS: Array<[string, string]> = [
+  ['courier_unresponsive', 'Kuryer javob bermayapti'],
+  ['courier_too_slow', 'Kuryer juda sekin / kechikmoqda'],
+  ['courier_request', 'Kuryerning o‘zi so‘radi'],
+  ['customer_request', 'Mijoz iltimosi'],
+  ['reassign', 'Boshqa kuryerga berish'],
+  ['other', 'Boshqa sabab'],
+];
 
 interface CourierOrder {
   id: number;
@@ -49,6 +60,21 @@ interface CourierOrder {
   statusUrl?: string;
   penaltyUrl?: string;
   penaltyRules?: PenaltyRule[];
+  releaseUrl?: string;
+  assignUrl?: string;
+  retryUrl?: string;
+  canRelease?: boolean;
+  canAssign?: boolean;
+  taskStatus?: string | null;
+  bookWithCourier?: boolean;
+  hoursInStatus?: number | null;
+  isStuck?: boolean;
+  returnRequired?: boolean;
+  deliveryAttempts?: number;
+  nextAttemptAt?: string | null;
+  lastAttemptReason?: string | null;
+  attempts?: Attempt[];
+  releases?: Array<Record<string, unknown>>;
 }
 
 const statusChip = (status?: string) => {
@@ -66,7 +92,9 @@ export default function CourierOrders() {
     courierOrderStatuses = {},
     courierOrderPagination = { page: 1, totalPages: 1, from: 0, to: 0, total: 0 },
     courierOrderFilters = {},
+    assignableCouriers = [],
   } = usePage<{
+    assignableCouriers?: AssignableCourier[];
     courierOrders?: CourierOrder[];
     courierOrderCounts?: Counts;
     courierOrderStatuses?: Record<string, StatusMeta>;
@@ -80,6 +108,7 @@ export default function CourierOrders() {
 
   const orderTabs = [
     { key: 'all', label: 'Barchasi' },
+    { key: 'stuck', label: 'Qotib qolgan' },
     ...Object.entries(courierOrderStatuses).map(([key, meta]) => ({ key, label: meta.label })),
   ];
 
@@ -207,7 +236,7 @@ export default function CourierOrders() {
                   }}
                 >
                   {tab.label}
-                  <span className="badge text-light-secondary ms-2">
+                  <span className={`badge ms-2 ${tab.key === 'stuck' && (courierOrderCounts.stuck || 0) > 0 ? 'text-light-danger' : 'text-light-secondary'}`}>
                     {fmt(courierOrderCounts[tab.key] || 0)}
                   </span>
                 </button>
@@ -290,6 +319,7 @@ export default function CourierOrders() {
                           </option>
                         ))}
                       </select>
+                      <OrderFlags order={order} />
                     </td>
                     <td className="text-muted f-s-13 text-nowrap">{order.date || '—'}</td>
                     <td className="text-center">
@@ -326,6 +356,7 @@ export default function CourierOrders() {
       <OrderModal
         order={selectedOrder}
         statuses={courierOrderStatuses}
+        couriers={assignableCouriers}
         onHide={() => setSelectedOrder(null)}
         onPatch={patch}
       />
@@ -333,14 +364,33 @@ export default function CourierOrders() {
   );
 }
 
+function OrderFlags({ order }: { order: CourierOrder }) {
+  const flags: Array<[string, string]> = [];
+  if (order.returnRequired) flags.push(['text-light-danger', 'Qaytarish kerak']);
+  else if (order.isStuck) flags.push(['text-light-danger', `Qotgan · ${order.hoursInStatus ?? 0} soat`]);
+  if (order.deliveryAttempts) flags.push(['text-light-warning', `${order.deliveryAttempts}-urinish`]);
+  if (order.nextAttemptAt && !order.returnRequired) flags.push(['text-light-info', `Qayta: ${order.nextAttemptAt}`]);
+  if (order.bookWithCourier) flags.push(['text-light-secondary', 'Kitob kuryerda']);
+  if (!flags.length) return null;
+  return (
+    <div className="d-flex flex-wrap gap-1 mt-1">
+      {flags.map(([tone, label]) => (
+        <span key={label} className={`badge ${tone} f-s-11`}>{label}</span>
+      ))}
+    </div>
+  );
+}
+
 function OrderModal({
   order,
   statuses,
+  couriers,
   onHide,
   onPatch,
 }: {
   order: CourierOrder | null;
   statuses: Record<string, StatusMeta>;
+  couriers: AssignableCourier[];
   onHide: () => void;
   onPatch: (url?: string, data?: Record<string, string>) => void;
 }) {
@@ -355,6 +405,12 @@ function OrderModal({
     if (!confirm(`${order.courier} balansidan ${fmt(activePenalty.amount)} so'm jarima yechilsinmi?`))
       return;
     router.post(order.penaltyUrl, new FormData(event.currentTarget), { preserveScroll: true });
+  };
+
+  const postAndClose = (url: string | undefined, event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!url) return;
+    router.post(url, new FormData(event.currentTarget), { preserveScroll: true, onSuccess: onHide });
   };
 
   return (
@@ -521,6 +577,153 @@ function OrderModal({
                       {(order.items || []).length === 0 && (
                         <div className="text-muted f-s-13">Mahsulotlar topilmadi</div>
                       )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Kuryerni boshqarish */}
+                <div className="col-12">
+                  <div className="card">
+                    <div className="card-header pb-2">
+                      <h6 className="mb-0 f-w-600">Kuryerni boshqarish</h6>
+                    </div>
+                    <div className="card-body pt-0">
+                      {order.returnRequired ? (
+                        <div className="alert alert-light-danger f-s-13 mt-3 mb-0">
+                          Yetkazish urinishlari tugadi yoki mijoz rad etdi. Kitob kuryerda — uni qaytarib olish uchun
+                          kuryer bilan bog‘laning va holatni «Qaytgan»ga o‘tkazing yoki yana bir urinish bering.
+                        </div>
+                      ) : null}
+                      <ActionRow
+                        icon="ti ti-user-minus"
+                        tone="warning"
+                        title="Kuryerni bo‘shatish"
+                        value={order.canRelease ? order.courier : 'Faol kuryer yo‘q'}
+                        meta={
+                          order.bookWithCourier
+                            ? 'Kitob allaqachon kuryerda — faqat majburiy bo‘shatish mumkin (kitobni qaytarib olish kerak)'
+                            : 'Buyurtma kuryerdan olinib, yana boshqa kuryerlarga ko‘rsatiladi. Naqd bandligi bo‘shaydi.'
+                        }
+                        action={
+                          <FormAction
+                            label="Bo‘shatish"
+                            icon="ti ti-user-minus"
+                            variant="light-warning"
+                            title="Kuryerni buyurtmadan bo‘shatish"
+                            submitLabel="Bo‘shatish"
+                            submitVariant="warning"
+                            disabled={!order.canRelease || !order.releaseUrl}
+                            onSubmit={(event) => postAndClose(order.releaseUrl, event)}
+                          >
+                            <div className="row g-3">
+                              <div className="col-12">
+                                <label className="form-label">Sabab</label>
+                                <select name="reason" className="form-select" defaultValue="courier_unresponsive">
+                                  {RELEASE_REASONS.map(([key, label]) => (
+                                    <option key={key} value={key}>{label}</option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div className="col-12">
+                                <label className="form-label">Izoh</label>
+                                <input name="note" className="form-control" placeholder="Ixtiyoriy" />
+                              </div>
+                              {order.bookWithCourier ? (
+                                <div className="col-12">
+                                  <label className="form-check">
+                                    <input type="checkbox" name="allow_picked_up" value="1" className="form-check-input" />
+                                    <span className="form-check-label f-s-13">
+                                      Kitob kuryerda ekanini bilaman — majburiy bo‘shatish
+                                    </span>
+                                  </label>
+                                </div>
+                              ) : null}
+                            </div>
+                          </FormAction>
+                        }
+                      />
+                      <ActionRow
+                        icon="ti ti-user-plus"
+                        tone="primary"
+                        title="Kuryer biriktirish"
+                        value={order.canAssign ? 'Buyurtma kuryer kutmoqda' : 'Avval joriy kuryerni bo‘shating'}
+                        meta="Online va bo‘sh kuryerlar ro‘yxat boshida. Kuryerga push xabar boradi."
+                        action={
+                          <FormAction
+                            label="Biriktirish"
+                            icon="ti ti-user-plus"
+                            variant="light-primary"
+                            title="Kuryerni qo‘lda biriktirish"
+                            submitLabel="Biriktirish"
+                            disabled={!order.canAssign || !order.assignUrl || !couriers.length}
+                            onSubmit={(event) => postAndClose(order.assignUrl, event)}
+                          >
+                            <div className="row g-3">
+                              <div className="col-12">
+                                <label className="form-label">Kuryer</label>
+                                <select name="courier_id" className="form-select" required defaultValue="">
+                                  <option value="" disabled>Tanlang…</option>
+                                  {couriers.map((c) => (
+                                    <option key={c.id} value={c.id} disabled={c.active >= c.max}>
+                                      {c.online ? '● ' : '○ '}{c.name} · {c.active}/{c.max}
+                                      {c.region ? ` · ${c.region}` : ''}{c.store ? ' · do‘kon' : ''}
+                                    </option>
+                                  ))}
+                                </select>
+                                <div className="f-s-12 text-secondary mt-1">● online · ○ offline · faol/limit</div>
+                              </div>
+                              <div className="col-12">
+                                <label className="form-check">
+                                  <input type="checkbox" name="ignore_limit" value="1" className="form-check-input" />
+                                  <span className="form-check-label f-s-13">Limitdan oshsa ham biriktirish</span>
+                                </label>
+                              </div>
+                            </div>
+                          </FormAction>
+                        }
+                      />
+                      <ActionRow
+                        icon="ti ti-calendar-repeat"
+                        tone="info"
+                        title="Qayta yetkazish urinishi"
+                        value={
+                          order.deliveryAttempts
+                            ? `${order.deliveryAttempts} ta urinish · ${order.nextAttemptAt ? `keyingisi ${order.nextAttemptAt}` : 'rejalashtirilmagan'}`
+                            : 'Urinishlar yo‘q'
+                        }
+                        meta="Kitob buzilmaydi: mijoz topilmasa buyurtma bekor bo‘lmaydi, boshqa kunga qoldiriladi."
+                        action={
+                          <FormAction
+                            label="Qayta urinish"
+                            icon="ti ti-calendar-repeat"
+                            variant="light-info"
+                            title="Yana bir urinish berish"
+                            submitLabel="Belgilash"
+                            disabled={order.status !== 'in_delivery' || !order.retryUrl}
+                            onSubmit={(event) => postAndClose(order.retryUrl, event)}
+                          >
+                            <label className="form-label">Keyingi urinish vaqti</label>
+                            <input type="datetime-local" name="next_attempt_at" className="form-control" />
+                            <div className="f-s-12 text-secondary mt-1">Bo‘sh qolsa — ertaga soat 10:00</div>
+                          </FormAction>
+                        }
+                      />
+                      {(order.attempts || []).length ? (
+                        <div className="mt-3">
+                          <small className="text-muted d-block mb-1">Urinishlar tarixi</small>
+                          {(order.attempts || []).map((a) => (
+                            <div key={a.no} className="d-flex justify-content-between f-s-13 py-1 b-b-1-light">
+                              <span>
+                                <strong>#{a.no}</strong> · {a.reasonLabel}
+                                {a.note ? <span className="text-muted"> — {a.note}</span> : null}
+                              </span>
+                              <span className="text-muted text-nowrap ms-2">
+                                {a.date}{a.nextAttemptAt ? ` → ${a.nextAttemptAt}` : ''}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
                     </div>
                   </div>
                 </div>

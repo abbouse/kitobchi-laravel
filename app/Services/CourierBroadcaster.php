@@ -60,6 +60,37 @@ class CourierBroadcaster
         }
     }
 
+    /** Boshqaruv kuryerga buyurtmani qo'lda biriktirganda. */
+    public function notifyAssigned(\App\Models\Couriers $courier, \App\Models\Sold $sold): void
+    {
+        $this->notifyCourier((int) $courier->id, 'Sizga buyurtma biriktirildi', "Buyurtma #{$sold->id} sizga biriktirildi. Ilovada tekshiring.", [
+            'type' => 'order_assigned',
+            'sold_id' => (string) $sold->id,
+        ]);
+    }
+
+    /** Bitta kuryerning barcha qurilmalariga push. */
+    public function notifyCourier(int $courierId, string $title, string $body, array $data = []): void
+    {
+        try {
+            $tokens = DB::table('connected_devices')
+                ->where('user_type', 'courier')
+                ->where('user_id', $courierId)
+                ->whereNotNull('fcm_token')
+                ->where('fcm_token', '!=', '')
+                ->pluck('fcm_token')
+                ->unique()
+                ->values()
+                ->all();
+            if ($tokens === []) {
+                return;
+            }
+            (new FCMService('courier'))->send($tokens, $title, $body, $data + ['click_action' => 'FLUTTER_NOTIFICATION_CLICK']);
+        } catch (\Throwable $e) {
+            Log::warning('CourierBroadcaster notifyCourier failed: '.$e->getMessage(), ['courier_id' => $courierId]);
+        }
+    }
+
     /**
      * Yangi buyurtma e'lon qilingani haqida barcha tasdiqlangan kuryerlarni xabardor qilish.
      */
@@ -197,6 +228,13 @@ class CourierBroadcaster
                 $join->on('active_tasks.courier_id', '=', 'couriers.id');
             })
             ->where('couriers.status', 'approved')
+            // Platforma buyurtmasi — faqat platforma kuryerlariga; do'kon
+            // buyurtmasi — faqat shu do'konning (yashirilmagan) kuryerlariga
+            ->when(
+                $courierOrder->store_seller_id,
+                fn ($builder) => $builder->where('couriers.seller_id', (int) $courierOrder->store_seller_id)->whereNull('couriers.store_courier_hidden_at'),
+                fn ($builder) => $builder->whereNull('couriers.seller_id')
+            )
             ->when($hasOnlineColumn, fn ($builder) => $builder->where('couriers.is_online', true))
             ->whereNotNull('connected_devices.fcm_token')
             ->where('connected_devices.fcm_token', '!=', '')
@@ -242,7 +280,15 @@ class CourierBroadcaster
 
     private function orderByDistanceIfPossible($query, CourierOrder $courierOrder): void
     {
-        $payload = $courierOrder->task_pickup_address;
+        // task_pickup_address DB ustuni emas (faqat kontrollerda xotirada
+        // qo'yiladi) — shuning uchun olish nuqtasini ochiq topshiriqdan olamiz.
+        $payload = $courierOrder->task_pickup_address
+            ?? \App\Models\CourierTask::query()
+                ->where('order_id', $courierOrder->order_id)
+                ->whereNull('courier_id')
+                ->where('status_code', \App\Enums\CourierTaskStatusCode::ASSIGNED->value)
+                ->latest('id')
+                ->value('pickup_address');
         if (is_string($payload)) {
             $payload = json_decode($payload, true);
         }
@@ -257,7 +303,8 @@ class CourierBroadcaster
         }
 
         $query
-            ->orderByRaw('CASE WHEN couriers.current_lat IS NULL OR couriers.current_lon IS NULL THEN 1 ELSE 0 END asc')
+            // Eskirgan (2 soatdan oshgan) joylashuv — noma'lum deb hisoblanadi
+            ->orderByRaw('CASE WHEN couriers.current_lat IS NULL OR couriers.current_lon IS NULL OR couriers.location_updated_at IS NULL OR couriers.location_updated_at < ? THEN 1 ELSE 0 END asc', [now()->subHours(2)])
             ->orderByRaw(
                 '(6371 * acos(cos(radians(?)) * cos(radians(couriers.current_lat)) * cos(radians(couriers.current_lon) - radians(?)) + sin(radians(?)) * sin(radians(couriers.current_lat)))) asc',
                 [(float) $lat, (float) $lon, (float) $lat]
