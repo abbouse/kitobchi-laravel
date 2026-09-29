@@ -74,6 +74,11 @@ class BookEdition extends Model
         return $this->hasOne(BookEditionVector::class, 'edition_id');
     }
 
+    public function video(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(BookEditionVideo::class, 'edition_id');
+    }
+
     public function authorProfile(): BelongsTo
     {
         return $this->belongsTo(Author::class, 'author_id');

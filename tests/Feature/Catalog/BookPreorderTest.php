@@ -87,7 +87,7 @@ class BookPreorderTest extends TestCase
         $edition = BookEdition::find($seed->edition_id);
         Sanctum::actingAs($shop, ['*'], 'seller');
 
-        $release = today()->addDays(30)->toDateString();
+        $release = today()->addDays(20)->toDateString();
         $this->postJson('/api/v1/seller/catalog/offers', [
             'edition_id' => $edition->id, 'price' => 70000, 'count' => 50,
             'preorder_release_date' => $release,

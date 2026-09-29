@@ -146,6 +146,7 @@ class CatalogController extends Controller
                 return $row;
             })->values(),
             'formOptions' => $this->formOptions(),
+            'video' => CatalogVideoController::panelPayload((int) $model->id),
         ]);
     }
 

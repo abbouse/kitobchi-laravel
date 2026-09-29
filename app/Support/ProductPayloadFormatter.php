@@ -101,6 +101,8 @@ class ProductPayloadFormatter
                     : [];
                 // Bir xil ISBN, boshqa nashr (qattiq/yumshoq muqova, boshqa til)
                 $payload['other_printings'] = CatalogOffers::otherPrintings($product->edition_id ? (int) $product->edition_id : null);
+                // Global kitob videosi (SD/HD + poster), bo'lmasa null
+                $payload['video'] = \App\Models\BookEditionVideo::payloadFor($product->edition_id ? (int) $product->edition_id : null);
             }
         }
 

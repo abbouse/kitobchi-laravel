@@ -173,4 +173,10 @@ return [
         'diagnostic_secret' => env('INSTAGRAM_DIAGNOSTIC_SECRET', ''),
     ],
 
+    // Mahsulot videolarini tayyorlash (ProcessEditionVideo)
+    'ffmpeg' => [
+        'binary' => env('FFMPEG_BINARY', '/usr/bin/ffmpeg'),
+        'probe' => env('FFPROBE_BINARY', '/usr/bin/ffprobe'),
+    ],
+
 ];

@@ -85,7 +85,164 @@ interface Submission {
   createdAt?: string;
 }
 
+interface EditionVideo {
+  status: 'processing' | 'ready' | 'failed' | string;
+  sdUrl?: string | null;
+  hdUrl?: string | null;
+  posterUrl?: string | null;
+  duration?: number | null;
+  sdSize?: number | null;
+  hdSize?: number | null;
+  error?: string | null;
+  canRetry?: boolean;
+  updatedAt?: string | null;
+}
+
+const mb = (bytes?: number | null) => (bytes ? `${(bytes / 1048576).toFixed(1)} MB` : '—');
+const mmss = (sec?: number | null) =>
+  sec ? `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}` : '—';
+
+/** Global kitobning mahsulot videosi: yuklash, holat, ko'rish, o'chirish. */
+function EditionVideoCard({ base, video }: { base: string; video: EditionVideo | null }) {
+  const [progress, setProgress] = useState<number | null>(null);
+  const [fileName, setFileName] = useState<string | null>(null);
+
+  const upload = (file: File) => {
+    setFileName(file.name);
+    setProgress(0);
+    router.post(
+      `${base}/video`,
+      { video: file },
+      {
+        forceFormData: true,
+        preserveScroll: true,
+        onProgress: (e) => setProgress((e as { percentage?: number } | undefined)?.percentage ?? null),
+        onFinish: () => {
+          setProgress(null);
+          setFileName(null);
+        },
+      },
+    );
+  };
+
+  const status = video?.status;
+  const chip =
+    status === 'ready'
+      ? ['Tayyor', 'bg-light-success text-success']
+      : status === 'failed'
+        ? ['Xatolik', 'bg-light-danger text-danger']
+        : status === 'processing'
+          ? ['Tayyorlanmoqda', 'bg-light-warning text-warning']
+          : null;
+
+  return (
+    <div className="card border-0 shadow-sm b-r-16 overflow-hidden mt-4">
+      <div className="card-body p-4">
+        <div className="d-flex align-items-center justify-content-between mb-3">
+          <h6 className="f-w-700 text-dark mb-0 d-flex align-items-center gap-2">
+            <i className="ti ti-movie text-primary"></i>
+            Mahsulot videosi
+          </h6>
+          {chip ? <span className={`badge ${chip[1]}`}>{chip[0]}</span> : null}
+        </div>
+
+        {status === 'ready' && (video?.hdUrl || video?.sdUrl) ? (
+          <div className="mb-3">
+            <video
+              className="w-100 b-r-12 bg-dark"
+              style={{ maxHeight: 320 }}
+              controls
+              preload="metadata"
+              poster={video?.posterUrl || undefined}
+              src={video?.hdUrl || video?.sdUrl || undefined}
+            />
+            <div className="d-flex flex-wrap gap-3 mt-2 f-s-12 text-secondary">
+              <span><i className="ti ti-clock"></i> {mmss(video?.duration)}</span>
+              <span>SD 480p: {mb(video?.sdSize)}</span>
+              <span>HD 720p: {mb(video?.hdSize)}</span>
+              {video?.updatedAt ? <span>{video.updatedAt}</span> : null}
+            </div>
+          </div>
+        ) : null}
+
+        {status === 'processing' ? (
+          <div className="alert alert-light-warning f-s-13 mb-3">
+            Video mobil uchun tayyorlanmoqda (480p va 720p). Bir necha daqiqadan so'ng sahifani yangilang.
+            <button type="button" className="btn btn-link btn-sm p-0 ms-2" onClick={() => router.reload({ preserveScroll: true })}>
+              Yangilash
+            </button>
+          </div>
+        ) : null}
+
+        {status === 'failed' ? (
+          <div className="alert alert-light-danger f-s-13 mb-3">
+            <div className="f-w-600 mb-1">Videoni tayyorlab bo'lmadi</div>
+            <div className="text-break">{video?.error || "Noma'lum xatolik"}</div>
+            {video?.canRetry ? (
+              <button
+                type="button"
+                className="btn btn-sm btn-light-danger mt-2"
+                onClick={() => router.post(`${base}/video/retry`, {}, { preserveScroll: true })}
+              >
+                <i className="ti ti-refresh"></i> Qayta urinish
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+
+        {progress !== null ? (
+          <div className="mb-3">
+            <div className="d-flex justify-content-between f-s-12 text-secondary mb-1">
+              <span className="text-truncate me-2">{fileName}</span>
+              <span>{Math.round(progress)}%</span>
+            </div>
+            <div className="progress" style={{ height: 6 }}>
+              <div className="progress-bar bg-primary" style={{ width: `${progress}%` }} />
+            </div>
+          </div>
+        ) : null}
+
+        <div className="d-flex flex-wrap gap-2">
+          <label className={`btn btn-primary mb-0 ${progress !== null ? 'disabled' : ''}`}>
+            <i className="ti ti-upload"></i> {video ? 'Videoni almashtirish' : 'Video yuklash'}
+            <input
+              type="file"
+              accept="video/mp4,video/quicktime,video/webm,video/x-matroska,.mp4,.mov,.webm,.mkv,.m4v"
+              hidden
+              disabled={progress !== null}
+              onChange={(e) => {
+                const f = e.currentTarget.files?.[0];
+                e.currentTarget.value = '';
+                if (f) upload(f);
+              }}
+            />
+          </label>
+          {video ? (
+            <button
+              type="button"
+              className="btn btn-light-danger"
+              disabled={progress !== null}
+              onClick={() => {
+                if (confirm("Videoni o'chirasizmi?")) {
+                  router.delete(`${base}/video`, { preserveScroll: true });
+                }
+              }}
+            >
+              <i className="ti ti-trash"></i> O'chirish
+            </button>
+          ) : null}
+        </div>
+        <div className="f-s-12 text-secondary mt-2">
+          MP4, MOV, WEBM yoki MKV, 300 MB gacha. Ilovada rasmlar ustida "Mahsulot videosi" tugmasi paydo bo'ladi;
+          sekin internetda 480p, Wi‑Fi da 720p o'ynaydi.
+        </div>
+      </div>
+    </div>
+  );
+}
+
 type Props = {
+  video?: EditionVideo | null;
   edition: Edition;
   offers: Offer[];
   submissions: Submission[];
@@ -94,7 +251,7 @@ type Props = {
 };
 
 export default function CatalogEdition() {
-  const { edition, offers = [], submissions = [], mergeCandidates = [], formOptions } = usePage<Props>().props;
+  const { edition, offers = [], submissions = [], mergeCandidates = [], formOptions, video = null } = usePage<Props>().props;
   const [label, chip] = editionStatus(edition.status, edition.verified);
   const base = `/boshqaruv/catalog/${edition.id}`;
 
@@ -551,6 +708,7 @@ export default function CatalogEdition() {
               </ul>
             </div>
           </div>
+          <EditionVideoCard base={base} video={video} />
         </div>
 
         {/* Right Column: Marketplace Ecosystem Tabs */}
