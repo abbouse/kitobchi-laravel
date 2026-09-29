@@ -1509,11 +1509,127 @@ class SearchController extends Controller
 
         $result = array_slice($sugg, 0, 12);
 
-        if (empty($result) && mb_strlen($query) >= 2) {
+        // rich=1 — yangi ilova: guruhlangan jonli natijalar (kitob kartasi,
+        // mualliflar, janrlar, teglar, do'konlar). Eski ilovalar uchun `data`
+        // avvalgidek oddiy matn ro'yxati bo'lib qoladi.
+        $groups = $request->boolean('rich')
+            ? $this->richSuggestionGroups($request, $patterns, $sellerId, $sugg)
+            : null;
+
+        $hasAnything = ! empty($result) || ($groups && collect($groups)->flatten(1)->isNotEmpty());
+        if (! $hasAnything && mb_strlen($query) >= 2) {
             $this->upsertHistory($request, $query, true, null);
         }
 
-        return response()->json(['status' => 'success', 'data' => $result]);
+        return response()->json(array_filter([
+            'status' => 'success',
+            'data' => $result,
+            'groups' => $groups,
+        ], fn ($v) => $v !== null));
+    }
+
+    /**
+     * Qidiruv maydoniga yozilayotganda chiqadigan guruhlangan natijalar.
+     * `limit` — natijalar sahifasidagi "Mualliflar"/"Do'konlar" tablari uchun
+     * kattaroq ro'yxat olish mumkin (maks. 20).
+     */
+    private function richSuggestionGroups(Request $request, array $patterns, ?int $sellerId, array $flat): array
+    {
+        $limit = max(3, min(20, (int) $request->query('limit', 0) ?: 0));
+        $bookLimit = $request->query('limit') ? $limit : 4;
+        $otherLimit = $request->query('limit') ? $limit : 3;
+        $user = auth('sanctum')->user();
+        $authorColumnAvailable = Books::hasAuthorColumn();
+        $visible = fn ($b) => $b->where('status', true)->where('is_hidden', 0)->where('is_approved', 1);
+
+        $books = $this->visibleBooks(['category', 'seller', 'tags'])
+            ->when($sellerId, fn ($q) => $q->where('seller_id', $sellerId), fn ($q) => $q->catalogFeatured())
+            ->where(function ($w) use ($patterns, $authorColumnAvailable) {
+                $this->orWhereLikeAny($w, $patterns, function ($inner, $p) use ($authorColumnAvailable) {
+                    $inner->where('name', 'LIKE', $p)->orWhere('artikul', 'LIKE', $p);
+                    $this->orWhereAuthorLike($inner, $p, $authorColumnAvailable);
+                });
+            })
+            ->when(
+                $sellerId,
+                fn ($q) => $q->orderByDesc('totalSalesWeek'),
+                fn ($q) => $q->orderByBookSales('week')
+            )
+            ->limit($bookLimit)
+            ->get()
+            ->map(fn ($b) => $this->formatProduct($b, $user))
+            ->filter()
+            ->values()
+            ->all();
+
+        $authors = [];
+        $shops = [];
+        $categories = [];
+
+        if (! $sellerId) {
+            try {
+                $authors = \App\Models\Author::query()
+                    ->where(fn ($w) => $this->orWhereLikeAny($w, $patterns, fn ($inner, $p) => $inner->where('name', 'LIKE', $p)))
+                    ->whereHas('books', $visible)
+                    ->withCount(['books as books_count' => fn ($b) => $visible($b)->catalogFeatured()])
+                    ->orderByDesc('books_count')
+                    ->limit($otherLimit)
+                    ->get()
+                    ->map(fn ($a) => [
+                        'id' => $a->id,
+                        'name' => (string) $a->name,
+                        'image' => $a->image_url,
+                        'books_count' => (int) $a->books_count,
+                    ])->values()->all();
+            } catch (\Throwable $e) {
+                Log::warning('rich suggestions: authors', ['e' => $e->getMessage()]);
+            }
+
+            try {
+                $shops = \App\Models\Seller::query()
+                    ->where('is_hidden', 0)
+                    ->where(fn ($q) => $q->whereNull('parent_id')->orWhere('parent_id', 0))
+                    ->where('status', 'approved')
+                    ->where(fn ($w) => $this->orWhereLikeAny($w, $patterns, fn ($inner, $p) => $inner->where('shop_name', 'LIKE', $p)))
+                    ->whereHas('books', $visible)
+                    ->orderByDesc('isVerified')
+                    ->limit($otherLimit)
+                    ->get(['id', 'shop_name', 'photo', 'region', 'isVerified'])
+                    ->map(fn ($s) => [
+                        'id' => $s->id,
+                        'shop_name' => (string) $s->shop_name,
+                        'photo' => $s->photo,
+                        'region' => $s->region,
+                        'isVerified' => (bool) $s->isVerified,
+                    ])->values()->all();
+            } catch (\Throwable $e) {
+                Log::warning('rich suggestions: shops', ['e' => $e->getMessage()]);
+            }
+
+            try {
+                $categories = BookCategories::query()
+                    ->where(fn ($w) => $this->orWhereLikeAny($w, $patterns, fn ($inner, $p) => $this->likeAnyColumns(
+                        $inner, $p, ['name_uz', 'name_ru', 'name_en', 'name_ja']
+                    )))
+                    ->whereHas('books', $visible)
+                    ->limit(3)
+                    ->get()
+                    ->map(fn ($c) => ['id' => $c->id, 'name' => $c->name])
+                    ->values()->all();
+            } catch (\Throwable $e) {
+                Log::warning('rich suggestions: categories', ['e' => $e->getMessage()]);
+            }
+        }
+
+        $tags = collect($flat)->where('type', 'tag')->pluck('text')->take(4)->values()->all();
+
+        return [
+            'books' => $books,
+            'authors' => $authors,
+            'categories' => $categories,
+            'tags' => $tags,
+            'shops' => $shops,
+        ];
     }
 
     // ─────────────────────────────────────────────
