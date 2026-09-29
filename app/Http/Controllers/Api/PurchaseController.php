@@ -359,6 +359,7 @@ class PurchaseController extends Controller
         $totalSum = 0;
         $sellers = [];
 
+        $preorderShipsAt = null;
         foreach ($cartItems as $item) {
             $product = $item->product;
             if (! $product || ! $product->seller_id) {
@@ -366,9 +367,17 @@ class PurchaseController extends Controller
             }
             $totalSum += $this->effectiveCartItemUnitPrice($item) * $item->count_item;
             $sellers[$product->seller_id] = true;
+            if ($product instanceof Books && $product->isPreorderActive()
+                && ($preorderShipsAt === null || $product->preorder_release_date->gt($preorderShipsAt))) {
+                $preorderShipsAt = $product->preorder_release_date->copy();
+            }
         }
 
         $sellerCount = count($sellers);
+        // Predzakaz: butun buyurtma shu kungacha kutadi, faqat karta
+        $preorderReason = $preorderShipsAt
+            ? "Savatda oldindan buyurtma bor — buyurtma ".$preorderShipsAt->format('d.m.Y')." dan jo'natiladi va faqat karta orqali to'lanadi."
+            : null;
 
         $services = $this->resolveDeliveryOffers($location, $sellerCount, $totalSum);
 
@@ -401,14 +410,15 @@ class PurchaseController extends Controller
                 'seller_count' => $sellerCount,
                 'price_before_promo' => $totalSum,
                 'cashback_balance' => (int) ($user->cashback ?? 0),
+                'preorder_ships_at' => $preorderShipsAt?->toDateString(),
             ],
             'user_reputation' => [
                 'score' => round((float) ($user->reputation_score ?? UserReputationService::BASELINE_SCORE), 2),
-                'cash_on_delivery_allowed' => (bool) ($user->cash_on_delivery_allowed ?? true),
+                'cash_on_delivery_allowed' => $preorderShipsAt === null && (bool) ($user->cash_on_delivery_allowed ?? true),
                 'cod_return_strikes' => (int) ($user->cod_return_strikes ?? 0),
-                'cash_on_delivery_block_reason' => ($user->cash_on_delivery_allowed ?? true)
+                'cash_on_delivery_block_reason' => $preorderReason ?? (($user->cash_on_delivery_allowed ?? true)
                     ? null
-                    : "Avvalgi naqd buyurtma qaytib kelgani uchun hozircha naqd to'lov yopilgan.",
+                    : "Avvalgi naqd buyurtma qaytib kelgani uchun hozircha naqd to'lov yopilgan."),
             ],
             'active_certificates' => GiftCertificate::where('recipient_user_id', $user->id)
                 ->where('status', GiftCertificate::STATUS_ACTIVE)
@@ -421,7 +431,9 @@ class PurchaseController extends Controller
                     'expires_at' => $cert->expires_at?->format('d.m.Y'),
                 ]),
             'delivery_services' => $services,
-            'split' => $this->splitAvailabilityPayload($user, (int) $totalSum, $cartItems),
+            'split' => $preorderShipsAt
+                ? ['available' => false]
+                : $this->splitAvailabilityPayload($user, (int) $totalSum, $cartItems),
         ]]);
     }
 
@@ -652,6 +664,10 @@ class PurchaseController extends Controller
         $paymentStatus = PaymentStatusCode::fromLegacy($order->payment_status_code ?? $order->paymentStatus);
         if ($paymentStatus !== PaymentStatusCode::CARD_PENDING) {
             return $this->err('Bu buyurtma to\'lovni kutmayapti.', 422);
+        }
+
+        if (\App\Support\OrderPreorder::shipsAt($order) !== null) {
+            return $this->err("Oldindan buyurtmani nasiyaga rasmiylashtirib bo'lmaydi — faqat karta orqali.", 422);
         }
 
         // Nasiya keshbek yoki gift sertifikat bilan birga ishlatilmaydi (promokod mumkin).
@@ -1273,6 +1289,7 @@ class PurchaseController extends Controller
 
             // ── Mahsulotlarni tayyorlash ──────────────────────────
             $groupedBySeller = [];
+            $preorderShipsAt = null;
             $allItems = [];
             $uniqueSellerIds = [];
             $totalSum = 0;
@@ -1324,6 +1341,10 @@ class PurchaseController extends Controller
                     $item['author'] = $product->author;
                     if ($product instanceof Books && $product->isPreorderActive()) {
                         $item['preorder_release_date'] = $product->preorder_release_date->toDateString();
+                        // Butun buyurtma eng kech chiqadigan kitob sanasigacha kutadi
+                        if ($preorderShipsAt === null || $product->preorder_release_date->gt($preorderShipsAt)) {
+                            $preorderShipsAt = $product->preorder_release_date->copy();
+                        }
                     }
                 }
                 if ($cartItem->product_type === 'stationery') {
@@ -1665,6 +1686,22 @@ class PurchaseController extends Controller
 
             if ($supportsSourceCollectionId && $sourceCollectionId > 0) {
                 $purchasePayload['source_collection_id'] = $sourceCollectionId;
+            }
+
+            if ($preorderShipsAt !== null) {
+                // Predzakaz bir necha hafta kutadi — faqat karta, darhol to'lanadi
+                if ((int) $request->paymentStatus === 0) {
+                    DB::rollBack();
+
+                    return response()->json([
+                        'status' => 'error',
+                        'error_code' => 'preorder_card_only',
+                        'message' => "Oldindan buyurtma faqat karta orqali to'lanadi. Buyurtma ".$preorderShipsAt->format('d.m.Y')." dan jo'natiladi.",
+                    ], 422);
+                }
+                if (Schema::hasColumn('solds', 'preorder_ships_at')) {
+                    $purchasePayload['preorder_ships_at'] = $preorderShipsAt->toDateString();
+                }
             }
 
             $purchase = Sold::create($purchasePayload);

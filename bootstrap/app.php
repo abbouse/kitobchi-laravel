@@ -297,6 +297,16 @@ return Application::configure(basePath: dirname(__DIR__))
             ->withoutOverlapping(2)
             ->runInBackground();
 
+        // Predzakaz: jo'natish kuni kelgan buyurtmalar kuryerga chiqadi
+        $schedule->command('orders:release-preorders')
+            ->dailyAt('08:05')
+            ->timezone($tz)
+            ->withoutOverlapping(30);
+        $schedule->command('orders:release-preorders')
+            ->dailyAt('13:05')
+            ->timezone($tz)
+            ->withoutOverlapping(30);
+
         $schedule->command('postal:sync-tracking --limit=250')
             ->everyTenMinutes()
             ->timezone($tz)

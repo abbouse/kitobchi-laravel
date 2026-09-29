@@ -97,6 +97,13 @@ class CourierBroadcaster
     public function notifyNewOrderAvailable(CourierOrder $courierOrder): array
     {
         try {
+            // Predzakaz: jo'natish kunigacha push yo'q (guard ham qo'yilmaydi —
+            // o'sha kuni orders:release-preorders qayta chaqiradi)
+            $sold = \App\Models\Sold::query()->find($courierOrder->order_id);
+            if ($sold && \App\Support\OrderPreorder::isHeld($sold)) {
+                return ['skipped' => true, 'reason' => 'preorder_held'];
+            }
+
             $target = $this->collectSmartCourierTokens($courierOrder);
             $tokens = $target['tokens'];
 

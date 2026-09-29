@@ -527,6 +527,33 @@ class OrderStatusPushService
         }
     }
 
+    /** Predzakaz kuni keldi — buyurtma jo'natishga tayyorlanmoqda. */
+    public function sendPreorderReleasedNotice(Sold $order): void
+    {
+        try {
+            $user = $order->user()->first(['id', 'locale']);
+            if (! $user) {
+                return;
+            }
+            $tokens = $this->tokensForUser($user->id);
+            if ($tokens->isEmpty()) {
+                return;
+            }
+            $texts = [
+                'uz' => ["Kutgan kitobingiz chiqdi! 📚", "Buyurtma #{$order->id} bugun jo'natishga tayyorlanmoqda."],
+                'ru' => ['Ваша книга вышла! 📚', "Заказ #{$order->id} сегодня готовится к отправке."],
+                'en' => ['Your book is out! 📚', "Order #{$order->id} is being prepared for shipping today."],
+            ];
+            [$title, $body] = $texts[$this->resolveLocale($user->locale ?? null)] ?? $texts['uz'];
+            (new FCMService('kitobchi'))->send($tokens->all(), $title, $body, [
+                'type' => 'order_status',
+                'order_id' => (string) $order->id,
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('Preorder release push failed: '.$e->getMessage(), ['order_id' => $order->id]);
+        }
+    }
+
     private function tokensForUser(int $userId): Collection
     {
         return ConnectedDevice::query()

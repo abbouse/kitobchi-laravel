@@ -624,6 +624,14 @@ class CourierOrderController extends Controller
                     ->pipe(fn ($tasks) => $this->courierVisibleTasksForAvailableFeed($tasks, $sold))
                     ->values();
 
+                if (\App\Support\OrderPreorder::isHeld($sold)) {
+                    return response()->json([
+                        'success' => false,
+                        'error_code' => 'preorder_not_ready',
+                        'message' => "Bu oldindan buyurtma — ".\App\Support\OrderPreorder::shipsAt($sold)->format('d.m.Y')." dan jo'natiladi.",
+                    ], 422);
+                }
+
                 if (! $this->allSellerPickupTasksReadyForCourier($availableTasks, $sold)) {
                     return response()->json([
                         'success' => false,
@@ -1229,6 +1237,11 @@ class CourierOrderController extends Controller
 
     private function allSellerPickupTasksReadyForCourier(\Illuminate\Support\Collection $tasks, Sold $order): bool
     {
+        // Predzakaz: jo'natish kuni kelmaguncha kuryerga chiqmaydi
+        if (\App\Support\OrderPreorder::isHeld($order)) {
+            return false;
+        }
+
         if ($tasks->isEmpty()) {
             return false;
         }
