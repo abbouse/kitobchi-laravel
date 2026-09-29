@@ -297,6 +297,14 @@ return Application::configure(basePath: dirname(__DIR__))
             ->withoutOverlapping(2)
             ->runInBackground();
 
+        // Do'konlarga javobsiz mijoz xabarlari — kuniga 3 marta, jamlab
+        foreach (['10:05', '14:05', '19:05'] as $at) {
+            $schedule->command('chats:notify-sellers-unread')
+                ->dailyAt($at)
+                ->timezone($tz)
+                ->withoutOverlapping(20);
+        }
+
         // Predzakaz: jo'natish kuni kelgan buyurtmalar kuryerga chiqadi
         $schedule->command('orders:release-preorders')
             ->dailyAt('07:05')

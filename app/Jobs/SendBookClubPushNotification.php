@@ -59,6 +59,8 @@ class SendBookClubPushNotification implements ShouldQueue
         $body = trim($formatted['body'] . ' ' . ($formatted['preview'] ?? ''));
 
         $pushRequest = new Request([
+            // Ichki chaqiruv: PushController maxfiy kalitsiz rad etardi (401)
+            'secret'  => \App\Http\Controllers\PushController::sharedSecret(),
             'app_key' => 'kitobchi',
             'title'   => $formatted['title'],
             'body'    => $body,

@@ -24,7 +24,9 @@ Broadcast::channel('chat.{conversationId}', function ($user, $conversationId) {
             return (int) $user->id === (int) $conversation->user_id;
         }
         if ($isSeller) {
-            return (int) $user->id === (int) $conversation->shop_id;
+            // Do'kon xodimlari (parent_id) ham suhbatni real vaqtda ko'radi
+            return (int) $user->id === (int) $conversation->shop_id
+                || (int) ($user->parent_id ?? 0) === (int) $conversation->shop_id;
         }
     }
 

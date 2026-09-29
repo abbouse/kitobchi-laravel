@@ -111,6 +111,9 @@ class SendMessagePushNotification implements ShouldQueue
         } else {
             if ($message->sender_id == $conversation->user_id) {
                 // ── User → Shop (Business App) ─────────────────────────────
+                // Har xabarga alohida push yubormaymiz — do'konga kuniga
+                // 3 marta jamlangan xabar boradi (chats:notify-sellers-unread)
+                return;
                 $appKey = 'business';
 
                 $sender       = User::find($message->sender_id);
@@ -166,6 +169,9 @@ class SendMessagePushNotification implements ShouldQueue
             : $message->message;
 
         $pushRequest = new Request([
+            // Ichki chaqiruv: maxfiy kalitsiz PushController 401 qaytarardi va
+            // chat pushlari umuman ketmasdi
+            'secret'  => \App\Http\Controllers\PushController::sharedSecret(),
             'app_key' => $appKey,
             'title'   => $senderName,
             'body'    => $body,
