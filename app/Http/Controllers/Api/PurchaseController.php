@@ -2993,6 +2993,11 @@ class PurchaseController extends Controller
         $this->appendDeliveryProgressMeta($order);
         $this->applySignedDeliveryQr($order);
         $this->appendFiscalReceiptMeta($order);
+        // Karta buyurtmasini bekor qilish oynasi (10 daqiqa) — ilova teskari sanaydi
+        $cardCancelUntil = $this->orderService->cardCancelDeadline($order);
+        $order->card_cancel_until = $cardCancelUntil && $cardCancelUntil->isFuture()
+            ? $cardCancelUntil->toIso8601String()
+            : null;
 
         return response()->json(['status' => 'success', 'data' => [$order]]);
     }

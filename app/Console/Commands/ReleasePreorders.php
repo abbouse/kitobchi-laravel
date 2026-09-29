@@ -44,6 +44,18 @@ class ReleasePreorders extends Command
                     if (! Cache::add('preorder-released:'.$order->id, 1, now()->addDays(5))) {
                         continue;
                     }
+                    // Hold 28 kundan keyin tugaydi — jo'natish kuni pulni yechamiz
+                    if (\App\Enums\PaymentStatusCode::fromLegacy($order->payment_status_code ?? $order->paymentStatus) === \App\Enums\PaymentStatusCode::HELD) {
+                        try {
+                            app(\App\Services\PaylovOrderPaymentService::class)->chargeHeldOrder(
+                                $order,
+                                app(\App\Services\SellerOrderCancellationService::class)->operationalAmountForCourier($order),
+                                'preorder_release',
+                            );
+                        } catch (\Throwable $e) {
+                            report($e);
+                        }
+                    }
                     $broadcaster->notifyPendingForOrder((int) $order->id);
                     $push->sendPreorderReleasedNotice($order);
                     $count++;

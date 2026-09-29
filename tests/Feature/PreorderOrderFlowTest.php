@@ -66,4 +66,34 @@ class PreorderOrderFlowTest extends TestCase
         $this->artisan('orders:release-preorders')->expectsOutput('Released preorders: 1')->assertSuccessful();
         $this->artisan('orders:release-preorders')->expectsOutput('Released preorders: 0')->assertSuccessful();
     }
+
+    public function test_card_order_cancel_window_is_ten_minutes(): void
+    {
+        $this->mock(\App\Services\PaylovOrderPaymentService::class)->shouldIgnoreMissing();
+        ['sold' => $sold] = $this->makeCourierOrder(cod: false);
+        $sold->forceFill([
+            'status' => 'A', 'status_code' => 'pending',
+            'paymentStatus' => 1, 'payment_status_code' => 'held',
+        ])->save();
+        \Illuminate\Support\Facades\DB::table('transactions')->insert([
+            'owner_id' => $sold->user_id, 'order_id' => $sold->id, 'amount' => 50000,
+            'payment_type' => 'order', 'provider' => 'paylov', 'state' => 1,
+            'create_time' => now()->subMinutes(11)->format('Y-m-d H:i:s'),
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $user = \App\Models\User::find($sold->user_id);
+        Sanctum::actingAs($user, ['*'], 'user');
+
+        $this->getJson("/api/v1/kitobchi/purchase/details/{$sold->id}")
+            ->assertOk()->assertJsonPath('data.0.card_cancel_until', null);
+        $this->getJson("/api/v1/kitobchi/purchase/cancel/{$sold->id}")
+            ->assertStatus(400)->assertJsonPath('message', 'cancel_order_error_expired');
+
+        \Illuminate\Support\Facades\DB::table('transactions')->where('order_id', $sold->id)
+            ->update(['create_time' => now()->subMinutes(3)->format('Y-m-d H:i:s')]);
+        $this->getJson("/api/v1/kitobchi/purchase/details/{$sold->id}")
+            ->assertOk()->assertJsonPath('data.0.card_cancel_until', fn ($v) => $v !== null);
+        $this->getJson("/api/v1/kitobchi/purchase/cancel/{$sold->id}")->assertOk();
+        $this->assertSame('cancelled', $sold->fresh()->status_code);
+    }
 }

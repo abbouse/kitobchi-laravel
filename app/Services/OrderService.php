@@ -525,6 +525,15 @@ class OrderService
             }
         }
 
+        // Karta orqali to'langan (hold) buyurtmani mijoz faqat to'lovdan keyin
+        // 10 daqiqa ichida bekor qila oladi — keyin do'kon ishga kirishadi
+        if ($strict && $paymentStatus === PaymentStatusCode::HELD) {
+            $deadline = $this->cardCancelDeadline($order);
+            if ($deadline === null || now()->gt($deadline)) {
+                return ['ok' => false, 'message' => 'cancel_order_error_expired'];
+            }
+        }
+
         if ($paymentStatus === PaymentStatusCode::HELD) {
             $this->dismissPaylovOrderHold($order, 'order_cancelled');
         }
@@ -715,6 +724,32 @@ class OrderService
         }
 
         return ['ok' => true, 'message' => 'Buyurtma bekor qilindi.'];
+    }
+
+    public const CARD_CANCEL_WINDOW_MINUTES = 10;
+
+    /**
+     * Karta (hold) buyurtmasini mijoz bekor qila oladigan oxirgi vaqt:
+     * to'lov (hold) paytidan 10 daqiqa. Faqat hali yo'lga chiqmagan buyurtma.
+     */
+    public function cardCancelDeadline(Sold $order): ?\Illuminate\Support\Carbon
+    {
+        if (PaymentStatusCode::fromLegacy($order->payment_status_code ?? $order->paymentStatus) !== PaymentStatusCode::HELD) {
+            return null;
+        }
+        $status = OrderStatusCode::fromLegacy($order->status_code ?? $order->status);
+        if (! in_array($status, [OrderStatusCode::PENDING, OrderStatusCode::PACKING], true)) {
+            return null;
+        }
+
+        $paidAt = Transaction::query()
+            ->where('order_id', $order->id)
+            ->where('payment_type', 'order')
+            ->orderByDesc('id')
+            ->value(\Illuminate\Support\Facades\Schema::hasColumn('transactions', 'create_time') ? 'create_time' : 'created_at');
+        $paidAt = $paidAt ? \Illuminate\Support\Carbon::parse($paidAt) : ($order->updated_at ? \Illuminate\Support\Carbon::parse($order->updated_at) : null);
+
+        return $paidAt?->copy()->addMinutes(self::CARD_CANCEL_WINDOW_MINUTES);
     }
 
     private function dismissPaylovOrderHold(Sold $order, string $reason): void

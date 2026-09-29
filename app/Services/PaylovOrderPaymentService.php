@@ -79,6 +79,11 @@ class PaylovOrderPaymentService
         }
 
         $holdMinutes = max(1, min(40320, (int) config('services.paylov.hold_minutes', 5760)));
+        // Predzakaz jo'natish kunigacha kutadi — Paylov ruxsat bergan eng uzun
+        // hold (28 kun). Jo'natish kuni orders:release-preorders pulni yechadi.
+        if (\App\Support\OrderPreorder::shipsAt($order) !== null) {
+            $holdMinutes = 40320;
+        }
         $holdCreate = $paylov->createHold(
             (string) $user->id,
             (string) $card->provider_card_id,

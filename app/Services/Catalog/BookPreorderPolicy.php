@@ -10,7 +10,7 @@ use Illuminate\Support\Carbon;
  * OLDINDAN BUYURTMA QOIDALARI.
  *
  * Faqat hali chiqmagan, nashr etilayotgan kitob uchun:
- *  - jo'natish kuni ertadan boshlab eng ko'pi 180 kun ichida;
+ *  - jo'natish kuni ertadan boshlab eng ko'pi 27 kun ichida (karta hold 28 kun);
  *  - kitob yili o'tgan yillarga tegishli bo'lmasin (eski kitob "yangi" emas);
  *  - kitob boshqa do'konlarda allaqachon oddiy sotuvda bo'lmasin — u holda
  *    u chiqib bo'lgan, oldindan buyurtmaning ma'nosi yo'q.
@@ -20,7 +20,11 @@ use Illuminate\Support\Carbon;
  */
 class BookPreorderPolicy
 {
-    public const MAX_DAYS = 180;
+    /**
+     * Karta hold Paylov'da eng ko'pi 28 kun turadi; jo'natish kuni pul
+     * yechilishi uchun 1 kun zaxira qoldiriladi.
+     */
+    public const MAX_DAYS = 27;
 
     /**
      * @return array{0: ?Carbon, 1: ?string} [sana yoki null, xato matni yoki null]
