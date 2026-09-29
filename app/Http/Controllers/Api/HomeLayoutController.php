@@ -73,6 +73,33 @@ class HomeLayoutController extends Controller
         ]);
     }
 
+    /** Janr chipi bosilganda: shu janr kitoblari (sahifalab). */
+    public function category(Request $request, int $id): JsonResponse
+    {
+        $page = max(1, (int) $request->query('page', 1));
+        $perPage = 20;
+        $section = new HomeSection([
+            'key' => 'category_'.$id,
+            'type' => 'category',
+            'item_limit' => $perPage,
+            'settings' => ['category_id' => $id],
+        ]);
+        $items = app(ProductsController::class)->homeSectionItems($request, $section, $page, $perPage);
+        $category = BookCategories::query()->find($id);
+        $locale = $this->locale($request);
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'key' => $section->key,
+                'title' => $category ? (string) ($category->{'name_'.$locale} ?: $category->name_uz) : '',
+                'items' => $items,
+                'page' => $page,
+                'has_more' => count($items) >= $perPage,
+            ],
+        ]);
+    }
+
     public function shops(Request $request): JsonResponse
     {
         $page = max(1, (int) $request->query('page', 1));

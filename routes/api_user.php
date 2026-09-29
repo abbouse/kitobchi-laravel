@@ -37,6 +37,7 @@ Route::get('home', [HomeController::class, 'index']);
 Route::get('home/layout', [\App\Http\Controllers\Api\HomeLayoutController::class, 'layout'])->middleware('throttle:120,1');
 Route::get('home/section/{key}', [\App\Http\Controllers\Api\HomeLayoutController::class, 'section'])->middleware('throttle:120,1');
 Route::get('home/shops', [\App\Http\Controllers\Api\HomeLayoutController::class, 'shops'])->middleware('throttle:120,1');
+Route::get('home/category/{id}', [\App\Http\Controllers\Api\HomeLayoutController::class, 'category'])->whereNumber('id')->middleware('throttle:120,1');
 Route::get('counts', [UserController::class, 'getGlobalCounts']);
 Route::get('split-preview', [PurchaseController::class, 'splitPreview']);
 Route::get('news', [NewsController::class, 'index']);
