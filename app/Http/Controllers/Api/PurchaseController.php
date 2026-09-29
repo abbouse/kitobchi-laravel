@@ -3316,6 +3316,45 @@ class PurchaseController extends Controller
             }
         }
 
+        // Kitob buzilmaydi: kuryer mijozni topa olmasa buyurtma bekor
+        // qilinmaydi — har bir urinish va keyingi yetkazish sanasi ko'rinadi.
+        $nextDeliveryAttemptAt = null;
+        if ($deliveryFlow === 'courier' && \Illuminate\Support\Facades\Schema::hasTable('courier_delivery_attempts')) {
+            $attempts = \Illuminate\Support\Facades\DB::table('courier_delivery_attempts')
+                ->where('order_id', $order->id)
+                ->orderBy('id')
+                ->get(['attempt_no', 'reason', 'next_attempt_at', 'created_at']);
+            foreach ($attempts as $attempt) {
+                $next = $attempt->next_attempt_at ? Carbon::parse($attempt->next_attempt_at) : null;
+                $when = $next ? $next->format('d.m H:i') : null;
+                $push(
+                    $timeline,
+                    $seen,
+                    'delivery_attempt_failed_'.$attempt->attempt_no,
+                    'handoff',
+                    Carbon::parse($attempt->created_at)->toIso8601String(),
+                    [
+                        'title_uz' => "Kuryer sizni topa olmadi ({$attempt->attempt_no}-urinish)",
+                        'title_ru' => "Курьер не смог вас найти (попытка {$attempt->attempt_no})",
+                        'title_en' => "Courier couldn't reach you (attempt {$attempt->attempt_no})",
+                        'location' => $when
+                            ? \App\Support\CourierDeliveryAttempts::reasonLabel((string) $attempt->reason).' · qayta: '.$when
+                            : \App\Support\CourierDeliveryAttempts::reasonLabel((string) $attempt->reason),
+                        'is_external' => true,
+                    ],
+                );
+            }
+            $activeCourierOrder = \App\Models\CourierOrder::query()
+                ->where('order_id', $order->id)
+                ->where('status_code', \App\Enums\CourierOrderStatusCode::IN_DELIVERY->value)
+                ->latest('id')
+                ->first(['id', 'next_attempt_at', 'return_required_at']);
+            if ($activeCourierOrder && ! $activeCourierOrder->return_required_at
+                && $activeCourierOrder->next_attempt_at?->isFuture()) {
+                $nextDeliveryAttemptAt = $activeCourierOrder->next_attempt_at->toIso8601String();
+            }
+        }
+
         if ($order->status_code === OrderStatusCode::CUSTOMER_RECEIVED->value) {
             $push(
                 $timeline,
@@ -3361,6 +3400,7 @@ class PurchaseController extends Controller
                 'recipient_postcode' => $postalTracking['recipient_postcode'] ?? null,
             ] : null,
             'timeline' => array_values($timeline),
+            'next_delivery_attempt_at' => $nextDeliveryAttemptAt,
         ];
     }
 
