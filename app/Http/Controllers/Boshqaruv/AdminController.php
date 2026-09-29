@@ -10764,6 +10764,7 @@ PROMPT;
                 'courier_price_per_km' => (int) ($settings->courier_price_per_km ?? 1500),
                 'courier_min_fee' => (int) ($settings->courier_min_fee ?? 5000),
                 'seller_courier_min_delivery_price' => (int) ($settings->seller_courier_min_delivery_price ?? 0),
+                'courier_max_active_orders' => (int) ($settings->courier_max_active_orders ?? 3),
                 'courier_bonus_rules' => $settings->courier_bonus_rules ?? [],
                 'telegram_login_enabled' => (bool) $settings->telegram_login_enabled,
                 'telegram_client_id' => $settings->telegram_client_id,

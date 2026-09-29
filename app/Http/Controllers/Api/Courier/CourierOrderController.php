@@ -30,6 +30,7 @@ use App\Services\PaylovOrderPaymentService;
 use App\Services\QrTokenService;
 use App\Services\SellerOrderCancellationService;
 use Carbon\Carbon;
+use App\Support\CourierLimits;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -253,6 +254,9 @@ class CourierOrderController extends Controller
         return response()->json([
             'success' => true,
             'data' => $orders,
+            // Ilova "faol: 2/3" ko'rsatishi va limitda qabul qilishni yopishi uchun
+            'active_orders_count' => CourierLimits::activeOrdersCount((int) $courier->id),
+            'max_active_orders' => CourierLimits::maxActiveOrders(),
         ], 200);
     }
 
@@ -507,16 +511,20 @@ class CourierOrderController extends Controller
 
         try {
             $response = DB::transaction(function () use ($courier, $id) {
-                $activeOrdersCount = CourierOrder::query()
-                    ->where('courier_id', $courier->id)
-                    ->where('status', 'in_delivery')
-                    ->lockForUpdate()
-                    ->count();
+                // Kuryer qatorini qulflaymiz: bir kuryerning parallel ikki
+                // "qabul qilish" so'rovi limitdan oshib ketmasin
+                \App\Models\Couriers::query()->whereKey($courier->id)->lockForUpdate()->first();
 
-                if ($activeOrdersCount >= 3) {
+                $maxActive = CourierLimits::maxActiveOrders();
+                $activeOrdersCount = CourierLimits::activeOrdersCount((int) $courier->id);
+
+                if ($activeOrdersCount >= $maxActive) {
                     return response()->json([
                         'success' => false,
-                        'message' => 'Sizda faol buyurtmalar soni 3 taga yetgan. Avval ulardan birini yakunlang.',
+                        'error_code' => 'active_orders_limit',
+                        'active_orders_count' => $activeOrdersCount,
+                        'max_active_orders' => $maxActive,
+                        'message' => "Sizda faol buyurtmalar soni {$maxActive} taga yetgan. Avval ulardan birini yakunlang.",
                     ], 422);
                 }
 

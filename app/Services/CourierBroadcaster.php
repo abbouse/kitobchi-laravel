@@ -205,7 +205,7 @@ class CourierBroadcaster
                     ->whereRaw('COALESCE(active_orders.active_orders_count, 0) = 0')
                     ->whereRaw('COALESCE(active_tasks.active_tasks_count, 0) = 0');
             }, function ($builder) {
-                $builder->whereRaw('COALESCE(active_orders.active_orders_count, 0) < 3');
+                $builder->whereRaw('COALESCE(active_orders.active_orders_count, 0) < ?', [\App\Support\CourierLimits::maxActiveOrders()]);
             })
             ->select([
                 'couriers.id as courier_id',

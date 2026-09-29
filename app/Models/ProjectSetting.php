@@ -28,6 +28,7 @@ class ProjectSetting extends Model
         // Kuryer km-based to'lov va bonus tizimi
         'courier_base_fee', 'courier_price_per_km', 'courier_min_fee', 'courier_bonus_rules',
         'seller_courier_min_delivery_price',
+        'courier_max_active_orders',
         // Split v1 prep
         'split_enabled', 'split_public_enabled',
         'split_global_min_limit', 'split_global_max_limit',
@@ -58,6 +59,7 @@ class ProjectSetting extends Model
         'courier_min_fee' => 'integer',
         'seller_courier_min_delivery_price' => 'integer',
         'courier_bonus_rules' => 'array',
+        'courier_max_active_orders' => 'integer',
         'split_enabled' => 'boolean',
         'split_public_enabled' => 'boolean',
         'split_global_min_limit' => 'integer',
