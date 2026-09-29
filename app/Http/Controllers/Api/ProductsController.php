@@ -1707,6 +1707,205 @@ class ProductsController extends Controller
     //  6. SELLERLAR + OXIRGI MAHSULOTLAR
     //  GET /products/sellers-with-latest
     // =========================================================================
+    // =========================================================================
+    //  BOSH SAHIFA BO'LIMLARI (boshqaruvdan sozlanadi)
+    //  Har kitob bitta kartochka (katalogdagi eng yaxshi taklif).
+    // =========================================================================
+
+    /**
+     * Bo'lim kitoblari. Sahifalab ("Hammasi" sahifasi uchun) ham ishlaydi.
+     *
+     * @return array<int, array>
+     */
+    public function homeSectionItems(Request $request, \App\Models\HomeSection $section, int $page = 1, ?int $perPage = null): array
+    {
+        $user = $request->user('user') ?? Auth::guard('user')->user();
+        $limit = max(4, min(40, (int) ($perPage ?? $section->item_limit ?: 12)));
+        $offset = max(0, ($page - 1) * $limit);
+        $settings = (array) ($section->settings ?? []);
+        $with = ['category', 'tags', 'seller'];
+        $format = fn ($books) => $books->map(fn ($b) => $this->formatProduct($b, $user, 'book'))->values()->all();
+
+        switch ($section->type) {
+            case 'for_you':
+                $items = collect();
+                if ($page === 1) {
+                    $items = $this->personalizedRecommendations($request, $user, $limit)
+                        ->filter(fn ($p) => ($p['type'] ?? 'book') === 'book' || isset($p['author']))
+                        ->values();
+                }
+                if ($items->count() < $limit) {
+                    $exclude = $items->pluck('id')->all();
+                    $fill = $this->bookListScope()->with($with)
+                        ->when($exclude !== [], fn ($q) => $q->whereNotIn('id', $exclude))
+                        ->orderByBookSales('week')->orderByDesc('id')
+                        ->offset($page === 1 ? 0 : $offset)
+                        ->limit($limit - $items->count())
+                        ->get();
+                    $items = $items->merge($format($fill));
+                }
+
+                return $items->values()->all();
+
+            case 'bestsellers':
+                return $format($this->bookListScope()->with($with)
+                    ->orderByBookSales('week')->orderByBookSales('total')->orderByDesc('id')
+                    ->offset($offset)->limit($limit)->get());
+
+            case 'new_arrivals':
+                return $format($this->bookListScope()->with($with)
+                    ->orderByDesc('created_at')->orderByDesc('id')
+                    ->offset($offset)->limit($limit)->get());
+
+            case 'coming_soon':
+                return $format($this->bookListScope()->with($with)
+                    ->whereDate('preorder_release_date', '>', today())
+                    ->orderBy('preorder_release_date')->orderByDesc('id')
+                    ->offset($offset)->limit($limit)->get());
+
+            case 'discount_ending':
+                return $format($this->hasActiveDiscount($this->bookListScope(), true)->with($with)
+                    ->whereNotNull('discountExpiresAt')
+                    ->where('discountExpiresAt', '<=', now()->addDays(14))
+                    ->orderBy('discountExpiresAt')->orderByDesc('id')
+                    ->offset($offset)->limit($limit)->get());
+
+            case 'category':
+                $categoryId = (int) ($settings['category_id'] ?? 0);
+                if ($categoryId <= 0) {
+                    return [];
+                }
+
+                return $format($this->bookListScope()->with($with)
+                    ->where('category_id', $categoryId)
+                    ->orderByBookSales('week')->orderByDesc('created_at')
+                    ->offset($offset)->limit($limit)->get());
+
+            case 'recently_viewed':
+                if (! $user) {
+                    return [];
+                }
+                $ids = ProductViewLog::query()
+                    ->where('user_id', $user->id)
+                    ->where('product_type', 'book')
+                    ->where('created_at', '>=', now()->subDays(60))
+                    ->selectRaw('product_id, MAX(id) as last_id')
+                    ->groupBy('product_id')
+                    ->orderByDesc('last_id')
+                    ->offset($offset)->limit($limit)
+                    ->pluck('product_id')
+                    ->map(fn ($id) => (int) $id)
+                    ->all();
+
+                return $this->booksByEditionOrder($ids, $with, $format);
+
+            case 'club_trending':
+                if (! \Illuminate\Support\Facades\Schema::hasTable('book_club')) {
+                    return [];
+                }
+                $ids = DB::table('book_club')
+                    ->where('product_type', 'book')
+                    ->whereNotNull('product_id')
+                    ->where(fn ($q) => $q->whereNull('is_deleted')->orWhere('is_deleted', 0))
+                    ->where('created_at', '>=', now()->subDays(30))
+                    ->selectRaw('product_id, COUNT(*) as mentions')
+                    ->groupBy('product_id')
+                    ->orderByDesc('mentions')
+                    ->offset($offset)->limit($limit)
+                    ->pluck('product_id')
+                    ->map(fn ($id) => (int) $id)
+                    ->all();
+
+                return $this->booksByEditionOrder($ids, $with, $format);
+
+            case 'collection':
+                $collectionId = (int) ($settings['collection_id'] ?? 0);
+                if ($collectionId <= 0 || ! \Illuminate\Support\Facades\Schema::hasTable('curated_collection_items')) {
+                    return [];
+                }
+                $ids = DB::table('curated_collection_items')
+                    ->where('collection_id', $collectionId)->where('product_type', 'book')
+                    ->orderBy('sort_order')
+                    ->offset($offset)->limit($limit)
+                    ->pluck('product_id')
+                    ->map(fn ($id) => (int) $id)
+                    ->all();
+
+                return $this->booksByEditionOrder($ids, $with, $format);
+        }
+
+        return [];
+    }
+
+    /**
+     * Berilgan taklif id'lari tartibida kitoblar — har kitobning hozirgi eng
+     * yaxshi taklifi (buy box) bilan, takrorsiz.
+     */
+    private function booksByEditionOrder(array $bookIds, array $with, callable $format): array
+    {
+        if ($bookIds === []) {
+            return [];
+        }
+        $source = Books::query()->whereIn('id', $bookIds)->get(['id', 'edition_id'])->keyBy('id');
+        $editionIds = collect($bookIds)->map(fn ($id) => $source->get($id)?->edition_id)->filter()->unique()->values();
+        $featured = $editionIds->isEmpty() ? collect() : $this->bookListScope()->with($with)
+            ->whereIn('edition_id', $editionIds->all())->get()->keyBy('edition_id');
+        $direct = $this->bookListScope()->with($with)
+            ->whereIn('id', $bookIds)->whereNull('edition_id')->get()->keyBy('id');
+
+        $ordered = collect();
+        $seen = [];
+        foreach ($bookIds as $id) {
+            $editionId = $source->get($id)?->edition_id;
+            $book = $editionId ? $featured->get($editionId) : $direct->get($id);
+            if (! $book || isset($seen[$book->id])) {
+                continue;
+            }
+            $seen[$book->id] = true;
+            $ordered->push($book);
+        }
+
+        return $format($ordered);
+    }
+
+    /**
+     * Bosh sahifa pastidagi do'konlar — sahifalab (scroll qilgani sari).
+     * Tartib kun bo'yi bir xil (sahifalar orasida takror bo'lmaydi).
+     */
+    public function homeShopsPage(Request $request, int $page = 1, int $perPage = 4): array
+    {
+        $user = Auth::guard('user')->user();
+        $seed = (int) crc32(now()->toDateString());
+        $sellers = Seller::where('is_hidden', 0)
+            ->where(fn ($q) => $q->whereNull('parent_id')->orWhere('parent_id', 0))
+            ->where('status', 'approved')
+            ->whereHas('books', fn ($b) => $b->where('status', true)->where('is_hidden', 0)->where('is_approved', 1))
+            ->with([
+                'books' => fn ($q) => $q
+                    ->where('status', true)->where('is_hidden', 0)->where('is_approved', 1)
+                    ->withAvailableTotal()
+                    ->latest('created_at')->take(12)
+                    ->with(['category', 'tags', 'seller', 'authorProfile', 'edition:id,offers_count,in_stock_offers_count,min_price']),
+            ])
+            ->orderByRaw('RAND('.$seed.')')
+            ->offset(max(0, ($page - 1) * $perPage))
+            ->limit($perPage + 1)
+            ->get();
+
+        $hasMore = $sellers->count() > $perPage;
+
+        return [
+            'data' => $sellers->take($perPage)->map(fn ($seller) => [
+                ...$this->formatSellerInfo($seller),
+                'status' => $seller->status,
+                'books' => $seller->books->map(fn ($b) => $this->formatProduct($b, $user, 'book')),
+                'stationeries' => [],
+            ])->values()->all(),
+            'has_more' => $hasMore,
+            'page' => $page,
+        ];
+    }
+
     public function sellersWithLatestProducts(Request $request)
     {
         $user = Auth::guard('user')->user();

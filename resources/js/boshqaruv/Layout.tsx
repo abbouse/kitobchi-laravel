@@ -56,6 +56,7 @@ const nav = [
     { to: '/boshqaruv/audit-logs', match: '/boshqaruv/audit-logs', label: 'Audit log', icon: 'ti-clipboard-data', perm: 'audit-logs' },
   ]},
   { group: 'Marketing', section: "O'sish", icon: 'ti-speakerphone', ax: 'iconoir-megaphone', items: [
+    { to: '/boshqaruv/home-sections', match: '/boshqaruv/home-sections', label: 'Ilova bosh sahifasi', icon: 'ti-layout-grid', badge: 'NEW', perm: 'marketing' },
     { to: '/boshqaruv/reklamalar', match: '/boshqaruv/reklamalar', label: 'Reklamalar', icon: 'ti-speakerphone', perm: 'marketing' },
     { to: '/boshqaruv/promokodlar', match: '/boshqaruv/promokodlar', label: 'Promokodlar', icon: 'ti-ticket', perm: 'marketing' },
     { to: '/boshqaruv/blogerlar', match: '/boshqaruv/blogerlar', label: 'Blogerlar', icon: 'ti-users', perm: 'marketing' },

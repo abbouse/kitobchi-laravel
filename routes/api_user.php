@@ -33,6 +33,10 @@ Route::get('user/premium/plans', [PremiumController::class, 'plans']);
 Route::get('user/update_locale/{locale}', [UserController::class, 'updateLocale']);
 Route::get('user/by-username/{username}', [UserController::class, 'byUsername']);
 Route::get('home', [HomeController::class, 'index']);
+// Bosh sahifa bo'limlari (boshqaruvdan sozlanadi)
+Route::get('home/layout', [\App\Http\Controllers\Api\HomeLayoutController::class, 'layout'])->middleware('throttle:120,1');
+Route::get('home/section/{key}', [\App\Http\Controllers\Api\HomeLayoutController::class, 'section'])->middleware('throttle:120,1');
+Route::get('home/shops', [\App\Http\Controllers\Api\HomeLayoutController::class, 'shops'])->middleware('throttle:120,1');
 Route::get('counts', [UserController::class, 'getGlobalCounts']);
 Route::get('split-preview', [PurchaseController::class, 'splitPreview']);
 Route::get('news', [NewsController::class, 'index']);

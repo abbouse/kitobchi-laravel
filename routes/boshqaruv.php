@@ -270,6 +270,12 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
         // ══════════════════════════ MARKETING VA HAMJAMIYAT ══════════════════════════
         Route::middleware('panel.permission:marketing')->group(function () {
             Route::get('/reklamalar', fn (AdminController $controller) => $controller->page('Reklamalar'))->name('reklamalar');
+            // BOSH SAHIFA: mobil ilova bo'limlari tartibi va sozlamalari
+            Route::get('/home-sections', [\App\Http\Controllers\Boshqaruv\HomeSectionsController::class, 'index'])->name('home-sections');
+            Route::post('/home-sections', [\App\Http\Controllers\Boshqaruv\HomeSectionsController::class, 'store'])->name('home-sections.store');
+            Route::post('/home-sections/reorder', [\App\Http\Controllers\Boshqaruv\HomeSectionsController::class, 'reorder'])->name('home-sections.reorder');
+            Route::put('/home-sections/{section}', [\App\Http\Controllers\Boshqaruv\HomeSectionsController::class, 'update'])->name('home-sections.update');
+            Route::delete('/home-sections/{section}', [\App\Http\Controllers\Boshqaruv\HomeSectionsController::class, 'destroy'])->name('home-sections.destroy');
             // KITOB VIDEOLARI: haftalik / oylik e'lon videolari (avto tanlov + admin tahriri)
             Route::get('/book-videos', [\App\Http\Controllers\Boshqaruv\BookVideoController::class, 'index'])->name('book-videos');
             Route::get('/book-videos/search', [\App\Http\Controllers\Boshqaruv\BookVideoController::class, 'search'])->name('book-videos.search');
