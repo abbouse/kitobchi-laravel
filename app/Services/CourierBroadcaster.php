@@ -103,6 +103,9 @@ class CourierBroadcaster
             if ($sold && \App\Support\OrderPreorder::isHeld($sold)) {
                 return ['skipped' => true, 'reason' => 'preorder_held'];
             }
+            if ($sold && \App\Support\DeliverySchedule::broadcastHeld($sold)) {
+                return ['skipped' => true, 'reason' => 'delivery_day_held'];
+            }
 
             $target = $this->collectSmartCourierTokens($courierOrder);
             $tokens = $target['tokens'];

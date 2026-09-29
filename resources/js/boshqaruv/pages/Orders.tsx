@@ -54,6 +54,7 @@ interface SellerOrder {
   courierRegion?: string | null;
   amount: number;
   deliveryType?: string;
+  deliveryWindow?: string | null;
   status: string;
   acceptedAt?: string | null;
   createdAt?: string | null;
@@ -144,6 +145,7 @@ interface Ord {
   payment: string;
   paymentStatus?: string;
   deliveryType?: string;
+  deliveryWindow?: string | null;
   orderKind?: string;
   postalReturnStatus?: string;
   postalReturnFee?: number;
@@ -736,7 +738,10 @@ export default function Orders() {
                           </div>
                         ) : null}
                       </td>
-                      <td className="f-s-13 text-secondary">{deliveryShort(order.deliveryType)}</td>
+                      <td className="f-s-13 text-secondary">
+                        {deliveryShort(order.deliveryType)}
+                        {order.deliveryWindow ? <div className="f-s-12 text-primary text-nowrap">{order.deliveryWindow}</div> : null}
+                      </td>
                       <td><span className={`badge text-uppercase ${toneBadge(statusTone(order.status))}`}>{statusLabel(order.status)}</span></td>
                       <td className="text-end f-s-13 text-secondary"><span className="f-w-600 text-nowrap">{order.date}</span></td>
                       <td className="text-end" onClick={(event) => event.stopPropagation()}>
@@ -815,6 +820,7 @@ export default function Orders() {
                       <Detail label="Yakunlangan" value={selectedOrd.completedAt} />
                       <Detail label="To'lov holati" value={paymentLabel(selectedOrd.paymentStatus || selectedOrd.payment)} />
                       <Detail label="Yetkazish turi" value={deliveryTypeLabel(selectedOrd.deliveryType)} />
+                      <Detail label="Yetkazish vaqti" value={selectedOrd.deliveryWindow || 'Imkon qadar tez'} />
                       <Detail label="Buyurtma turi" value={orderKindLabel(selectedOrd)} />
                       <Detail label="Pochta qaytimi" value={postalReturnLabel(selectedOrd.postalReturnStatus)} />
                     </div>

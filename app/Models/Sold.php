@@ -18,7 +18,7 @@ class Sold extends Model
 
     protected $fillable = [
         'deliveryType', 'items', 'user_id', 'courier_id', 'courierName',
-        'amount', 'status', 'address', 'qr', 'gift', 'preorder_ships_at',
+        'amount', 'status', 'address', 'qr', 'gift', 'preorder_ships_at', 'delivery_date', 'delivery_slot',
         'gift_certificate_id', 'giftCertAmount',
         'buyerWish', 'promocode', 'discountAmount', 'collectionDiscountAmount',
         'is_instore',
@@ -50,6 +50,7 @@ class Sold extends Model
 
     protected $casts = [
         'preorder_ships_at' => 'date:Y-m-d',
+        'delivery_date' => 'date:Y-m-d',
         'address'         => 'array',
         'items'           => 'array',
         'is_instore'      => 'boolean',

@@ -434,6 +434,12 @@ class PurchaseController extends Controller
             'split' => $preorderShipsAt
                 ? ['available' => false]
                 : $this->splitAvailabilityPayload($user, (int) $totalSum, $cartItems),
+            // Kuryer orqali: yetkazish kuni (ertadan keyindan 7 kun) va vaqt oralig'i
+            'delivery_schedule' => \App\Support\DeliverySchedule::supported() ? [
+                'service_types' => \App\Support\DeliverySchedule::SERVICE_TYPES,
+                'days' => \App\Support\DeliverySchedule::days($preorderShipsAt),
+                'slots' => \App\Support\DeliverySchedule::slots(),
+            ] : null,
         ]]);
     }
 
@@ -1218,6 +1224,8 @@ class PurchaseController extends Controller
             'recipient_name' => 'nullable|string|max:150',
             'recipient_region' => 'nullable|string|max:150',
             'recipient_address' => 'nullable|string|max:500',
+            'delivery_date' => 'nullable|date_format:Y-m-d',
+            'delivery_slot' => 'nullable|string|max:8',
         ]);
 
         $user = Auth::guard('user')->user();
@@ -1702,6 +1710,24 @@ class PurchaseController extends Controller
                 if (Schema::hasColumn('solds', 'preorder_ships_at')) {
                     $purchasePayload['preorder_ships_at'] = $preorderShipsAt->toDateString();
                 }
+            }
+
+            // Yetkazish kuni va vaqti (faqat platforma kuryeri). Eski ilova
+            // yubormasa — bo'sh qoladi (odatdagidek imkon qadar tez).
+            if (\App\Support\DeliverySchedule::supported()
+                && in_array($deliveryService->type, \App\Support\DeliverySchedule::SERVICE_TYPES, true)
+                && $request->filled('delivery_date')) {
+                if (! \App\Support\DeliverySchedule::isValid($request->input('delivery_date'), $request->input('delivery_slot'), $preorderShipsAt)) {
+                    DB::rollBack();
+
+                    return response()->json([
+                        'status' => 'error',
+                        'error_code' => 'delivery_window_invalid',
+                        'message' => "Yetkazish kuni yoki vaqti noto'g'ri. Iltimos, qayta tanlang.",
+                    ], 422);
+                }
+                $purchasePayload['delivery_date'] = $request->input('delivery_date');
+                $purchasePayload['delivery_slot'] = $request->input('delivery_slot');
             }
 
             $purchase = Sold::create($purchasePayload);

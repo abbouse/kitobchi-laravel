@@ -256,6 +256,7 @@ class CourierOrderController extends Controller
                 // Kitob buzilmaydi — bir do'kondan bir nechta buyurtmani
                 // birga olib ketish (batching) foydali: kuryer hozir boradigan
                 // filialdan chiqadigan buyurtmalar "yo'lingizda" deb belgilanadi.
+                $order->delivery_window = $soldOrder ? \App\Support\DeliverySchedule::windowLabel($soldOrder) : null;
                 $order->on_the_way = $activePickupLocations !== []
                     && $order->items->contains(fn ($item) => in_array((int) $item->seller_location_id, $activePickupLocations, true));
 
@@ -629,6 +630,14 @@ class CourierOrderController extends Controller
                         'success' => false,
                         'error_code' => 'preorder_not_ready',
                         'message' => "Bu oldindan buyurtma — ".\App\Support\OrderPreorder::shipsAt($sold)->format('d.m.Y')." dan jo'natiladi.",
+                    ], 422);
+                }
+
+                if (\App\Support\DeliverySchedule::customerLegHeld($sold, $availableTasks)) {
+                    return response()->json([
+                        'success' => false,
+                        'error_code' => 'delivery_day_not_ready',
+                        'message' => 'Mijoz yetkazishni '.\App\Support\DeliverySchedule::windowLabel($sold).' ga tanlagan.',
                     ], 422);
                 }
 
@@ -1100,6 +1109,8 @@ class CourierOrderController extends Controller
             ->whereIn('status_code', [CourierTaskStatusCode::PICKED_UP->value, CourierTaskStatusCode::DROPPED_OFF->value])
             ->exists();
         $order->can_report_failed_attempt = $holds && ! $order->return_required_at;
+        $sold = $order->relationLoaded('order') ? $order->order : $order->order()->first();
+        $order->delivery_window = $sold ? \App\Support\DeliverySchedule::windowLabel($sold) : null;
         $order->max_delivery_attempts = \App\Support\CourierDeliveryAttempts::maxAttempts();
     }
 
@@ -1239,6 +1250,11 @@ class CourierOrderController extends Controller
     {
         // Predzakaz: jo'natish kuni kelmaguncha kuryerga chiqmaydi
         if (\App\Support\OrderPreorder::isHeld($order)) {
+            return false;
+        }
+        // Mijoz tanlagan yetkazish kuni kelmaguncha mijozga olib boradigan
+        // topshiriq chiqmaydi (hubga olib borish oldindan bajarilaveradi)
+        if (\App\Support\DeliverySchedule::customerLegHeld($order, $tasks)) {
             return false;
         }
 

@@ -7706,7 +7706,7 @@ PROMPT;
             ->with([
                 'courier:id,first_name,last_name,phone_number,region,status,photo',
                 'user:id,name,lastname,phone_number',
-                'order:id,amount,status,paymentStatus,deliveryPrice,deliveryType,address,items,created_at',
+                'order:id,amount,status,paymentStatus,deliveryPrice,deliveryType,address,items,created_at'.(\App\Support\DeliverySchedule::supported() ? ',delivery_date,delivery_slot' : ''),
             ])
             ->latest()
             ->take(240)
@@ -7726,7 +7726,7 @@ PROMPT;
         $search = trim((string) request('courier_orders_search', ''));
         $digits = preg_replace('/\D+/', '', $search) ?: $search;
         $query = CourierOrder::query()
-            ->with(['courier:id,first_name,last_name,phone_number,region,status,photo', 'user:id,name,lastname,phone_number', 'order:id,amount,status,paymentStatus,deliveryPrice,deliveryType,address,items,created_at'])
+            ->with(['courier:id,first_name,last_name,phone_number,region,status,photo', 'user:id,name,lastname,phone_number', 'order:id,amount,status,paymentStatus,deliveryPrice,deliveryType,address,items,created_at'.(\App\Support\DeliverySchedule::supported() ? ',delivery_date,delivery_slot' : '')])
             ->when($tab === 'stuck', fn ($builder) => \App\Support\CourierLimits::applyStuckScope($builder))
             ->when(! in_array($tab, ['all', 'stuck'], true), fn ($builder) => $builder->where(fn ($nested) => $nested
                 ->where('status_code', $tab)
@@ -7798,6 +7798,7 @@ PROMPT;
             'pickedUpAt' => $this->dateTime($order->picked_up_at),
             'deliveryPrice' => (float) ($order->order?->deliveryPrice ?? 0),
             'deliveryType' => $order->order?->deliveryType,
+            'deliveryWindow' => $order->order ? \App\Support\DeliverySchedule::windowLabel($order->order) : null,
             'paymentStatus' => $order->order?->paymentStatus,
             'status' => $statusCode,
             'statusLabel' => $statusMeta['label'],
@@ -7826,7 +7827,8 @@ PROMPT;
                     && $order->updated_at?->lt(now()->subHours(\App\Support\CourierLimits::STUCK_IN_DELIVERY_HOURS))
                     && ! ($order->next_attempt_at ?? null)?->isFuture())
                 || ($statusCode === CourierOrderStatusCode::PENDING->value && $order->courier_id === null
-                    && $order->created_at?->lt(now()->subHours(\App\Support\CourierLimits::STUCK_PENDING_HOURS))),
+                    && $order->created_at?->lt(now()->subHours(\App\Support\CourierLimits::STUCK_PENDING_HOURS))
+                    && ! ($order->order && (\App\Support\DeliverySchedule::isFuture($order->order) || \App\Support\OrderPreorder::isHeld($order->order)))),
             'deliveryAttempts' => (int) ($order->delivery_attempts ?? 0),
             'nextAttemptAt' => $this->dateTime($order->next_attempt_at ?? null),
             'lastAttemptReason' => $order->last_attempt_reason ?? null,
@@ -13695,6 +13697,8 @@ PROMPT;
             'payment' => (string) ($order->paymentStatus ?? $order->payment_status_code ?? '—'),
             'paymentStatus' => (string) ($order->payment_status_code ?? $order->paymentStatus ?? '—'),
             'deliveryType' => $order->deliveryType,
+            // Mijoz tanlagan yetkazish kuni va vaqti ("02.10 · 14:00–18:00")
+            'deliveryWindow' => \App\Support\DeliverySchedule::windowLabel($order),
             'orderKind' => $order->order_kind,
             'postalReturnStatus' => $order->postal_return_status,
             'postalReturnFee' => (float) ($order->postal_return_fee ?? 0),

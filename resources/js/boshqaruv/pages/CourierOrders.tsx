@@ -49,6 +49,7 @@ interface CourierOrder {
   pickedUpAt?: string;
   deliveryPrice?: number;
   deliveryType?: string;
+  deliveryWindow?: string | null;
   paymentStatus?: string;
   status: string;
   statusLabel?: string;
@@ -321,7 +322,10 @@ export default function CourierOrders() {
                       </select>
                       <OrderFlags order={order} />
                     </td>
-                    <td className="text-muted f-s-13 text-nowrap">{order.date || '—'}</td>
+                    <td className="text-muted f-s-13 text-nowrap">
+                      {order.date || '—'}
+                      {order.deliveryWindow ? <div className="text-primary f-s-12">{order.deliveryWindow}</div> : null}
+                    </td>
                     <td className="text-center">
                       <button
                         className="btn btn-light-primary icon-btn w-30 h-30 b-r-22"
@@ -507,6 +511,7 @@ function OrderModal({
                     ['Holat', order.statusLabel || order.status],
                     ['To‘lov holati', order.paymentStatus || '—'],
                     ['Yetkazish turi', order.deliveryType || '—'],
+                    ['Yetkazish vaqti', order.deliveryWindow || 'Imkon qadar tez'],
                     ['Olingan vaqt', order.pickedUpAt || '—'],
                     ['Topshirilgan vaqt', order.settledAt || '—'],
                     ['Yaratilgan sana', order.date || '—'],

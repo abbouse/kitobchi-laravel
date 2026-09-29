@@ -94,6 +94,15 @@ class CourierLimits
                 $q->whereNull('courier_id')
                     ->where('status_code', CourierOrderStatusCode::PENDING->value)
                     ->where('created_at', '<', now()->subHours(self::STUCK_PENDING_HOURS));
+                // Mijoz tanlagan kun yoki predzakaz sanasi kelmagan — kutish normal
+                if (Schema::hasColumn('solds', 'delivery_date')) {
+                    $q->whereNotIn('order_id', fn ($sub) => $sub->select('id')->from('solds')
+                        ->whereDate('delivery_date', '>', today()));
+                }
+                if (Schema::hasColumn('solds', 'preorder_ships_at')) {
+                    $q->whereNotIn('order_id', fn ($sub) => $sub->select('id')->from('solds')
+                        ->whereDate('preorder_ships_at', '>', today()));
+                }
             });
         });
     }

@@ -299,6 +299,10 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Predzakaz: jo'natish kuni kelgan buyurtmalar kuryerga chiqadi
         $schedule->command('orders:release-preorders')
+            ->dailyAt('07:05')
+            ->timezone($tz)
+            ->withoutOverlapping(30);
+        $schedule->command('orders:release-preorders')
             ->dailyAt('08:05')
             ->timezone($tz)
             ->withoutOverlapping(30);

@@ -19,7 +19,7 @@ class ReleasePreorders extends Command
 {
     protected $signature = 'orders:release-preorders';
 
-    protected $description = "Jo'natish kuni kelgan oldindan buyurtmalarni kuryerlarga chiqaradi";
+    protected $description = "Jo'natish kuni kelgan predzakazlar va yetkazish kuni kelgan buyurtmalarni kuryerlarga chiqaradi";
 
     public function handle(CourierBroadcaster $broadcaster, OrderStatusPushService $push): int
     {
@@ -62,7 +62,31 @@ class ReleasePreorders extends Command
                 }
             });
 
+        // Mijoz tanlagan yetkazish kuni keldi — kuryerlarga chiqaramiz
+        $scheduled = 0;
+        if (\App\Support\DeliverySchedule::supported()) {
+            Sold::query()
+                ->whereDate('delivery_date', today())
+                ->whereNotIn('status_code', [
+                    OrderStatusCode::CANCELLED->value,
+                    OrderStatusCode::RETURNED->value,
+                    OrderStatusCode::DELIVERED->value,
+                    OrderStatusCode::CUSTOMER_RECEIVED->value,
+                ])
+                ->orderBy('id')
+                ->chunkById(200, function ($orders) use ($broadcaster, &$scheduled) {
+                    foreach ($orders as $order) {
+                        if (! Cache::add('delivery-day-released:'.$order->id, 1, now()->addDays(2))) {
+                            continue;
+                        }
+                        $broadcaster->notifyPendingForOrder((int) $order->id);
+                        $scheduled++;
+                    }
+                });
+        }
+
         $this->info("Released preorders: {$count}");
+        $this->info("Released scheduled deliveries: {$scheduled}");
 
         return self::SUCCESS;
     }
