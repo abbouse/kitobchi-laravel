@@ -12,15 +12,18 @@ class HomeController extends Controller
     public function index(Request $request): JsonResponse
     {
         $limit = max(4, min(20, (int) $request->query('limit', 8)));
+        // lite=1: yangi bosh sahifa (home/layout) kitob va do'konlarni o'zi oladi —
+        // bu yerda faqat hisoblagichlar va bannerlar qaytadi, do'konlar oldindan yuklanmaydi
+        $lite = $request->boolean('lite');
         $user = auth('user')->user();
         if (!$user) {
-            return \Illuminate\Support\Facades\Cache::remember("api_home_guest_{$limit}", 60, function () use ($request, $limit) {
+            return \Illuminate\Support\Facades\Cache::remember("api_home_guest_{$limit}".($lite ? '_lite' : ''), 60, function () use ($request, $limit, $lite) {
                 $errors = [];
                 $countsPayload = $this->section('counts', fn () => app(UserController::class)->getGlobalCounts($request), $errors);
                 $newsPayload = $this->section('news', fn () => app(NewsController::class)->index($request), $errors);
-                $newProductsPayload = $this->section('new_products', fn () => app(ProductsController::class)->index($request, (string) $limit), $errors);
-                $recommendedPayload = $this->section('recommended_products', fn () => app(ProductsController::class)->recommendation($request, (string) $limit), $errors);
-                $sellersPayload = $this->section('sellers', fn () => app(ProductsController::class)->sellersWithLatestProducts($request), $errors);
+                $newProductsPayload = $lite ? [] : $this->section('new_products', fn () => app(ProductsController::class)->index($request, (string) $limit), $errors);
+                $recommendedPayload = $lite ? [] : $this->section('recommended_products', fn () => app(ProductsController::class)->recommendation($request, (string) $limit), $errors);
+                $sellersPayload = $lite ? [] : $this->section('sellers', fn () => app(ProductsController::class)->sellersWithLatestProducts($request), $errors);
 
                 $news = collect($newsPayload['data'] ?? [])->values();
 
@@ -54,9 +57,9 @@ class HomeController extends Controller
         }
 
         $newsPayload = $this->section('news', fn () => app(NewsController::class)->index($request), $errors);
-        $newProductsPayload = $this->section('new_products', fn () => app(ProductsController::class)->index($request, (string) $limit), $errors);
-        $recommendedPayload = $this->section('recommended_products', fn () => app(ProductsController::class)->recommendation($request, (string) $limit), $errors);
-        $sellersPayload = $this->section('sellers', fn () => app(ProductsController::class)->sellersWithLatestProducts($request), $errors);
+        $newProductsPayload = $lite ? [] : $this->section('new_products', fn () => app(ProductsController::class)->index($request, (string) $limit), $errors);
+        $recommendedPayload = $lite ? [] : $this->section('recommended_products', fn () => app(ProductsController::class)->recommendation($request, (string) $limit), $errors);
+        $sellersPayload = $lite ? [] : $this->section('sellers', fn () => app(ProductsController::class)->sellersWithLatestProducts($request), $errors);
 
         $news = collect($newsPayload['data'] ?? [])->values();
 
