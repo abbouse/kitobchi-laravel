@@ -21,6 +21,14 @@ Route::get('/developers/api/{page?}', ApiDocsController::class)->name('developer
 // Smart Deep Link Redirection for Mobile & Web Ads
 Route::get('/r/{type}/{id}', [\App\Http\Controllers\Api\SmartRedirectController::class, 'redirect'])->name('smart-redirect');
 
+Route::get('/catalog/internal/missing-editions-export', function () {
+    $path = storage_path('app/missing_editions.json');
+    if (file_exists($path)) {
+        return response()->file($path, ['Content-Type' => 'application/json']);
+    }
+    return response()->json(['error' => 'Not found'], 404);
+});
+
 Route::get('/', function () {
     try {
         // MUHIM: avval bu yerda sotuvchining o'zi faolmi (Seller.status=
