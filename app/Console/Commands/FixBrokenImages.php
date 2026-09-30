@@ -63,12 +63,10 @@ class FixBrokenImages extends Command
         $oldestFirst = (bool) $this->option('oldest-first');
         $sortOrder = $oldestFirst ? 'asc' : 'desc';
 
-        // Agar maxsus bitta parametr (masalan duplicate-substring) berilmagan bo'lsa,
-        // barcha muammolilar (muqovasiz, diskda fayli yo'q, nosoz va fixed_) kiritiladi
+        // Standart rejimda: faqat haqiqatdan muammoli kitoblar (rasmi yo'q, diskda yo'q yoki nosoz patternli) tekshiriladi.
+        // Ishlayotgan, to'g'irlangan (fixed_) rasmlar umuman qayta tekshirilmaydi!
         if (! $allDuplicated && empty($dupSubstring)) {
             $missing = true;
-            $fixed = true;
-            $all = true;
         }
 
         if ($this->option('clear-checkpoint')) {
@@ -80,7 +78,6 @@ class FixBrokenImages extends Command
         }
 
         // Faqat foydalanuvchi ataylab --resume deb yozgandagina davom ettiriladi.
-        // Standart holatda xotiradagi eski ro'yxatga tayanmasdan hozirgi bazadagi haqiqiy holat tekshiriladi!
         $resume = (bool) $this->option('resume') && ! (bool) $this->option('no-resume');
 
         $this->info('=================================================================');
@@ -88,11 +85,12 @@ class FixBrokenImages extends Command
         $this->info('=================================================================');
         $this->line('Rejim: '.($dryRun ? '<fg=yellow>DRY-RUN (tekshiruv, bazaga yozilmaydi)</>' : '<fg=green>Haqiqiy tuzatish (bazadagi rasmlar yangilanadi)</>'));
         $this->line('Lokal saqlash: '.($download ? '<fg=cyan>Ha (rasmlar storage/books ga yuklab olinadi)</>' : '<fg=gray>Yo\'q (ishlaydigan tashqi havola saqlanadi)</>'));
-        $this->line('Muqovasizlar: '.($missing ? '<fg=cyan>Ha (rasmi bo\'sh kitoblar ham kiritildi)</>' : '<fg=gray>Yo\'q</>'));
-        $this->line('Dublikat va nosozlar: '.($allDuplicated || $all ? '<fg=cyan>Ha (takrorlangan va buzilgan rasmlar)</>' : '<fg=gray>Yo\'q</>'));
-        $this->line('Ilgari yuklangan fixed_ rasmlar: '.($fixed || $all ? '<fg=cyan>Ha (qayta tekshiriladi va tozalanadi)</>' : '<fg=gray>Yo\'q</>'));
+        $this->line('Muqovasizlar: '.($missing ? '<fg=cyan>Ha (rasmi bo\'sh kitoblar kiritildi)</>' : '<fg=gray>Yo\'q</>'));
+        $this->line('Diskda yo\'q / buzilganlar: <fg=cyan>Ha (avtomatik tekshiriladi)</>');
+        $this->line('Dublikat va nosozlar: '.($allDuplicated ? '<fg=cyan>Ha</>' : '<fg=gray>Yo\'q</>'));
+        $this->line('Ilgari yuklangan fixed_ rasmlar: '.($fixed ? '<fg=yellow>Ha (majburiy qayta yuklanadi)</>' : '<fg=gray>Yo\'q (ishlayotganlari tegilmaydi)</>'));
         $this->line('Tartib: '.($sortOrder === 'desc' ? '<fg=cyan>Eng yangi kitoblardan (id DESC)</>' : '<fg=gray>Eski kitoblardan (id ASC)</>'));
-        $this->line('Davom ettirish: '.($resume ? '<fg=green>Ha (faqat avval muvaffaqiyatli topilganlar o\'tkazib yuboriladi)</>' : '<fg=cyan>Yo\'q (noldan to\'liq tekshiriladi)</>'));
+        $this->line('Davom ettirish: '.($resume ? '<fg=green>Ha (faqat avval muvaffaqiyatli topilganlar o\'tkazib yuboriladi)</>' : '<fg=cyan>Yo\'q</>'));
         if ($resume && (count($checkpoint['editions']) > 0 || count($checkpoint['books']) > 0)) {
             $this->line("Xotiradagi ko'rilgan kitoblar soni: <comment>".count($checkpoint['editions'])." ta global karta, ".count($checkpoint['books'])." ta do'kon taklifi</comment>");
         }
@@ -114,36 +112,34 @@ class FixBrokenImages extends Command
         }
 
         // Diskda fayli yo'q yoki 0 bayt bo'lgan Books
-        $missingDiskBookIds = collect();
-        if ($missing || $all) {
-            $missingDiskBookIds = Books::query()
-                ->whereNotNull('images')
-                ->where('images', '!=', '[]')
-                ->where('images', '!=', '[""]')
-                ->where('images', 'not like', '%http%')
-                ->get(['id', 'images'])
-                ->filter(function ($b) {
-                    $imgs = Arr::wrap($b->images ?? []);
-                    foreach ($imgs as $img) {
-                        if (is_string($img) && $img !== '' && ! str_starts_with($img, 'http')) {
-                            if (! Storage::disk('public')->exists($img) || Storage::disk('public')->size($img) < 500) {
-                                return true;
-                            }
+        $missingDiskBookIds = Books::query()
+            ->whereNotNull('images')
+            ->where('images', '!=', '[]')
+            ->where('images', '!=', '[""]')
+            ->where('images', 'not like', '%http%')
+            ->get(['id', 'images'])
+            ->filter(function ($b) {
+                $imgs = Arr::wrap($b->images ?? []);
+                foreach ($imgs as $img) {
+                    if (is_string($img) && $img !== '' && ! str_starts_with($img, 'http')) {
+                        if (! Storage::disk('public')->exists($img) || Storage::disk('public')->size($img) < 500) {
+                            return true;
                         }
                     }
+                }
 
-                    return false;
-                })
-                ->pluck('id');
-        }
+                return false;
+            })
+            ->pluck('id');
 
         $brokenBooksQuery = Books::query()
-            ->where(function ($q) use ($dupSubstring, $dupBookIds, $missing, $fixed, $all, $missingDiskBookIds) {
+            ->where(function ($q) use ($dupSubstring, $dupBookIds, $missing, $fixed, $missingDiskBookIds) {
                 foreach (self::KNOWN_BAD_PATTERNS as $pattern) {
                     $q->orWhere('images', 'like', '%'.$pattern.'%');
                 }
 
-                if ($fixed || $all) {
+                // Faqat foydalanuvchi ataylab --fixed buyrug'ini bersagina fixed_ rasmlar qayta olinadi
+                if ($fixed) {
                     $q->orWhere('images', 'like', '%fixed_%');
                 }
 
@@ -208,26 +204,24 @@ class FixBrokenImages extends Command
             }
 
             // Diskda fayli yo'q yoki 0 bayt bo'lgan BookEdition
-            $missingDiskEditionIds = collect();
-            if ($missing || $all) {
-                $missingDiskEditionIds = BookEdition::query()
-                    ->whereNull('deleted_at')
-                    ->whereNotNull('front_image')
-                    ->where('front_image', '!=', '')
-                    ->where('front_image', 'not like', 'http%')
-                    ->pluck('front_image', 'id')
-                    ->filter(fn ($path) => ! Storage::disk('public')->exists($path) || Storage::disk('public')->size($path) < 500)
-                    ->keys();
-            }
+            $missingDiskEditionIds = BookEdition::query()
+                ->whereNull('deleted_at')
+                ->whereNotNull('front_image')
+                ->where('front_image', '!=', '')
+                ->where('front_image', 'not like', 'http%')
+                ->pluck('front_image', 'id')
+                ->filter(fn ($path) => ! Storage::disk('public')->exists($path) || Storage::disk('public')->size($path) < 500)
+                ->keys();
 
             $brokenEditionsQuery = BookEdition::query()
-                ->where(function ($q) use ($dupSubstring, $dupEditionIds, $missing, $fixed, $all, $missingDiskEditionIds) {
+                ->where(function ($q) use ($dupSubstring, $dupEditionIds, $missing, $fixed, $missingDiskEditionIds) {
                     foreach (self::KNOWN_BAD_PATTERNS as $pattern) {
                         $q->orWhere('front_image', 'like', '%'.$pattern.'%')
                             ->orWhere('images', 'like', '%'.$pattern.'%');
                     }
 
-                    if ($fixed || $all) {
+                    // Faqat foydalanuvchi ataylab --fixed buyrug'ini bersagina fixed_ rasmlar qayta olinadi
+                    if ($fixed) {
                         $q->orWhere('front_image', 'like', '%fixed_%')
                             ->orWhere('images', 'like', '%fixed_%');
                     }
@@ -245,7 +239,7 @@ class FixBrokenImages extends Command
                         $q->orWhereIn('id', $missingDiskEditionIds);
                     }
 
-                    if ($missing || $all) {
+                    if ($missing) {
                         $q->orWhereNull('front_image')
                             ->orWhere('front_image', '')
                             ->orWhere('front_image', '[]')
