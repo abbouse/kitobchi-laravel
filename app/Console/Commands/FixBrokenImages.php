@@ -221,6 +221,7 @@ class FixBrokenImages extends Command
         $fixedEditions = 0;
         $notFound = 0;
         $processed = 0;
+        $unresolvedList = [];
 
         // 1. Global kartalarni (BookEdition) BIRINCHI tuzatish (chunki ular asosiy manba)
         $this->info("--- GLOBAL KARTALARNI (BookEdition) TEKSHIRISH ---");
@@ -260,6 +261,14 @@ class FixBrokenImages extends Command
                 $checkpoint['editions'][$edition->id] = 'found';
             } else {
                 $notFound++;
+                $unresolvedList[] = [
+                    'id' => $edition->id,
+                    'type' => 'edition',
+                    'title' => $edition->title,
+                    'author' => $edition->author,
+                    'isbn' => $edition->isbn13 ?: $edition->isbn10,
+                    'edit_url' => url('/boshqaruv/catalog/editions/'.$edition->id.'/edit'),
+                ];
                 if (! $dryRun && $isBadImage) {
                     if ($rawFront && str_contains($rawFront, 'fixed_')) {
                         @Storage::disk('public')->delete($rawFront);
@@ -326,6 +335,14 @@ class FixBrokenImages extends Command
                     $checkpoint['books'][$book->id] = 'found';
                 } else {
                     $notFound++;
+                    $unresolvedList[] = [
+                        'id' => $book->id,
+                        'type' => 'book',
+                        'title' => $book->name,
+                        'author' => $book->author,
+                        'isbn' => $book->isbn,
+                        'edit_url' => url('/boshqaruv/catalog?search='.$book->id),
+                    ];
                     if (! $dryRun && $isBadBookImage) {
                         Books::writingFromCatalog(function () use ($book) {
                             $book->update([
@@ -346,6 +363,7 @@ class FixBrokenImages extends Command
         }
 
         $this->saveCheckpoint($checkpoint);
+        $this->saveUnresolvedReport($unresolvedList);
         $this->newLine(2);
 
         $this->table(
@@ -360,6 +378,43 @@ class FixBrokenImages extends Command
         $this->info('✅ Jarayon muvaffaqiyatli yakunlandi!');
 
         return Command::SUCCESS;
+    }
+
+    private function saveUnresolvedReport(array $list): void
+    {
+        if (empty($list)) {
+            return;
+        }
+
+        $dir = storage_path('app');
+        if (! is_dir($dir)) {
+            @mkdir($dir, 0755, true);
+        }
+
+        // 1. JSON hisobot
+        $jsonPath = storage_path('app/missing_covers_report.json');
+        file_put_contents($jsonPath, json_encode($list, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+
+        // 2. CSV hisobot
+        $csvPath = storage_path('app/missing_covers_report.csv');
+        $fp = fopen($csvPath, 'w');
+        fputcsv($fp, ['ID', 'Turi', 'Kitob nomi', 'Muallif', 'ISBN', 'Boshqaruv tahrirlash havolasi']);
+        foreach ($list as $item) {
+            fputcsv($fp, [
+                $item['id'],
+                $item['type'] === 'edition' ? 'Global nashr' : 'Do\'kon taklifi',
+                $item['title'],
+                $item['author'],
+                $item['isbn'],
+                $item['edit_url'],
+            ]);
+        }
+        fclose($fp);
+
+        $this->newLine();
+        $this->info("📑 Topilmagan muqovasiz kitoblar ro'yxati (admin qo'lda to'ldirishi uchun) saqlandi:");
+        $this->line("   - CSV: <comment>storage/app/missing_covers_report.csv</comment>");
+        $this->line("   - JSON: <comment>storage/app/missing_covers_report.json</comment>");
     }
 
     private function checkpointPath(): string

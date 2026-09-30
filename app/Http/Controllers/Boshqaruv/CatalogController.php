@@ -57,7 +57,18 @@ class CatalogController extends Controller
             ->when($tab === 'unverified', fn ($q) => $q->whereNull('verified_at')->where('status', BookEdition::STATUS_ACTIVE))
             ->when($tab === 'pending', fn ($q) => $q->where('status', BookEdition::STATUS_PENDING))
             ->when($tab === 'rejected', fn ($q) => $q->where('status', BookEdition::STATUS_REJECTED))
-            ->when($tab === 'no_cover', fn ($q) => $q->whereNull('front_image')->where(fn ($w) => $w->whereNull('images')->orWhereRaw('JSON_LENGTH(images) = 0')))
+            ->when($tab === 'no_cover', fn ($q) => $q->where(fn ($w) => $w
+                ->whereNull('front_image')
+                ->orWhere('front_image', '')
+                ->orWhere('front_image', '[]')
+                ->orWhere('front_image', '[""]')
+            )->where(fn ($w) => $w
+                ->whereNull('images')
+                ->orWhere('images', '')
+                ->orWhere('images', '[]')
+                ->orWhere('images', '[""]')
+                ->orWhereRaw('JSON_LENGTH(images) = 0')
+            ))
             ->when($tab === 'duplicates', fn ($q) => $q->whereNotNull('isbn13')->whereIn('isbn13', BookEdition::query()
                 ->usable()->whereNotNull('isbn13')->groupBy('isbn13')->havingRaw('COUNT(*) > 1')->select('isbn13')))
             ->when($search !== '', function ($q) use ($search) {
@@ -83,6 +94,20 @@ class CatalogController extends Controller
                 'pending' => BookEdition::query()->where('status', BookEdition::STATUS_PENDING)->count(),
                 'rejected' => BookEdition::query()->where('status', BookEdition::STATUS_REJECTED)->count(),
                 'deleted' => BookEdition::onlyTrashed()->count(),
+                'no_cover' => BookEdition::query()
+                    ->where('status', '!=', BookEdition::STATUS_MERGED)
+                    ->where(fn ($w) => $w
+                        ->whereNull('front_image')
+                        ->orWhere('front_image', '')
+                        ->orWhere('front_image', '[]')
+                        ->orWhere('front_image', '[""]')
+                    )->where(fn ($w) => $w
+                        ->whereNull('images')
+                        ->orWhere('images', '')
+                        ->orWhere('images', '[]')
+                        ->orWhere('images', '[""]')
+                        ->orWhereRaw('JSON_LENGTH(images) = 0')
+                    )->count(),
                 'submissions' => BookEditionSubmission::query()->where('status', BookEditionSubmission::STATUS_PENDING)->count(),
                 'unlinked' => Books::query()->whereNull('edition_id')->count(),
             ],
