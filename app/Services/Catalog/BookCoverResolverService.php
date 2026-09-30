@@ -404,21 +404,29 @@ class BookCoverResolverService
             return false;
         }
 
-        if ($c1 === $c2 || str_contains($c2, $c1) || str_contains($c1, $c2)) {
+        if ($c1 === $c2) {
             return true;
+        }
+
+        // Agar birining ichida ikkinchisi to'liq so'z sifatida kelsa va uzunligi yaqin bo'lsa
+        if (str_contains($c2, $c1) || str_contains($c1, $c2)) {
+            $lenRatio = min(mb_strlen($c1), mb_strlen($c2)) / max(mb_strlen($c1), mb_strlen($c2));
+            if ($lenRatio >= 0.70) {
+                return true;
+            }
         }
 
         similar_text($c1, $c2, $percent);
-        if ($percent >= 50.0) {
+        if ($percent >= 75.0) {
             return true;
         }
 
-        // So'zlar kesishmasi (asosiy so'zlar mos kelishi)
+        // So'zlar kesishmasi (kamida 2 ta so'z va kamida 75% so'zlar mos kelishi kerak)
         $w1 = array_values(array_filter(explode(' ', $c1), fn ($w) => mb_strlen($w) >= 3));
         $w2 = array_values(array_filter(explode(' ', $c2), fn ($w) => mb_strlen($w) >= 3));
-        if (count($w1) > 0 && count($w2) > 0) {
+        if (count($w1) >= 2 && count($w2) >= 2) {
             $intersect = array_intersect($w1, $w2);
-            if (count($intersect) >= max(1, (int) round(count($w1) * 0.5))) {
+            if (count($intersect) >= (int) ceil(count($w1) * 0.75)) {
                 return true;
             }
         }

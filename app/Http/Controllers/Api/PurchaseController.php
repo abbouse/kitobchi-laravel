@@ -1224,6 +1224,8 @@ class PurchaseController extends Controller
             'recipient_name' => 'nullable|string|max:150',
             'recipient_region' => 'nullable|string|max:150',
             'recipient_address' => 'nullable|string|max:500',
+            'customer_name' => 'nullable|string|max:150',
+            'customer_phone' => 'nullable|string|max:30',
             'delivery_date' => 'nullable|date_format:Y-m-d',
             'delivery_slot' => 'nullable|string|max:8',
         ]);
@@ -1618,14 +1620,25 @@ class PurchaseController extends Controller
                 $finalPrice += $packagingPrice;
             }
 
-            // ── Manzil ────────────────────────────────────────────
+            // ── Manzil va mijoz ma'lumotlari ──────────────────────
+            $customerName = trim((string) ($request->input('customer_name') ?? $request->input('name') ?? ""));
+            if ($customerName === "") {
+                $customerName = trim(($user->name ?? "")." ".($user->lastname ?? ""));
+            }
+
+            $rawCustomerPhone = trim((string) ($request->input('customer_phone') ?? $request->input('phone') ?? $request->input('phoneNumber') ?? ""));
+            $customerPhone = preg_replace("/[^\d]/", "", $rawCustomerPhone);
+            if ($customerPhone === "") {
+                $customerPhone = preg_replace("/[^\d]/", "", (string) ($user->phone_number ?? ""));
+            }
+
             $locationData = [
-                'fullName' => trim("{$user->name} {$user->lastname}"),
+                'fullName' => $customerName,
                 'fullAddress' => $location->fullAddress,
                 'lat' => $location->lat,
                 'lon' => $location->lon,
                 'country_code' => $location->country_code,
-                'phoneNumber' => $user->phone_number,
+                'phoneNumber' => $customerPhone,
             ];
 
             // ── Asosiy buyurtma yaratish ──────────────────────────
@@ -1678,8 +1691,8 @@ class PurchaseController extends Controller
                 'is_gift_to_other' => (bool) $request->boolean('is_gift_to_other'),
                 'with_packaging' => (bool) $withPackaging,
                 'packaging_price' => (int) $packagingPrice,
-                'recipient_phone' => $request->input('recipient_phone'),
-                'recipient_name' => $request->input('recipient_name'),
+                'recipient_phone' => $request->input('recipient_phone') ?? ($request->input('customer_phone') ? $customerPhone : null),
+                'recipient_name' => $request->input('recipient_name') ?? ($request->input('customer_name') ? $customerName : null),
                 'recipient_region' => $request->input('recipient_region'),
                 'recipient_address' => $request->input('recipient_address'),
             ];

@@ -151,10 +151,32 @@ class BookUzParserService
 
             if ($book) {
                 $normalizedIsbn = $this->normalizeNumericIsbn($item->isbn);
+                $bookUpdates = [];
                 if ($normalizedIsbn) {
-                    $book->update([
-                        'isbn' => $normalizedIsbn,
-                    ]);
+                    $bookUpdates['isbn'] = $normalizedIsbn;
+                }
+
+                if (! empty($images)) {
+                    $currentImages = Arr::wrap($book->images ?? []);
+                    $needsImage = empty($currentImages) || empty(array_filter($currentImages));
+                    foreach ($currentImages as $img) {
+                        if (is_string($img) && (
+                            str_contains($img, '1790422172657') ||
+                            str_contains($img, 'Screenshot_2026_09_26_072402') ||
+                            str_contains($img, 'dd9xb0bqw')
+                        )) {
+                            $needsImage = true;
+                            break;
+                        }
+                    }
+
+                    if ($needsImage) {
+                        $bookUpdates['images'] = $images;
+                    }
+                }
+
+                if (! empty($bookUpdates)) {
+                    $book->update($bookUpdates);
                 }
 
                 $item->forceFill([
@@ -169,6 +191,7 @@ class BookUzParserService
                 Log::info('[book_uz_import] existing_book_updated', [
                     'parser_item_id' => $item->id,
                     'book_id' => $book->id,
+                    'updated_fields' => array_keys($bookUpdates),
                 ]);
 
                 return $book;
@@ -832,24 +855,41 @@ class BookUzParserService
             ->all();
 
         $images = collect(array_merge(
+            Arr::wrap($item['image'] ?? null),
+            Arr::wrap($item['images'] ?? []),
             Arr::wrap($item['imgUrl'] ?? null),
             Arr::wrap($item['additionalImgs'] ?? [])
         ))
+            ->filter(fn ($url) => is_string($url) && trim($url) !== '')
             ->map(fn ($url) => $this->absoluteUrl((string) $url))
             ->filter()
             ->unique()
             ->take(8)
             ->values()
             ->all();
-        $tags = collect($item['tags'] ?? [])
+
+        $tags = collect($item['tags'] ?? $item['tegs'] ?? [])
             ->map(fn ($tag) => trim((string) $tag))
             ->filter()
             ->values()
             ->all();
-        $descriptionText = $this->normalizeRichText($item['description'] ?? $item['shortDescription'] ?? $item['annotation'] ?? null);
-        $title = $this->extractCatalogTextValue($item['name'] ?? $item['title'] ?? null, ['name', 'title', 'value', 'text']);
-        $author = $this->extractAuthorFromCatalogItem($item);
-        $publisher = $this->extractCatalogTextValue($item['publisher'] ?? $item['publisherName'] ?? $item['publishingHouse'] ?? null, ['name', 'title', 'value', 'label']);
+
+        $rawDescription = $item['description'] ?? $item['shortDescription'] ?? $item['annotation'] ?? null;
+        if (is_array($rawDescription)) {
+            $rawDescription = $rawDescription['uz'] ?? $rawDescription['ru'] ?? reset($rawDescription);
+        }
+        $descriptionText = $this->normalizeRichText($rawDescription);
+
+        $rawTitle = $item['title'] ?? $item['name'] ?? null;
+        if (is_array($rawTitle)) {
+            $title = $this->cleanField($rawTitle['uz'] ?? $rawTitle['ru'] ?? reset($rawTitle));
+        } else {
+            $title = $this->extractCatalogTextValue($rawTitle, ['name', 'title', 'value', 'text']);
+        }
+
+        $author = $this->cleanField($item['authorName'] ?? null) ?: $this->extractAuthorFromCatalogItem($item);
+        $publisher = $this->cleanField($item['publisherName'] ?? null)
+            ?: $this->extractCatalogTextValue($item['publisher'] ?? $item['publishingHouse'] ?? null, ['name', 'title', 'value', 'label']);
         $translator = $this->extractCatalogTextValue($item['translator'] ?? null, ['fullName', 'name', 'title', 'value']);
         $language = $this->extractCatalogTextValue($item['language'] ?? null, ['name', 'title', 'value']);
         $script = $this->extractCatalogTextValue($item['contentLanguage'] ?? null, ['name', 'title', 'value']);
@@ -857,11 +897,11 @@ class BookUzParserService
 
         $payload = [
             'source_url' => $sourceUrl,
-            'external_id' => $this->cleanField((string) ($item['_id'] ?? $item['id'] ?? $item['link'] ?? '')),
-            'title' => $title ?: $this->fallbackTitleFromSlug($item['link'] ?? null),
+            'external_id' => $this->cleanField((string) ($item['_id'] ?? $item['id'] ?? $item['slug'] ?? $item['link'] ?? '')),
+            'title' => $title ?: $this->fallbackTitleFromSlug($item['slug'] ?? $item['link'] ?? null),
             'author' => $author,
             'isbn' => $this->cleanField($item['barcode'] ?? $item['isbn'] ?? null),
-            'source_category' => $this->cleanField($genres[0] ?? null),
+            'source_category' => $this->cleanField($item['categoryName'] ?? ($genres[0] ?? null)),
             'publisher' => $publisher,
             'translator' => $translator,
             'language' => $language,
@@ -869,10 +909,10 @@ class BookUzParserService
             'cover_type' => $coverType,
             'year' => $this->toInt($item['year'] ?? null),
             'pages' => $this->toInt($item['numberOfPage'] ?? $item['pages'] ?? null),
-            'price_uzs' => $this->toInt($item['bookPrice'] ?? $item['price'] ?? null),
-            'rating_value' => is_numeric($item['rating'] ?? null) ? round((float) $item['rating'], 2) : null,
-            'rating_count' => $this->toInt($item['rateCount'] ?? $item['ratingCount'] ?? null),
-            'in_stock' => ((int) ($item['stockCount'] ?? 0)) > 0,
+            'price_uzs' => $this->toInt($item['price'] ?? $item['discountPrice'] ?? $item['bookPrice'] ?? null),
+            'rating_value' => is_numeric($item['ratingAvg'] ?? $item['rating'] ?? null) ? round((float) ($item['ratingAvg'] ?? $item['rating']), 2) : null,
+            'rating_count' => $this->toInt($item['ratingCount'] ?? $item['rateCount'] ?? null),
+            'in_stock' => ((int) ($item['stock'] ?? $item['stockCount'] ?? $item['availableCount'] ?? 0)) > 0,
             'remote_image_urls' => $images,
             'description' => $descriptionText,
             'payload' => [
