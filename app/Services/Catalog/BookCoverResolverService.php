@@ -53,6 +53,15 @@ class BookCoverResolverService
      */
     public function resolveAndStore(string $title, ?string $rawIsbn = null, mixed $rawStoredImage = null, string $prefix = 'cover'): ?string
     {
+        // 0. Oldindan tayyorlangan tasdiqlangan muqovalar xaritasi (storage/app/resolved_covers_map.json)
+        $mappedUrl = $this->getFromCoversMap($prefix);
+        if ($mappedUrl) {
+            $path = $this->downloadToLocal($mappedUrl, $prefix);
+            if ($path) {
+                return $path;
+            }
+        }
+
         // 1. Book.uz original kesh (agar bor bo'lsa)
         $cachedUrl = $this->resolveFromOriginalCloudinary($rawStoredImage);
         if ($cachedUrl) {
@@ -74,7 +83,16 @@ class BookCoverResolverService
             }
         }
 
-        // 3. Kitob nomi bo'yicha Book.uz API
+        // 3. Labirint (ISBN yoki Ruscha kitoblar uchun — serverda bloklanmaydi)
+        $url = $this->searchLabirint($rawIsbn, $title);
+        if ($url) {
+            $path = $this->downloadToLocal($url, $prefix);
+            if ($path) {
+                return $path;
+            }
+        }
+
+        // 4. Kitob nomi bo'yicha Book.uz API
         if (mb_strlen(trim($title)) >= 2) {
             $url = $this->searchBookUzByTitle($title);
             if ($url) {
@@ -85,7 +103,7 @@ class BookCoverResolverService
             }
         }
 
-        // 4. Asaxiy.uz qidiruvi (Book.uz da bo'lmagan yoki yuklab bo'lmagan o'zbek kitoblari uchun)
+        // 5. Asaxiy.uz qidiruvi (Book.uz da bo'lmagan yoki yuklab bo'lmagan o'zbek kitoblari uchun)
         if (mb_strlen(trim($title)) >= 3) {
             $url = $this->searchAsaxiy($title);
             if ($url) {
@@ -96,7 +114,7 @@ class BookCoverResolverService
             }
         }
 
-        // 5. Google Books API orqali qidiruv (ISBN bo'yicha)
+        // 6. Google Books API orqali qidiruv (ISBN bo'yicha)
         if ($cleanIsbn) {
             $url = $this->searchGoogleBooks($cleanIsbn);
             if ($url) {
@@ -104,6 +122,31 @@ class BookCoverResolverService
                 if ($path) {
                     return $path;
                 }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * resolved_covers_map.json faylidan berilgan ID uchun rasm havolasini olish.
+     */
+    private function getFromCoversMap(string $prefix): ?string
+    {
+        static $coversMap = null;
+        if ($coversMap === null) {
+            $mapPath = storage_path('app/resolved_covers_map.json');
+            if (file_exists($mapPath)) {
+                $coversMap = json_decode((string) file_get_contents($mapPath), true) ?: [];
+            } else {
+                $coversMap = [];
+            }
+        }
+
+        if (preg_match('/(?:ed|b)_([0-9]+)/', $prefix, $m)) {
+            $id = $m[1];
+            if (! empty($coversMap[$id])) {
+                return (string) $coversMap[$id];
             }
         }
 
@@ -190,6 +233,8 @@ class BookCoverResolverService
                 $headers['Referer'] = 'https://book.uz/';
             } elseif (str_contains($url, 'asaxiy.uz')) {
                 $headers['Referer'] = 'https://asaxiy.uz/';
+            } elseif (str_contains($url, 'labirint.ru')) {
+                $headers['Referer'] = 'https://www.labirint.ru/';
             }
 
             if (str_contains($url, self::BROKEN_CLOUDINARY_SUBSTRING) && ! str_contains($url, 'book.uz/_next/image')) {
@@ -424,6 +469,48 @@ class BookCoverResolverService
                 }
             } catch (\Throwable $e) {
                 Log::debug("[book_cover_resolver] Asaxiy search error: {$e->getMessage()}");
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Labirint orqali kitob muqovasini qidirish (Ruscha kitoblar va ISBN bo'yicha kuchli manba).
+     */
+    public function searchLabirint(?string $isbn = null, ?string $title = null): ?string
+    {
+        $queries = [];
+        if ($isbn) {
+            $cleanIsbn = Isbn::clean($isbn);
+            if ($cleanIsbn) {
+                $queries[] = $cleanIsbn;
+            }
+        }
+        if ($title && preg_match('/[\p{Cyrillic}]/u', $title)) {
+            $queries[] = $this->cleanTitle($title);
+        }
+
+        foreach ($queries as $q) {
+            try {
+                $url = 'https://www.labirint.ru/search/'.urlencode($q).'/';
+                $res = $this->http->get($url, [
+                    'headers' => [
+                        'User-Agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                        'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    ],
+                ]);
+
+                if ($res->getStatusCode() !== 200) {
+                    continue;
+                }
+
+                $html = (string) $res->getBody();
+                if (preg_match('/data-src=["\'](https:\/\/[^"\']*labirint\.ru\/books\/[^"\']+)["\']/i', $html, $m)) {
+                    return $m[1];
+                }
+            } catch (\Throwable $e) {
+                Log::debug("[book_cover_resolver] Labirint search error: {$e->getMessage()}");
             }
         }
 
