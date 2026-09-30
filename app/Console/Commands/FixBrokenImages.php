@@ -317,7 +317,7 @@ class FixBrokenImages extends Command
                     $this->catalogService->syncOffers($edition);
                 }
                 $fixedEditions++;
-                $this->line(sprintf("[%d/%d] #%d \"%s\" -> <fg=green>TOPILDI VA SAQLANDI</>", $processed, $totalCount, $edition->id, $edition->title));
+                $this->line(sprintf("[%d/%d] #%d \"%s\" -> <fg=green>TOPILDI VA SAQLANDI</> (<fg=gray>%s</>)", $processed, $totalCount, $edition->id, $edition->title, $workingUrl));
                 $checkpoint['editions'][$edition->id] = 'found';
             } else {
                 $notFound++;
@@ -391,7 +391,7 @@ class FixBrokenImages extends Command
                         }
                     }
                     $fixedBooks++;
-                    $this->line(sprintf("[%d/%d] #%d \"%s\" -> <fg=green>TOPILDI VA SAQLANDI</>", $processed, $totalCount, $book->id, $book->name));
+                    $this->line(sprintf("[%d/%d] #%d \"%s\" -> <fg=green>TOPILDI VA SAQLANDI</> (<fg=gray>%s</>)", $processed, $totalCount, $book->id, $book->name, $workingUrl));
                     $checkpoint['books'][$book->id] = 'found';
                 } else {
                     $notFound++;

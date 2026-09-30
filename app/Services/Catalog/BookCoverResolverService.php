@@ -44,16 +44,86 @@ class BookCoverResolverService
      *
      * @return string|null Saqlangan lokal rasm yo'li (masalan: books/fixed_ed_123_abc.webp) yoki ishlaydigan tashqi havola
      */
+    /**
+     * Kitob uchun mos va haqiqiy muqova rasmini topish va lokal saqlash:
+     * Har bir manbani ketma-ket sinab ko'radi (Book.uz kesh -> Book.uz API -> Asaxiy -> Google Books).
+     * Faqat diskka haqiqatdan to'liq yuklab olingan rasmnigina tasdiqlaydi.
+     *
+     * @return string|null Saqlangan lokal rasm yo'li (masalan: books/fixed_ed_123_abc.webp)
+     */
     public function resolveAndStore(string $title, ?string $rawIsbn = null, mixed $rawStoredImage = null, string $prefix = 'cover'): ?string
     {
-        $remoteUrl = $this->resolveRemoteCover($title, $rawIsbn, $rawStoredImage);
-        if (! $remoteUrl) {
-            return null;
+        // 1. Book.uz original kesh (agar bor bo'lsa)
+        $cachedUrl = $this->resolveFromOriginalCloudinary($rawStoredImage);
+        if ($cachedUrl) {
+            $path = $this->downloadToLocal($cachedUrl, $prefix);
+            if ($path) {
+                return $path;
+            }
         }
 
-        $localPath = $this->downloadToLocal($remoteUrl, $prefix);
+        // 2. ISBN bo'yicha Book.uz API
+        $cleanIsbn = $rawIsbn ? Isbn::clean($rawIsbn) : null;
+        if ($cleanIsbn) {
+            $url = $this->searchBookUzByIsbn($cleanIsbn);
+            if ($url) {
+                $path = $this->downloadToLocal($url, $prefix);
+                if ($path) {
+                    return $path;
+                }
+            }
+        }
 
-        return $localPath ?: $remoteUrl;
+        // 3. Kitob nomi bo'yicha Book.uz API
+        if (mb_strlen(trim($title)) >= 2) {
+            $url = $this->searchBookUzByTitle($title);
+            if ($url) {
+                $path = $this->downloadToLocal($url, $prefix);
+                if ($path) {
+                    return $path;
+                }
+            }
+        }
+
+        // 4. Asaxiy.uz qidiruvi (Book.uz da bo'lmagan yoki yuklab bo'lmagan o'zbek kitoblari uchun)
+        if (mb_strlen(trim($title)) >= 3) {
+            $url = $this->searchAsaxiy($title);
+            if ($url) {
+                $path = $this->downloadToLocal($url, $prefix);
+                if ($path) {
+                    return $path;
+                }
+            }
+        }
+
+        // 5. Google Books API orqali qidiruv (ISBN bo'yicha)
+        if ($cleanIsbn) {
+            $url = $this->searchGoogleBooks($cleanIsbn);
+            if ($url) {
+                $path = $this->downloadToLocal($url, $prefix);
+                if ($path) {
+                    return $path;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Avvalgi asl Cloudinary havolasidan kesh manzilini aniqlash.
+     */
+    private function resolveFromOriginalCloudinary(mixed $rawStoredImage): ?string
+    {
+        $originalCloudinaryUrl = $this->extractOriginalCloudinaryUrl($rawStoredImage);
+        if ($originalCloudinaryUrl) {
+            $cachedProxyUrl = 'https://book.uz/_next/image?url='.urlencode($originalCloudinaryUrl).'&w=640&q=75';
+            if ($this->verifyUrlWorks($cachedProxyUrl)) {
+                return $cachedProxyUrl;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -61,13 +131,10 @@ class BookCoverResolverService
      */
     public function resolveRemoteCover(string $title, ?string $rawIsbn = null, mixed $rawStoredImage = null): ?string
     {
-        // 1. Agar kitobning avvalgi asl Cloudinary rasmi saqlanib qolgan bo'lsa (faqat u xato dublikat bo'lmasa)
-        $originalCloudinaryUrl = $this->extractOriginalCloudinaryUrl($rawStoredImage);
-        if ($originalCloudinaryUrl) {
-            $cachedProxyUrl = 'https://book.uz/_next/image?url='.urlencode($originalCloudinaryUrl).'&w=640&q=75';
-            if ($this->verifyUrlWorks($cachedProxyUrl)) {
-                return $cachedProxyUrl;
-            }
+        // 1. Agar kitobning avvalgi asl Cloudinary rasmi saqlanib qolgan bo'lsa
+        $cachedProxyUrl = $this->resolveFromOriginalCloudinary($rawStoredImage);
+        if ($cachedProxyUrl) {
+            return $cachedProxyUrl;
         }
 
         // 2. ISBN bo'yicha Book.uz API qidiruvi
@@ -79,7 +146,7 @@ class BookCoverResolverService
             }
         }
 
-        // 3. Kitob nomi bo'yicha Book.uz API qidiruvi (barcha o'zbekcha yozuv va sarlavha variantlari)
+        // 3. Kitob nomi bo'yicha Book.uz API qidiruvi
         if (mb_strlen(trim($title)) >= 2) {
             $url = $this->searchBookUzByTitle($title);
             if ($url) {
@@ -87,7 +154,7 @@ class BookCoverResolverService
             }
         }
 
-        // 4. Asaxiy.uz qidiruvi (Book.uz da bo'lmagan yangi yoki muqobil o'zbek kitoblari uchun)
+        // 4. Asaxiy.uz qidiruvi (Book.uz da bo'lmagan yangi yoki muqobil kitoblar uchun)
         if (mb_strlen(trim($title)) >= 3) {
             $url = $this->searchAsaxiy($title);
             if ($url) {
@@ -108,6 +175,7 @@ class BookCoverResolverService
 
     /**
      * Tashqi rasmni yuklab olib, o'zimizning storage/books/... ga saqlash.
+     * Faqat to'liq yozilgan (>= 1000 bayt) rasmlar saqlanadi.
      */
     public function downloadToLocal(string $url, string $prefix = 'cover'): ?string
     {
@@ -120,6 +188,8 @@ class BookCoverResolverService
 
             if (str_contains($url, 'book.uz')) {
                 $headers['Referer'] = 'https://book.uz/';
+            } elseif (str_contains($url, 'asaxiy.uz')) {
+                $headers['Referer'] = 'https://asaxiy.uz/';
             }
 
             if (str_contains($url, self::BROKEN_CLOUDINARY_SUBSTRING) && ! str_contains($url, 'book.uz/_next/image')) {
@@ -151,7 +221,11 @@ class BookCoverResolverService
             $filename = 'books/fixed_'.$prefix.'_'.Str::random(8).'.'.$extension;
             Storage::disk('public')->put($filename, $body);
 
-            return $filename;
+            if (Storage::disk('public')->exists($filename) && Storage::disk('public')->size($filename) >= 1000) {
+                return $filename;
+            }
+
+            return null;
         } catch (\Throwable $e) {
             Log::warning("[book_cover_resolver] Download failed for {$url}: {$e->getMessage()}");
 
@@ -271,40 +345,86 @@ class BookCoverResolverService
     /**
      * Asaxiy.uz orqali kitob muqovasini qidirish (Book.uz da topilmaganlar uchun kuchli zaxira).
      */
-    private function searchAsaxiy(string $title): ?string
+    public function searchAsaxiy(string $title): ?string
     {
-        try {
-            $query = $this->cleanTitle($title);
-            if (mb_strlen($query) < 3) {
-                return null;
-            }
+        $queries = [];
+        $rawTrimmed = trim($title);
+        if ($rawTrimmed !== '') {
+            $queries[] = $rawTrimmed;
+        }
 
-            $url = 'https://asaxiy.uz/uz/product?key='.urlencode($query);
-            $res = $this->http->get($url, [
-                'headers' => [
-                    'User-Agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-                    'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                ],
-            ]);
+        $clean = $this->cleanTitle($title);
+        if ($clean !== '' && $clean !== $rawTrimmed) {
+            $queries[] = $clean;
+        }
 
-            if ($res->getStatusCode() !== 200) {
-                return null;
-            }
+        $norm = $this->normalizeApostrophe($rawTrimmed);
+        if ($norm !== $rawTrimmed && $norm !== $clean) {
+            $queries[] = $norm;
+        }
 
-            $html = (string) $res->getBody();
-            preg_match_all('/<img[^>]+itemprop=["\']image["\'][^>]+>/i', $html, $matches);
-            foreach ($matches[0] as $tag) {
-                if (preg_match('/(?:title|alt)=["\']([^"\']+)["\']/i', $tag, $altMatch) &&
-                    preg_match('/(?:data-fallback|src)=["\']([^"\']+)["\']/i', $tag, $srcMatch)) {
-                    $foundTitle = html_entity_decode($altMatch[1]);
-                    $imgUrl = $srcMatch[1];
-                    if ($this->isTitleMatch($title, $foundTitle) && str_starts_with($imgUrl, 'http') && ! str_contains($imgUrl, 'no-image')) {
+        // Subtitle split (masalan: "O'zbekiston tavalludi. Ilk SSSR davrida..." -> "O'zbekiston tavalludi")
+        $parts = preg_split('/[:.\-—]/u', $title);
+        if (count($parts) > 1 && mb_strlen(trim($parts[0])) >= 3) {
+            $queries[] = trim($parts[0]);
+        }
+
+        $cyr = $this->latinToCyrillic($clean);
+        if ($cyr !== $clean) {
+            $queries[] = $cyr;
+        }
+
+        $queries = array_values(array_unique(array_filter($queries, fn ($q) => mb_strlen($q) >= 3)));
+
+        foreach ($queries as $query) {
+            try {
+                $url = 'https://asaxiy.uz/uz/product?key='.urlencode($query);
+                $res = $this->http->get($url, [
+                    'headers' => [
+                        'User-Agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                        'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    ],
+                ]);
+
+                if ($res->getStatusCode() !== 200) {
+                    continue;
+                }
+
+                $html = (string) $res->getBody();
+                $dom = new \DOMDocument();
+                @$dom->loadHTML($html);
+                $xpath = new \DOMXPath($dom);
+                $nodes = $xpath->query('//div[contains(@class, "product__item")]');
+
+                foreach ($nodes as $node) {
+                    $titleNode = $xpath->query('.//span[contains(@class, "product__item__info-title")]', $node)->item(0);
+                    $imgNode = $xpath->query('.//img[contains(@class, "img-fluid")]', $node)->item(0);
+
+                    if (! $titleNode || ! $imgNode) {
+                        continue;
+                    }
+
+                    $foundTitle = trim($titleNode->textContent);
+                    $imgUrl = $imgNode->getAttribute('src') ?: $imgNode->getAttribute('data-fallback');
+
+                    if (! str_starts_with($imgUrl, 'http') || str_contains($imgUrl, 'no-image')) {
+                        continue;
+                    }
+
+                    // 1. To'g'ridan-to'g'ri tekshirish
+                    if ($this->isTitleMatch($title, $foundTitle)) {
+                        return $imgUrl;
+                    }
+
+                    // 2. Muallif nomini olib tashlab tekshirish ("Tomas Harris: Gannibal" -> "Gannibal")
+                    $cleanFoundTitle = preg_replace('/^[^:]+:\s*/u', '', $foundTitle);
+                    if ($this->isTitleMatch($title, $cleanFoundTitle)) {
                         return $imgUrl;
                     }
                 }
+            } catch (\Throwable $e) {
+                Log::debug("[book_cover_resolver] Asaxiy search error: {$e->getMessage()}");
             }
-        } catch (\Throwable $e) {
-            Log::debug("[book_cover_resolver] Asaxiy search error: {$e->getMessage()}");
         }
 
         return null;
