@@ -16,14 +16,23 @@ class BuildCoversMap extends Command
     public function handle(BookCoverResolverService $resolver): int
     {
         $inputPath = storage_path('app/missing_editions.json');
-        if (! file_exists($inputPath)) {
-            $this->error("Fayl topilmadi: {$inputPath}");
-            return 1;
+        if (file_exists($inputPath)) {
+            $items = json_decode((string) file_get_contents($inputPath), true) ?: [];
+        } else {
+            $this->info("missing_editions.json topilmadi, ma'lumotlar bazasidan olinmoqda...");
+            $items = \App\Models\BookEdition::query()
+                ->whereNull('deleted_at')
+                ->where(function ($q) {
+                    $q->whereNull('front_image')
+                        ->orWhere('front_image', '')
+                        ->orWhere('front_image', 'like', '%fixed_%');
+                })
+                ->get(['id', 'title', 'author', 'isbn13', 'isbn10'])
+                ->toArray();
         }
 
-        $items = json_decode((string) file_get_contents($inputPath), true);
-        if (! is_array($items) || empty($items)) {
-            $this->error("Missing editions ro'yxati bo'sh yoki noto'g'ri formatda.");
+        if (empty($items)) {
+            $this->error("Muqovasi yo'q nashrlar topilmadi.");
             return 1;
         }
 
