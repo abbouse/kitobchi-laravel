@@ -10,6 +10,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 
 class FixBrokenImages extends Command
 {
@@ -17,6 +18,7 @@ class FixBrokenImages extends Command
                             {--limit=0 : Maksimal tekshiriladigan kitoblar soni (0 = barchasi)}
                             {--download : Rasmlarni tashqi serverga bog\'lanmasdan o\'zimizning local serverga (storage/books) yuklab olish}
                             {--all : Barcha muammoli (nosoz, bir xil takrorlangan va muqovasiz) kitoblarni birvarakayiga to\'g\'irlash (standart: ha)}
+                            {--fixed : Ilgari xato yuklangan (books/fixed_...) rasmli kitoblarni ham tozalab qayta qidirish}
                             {--missing : Faqat rasmi umuman yo\'q (bo\'sh / muqovasiz) kitoblarni qidirib rasm o\'rnatish}
                             {--all-duplicated : 2 va undan ko\'p kitobda bir xil takrorlanib qolgan rasmli kitoblarni ham qayta qidirib to\'g\'irlash}
                             {--duplicate-substring= : Takrorlanib qolgan rasm havolasining bir qismi (masalan: 1790422172657)}
@@ -54,6 +56,7 @@ class FixBrokenImages extends Command
         $download = (bool) $this->option('download');
         $dryRun = (bool) $this->option('dry-run');
         $all = (bool) $this->option('all');
+        $fixed = (bool) $this->option('fixed');
         $missing = (bool) $this->option('missing');
         $allDuplicated = (bool) $this->option('all-duplicated');
         $dupSubstring = trim((string) $this->option('duplicate-substring'));
@@ -82,6 +85,7 @@ class FixBrokenImages extends Command
         $this->line('Lokal saqlash: '.($download ? '<fg=cyan>Ha (rasmlar storage/books ga yuklab olinadi)</>' : '<fg=gray>Yo\'q (ishlaydigan tashqi havola saqlanadi)</>'));
         $this->line('Muqovasizlar: '.($missing ? '<fg=cyan>Ha (rasmi bo\'sh kitoblar ham kiritildi)</>' : '<fg=gray>Yo\'q</>'));
         $this->line('Dublikat va nosozlar: '.($allDuplicated ? '<fg=cyan>Ha (takrorlangan va buzilgan rasmlar)</>' : '<fg=gray>Yo\'q</>'));
+        $this->line('Ilgari yuklangan fixed_ rasmlar: '.($fixed || $all ? '<fg=cyan>Ha (qayta tekshiriladi va tozalanadi)</>' : '<fg=gray>Yo\'q</>'));
         $this->line('Tartib: '.($sortOrder === 'desc' ? '<fg=cyan>Eng yangi kitoblardan (id DESC)</>' : '<fg=gray>Eski kitoblardan (id ASC)</>'));
         $this->line('Davom ettirish: '.($resume ? '<fg=green>Ha (avval ko\'rilgan kitoblar o\'tkazib yuboriladi)</>' : '<fg=gray>Yo\'q (barchasi ko\'rib chiqiladi)</>'));
         if ($resume && (count($checkpoint['editions']) > 0 || count($checkpoint['books']) > 0)) {
@@ -105,9 +109,13 @@ class FixBrokenImages extends Command
         }
 
         $brokenBooksQuery = Books::query()
-            ->where(function ($q) use ($dupSubstring, $dupBookIds, $missing) {
+            ->where(function ($q) use ($dupSubstring, $dupBookIds, $missing, $fixed, $all) {
                 foreach (self::KNOWN_BAD_PATTERNS as $pattern) {
                     $q->orWhere('images', 'like', '%'.$pattern.'%');
+                }
+
+                if ($fixed || $all) {
+                    $q->orWhere('images', 'like', '%fixed_%');
                 }
 
                 if ($dupSubstring !== '') {
@@ -159,10 +167,15 @@ class FixBrokenImages extends Command
             }
 
             $brokenEditionsQuery = BookEdition::query()
-                ->where(function ($q) use ($dupSubstring, $dupEditionIds, $missing) {
+                ->where(function ($q) use ($dupSubstring, $dupEditionIds, $missing, $fixed, $all) {
                     foreach (self::KNOWN_BAD_PATTERNS as $pattern) {
                         $q->orWhere('front_image', 'like', '%'.$pattern.'%')
                             ->orWhere('images', 'like', '%'.$pattern.'%');
+                    }
+
+                    if ($fixed || $all) {
+                        $q->orWhere('front_image', 'like', '%fixed_%')
+                            ->orWhere('images', 'like', '%fixed_%');
                     }
 
                     if ($dupSubstring !== '') {
@@ -213,14 +226,29 @@ class FixBrokenImages extends Command
         $this->info("--- GLOBAL KARTALARNI (BookEdition) TEKSHIRISH ---");
         foreach ($brokenEditions as $edition) {
             $processed++;
-            $rawFront = $edition->getRawOriginal('front_image');
-            $rawImages = $edition->getRawOriginal('images');
+            $rawFront = (string) $edition->getRawOriginal('front_image');
+            $rawImages = (string) $edition->getRawOriginal('images');
+
+            $isBadImage = false;
+            foreach (self::KNOWN_BAD_PATTERNS as $bp) {
+                if (str_contains($rawFront, $bp) || str_contains($rawImages, $bp)) {
+                    $isBadImage = true;
+                    break;
+                }
+            }
+            if (! $isBadImage && (str_contains($rawFront, 'fixed_') || str_contains($rawImages, 'fixed_'))) {
+                $isBadImage = true;
+            }
+
             $workingUrl = $download
                 ? $this->resolver->resolveAndStore($edition->title, $edition->isbn13 ?: $edition->isbn10, $rawFront ?: $rawImages, 'ed_'.$edition->id)
                 : $this->resolver->resolveRemoteCover($edition->title, $edition->isbn13 ?: $edition->isbn10, $rawFront ?: $rawImages);
 
             if ($workingUrl) {
                 if (! $dryRun) {
+                    if ($rawFront && str_contains($rawFront, 'fixed_') && $rawFront !== $workingUrl) {
+                        @Storage::disk('public')->delete($rawFront);
+                    }
                     $edition->update([
                         'front_image' => $workingUrl,
                         'images' => Arr::wrap($workingUrl),
@@ -232,7 +260,19 @@ class FixBrokenImages extends Command
                 $checkpoint['editions'][$edition->id] = 'found';
             } else {
                 $notFound++;
-                $this->line(sprintf("[%d/%d] #%d \"%s\" -> <fg=yellow>INTERNETDAN TOPILMADI</>", $processed, $totalCount, $edition->id, $edition->title));
+                if (! $dryRun && $isBadImage) {
+                    if ($rawFront && str_contains($rawFront, 'fixed_')) {
+                        @Storage::disk('public')->delete($rawFront);
+                    }
+                    $edition->update([
+                        'front_image' => null,
+                        'images' => [],
+                    ]);
+                    $this->catalogService->syncOffers($edition);
+                    $this->line(sprintf("[%d/%d] #%d \"%s\" -> <fg=yellow>TOPILMADI (xato muqova tozalandi)</>", $processed, $totalCount, $edition->id, $edition->title));
+                } else {
+                    $this->line(sprintf("[%d/%d] #%d \"%s\" -> <fg=yellow>INTERNETDAN TOPILMADI</>", $processed, $totalCount, $edition->id, $edition->title));
+                }
                 $checkpoint['editions'][$edition->id] = 'not_found';
             }
 
@@ -247,6 +287,19 @@ class FixBrokenImages extends Command
             $this->info("--- DO'KON TAKLIFLARINI (Books) TEKSHIRISH ---");
             foreach ($brokenBooks as $book) {
                 $processed++;
+                $rawBookImages = (string) $book->getRawOriginal('images');
+
+                $isBadBookImage = false;
+                foreach (self::KNOWN_BAD_PATTERNS as $bp) {
+                    if (str_contains($rawBookImages, $bp)) {
+                        $isBadBookImage = true;
+                        break;
+                    }
+                }
+                if (! $isBadBookImage && str_contains($rawBookImages, 'fixed_')) {
+                    $isBadBookImage = true;
+                }
+
                 $workingUrl = $download
                     ? $this->resolver->resolveAndStore($book->name, $book->isbn, $book->getRawOriginal('images'), 'b_'.$book->id)
                     : $this->resolver->resolveRemoteCover($book->name, $book->isbn, $book->getRawOriginal('images'));
@@ -273,7 +326,16 @@ class FixBrokenImages extends Command
                     $checkpoint['books'][$book->id] = 'found';
                 } else {
                     $notFound++;
-                    $this->line(sprintf("[%d/%d] #%d \"%s\" -> <fg=yellow>INTERNETDAN TOPILMADI</>", $processed, $totalCount, $book->id, $book->name));
+                    if (! $dryRun && $isBadBookImage) {
+                        Books::writingFromCatalog(function () use ($book) {
+                            $book->update([
+                                'images' => [],
+                            ]);
+                        });
+                        $this->line(sprintf("[%d/%d] #%d \"%s\" -> <fg=yellow>TOPILMADI (xato rasm tozalandi)</>", $processed, $totalCount, $book->id, $book->name));
+                    } else {
+                        $this->line(sprintf("[%d/%d] #%d \"%s\" -> <fg=yellow>INTERNETDAN TOPILMADI</>", $processed, $totalCount, $book->id, $book->name));
+                    }
                     $checkpoint['books'][$book->id] = 'not_found';
                 }
 

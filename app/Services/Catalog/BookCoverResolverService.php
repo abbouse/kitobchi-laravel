@@ -367,7 +367,7 @@ class BookCoverResolverService
         }
 
         // Agar bu bir xil bo'lib yozilib qolgan xato rasm bo'lsa, uni hisobga olmaymiz
-        if (str_contains($raw, '1790422172657') || str_contains($raw, 'Screenshot_2026_09_26_072402')) {
+        if (str_contains($raw, '1790422172657') || str_contains($raw, 'Screenshot_2026_09_26_072402') || str_contains($raw, 'fixed_')) {
             return null;
         }
 
