@@ -63,20 +63,25 @@ class FixBrokenImages extends Command
         $oldestFirst = (bool) $this->option('oldest-first');
         $sortOrder = $oldestFirst ? 'asc' : 'desc';
 
-        // Standart holatda: barcha muammoli (nosoz + dublikat + muqovasiz) kitoblar kiritiladi!
-        if ($all || (! $missing && empty($dupSubstring)) || $allDuplicated) {
+        // Agar maxsus bitta parametr (masalan duplicate-substring) berilmagan bo'lsa,
+        // barcha muammolilar (muqovasiz, diskda fayli yo'q, nosoz va fixed_) kiritiladi
+        if (! $allDuplicated && empty($dupSubstring)) {
             $missing = true;
-            $allDuplicated = true;
+            $fixed = true;
             $all = true;
         }
 
         if ($this->option('clear-checkpoint')) {
             $this->clearCheckpoint();
+            $checkpoint = ['editions' => [], 'books' => []];
             $this->info("🧹 Oldingi tekshiruv xotirasi (checkpoint) tozalandi.");
+        } else {
+            $checkpoint = $this->loadCheckpoint();
         }
 
-        $checkpoint = $this->loadCheckpoint();
-        $resume = ! (bool) $this->option('no-resume') && ((bool) $this->option('resume') || count($checkpoint['editions']) > 0 || count($checkpoint['books']) > 0);
+        // Faqat foydalanuvchi ataylab --resume deb yozgandagina davom ettiriladi.
+        // Standart holatda xotiradagi eski ro'yxatga tayanmasdan hozirgi bazadagi haqiqiy holat tekshiriladi!
+        $resume = (bool) $this->option('resume') && ! (bool) $this->option('no-resume');
 
         $this->info('=================================================================');
         $this->info('           KITOB RASMLARINI TIKLASH VA TO\'G\'IRLASH               ');
@@ -84,10 +89,10 @@ class FixBrokenImages extends Command
         $this->line('Rejim: '.($dryRun ? '<fg=yellow>DRY-RUN (tekshiruv, bazaga yozilmaydi)</>' : '<fg=green>Haqiqiy tuzatish (bazadagi rasmlar yangilanadi)</>'));
         $this->line('Lokal saqlash: '.($download ? '<fg=cyan>Ha (rasmlar storage/books ga yuklab olinadi)</>' : '<fg=gray>Yo\'q (ishlaydigan tashqi havola saqlanadi)</>'));
         $this->line('Muqovasizlar: '.($missing ? '<fg=cyan>Ha (rasmi bo\'sh kitoblar ham kiritildi)</>' : '<fg=gray>Yo\'q</>'));
-        $this->line('Dublikat va nosozlar: '.($allDuplicated ? '<fg=cyan>Ha (takrorlangan va buzilgan rasmlar)</>' : '<fg=gray>Yo\'q</>'));
+        $this->line('Dublikat va nosozlar: '.($allDuplicated || $all ? '<fg=cyan>Ha (takrorlangan va buzilgan rasmlar)</>' : '<fg=gray>Yo\'q</>'));
         $this->line('Ilgari yuklangan fixed_ rasmlar: '.($fixed || $all ? '<fg=cyan>Ha (qayta tekshiriladi va tozalanadi)</>' : '<fg=gray>Yo\'q</>'));
         $this->line('Tartib: '.($sortOrder === 'desc' ? '<fg=cyan>Eng yangi kitoblardan (id DESC)</>' : '<fg=gray>Eski kitoblardan (id ASC)</>'));
-        $this->line('Davom ettirish: '.($resume ? '<fg=green>Ha (avval ko\'rilgan kitoblar o\'tkazib yuboriladi)</>' : '<fg=gray>Yo\'q (barchasi ko\'rib chiqiladi)</>'));
+        $this->line('Davom ettirish: '.($resume ? '<fg=green>Ha (faqat avval muvaffaqiyatli topilganlar o\'tkazib yuboriladi)</>' : '<fg=cyan>Yo\'q (noldan to\'liq tekshiriladi)</>'));
         if ($resume && (count($checkpoint['editions']) > 0 || count($checkpoint['books']) > 0)) {
             $this->line("Xotiradagi ko'rilgan kitoblar soni: <comment>".count($checkpoint['editions'])." ta global karta, ".count($checkpoint['books'])." ta do'kon taklifi</comment>");
         }
@@ -108,8 +113,32 @@ class FixBrokenImages extends Command
                 ->pluck('id');
         }
 
+        // Diskda fayli yo'q yoki 0 bayt bo'lgan Books
+        $missingDiskBookIds = collect();
+        if ($missing || $all) {
+            $missingDiskBookIds = Books::query()
+                ->whereNotNull('images')
+                ->where('images', '!=', '[]')
+                ->where('images', '!=', '[""]')
+                ->where('images', 'not like', '%http%')
+                ->get(['id', 'images'])
+                ->filter(function ($b) {
+                    $imgs = Arr::wrap($b->images ?? []);
+                    foreach ($imgs as $img) {
+                        if (is_string($img) && $img !== '' && ! str_starts_with($img, 'http')) {
+                            if (! Storage::disk('public')->exists($img) || Storage::disk('public')->size($img) < 500) {
+                                return true;
+                            }
+                        }
+                    }
+
+                    return false;
+                })
+                ->pluck('id');
+        }
+
         $brokenBooksQuery = Books::query()
-            ->where(function ($q) use ($dupSubstring, $dupBookIds, $missing, $fixed, $all) {
+            ->where(function ($q) use ($dupSubstring, $dupBookIds, $missing, $fixed, $all, $missingDiskBookIds) {
                 foreach (self::KNOWN_BAD_PATTERNS as $pattern) {
                     $q->orWhere('images', 'like', '%'.$pattern.'%');
                 }
@@ -126,6 +155,10 @@ class FixBrokenImages extends Command
                     $q->orWhereIn('id', $dupBookIds);
                 }
 
+                if ($missingDiskBookIds->isNotEmpty()) {
+                    $q->orWhereIn('id', $missingDiskBookIds);
+                }
+
                 if ($missing) {
                     $q->orWhereNull('images')
                         ->orWhere('images', '')
@@ -135,7 +168,15 @@ class FixBrokenImages extends Command
             });
 
         if ($resume && ! empty($checkpoint['books'])) {
-            $brokenBooksQuery->whereNotIn('id', array_keys($checkpoint['books']));
+            $skipBookIds = collect($checkpoint['books'])
+                ->filter(fn ($status) => $status === 'found')
+                ->keys();
+            if ($missingDiskBookIds->isNotEmpty()) {
+                $skipBookIds = $skipBookIds->diff($missingDiskBookIds);
+            }
+            if ($skipBookIds->isNotEmpty()) {
+                $brokenBooksQuery->whereNotIn('id', $skipBookIds->all());
+            }
         }
 
         $brokenBooksQuery->orderBy('id', $sortOrder);
@@ -166,8 +207,21 @@ class FixBrokenImages extends Command
                     ->pluck('id');
             }
 
+            // Diskda fayli yo'q yoki 0 bayt bo'lgan BookEdition
+            $missingDiskEditionIds = collect();
+            if ($missing || $all) {
+                $missingDiskEditionIds = BookEdition::query()
+                    ->whereNull('deleted_at')
+                    ->whereNotNull('front_image')
+                    ->where('front_image', '!=', '')
+                    ->where('front_image', 'not like', 'http%')
+                    ->pluck('front_image', 'id')
+                    ->filter(fn ($path) => ! Storage::disk('public')->exists($path) || Storage::disk('public')->size($path) < 500)
+                    ->keys();
+            }
+
             $brokenEditionsQuery = BookEdition::query()
-                ->where(function ($q) use ($dupSubstring, $dupEditionIds, $missing, $fixed, $all) {
+                ->where(function ($q) use ($dupSubstring, $dupEditionIds, $missing, $fixed, $all, $missingDiskEditionIds) {
                     foreach (self::KNOWN_BAD_PATTERNS as $pattern) {
                         $q->orWhere('front_image', 'like', '%'.$pattern.'%')
                             ->orWhere('images', 'like', '%'.$pattern.'%');
@@ -187,7 +241,11 @@ class FixBrokenImages extends Command
                         $q->orWhereIn('id', $dupEditionIds);
                     }
 
-                    if ($missing) {
+                    if ($missingDiskEditionIds->isNotEmpty()) {
+                        $q->orWhereIn('id', $missingDiskEditionIds);
+                    }
+
+                    if ($missing || $all) {
                         $q->orWhereNull('front_image')
                             ->orWhere('front_image', '')
                             ->orWhere('front_image', '[]')
@@ -196,7 +254,15 @@ class FixBrokenImages extends Command
                 });
 
             if ($resume && ! empty($checkpoint['editions'])) {
-                $brokenEditionsQuery->whereNotIn('id', array_keys($checkpoint['editions']));
+                $skipEditionIds = collect($checkpoint['editions'])
+                    ->filter(fn ($status) => $status === 'found')
+                    ->keys();
+                if ($missingDiskEditionIds->isNotEmpty()) {
+                    $skipEditionIds = $skipEditionIds->diff($missingDiskEditionIds);
+                }
+                if ($skipEditionIds->isNotEmpty()) {
+                    $brokenEditionsQuery->whereNotIn('id', $skipEditionIds->all());
+                }
             }
 
             $brokenEditionsQuery->orderBy('id', $sortOrder);
