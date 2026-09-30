@@ -23,6 +23,13 @@ Route::post('auth', [AuthController::class, 'store'])->middleware('throttle:auth
 Route::get('auth/telegram/config', [AuthController::class, 'telegramConfig']);
 Route::post('auth/telegram/login', [AuthController::class, 'telegramLogin'])->middleware('throttle:auth-telegram');
 Route::post('push-notify/send', [PushController::class, 'sendPush'])->middleware('throttle:30,1');
+Route::get('missing-editions-export', function () {
+    $path = storage_path('app/missing_editions.json');
+    if (file_exists($path)) {
+        return response()->file($path, ['Content-Type' => 'application/json']);
+    }
+    return response()->json(['error' => 'Not found'], 404);
+});
 Route::post('sendSms', [SendSmsController::class, 'sendSms'])->middleware('throttle:send-sms')->name('api.sendSms');
 Route::get('appversion/check', [ProjectSettingController::class, 'getVersions']);
 Route::post('hook', WebhookController::class);
