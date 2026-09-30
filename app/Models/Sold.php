@@ -157,6 +157,26 @@ class Sold extends Model
 
     public function estimatedDeliveryAt(): ?Carbon
     {
+        if ($this->delivery_date) {
+            $date = $this->delivery_date instanceof Carbon
+                ? $this->delivery_date->copy()
+                : Carbon::parse($this->delivery_date);
+
+            if ($this->delivery_slot && str_contains($this->delivery_slot, '-')) {
+                $parts = explode('-', $this->delivery_slot);
+                $endHour = (int) ($parts[1] ?? 18);
+                return $date->setTime($endHour, 0, 0);
+            }
+
+            return $date->setTime(18, 0, 0);
+        }
+
+        if ($this->preorder_ships_at) {
+            return $this->preorder_ships_at instanceof Carbon
+                ? $this->preorder_ships_at->copy()
+                : Carbon::parse($this->preorder_ships_at);
+        }
+
         if (!$this->created_at) {
             return null;
         }

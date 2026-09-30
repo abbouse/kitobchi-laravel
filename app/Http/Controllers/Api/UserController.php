@@ -170,6 +170,13 @@ class UserController extends Controller
             'status_label' => $this->orderStatusLabelForHome($order),
             'amount' => (int) ($order->amount ?? 0),
             'deliveryType' => $order->deliveryType,
+            'delivery_date' => $order->delivery_date instanceof \DateTimeInterface
+                ? $order->delivery_date->format('Y-m-d')
+                : ($order->delivery_date ? (string) $order->delivery_date : null),
+            'delivery_slot' => $order->delivery_slot,
+            'preorder_ships_at' => $order->preorder_ships_at instanceof \DateTimeInterface
+                ? $order->preorder_ships_at->format('Y-m-d')
+                : ($order->preorder_ships_at ? (string) $order->preorder_ships_at : null),
             'created_at' => $order->created_at?->toIso8601String(),
             'formatted_created_at' => optional($order->created_at)?->format('d.m.Y HH:mm'),
             'expected_delivery_at' => $expectedDeliveryAt?->toIso8601String(),

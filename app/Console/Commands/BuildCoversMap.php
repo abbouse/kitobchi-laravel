@@ -11,7 +11,7 @@ class BuildCoversMap extends Command
     protected $signature = 'catalog:build-covers-map
                             {--limit=0 : Maksimal tekshiriladigan kitoblar soni (0 = barchasi)}';
 
-    protected $description = 'Missing editions ro\'yxatini Asaxiy, Labirint va Book.uz orqali qidirib, resolved_covers_map.json xaritasini hosil qiladi';
+    protected $description = 'Missing editions ro\'yxatini faqat mahalliy ishonchli manbalar (Asaxiy, Book.uz) orqali muallif va sarlavhani qat\'iy solishtirib xaritalaydi';
 
     public function handle(BookCoverResolverService $resolver): int
     {
@@ -39,13 +39,15 @@ class BuildCoversMap extends Command
         }
 
         $total = count($items);
-        $this->info("Boshlandi: {$total} ta kitob uchun muqova qidirilmoqda...");
+        $this->info("Boshlandi: {$total} ta kitob uchun O'zbekiston manbalaridan (Asaxiy, Book.uz) qidirilmoqda...");
         $foundInRun = 0;
 
         foreach ($items as $idx => $item) {
             $id = (string) $item['id'];
             $title = (string) ($item['title'] ?? '');
-            $isbn = $item['isbn13'] ?: ($item['isbn10'] ?? null);
+            $author = (string) ($item['author'] ?? '');
+            $rawIsbn = $item['isbn13'] ?: ($item['isbn10'] ?? null);
+            $cleanIsbn = $rawIsbn ? Isbn::clean($rawIsbn) : null;
 
             if (! empty($map[$id])) {
                 $this->line(sprintf("[%d/%d] #%s \"%s\" -> <fg=gray>AVVAL TOPILGAN</>", $idx + 1, $total, $id, $title));
@@ -55,37 +57,36 @@ class BuildCoversMap extends Command
             $coverUrl = null;
             $source = null;
 
-            // 1. Agar ruscha bo'lsa yoki ISBN 9785/5 bo'lsa -> Labirint (100% aniq)
-            $cleanIsbn = $isbn ? Isbn::clean($isbn) : null;
-            if ($cleanIsbn && (str_starts_with($cleanIsbn, '9785') || str_starts_with($cleanIsbn, '5'))) {
-                $coverUrl = $resolver->searchLabirint($cleanIsbn, $title);
+            // 1. Asaxiy.uz — Muallif va Sarlavha qat'iy tekshiriladi
+            if (mb_strlen(trim($title)) >= 3) {
+                $coverUrl = $resolver->searchAsaxiy($title, $author);
                 if ($coverUrl) {
-                    $source = 'Labirint (ISBN)';
+                    $source = 'Asaxiy (Muallif va Nom tasdiqlandi)';
                 }
             }
 
-            // 2. Asaxiy.uz qidiruvi (O'zbekcha va umumiy kitoblar)
-            if (! $coverUrl && mb_strlen(trim($title)) >= 3) {
-                $coverUrl = $resolver->searchAsaxiy($title);
+            // 2. Book.uz API — ISBN bo'yicha
+            if (! $coverUrl && $cleanIsbn) {
+                $coverUrl = $resolver->searchBookUzByIsbn($cleanIsbn);
                 if ($coverUrl) {
-                    $source = 'Asaxiy';
+                    $source = 'Book.uz (ISBN)';
                 }
             }
 
-            // 3. Agar ruscha sarlavhali bo'lsa va hali topilmagan bo'lsa -> Labirint sarlavha bo'yicha
-            if (! $coverUrl && preg_match('/[\p{Cyrillic}]/u', $title)) {
-                $coverUrl = $resolver->searchLabirint(null, $title);
+            // 3. Book.uz API — Sarlavha bo'yicha
+            if (! $coverUrl && mb_strlen(trim($title)) >= 2) {
+                $coverUrl = $resolver->searchBookUzByTitle($title);
                 if ($coverUrl) {
-                    $source = 'Labirint (Nomi)';
+                    $source = 'Book.uz (Sarlavha)';
                 }
             }
 
             if ($coverUrl) {
                 $map[$id] = $coverUrl;
                 $foundInRun++;
-                $this->line(sprintf("[%d/%d] #%s \"%s\" -> <fg=green>TOPILDI (%s)</> (<fg=cyan>%s</>)", $idx + 1, $total, $id, $title, $source, $coverUrl));
+                $this->line(sprintf("[%d/%d] #%s \"%s\" (Muallif: %s) -> <fg=green>TOPILDI (%s)</> (<fg=cyan>%s</>)", $idx + 1, $total, $id, $title, $author ?: '-', $source, $coverUrl));
             } else {
-                $this->line(sprintf("[%d/%d] #%s \"%s\" -> <fg=yellow>TOPILMADI</>", $idx + 1, $total, $id, $title));
+                $this->line(sprintf("[%d/%d] #%s \"%s\" (Muallif: %s) -> <fg=yellow>TOPILMADI</>", $idx + 1, $total, $id, $title, $author ?: '-'));
             }
 
             if (($idx + 1) % 10 === 0) {
@@ -94,7 +95,7 @@ class BuildCoversMap extends Command
         }
 
         file_put_contents($outputPath, json_encode($map, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
-        $this->info("Tugadi! Jami xaritada: " . count($map) . " ta muqova saqlandi.");
+        $this->info("Tugadi! Yangi topilganlar: {$foundInRun}. Jami xaritada: " . count($map) . " ta muqova saqlandi.");
 
         return 0;
     }

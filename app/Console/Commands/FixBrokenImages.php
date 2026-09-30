@@ -302,8 +302,8 @@ class FixBrokenImages extends Command
             }
 
             $workingUrl = $download
-                ? $this->resolver->resolveAndStore($edition->title, $edition->isbn13 ?: $edition->isbn10, $rawFront ?: $rawImages, 'ed_'.$edition->id)
-                : $this->resolver->resolveRemoteCover($edition->title, $edition->isbn13 ?: $edition->isbn10, $rawFront ?: $rawImages);
+                ? $this->resolver->resolveAndStore($edition->title, $edition->isbn13 ?: $edition->isbn10, $rawFront ?: $rawImages, 'ed_'.$edition->id, $edition->author)
+                : $this->resolver->resolveRemoteCover($edition->title, $edition->isbn13 ?: $edition->isbn10, $rawFront ?: $rawImages, $edition->author);
 
             if ($workingUrl) {
                 if (! $dryRun) {
@@ -369,9 +369,10 @@ class FixBrokenImages extends Command
                     $isBadBookImage = true;
                 }
 
+                $bookAuthor = $book->author ?: ($book->edition?->author ?? null);
                 $workingUrl = $download
-                    ? $this->resolver->resolveAndStore($book->name, $book->isbn, $book->getRawOriginal('images'), 'b_'.$book->id)
-                    : $this->resolver->resolveRemoteCover($book->name, $book->isbn, $book->getRawOriginal('images'));
+                    ? $this->resolver->resolveAndStore($book->name, $book->isbn, $book->getRawOriginal('images'), 'b_'.$book->id, $bookAuthor)
+                    : $this->resolver->resolveRemoteCover($book->name, $book->isbn, $book->getRawOriginal('images'), $bookAuthor);
 
                 if ($workingUrl) {
                     if (! $dryRun) {

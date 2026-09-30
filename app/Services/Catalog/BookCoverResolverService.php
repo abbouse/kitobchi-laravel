@@ -51,7 +51,7 @@ class BookCoverResolverService
      *
      * @return string|null Saqlangan lokal rasm yo'li (masalan: books/fixed_ed_123_abc.webp)
      */
-    public function resolveAndStore(string $title, ?string $rawIsbn = null, mixed $rawStoredImage = null, string $prefix = 'cover'): ?string
+    public function resolveAndStore(string $title, ?string $rawIsbn = null, mixed $rawStoredImage = null, string $prefix = 'cover', ?string $author = null): ?string
     {
         // 0. Oldindan tayyorlangan tasdiqlangan muqovalar xaritasi (storage/app/resolved_covers_map.json)
         $mappedUrl = $this->getFromCoversMap($prefix);
@@ -83,16 +83,7 @@ class BookCoverResolverService
             }
         }
 
-        // 3. Labirint (ISBN yoki Ruscha kitoblar uchun — serverda bloklanmaydi)
-        $url = $this->searchLabirint($rawIsbn, $title);
-        if ($url) {
-            $path = $this->downloadToLocal($url, $prefix);
-            if ($path) {
-                return $path;
-            }
-        }
-
-        // 4. Kitob nomi bo'yicha Book.uz API
+        // 3. Kitob nomi bo'yicha Book.uz API
         if (mb_strlen(trim($title)) >= 2) {
             $url = $this->searchBookUzByTitle($title);
             if ($url) {
@@ -103,9 +94,9 @@ class BookCoverResolverService
             }
         }
 
-        // 5. Asaxiy.uz qidiruvi (Book.uz da bo'lmagan yoki yuklab bo'lmagan o'zbek kitoblari uchun)
+        // 4. Asaxiy.uz qidiruvi (Muallif va sarlavha qat'iy tekshiriladi)
         if (mb_strlen(trim($title)) >= 3) {
-            $url = $this->searchAsaxiy($title);
+            $url = $this->searchAsaxiy($title, $author);
             if ($url) {
                 $path = $this->downloadToLocal($url, $prefix);
                 if ($path) {
@@ -114,7 +105,7 @@ class BookCoverResolverService
             }
         }
 
-        // 6. Google Books API orqali qidiruv (ISBN bo'yicha)
+        // 5. Google Books API orqali qidiruv (ISBN bo'yicha)
         if ($cleanIsbn) {
             $url = $this->searchGoogleBooks($cleanIsbn);
             if ($url) {
@@ -172,7 +163,7 @@ class BookCoverResolverService
     /**
      * Tashqi manbalardan (Book.uz, Asaxiy, Google Books) haqiqiy rasm manzilini aniqlash.
      */
-    public function resolveRemoteCover(string $title, ?string $rawIsbn = null, mixed $rawStoredImage = null): ?string
+    public function resolveRemoteCover(string $title, ?string $rawIsbn = null, mixed $rawStoredImage = null, ?string $author = null): ?string
     {
         // 1. Agar kitobning avvalgi asl Cloudinary rasmi saqlanib qolgan bo'lsa
         $cachedProxyUrl = $this->resolveFromOriginalCloudinary($rawStoredImage);
@@ -197,9 +188,9 @@ class BookCoverResolverService
             }
         }
 
-        // 4. Asaxiy.uz qidiruvi (Book.uz da bo'lmagan yangi yoki muqobil kitoblar uchun)
+        // 4. Asaxiy.uz qidiruvi (Muallif va sarlavha qat'iy tekshiriladi)
         if (mb_strlen(trim($title)) >= 3) {
-            $url = $this->searchAsaxiy($title);
+            $url = $this->searchAsaxiy($title, $author);
             if ($url) {
                 return $url;
             }
@@ -233,8 +224,6 @@ class BookCoverResolverService
                 $headers['Referer'] = 'https://book.uz/';
             } elseif (str_contains($url, 'asaxiy.uz')) {
                 $headers['Referer'] = 'https://asaxiy.uz/';
-            } elseif (str_contains($url, 'labirint.ru')) {
-                $headers['Referer'] = 'https://www.labirint.ru/';
             }
 
             if (str_contains($url, self::BROKEN_CLOUDINARY_SUBSTRING) && ! str_contains($url, 'book.uz/_next/image')) {
@@ -281,7 +270,7 @@ class BookCoverResolverService
     /**
      * Book.uz API dan ISBN orqali qidirish.
      */
-    private function searchBookUzByIsbn(string $isbn): ?string
+    public function searchBookUzByIsbn(string $isbn): ?string
     {
         try {
             $response = $this->http->get(self::BOOKUZ_API.'/products', [
@@ -317,7 +306,7 @@ class BookCoverResolverService
      * Book.uz API dan kitob nomi va uning variantlari orqali qidirish.
      * Apostroflarni ajratib yubormasdan to'g'ri qidiruv so'zlarini tuzadi.
      */
-    private function searchBookUzByTitle(string $expectedTitle): ?string
+    public function searchBookUzByTitle(string $expectedTitle): ?string
     {
         $queries = [];
         $rawTrimmed = trim($expectedTitle);
@@ -388,14 +377,20 @@ class BookCoverResolverService
     }
 
     /**
-     * Asaxiy.uz orqali kitob muqovasini qidirish (Book.uz da topilmaganlar uchun kuchli zaxira).
+     * Asaxiy.uz orqali kitob muqovasini qidirish va muallif/sarlavha bo'yicha qat'iy tekshirish.
      */
-    public function searchAsaxiy(string $title): ?string
+    public function searchAsaxiy(string $title, ?string $author = null): ?string
     {
         $queries = [];
         $rawTrimmed = trim($title);
         if ($rawTrimmed !== '') {
             $queries[] = $rawTrimmed;
+        }
+
+        // Subtitle split (masalan: "O'zbekiston tavalludi. Ilk SSSR davrida..." -> "O'zbekiston tavalludi")
+        $parts = preg_split('/[:.\-—]/u', $title);
+        if (count($parts) > 1 && mb_strlen(trim($parts[0])) >= 3) {
+            $queries[] = trim($parts[0]);
         }
 
         $clean = $this->cleanTitle($title);
@@ -406,12 +401,6 @@ class BookCoverResolverService
         $norm = $this->normalizeApostrophe($rawTrimmed);
         if ($norm !== $rawTrimmed && $norm !== $clean) {
             $queries[] = $norm;
-        }
-
-        // Subtitle split (masalan: "O'zbekiston tavalludi. Ilk SSSR davrida..." -> "O'zbekiston tavalludi")
-        $parts = preg_split('/[:.\-—]/u', $title);
-        if (count($parts) > 1 && mb_strlen(trim($parts[0])) >= 3) {
-            $queries[] = trim($parts[0]);
         }
 
         $cyr = $this->latinToCyrillic($clean);
@@ -429,6 +418,7 @@ class BookCoverResolverService
                         'User-Agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
                         'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
                     ],
+                    'timeout' => 8,
                 ]);
 
                 if ($res->getStatusCode() !== 200) {
@@ -436,36 +426,51 @@ class BookCoverResolverService
                 }
 
                 $html = (string) $res->getBody();
-                $dom = new \DOMDocument();
-                @$dom->loadHTML($html);
-                $xpath = new \DOMXPath($dom);
-                $nodes = $xpath->query('//div[contains(@class, "product__item")]');
+                if (empty($html)) {
+                    continue;
+                }
 
-                foreach ($nodes as $node) {
-                    $titleNode = $xpath->query('.//span[contains(@class, "product__item__info-title")]', $node)->item(0);
-                    $imgNode = $xpath->query('.//img[contains(@class, "img-fluid")]', $node)->item(0);
+                // Asaxiy sahifasidagi ItemList JSON-LD bloklarini ajratib olish
+                $items = [];
+                if (preg_match_all('/<script type=["\']application\/ld\+json["\']>(.*?)<\/script>/s', $html, $matches)) {
+                    foreach ($matches[1] as $script) {
+                        $json = json_decode($script, true);
+                        if ($json && ($json['@type'] ?? '') === 'ItemList' && ! empty($json['itemListElement'])) {
+                            $items = $json['itemListElement'];
+                            break;
+                        }
+                    }
+                }
 
-                    if (! $titleNode || ! $imgNode) {
+                foreach ($items as $item) {
+                    $name = (string) ($item['name'] ?? '');
+                    $imgUrl = (string) ($item['image'] ?? '');
+                    if (! $imgUrl || ! str_starts_with($imgUrl, 'http') || str_contains($imgUrl, 'no-image')) {
                         continue;
                     }
 
-                    $foundTitle = trim($titleNode->textContent);
-                    $imgUrl = $imgNode->getAttribute('src') ?: $imgNode->getAttribute('data-fallback');
+                    // Asaxiy nomi: "{Muallif}: {Kitob nomi}" ko'rinishida bo'ladi
+                    $split = explode(':', $name, 2);
+                    if (count($split) === 2) {
+                        $foundAuthor = trim($split[0]);
+                        $foundTitle = trim($split[1]);
+                    } else {
+                        $foundAuthor = '';
+                        $foundTitle = trim($name);
+                    }
 
-                    if (! str_starts_with($imgUrl, 'http') || str_contains($imgUrl, 'no-image')) {
+                    // 1. Muallif bo'yicha qat'iy tekshirish
+                    if (! $this->isAuthorMatch($author, $foundAuthor)) {
                         continue;
                     }
 
-                    // 1. To'g'ridan-to'g'ri tekshirish
-                    if ($this->isTitleMatch($title, $foundTitle)) {
-                        return $imgUrl;
+                    // 2. Sarlavha bo'yicha tekshirish
+                    if (! $this->isTitleMatch($title, $foundTitle) && ! $this->isTitleMatch($title, $name)) {
+                        continue;
                     }
 
-                    // 2. Muallif nomini olib tashlab tekshirish ("Tomas Harris: Gannibal" -> "Gannibal")
-                    $cleanFoundTitle = preg_replace('/^[^:]+:\s*/u', '', $foundTitle);
-                    if ($this->isTitleMatch($title, $cleanFoundTitle)) {
-                        return $imgUrl;
-                    }
+                    // Muallif ham, sarlavha ham to'g'ri keldi -> muqovani qabul qilamiz
+                    return $imgUrl;
                 }
             } catch (\Throwable $e) {
                 Log::debug("[book_cover_resolver] Asaxiy search error: {$e->getMessage()}");
@@ -476,45 +481,43 @@ class BookCoverResolverService
     }
 
     /**
-     * Labirint orqali kitob muqovasini qidirish (Ruscha kitoblar va ISBN bo'yicha kuchli manba).
+     * Mualliflar mos kelishini tekshirish (o'zbek, rus va xorijiy transliteratsiyalarni hisobga olgan holda).
      */
-    public function searchLabirint(?string $isbn = null, ?string $title = null): ?string
+    public function isAuthorMatch(?string $targetAuthor, string $foundAuthor): bool
     {
-        $queries = [];
-        if ($isbn) {
-            $cleanIsbn = Isbn::clean($isbn);
-            if ($cleanIsbn) {
-                $queries[] = $cleanIsbn;
+        if (! $targetAuthor || in_array(mb_strtolower(trim($targetAuthor)), ['noma\'lum', 'nomalum', 'unknown', ''])) {
+            return true; // Muallif ma'lum bo'lmasa, sarlavhaga tayaniladi
+        }
+
+        $tNorm = $this->toComparableLatin($targetAuthor);
+        $fNorm = $this->toComparableLatin($foundAuthor);
+
+        if ($tNorm === $fNorm || str_contains($tNorm, $fNorm) || str_contains($fNorm, $tNorm)) {
+            return true;
+        }
+
+        $tTokens = array_values(array_filter(explode(' ', $tNorm), fn ($w) => mb_strlen($w) > 2));
+        $fTokens = array_values(array_filter(explode(' ', $fNorm), fn ($w) => mb_strlen($w) > 2));
+
+        foreach ($tTokens as $t) {
+            foreach ($fTokens as $f) {
+                if ($t === $f) {
+                    return true;
+                }
+                // H/X/G almashinuvlarini tekshirish (Huver / Guver, Harris / Xarris)
+                $tVar = str_replace(['h', 'x', 'g'], '#', $t);
+                $fVar = str_replace(['h', 'x', 'g'], '#', $f);
+                if ($tVar === $fVar) {
+                    return true;
+                }
+                // Levenshtein masofasi (1 ta xato)
+                if (mb_strlen($t) >= 4 && levenshtein($t, $f) <= 1) {
+                    return true;
+                }
             }
         }
-        if ($title && preg_match('/[\p{Cyrillic}]/u', $title)) {
-            $queries[] = $this->cleanTitle($title);
-        }
 
-        foreach ($queries as $q) {
-            try {
-                $url = 'https://www.labirint.ru/search/'.urlencode($q).'/';
-                $res = $this->http->get($url, [
-                    'headers' => [
-                        'User-Agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-                        'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                    ],
-                ]);
-
-                if ($res->getStatusCode() !== 200) {
-                    continue;
-                }
-
-                $html = (string) $res->getBody();
-                if (preg_match('/data-src=["\'](https:\/\/[^"\']*labirint\.ru\/books\/[^"\']+)["\']/i', $html, $m)) {
-                    return $m[1];
-                }
-            } catch (\Throwable $e) {
-                Log::debug("[book_cover_resolver] Labirint search error: {$e->getMessage()}");
-            }
-        }
-
-        return null;
+        return false;
     }
 
     /**
