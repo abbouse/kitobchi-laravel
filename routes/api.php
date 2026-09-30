@@ -24,11 +24,18 @@ Route::get('auth/telegram/config', [AuthController::class, 'telegramConfig']);
 Route::post('auth/telegram/login', [AuthController::class, 'telegramLogin'])->middleware('throttle:auth-telegram');
 Route::post('push-notify/send', [PushController::class, 'sendPush'])->middleware('throttle:30,1');
 Route::get('missing-editions-export', function () {
-    $path = storage_path('app/missing_editions.json');
-    if (file_exists($path)) {
-        return response()->file($path, ['Content-Type' => 'application/json']);
-    }
-    return response()->json(['error' => 'Not found'], 404);
+    return \App\Models\BookEdition::query()
+        ->whereNull('deleted_at')
+        ->where(function ($q) {
+            $q->whereNull('front_image')
+                ->orWhere('front_image', '')
+                ->orWhere('front_image', '[]')
+                ->orWhere('front_image', '[""]')
+                ->orWhere('front_image', 'like', '%1790422172657%')
+                ->orWhere('front_image', 'like', '%dd9xb0bqw%')
+                ->orWhere('front_image', 'like', '%Screenshot_%');
+        })
+        ->get(['id', 'title', 'author', 'isbn13', 'isbn10']);
 });
 Route::post('sendSms', [SendSmsController::class, 'sendSms'])->middleware('throttle:send-sms')->name('api.sendSms');
 Route::get('appversion/check', [ProjectSettingController::class, 'getVersions']);
