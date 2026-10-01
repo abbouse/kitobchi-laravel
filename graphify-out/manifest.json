@@ -5100,9 +5100,9 @@
     "semantic_hash": "5494f01c6ed3f688be0d453fa489ff69"
   },
   "resources/views/demo.blade.php": {
-    "mtime": 1790845709.5490472,
-    "seen": 1790845724.0939798,
-    "ast_hash": "d992929d7072a7f57d83c03d06fafbf4",
+    "mtime": 1790846237.9241638,
+    "seen": 1790846246.88675,
+    "ast_hash": "85413925de14ddfabc01b9159c6dd1f0",
     "semantic_hash": ""
   },
   "resources/views/developers/api-docs.blade.php": {
