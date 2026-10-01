@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Kitobchi — Kitob va kanselyariya savdosi uchun to‘liq ekotizim: Marketplace, Express, Business, POS va AI. Pitch Day 3.0 taqdimoti.">
+    <meta name="description" content="Kitobchi — Kitob va kanselyariya savdosi uchun yagona ekotizim: Marketplace, Express, Business, POS va AI. Pitch Day 3.0 taqdimoti.">
     <title>Kitobchi — Pitch Day 3.0 Taqdimoti</title>
     
     <!-- Favicon -->
@@ -19,21 +19,25 @@
 
     <style>
         :root {
-            --bg-body: #000000;
-            --bg-card: #121215;
-            --bg-card-hover: #1c1c21;
-            --bg-card-border: rgba(255, 255, 255, 0.08);
-            --text-primary: #f5f5f7;
-            --text-secondary: #a1a1a6;
-            --text-muted: #6e6e73;
-            --apple-blue: #2997ff;
-            --apple-blue-hover: #147ce5;
-            --apple-green: #30d158;
-            --apple-purple: #bf5af2;
-            --apple-orange: #ff9f0a;
-            --apple-gradient: linear-gradient(135deg, #ffffff 0%, #a1a1a6 100%);
-            --blue-gradient: linear-gradient(135deg, #2997ff 0%, #a259ff 100%);
-            --card-radius: 24px;
+            --bg-body: #ffffff;
+            --bg-subtle: #f5f5f7;
+            --bg-card: #ffffff;
+            --bg-card-hover: #fafafa;
+            --border-color: rgba(0, 0, 0, 0.08);
+            --border-hover: rgba(0, 0, 0, 0.16);
+            --text-primary: #1d1d1f;
+            --text-secondary: #6e6e73;
+            --text-muted: #86868b;
+            --apple-blue: #0071e3;
+            --apple-blue-hover: #0077ed;
+            --apple-green: #34c759;
+            --apple-purple: #af52de;
+            --apple-orange: #ff9500;
+            --apple-red: #ff3b30;
+            --card-radius: 22px;
+            --shadow-sm: 0 4px 14px rgba(0, 0, 0, 0.04);
+            --shadow-md: 0 12px 32px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 20px 48px rgba(0, 0, 0, 0.08);
         }
 
         * {
@@ -51,18 +55,18 @@
             -webkit-font-smoothing: antialiased;
         }
 
-        /* Glassmorphism Navigation */
+        /* Glassmorphism Navigation (Apple Light Style) */
         nav {
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
             z-index: 1000;
-            background: rgba(0, 0, 0, 0.75);
+            background: rgba(255, 255, 255, 0.85);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-            padding: 16px 32px;
+            border-bottom: 1px solid var(--border-color);
+            padding: 16px 36px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -72,25 +76,25 @@
         .nav-logo {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
             text-decoration: none;
-            color: #fff;
+            color: var(--text-primary);
             font-weight: 800;
             font-size: 20px;
             letter-spacing: -0.5px;
         }
 
         .nav-logo .logo-icon {
-            width: 38px;
-            height: 38px;
-            background: var(--blue-gradient);
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #0071e3 0%, #5e5ce6 100%);
             border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 20px;
+            font-size: 19px;
             color: #fff;
-            box-shadow: 0 4px 14px rgba(41, 151, 255, 0.35);
+            box-shadow: 0 4px 12px rgba(0, 113, 227, 0.3);
         }
 
         .nav-links {
@@ -108,22 +112,23 @@
         }
 
         .nav-links a:hover {
-            color: #fff;
+            color: var(--apple-blue);
         }
 
         .nav-cta {
-            background: #fff;
-            color: #000;
+            background: #000000;
+            color: #ffffff;
             padding: 8px 18px;
             border-radius: 980px;
             font-size: 13px;
             font-weight: 600;
             text-decoration: none;
             transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }
 
         .nav-cta:hover {
-            background: #e5e5ea;
+            background: #2c2c2e;
             transform: scale(1.02);
         }
 
@@ -136,23 +141,10 @@
 
         /* Hero Section */
         .hero {
-            padding: 160px 0 90px;
+            padding: 150px 0 80px;
             text-align: center;
             position: relative;
-        }
-
-        .hero::before {
-            content: '';
-            position: absolute;
-            top: 80px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 600px;
-            height: 350px;
-            background: radial-gradient(circle, rgba(41, 151, 255, 0.18) 0%, rgba(162, 89, 255, 0.08) 50%, rgba(0, 0, 0, 0) 80%);
-            z-index: -1;
-            pointer-events: none;
-            filter: blur(40px);
+            background: radial-gradient(circle at 50% 10%, rgba(0, 113, 227, 0.05) 0%, rgba(255, 255, 255, 0) 70%);
         }
 
         .pitch-badge {
@@ -160,14 +152,13 @@
             align-items: center;
             gap: 8px;
             padding: 6px 16px;
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(0, 113, 227, 0.08);
+            border: 1px solid rgba(0, 113, 227, 0.18);
             border-radius: 980px;
             font-size: 13px;
             font-weight: 600;
             color: var(--apple-blue);
             margin-bottom: 24px;
-            backdrop-filter: blur(10px);
         }
 
         .pitch-badge .dot {
@@ -175,7 +166,7 @@
             height: 8px;
             border-radius: 50%;
             background: var(--apple-green);
-            box-shadow: 0 0 10px var(--apple-green);
+            box-shadow: 0 0 8px var(--apple-green);
             animation: pulse 2s infinite;
         }
 
@@ -186,21 +177,19 @@
         }
 
         .hero h1 {
-            font-size: 68px;
+            font-size: 64px;
             font-weight: 800;
             line-height: 1.08;
             letter-spacing: -2px;
-            margin-bottom: 24px;
-            background: linear-gradient(180deg, #ffffff 30%, #a1a1a6 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            margin-bottom: 20px;
+            color: var(--text-primary);
         }
 
         .hero p {
-            font-size: 22px;
+            font-size: 21px;
             color: var(--text-secondary);
-            max-width: 780px;
-            margin: 0 auto 40px;
+            max-width: 760px;
+            margin: 0 auto 36px;
             font-weight: 400;
             line-height: 1.5;
         }
@@ -210,9 +199,9 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            gap: 16px;
+            gap: 14px;
             flex-wrap: wrap;
-            margin-bottom: 60px;
+            margin-bottom: 56px;
         }
 
         .store-btn {
@@ -220,24 +209,34 @@
             align-items: center;
             gap: 12px;
             padding: 12px 24px;
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.14);
+            background: #000000;
+            color: #ffffff;
             border-radius: 16px;
             text-decoration: none;
-            color: #fff;
             transition: all 0.25s cubic-bezier(0.25, 1, 0.5, 1);
-            backdrop-filter: blur(10px);
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
         }
 
         .store-btn:hover {
-            background: rgba(255, 255, 255, 0.16);
-            border-color: rgba(255, 255, 255, 0.3);
+            background: #2c2c2e;
             transform: translateY(-2px);
-            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+        }
+
+        .store-btn.web-btn {
+            background: #ffffff;
+            color: #000000;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .store-btn.web-btn:hover {
+            background: var(--bg-subtle);
+            border-color: var(--border-hover);
         }
 
         .store-btn i {
-            font-size: 28px;
+            font-size: 26px;
         }
 
         .store-btn .store-text {
@@ -248,86 +247,90 @@
         .store-btn .store-text span {
             display: block;
             font-size: 11px;
-            color: var(--text-secondary);
+            opacity: 0.75;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
 
         .store-btn .store-text strong {
-            font-size: 16px;
+            font-size: 15px;
             font-weight: 700;
         }
 
-        /* Stats Grid */
+        /* Stats Grid (Apple Clean Cards) */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 20px;
-            margin-top: 20px;
+            gap: 18px;
+            margin-top: 10px;
         }
 
         .stat-card {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid var(--bg-card-border);
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
             border-radius: var(--card-radius);
-            padding: 32px 20px;
+            padding: 30px 18px;
             text-align: center;
+            box-shadow: var(--shadow-sm);
             transition: all 0.3s ease;
         }
 
         .stat-card:hover {
-            background: rgba(255, 255, 255, 0.06);
-            border-color: rgba(255, 255, 255, 0.2);
+            border-color: var(--border-hover);
+            box-shadow: var(--shadow-md);
             transform: translateY(-3px);
         }
 
         .stat-card .number {
-            font-size: 46px;
+            font-size: 44px;
             font-weight: 800;
             letter-spacing: -1.5px;
             line-height: 1;
             margin-bottom: 8px;
-            background: var(--blue-gradient);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            color: var(--apple-blue);
         }
 
         .stat-card .label {
             font-size: 14px;
             color: var(--text-secondary);
-            font-weight: 500;
+            font-weight: 600;
         }
 
         /* Section Headings */
         .section {
-            padding: 100px 0;
-            border-top: 1px solid rgba(255, 255, 255, 0.06);
+            padding: 90px 0;
+            border-top: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .section.subtle-bg {
+            background-color: var(--bg-subtle);
         }
 
         .section-header {
             text-align: center;
-            margin-bottom: 56px;
+            margin-bottom: 50px;
         }
 
         .section-tag {
-            font-size: 13px;
+            font-size: 12.5px;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 1.5px;
             color: var(--apple-blue);
-            margin-bottom: 12px;
+            margin-bottom: 10px;
         }
 
         .section-title {
-            font-size: 46px;
+            font-size: 42px;
             font-weight: 800;
             letter-spacing: -1.5px;
             line-height: 1.15;
-            margin-bottom: 16px;
+            margin-bottom: 14px;
+            color: var(--text-primary);
         }
 
         .section-desc {
-            font-size: 18px;
+            font-size: 17px;
             color: var(--text-secondary);
             max-width: 680px;
             margin: 0 auto;
@@ -337,20 +340,19 @@
         .problem-solution-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 28px;
+            gap: 24px;
         }
 
         .ps-card {
             background: var(--bg-card);
-            border: 1px solid var(--bg-card-border);
+            border: 1px solid var(--border-color);
             border-radius: var(--card-radius);
-            padding: 40px;
-            position: relative;
-            overflow: hidden;
+            padding: 38px;
+            box-shadow: var(--shadow-sm);
         }
 
         .ps-card.problem {
-            border-top: 4px solid #ff453a;
+            border-top: 4px solid var(--apple-red);
         }
 
         .ps-card.solution {
@@ -358,12 +360,12 @@
         }
 
         .ps-card h3 {
-            font-size: 26px;
+            font-size: 24px;
             font-weight: 700;
-            margin-bottom: 24px;
+            margin-bottom: 22px;
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
         }
 
         .ps-list {
@@ -377,7 +379,7 @@
             display: flex;
             align-items: flex-start;
             gap: 14px;
-            font-size: 15px;
+            font-size: 14.5px;
             color: var(--text-secondary);
             line-height: 1.5;
         }
@@ -389,7 +391,7 @@
         }
 
         .ps-card.problem .ps-list li i {
-            color: #ff453a;
+            color: var(--apple-red);
         }
 
         .ps-card.solution .ps-list li i {
@@ -397,62 +399,65 @@
         }
 
         .ps-list li strong {
-            color: #fff;
+            color: var(--text-primary);
             display: block;
             margin-bottom: 2px;
+            font-size: 15px;
         }
 
         /* Team Cards */
         .team-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 24px;
+            gap: 20px;
         }
 
         .team-card {
             background: var(--bg-card);
-            border: 1px solid var(--bg-card-border);
+            border: 1px solid var(--border-color);
             border-radius: var(--card-radius);
-            padding: 32px 24px;
+            padding: 32px 20px;
             display: flex;
             flex-direction: column;
             align-items: center;
             text-align: center;
+            box-shadow: var(--shadow-sm);
             transition: all 0.3s ease;
         }
 
         .team-card:hover {
-            background: var(--bg-card-hover);
-            border-color: rgba(255, 255, 255, 0.2);
+            border-color: var(--border-hover);
+            box-shadow: var(--shadow-md);
             transform: translateY(-4px);
         }
 
         .team-avatar {
-            width: 88px;
-            height: 88px;
+            width: 80px;
+            height: 80px;
             border-radius: 50%;
-            background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.02));
-            border: 2px solid rgba(255, 255, 255, 0.12);
+            background: var(--bg-subtle);
+            border: 2px solid var(--border-color);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 32px;
-            margin-bottom: 20px;
-            color: #fff;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+            font-size: 30px;
+            margin-bottom: 18px;
+            box-shadow: var(--shadow-sm);
         }
 
         .team-name {
-            font-size: 19px;
+            font-size: 18px;
             font-weight: 700;
-            margin-bottom: 6px;
+            color: var(--text-primary);
+            margin-bottom: 4px;
         }
 
         .team-role {
-            font-size: 13px;
+            font-size: 12.5px;
             color: var(--apple-blue);
             font-weight: 600;
-            margin-bottom: 16px;
+            margin-bottom: 14px;
+            line-height: 1.3;
         }
 
         .team-skills {
@@ -460,16 +465,17 @@
             flex-wrap: wrap;
             gap: 6px;
             justify-content: center;
-            margin-bottom: 20px;
+            margin-bottom: 18px;
         }
 
         .skill-tag {
             font-size: 11px;
-            padding: 4px 10px;
-            background: rgba(255, 255, 255, 0.06);
+            padding: 4px 9px;
+            background: var(--bg-subtle);
+            border: 1px solid var(--border-color);
             border-radius: 980px;
             color: var(--text-secondary);
-            font-weight: 500;
+            font-weight: 600;
         }
 
         .team-links {
@@ -480,66 +486,69 @@
 
         .team-links a {
             color: var(--text-muted);
-            font-size: 18px;
+            font-size: 19px;
             transition: color 0.2s;
             text-decoration: none;
         }
 
         .team-links a:hover {
-            color: #fff;
+            color: var(--apple-blue);
         }
 
         /* Why Team Cards */
         .why-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 24px;
+            gap: 20px;
         }
 
         .why-card {
             background: var(--bg-card);
-            border: 1px solid var(--bg-card-border);
+            border: 1px solid var(--border-color);
             border-radius: var(--card-radius);
-            padding: 36px 28px;
+            padding: 34px 26px;
+            box-shadow: var(--shadow-sm);
             transition: all 0.3s ease;
         }
 
         .why-card:hover {
-            border-color: rgba(255, 255, 255, 0.2);
+            border-color: var(--border-hover);
+            box-shadow: var(--shadow-md);
             transform: translateY(-3px);
         }
 
         .why-icon {
-            width: 52px;
-            height: 52px;
-            border-radius: 14px;
-            background: rgba(41, 151, 255, 0.12);
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: rgba(0, 113, 227, 0.08);
             color: var(--apple-blue);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 26px;
-            margin-bottom: 20px;
+            font-size: 24px;
+            margin-bottom: 18px;
         }
 
         .why-card:nth-child(2) .why-icon {
-            background: rgba(48, 209, 88, 0.12);
+            background: rgba(52, 199, 89, 0.1);
             color: var(--apple-green);
         }
 
         .why-card:nth-child(3) .why-icon {
-            background: rgba(191, 90, 242, 0.12);
+            background: rgba(175, 82, 222, 0.1);
             color: var(--apple-purple);
         }
 
         .why-card h4 {
-            font-size: 20px;
+            font-size: 19px;
             font-weight: 700;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
+            color: var(--text-primary);
         }
 
         .why-card p {
-            font-size: 14.5px;
+            font-size: 14px;
             color: var(--text-secondary);
             line-height: 1.6;
         }
@@ -548,27 +557,26 @@
         .roadmap-timeline {
             display: grid;
             grid-template-columns: repeat(5, 1fr);
-            gap: 16px;
-            position: relative;
+            gap: 14px;
         }
 
         .roadmap-step {
             background: var(--bg-card);
-            border: 1px solid var(--bg-card-border);
-            border-radius: 20px;
-            padding: 28px 20px;
-            position: relative;
+            border: 1px solid var(--border-color);
+            border-radius: 18px;
+            padding: 24px 18px;
+            box-shadow: var(--shadow-sm);
             transition: all 0.3s ease;
         }
 
         .roadmap-step.active {
-            border-color: var(--apple-blue);
-            background: rgba(41, 151, 255, 0.05);
-            box-shadow: 0 0 30px rgba(41, 151, 255, 0.12);
+            border: 2px solid var(--apple-blue);
+            background: rgba(0, 113, 227, 0.02);
+            box-shadow: var(--shadow-md);
         }
 
         .roadmap-step.completed {
-            border-color: rgba(48, 209, 88, 0.4);
+            border-top: 3px solid var(--apple-green);
         }
 
         .step-badge {
@@ -576,59 +584,62 @@
             font-size: 11px;
             font-weight: 700;
             text-transform: uppercase;
-            padding: 4px 10px;
+            padding: 4px 9px;
             border-radius: 980px;
-            margin-bottom: 14px;
+            margin-bottom: 12px;
         }
 
         .roadmap-step.completed .step-badge {
-            background: rgba(48, 209, 88, 0.15);
+            background: rgba(52, 199, 89, 0.12);
             color: var(--apple-green);
         }
 
         .roadmap-step.active .step-badge {
-            background: rgba(41, 151, 255, 0.2);
+            background: rgba(0, 113, 227, 0.12);
             color: var(--apple-blue);
         }
 
         .roadmap-step.planned .step-badge {
-            background: rgba(255, 255, 255, 0.08);
+            background: var(--bg-subtle);
             color: var(--text-muted);
         }
 
         .roadmap-step h4 {
-            font-size: 18px;
+            font-size: 17px;
             font-weight: 700;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
+            color: var(--text-primary);
         }
 
         .roadmap-step p {
-            font-size: 13px;
+            font-size: 12.5px;
             color: var(--text-secondary);
             line-height: 1.5;
         }
 
-        /* Implementation & Tech Architecture */
+        /* Tech Architecture */
         .tech-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 24px;
+            gap: 20px;
         }
 
         .tech-card {
             background: var(--bg-card);
-            border: 1px solid var(--bg-card-border);
+            border: 1px solid var(--border-color);
             border-radius: var(--card-radius);
-            padding: 32px;
+            padding: 30px;
+            box-shadow: var(--shadow-sm);
         }
 
         .tech-card h4 {
-            font-size: 20px;
+            font-size: 19px;
             font-weight: 700;
             margin-bottom: 16px;
             display: flex;
             align-items: center;
             gap: 10px;
+            color: var(--text-primary);
         }
 
         .tech-card ul {
@@ -639,7 +650,7 @@
         }
 
         .tech-card ul li {
-            font-size: 14px;
+            font-size: 13.5px;
             color: var(--text-secondary);
             display: flex;
             align-items: center;
@@ -648,7 +659,7 @@
 
         .tech-card ul li i {
             color: var(--apple-blue);
-            font-size: 18px;
+            font-size: 17px;
         }
 
         /* Demo Video Section */
@@ -657,12 +668,12 @@
             width: 100%;
             padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
             height: 0;
-            border-radius: 28px;
+            border-radius: 24px;
             overflow: hidden;
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.7);
-            margin-bottom: 32px;
-            background: #0a0a0c;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-lg);
+            margin-bottom: 28px;
+            background: #000000;
         }
 
         .video-container iframe {
@@ -676,82 +687,90 @@
 
         .video-desc-box {
             background: var(--bg-card);
-            border: 1px solid var(--bg-card-border);
+            border: 1px solid var(--border-color);
             border-radius: var(--card-radius);
-            padding: 32px;
-            margin-bottom: 40px;
+            padding: 28px 32px;
+            margin-bottom: 32px;
+            box-shadow: var(--shadow-sm);
         }
 
         .video-desc-box h4 {
-            font-size: 20px;
+            font-size: 19px;
             font-weight: 700;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
             display: flex;
             align-items: center;
             gap: 10px;
+            color: var(--text-primary);
         }
 
         .video-desc-box p {
-            font-size: 15px;
+            font-size: 14.5px;
             color: var(--text-secondary);
-            line-height: 1.7;
+            line-height: 1.6;
         }
 
         /* Prototype Live Cards */
         .proto-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
+            gap: 18px;
         }
 
         .proto-card {
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid var(--bg-card-border);
-            border-radius: 20px;
-            padding: 24px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 18px;
+            padding: 22px;
             text-decoration: none;
-            color: #fff;
+            color: var(--text-primary);
             display: flex;
             align-items: center;
-            gap: 18px;
+            gap: 16px;
+            box-shadow: var(--shadow-sm);
             transition: all 0.3s ease;
         }
 
         .proto-card:hover {
-            background: rgba(255, 255, 255, 0.08);
-            border-color: rgba(255, 255, 255, 0.25);
-            transform: translateY(-3px);
+            border-color: var(--border-hover);
+            box-shadow: var(--shadow-md);
+            transform: translateY(-2px);
         }
 
         .proto-icon {
-            width: 48px;
-            height: 48px;
+            width: 44px;
+            height: 44px;
             border-radius: 12px;
-            background: var(--blue-gradient);
+            background: #000000;
+            color: #ffffff;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
+            font-size: 22px;
             flex-shrink: 0;
         }
 
+        .proto-card.web-card .proto-icon {
+            background: var(--apple-blue);
+        }
+
         .proto-card strong {
-            font-size: 16px;
+            font-size: 15px;
             display: block;
             margin-bottom: 2px;
         }
 
         .proto-card span {
-            font-size: 13px;
+            font-size: 12.5px;
             color: var(--text-secondary);
         }
 
-        /* Screenshots Showcase (Apple Carousel) */
+        /* Screenshots Showcase (Apple Carousel Light) */
         .screenshots-wrap {
             display: flex;
             overflow-x: auto;
-            gap: 24px;
-            padding: 20px 0 40px;
+            gap: 22px;
+            padding: 10px 0 30px;
             scroll-snap-type: x mandatory;
             scrollbar-width: none;
             -webkit-overflow-scrolling: touch;
@@ -762,18 +781,19 @@
         }
 
         .screenshot-item {
-            flex: 0 0 280px;
+            flex: 0 0 270px;
             scroll-snap-align: center;
             border-radius: 24px;
             overflow: hidden;
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-md);
+            background: #ffffff;
             transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
         }
 
         .screenshot-item:hover {
-            transform: scale(1.04);
-            border-color: rgba(255, 255, 255, 0.3);
+            transform: scale(1.03);
+            box-shadow: var(--shadow-lg);
         }
 
         .screenshot-item img {
@@ -784,27 +804,27 @@
 
         /* Footer */
         footer {
-            background: #08080a;
-            border-top: 1px solid rgba(255, 255, 255, 0.06);
-            padding: 60px 0 40px;
+            background: var(--bg-subtle);
+            border-top: 1px solid var(--border-color);
+            padding: 50px 0 30px;
             text-align: center;
         }
 
         footer p {
-            font-size: 14px;
-            color: var(--text-muted);
-            margin-bottom: 8px;
+            font-size: 13.5px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
         }
 
         footer .pitch-tag {
-            color: var(--text-secondary);
-            font-weight: 600;
+            color: var(--text-primary);
+            font-weight: 700;
         }
 
         /* Responsive Breakpoints */
         @media (max-width: 992px) {
-            .hero h1 { font-size: 48px; }
-            .section-title { font-size: 36px; }
+            .hero h1 { font-size: 46px; }
+            .section-title { font-size: 34px; }
             .stats-grid { grid-template-columns: repeat(2, 1fr); }
             .problem-solution-grid { grid-template-columns: 1fr; }
             .team-grid { grid-template-columns: repeat(2, 1fr); }
@@ -817,11 +837,11 @@
         }
 
         @media (max-width: 600px) {
-            .hero h1 { font-size: 38px; }
-            .hero p { font-size: 18px; }
+            .hero h1 { font-size: 36px; }
+            .hero p { font-size: 17px; }
             .stats-grid { grid-template-columns: 1fr; }
             .team-grid { grid-template-columns: 1fr; }
-            .stat-card .number { font-size: 38px; }
+            .stat-card .number { font-size: 36px; }
         }
     </style>
 </head>
@@ -854,7 +874,7 @@
                 Pitch Day 3.0 • 1-bosqich Taqdimoti
             </div>
             <h1>Kitob va kanselyariya savdosi<br>uchun yagona ekotizim</h1>
-            <p>Marketplace • Express Yetkazib Berish • Nashriyot & Seller Boshqaruvi • Smart POS • AI Tavsiyalar</p>
+            <p>Marketplace • Express Yetkazib Berish • Nashriyot & Do'konlar Boshqaruvi • Smart POS • AI Tavsiyalar</p>
 
             <!-- Store Badges -->
             <div class="app-buttons">
@@ -872,10 +892,10 @@
                         <strong>Google Play</strong>
                     </div>
                 </a>
-                <a class="store-btn" href="https://kitobchi.com" target="_blank">
+                <a class="store-btn web-btn" href="https://kitobchi.com" target="_blank">
                     <i class="ti ti-world"></i>
                     <div class="store-text">
-                        <span>Veb platforma</span>
+                        <span>Veb sayt</span>
                         <strong>kitobchi.com</strong>
                     </div>
                 </a>
@@ -892,11 +912,11 @@
                     <div class="label">Muvaffaqiyatli Savdolar</div>
                 </div>
                 <div class="stat-card">
-                    <div class="number">15,000+</div>
-                    <div class="label">Kitoblar Global Katalogi</div>
+                    <div class="number">7,000+</div>
+                    <div class="label">Kitoblar Bazasi</div>
                 </div>
                 <div class="stat-card">
-                    <div class="number">50+</div>
+                    <div class="number">5+</div>
                     <div class="label">Hamkor Do'konlar & Nashriyotlar</div>
                 </div>
             </div>
@@ -904,12 +924,12 @@
     </section>
 
     <!-- 1. MUAMMO → YECHIM -->
-    <section class="section" id="problem">
+    <section class="section subtle-bg" id="problem">
         <div class="container">
             <div class="section-header">
                 <div class="section-tag">1. Tahlil & Yondashuv</div>
                 <h2 class="section-title">Muammo → Yechim</h2>
-                <p class="section-desc">Kitob va kanselyariya sanoatidagi asosiy tizimli muammolar va Kitobchi taqdim etayotgan zamonaviy raqamli yechimlar.</p>
+                <p class="section-desc">Kitob va kanselyariya savdosidagi asosiy tizimli muammolar va Kitobchi taqdim etayotgan qulay raqamli yechimlar.</p>
             </div>
 
             <div class="problem-solution-grid">
@@ -920,29 +940,29 @@
                         <li>
                             <i class="ti ti-x"></i>
                             <div>
-                                <strong>Fragmentlashgan va tarqoq bozor</strong>
-                                Kitobxon kerakli kitobni topish uchun o'nlab do'konlarga borishi yoki turli ijtimoiy tarmoq kanallarini qidirishga majbur.
+                                <strong>Tarqoq va noqulay bozor</strong>
+                                Xaridor kerakli kitobni topish uchun o'nlab do'konlarni aylanib chiqishga yoki turli ijtimoiy tarmoqlardan qidirishga majbur.
                             </div>
                         </li>
                         <li>
                             <i class="ti ti-x"></i>
                             <div>
                                 <strong>Do'konlar va nashriyotlarning raqamlashmaganligi</strong>
-                                Aksariyat kichik kitob do'konlarida avtomatlashgan inventar, POS kassa va onlayn savdo boshqaruvi yo'q.
+                                Kichik kitob do'konlarida avtomatlashgan hisob-kitob, kassa dasturi va onlayn savdo boshqaruvi yo'q.
                             </div>
                         </li>
                         <li>
                             <i class="ti ti-x"></i>
                             <div>
-                                <strong>Qimmat va uzoq logistika</strong>
-                                Kitoblarni yetkazib berish 1–3 kun vaqt oladi, tezkor shahar ichi ekspress kuryerlik tizimi yo'lga qo'yilmagan.
+                                <strong>Qimmat va uzoq vaqt oladigan yetkazib berish</strong>
+                                Kitoblarni yetkazish bir necha kun vaqt oladi, shahar ichida tezkor yetkazish xizmati yo'lga qo'yilmagan.
                             </div>
                         </li>
                         <li>
                             <i class="ti ti-x"></i>
                             <div>
-                                <strong>Yagona standartlashtirilgan katalog yo'qligi</strong>
-                                ISBN, mualliflar va nashriyotlar bo'yicha yagona ma'lumotlar bazasi mavjud emasligi sababli narxlarni taqqoslash imkonsiz.
+                                <strong>Yagona standartlashtirilgan baza yo'qligi</strong>
+                                ISBN, mualliflar va nashriyotlar bo'yicha yagona ma'lumotlar bazasi yo'qligi sababli narxlarni taqqoslash imkoni yo'q.
                             </div>
                         </li>
                     </ul>
@@ -955,29 +975,29 @@
                         <li>
                             <i class="ti ti-check"></i>
                             <div>
-                                <strong>Yagona Global Marketplace & BuyBox</strong>
-                                Barcha do'konlar takliflari bitta kitob kartasiga birlashtiriladi. Xaridor eng arzon va eng yaqin narxni tanlaydi.
+                                <strong>Yagona Kitoblar Bozori va Narxlar Solishtiruvi</strong>
+                                Barcha do'konlarning takliflari bitta kitob sahifasida jamlanadi. Xaridor eng arzon va eng yaqin do'konni tanlay oladi.
                             </div>
                         </li>
                         <li>
                             <i class="ti ti-check"></i>
                             <div>
                                 <strong>Kitobchi Express (1–2 soatda yetkazish)</strong>
-                                Shahar ichida kitoblarni bir necha soat ichida yetkazib berish xizmati va viloyatlararo ishonchli pochta integratsiyasi.
+                                Shahar ichida kitoblarni bir necha soat ichida eshikkacha yetkazib berish va viloyatlarga qulay pochta xizmati.
                             </div>
                         </li>
                         <li>
                             <i class="ti ti-check"></i>
                             <div>
                                 <strong>Kitobchi Business & Smart POS</strong>
-                                Do'konlar va nashriyotlar uchun zamonaviy ERP/CRM: ombor hisobi, kassa, shtrix-kod skaner va avtomatik hisobotlar.
+                                Do'konlar va nashriyotlar uchun bepul dastur: ombor hisobi, kassa, shtrix-kod skaner va avtomatik hisobotlar.
                             </div>
                         </li>
                         <li>
                             <i class="ti ti-check"></i>
                             <div>
-                                <strong>AI Smart Qidiruv va Tavsiya Tizimi</strong>
-                                Sun'iy intellekt orqali kitoblarni syujet, janr va qiziqishlar bo'yicha aniq topish hamda muqovalarni tiklash.
+                                <strong>Sun'iy Intellekt (AI) Tavsiya Tizimi</strong>
+                                Sun'iy intellekt orqali kitoblarni syujet, janr va qiziqishlar bo'yicha aniq topish va muqovalarni sifatli tiklash.
                             </div>
                         </li>
                     </ul>
@@ -1000,13 +1020,13 @@
                 <div class="team-card">
                     <div class="team-avatar">👨‍💻</div>
                     <h3 class="team-name">Abbos Turdaliyev</h3>
-                    <div class="team-role">Founder & Lead Full Stack Architect</div>
+                    <div class="team-role">Loyiha Asoschisi & Bosh Dasturchi</div>
                     <div class="team-skills">
                         <span class="skill-tag">Flutter</span>
                         <span class="skill-tag">Laravel / PHP</span>
                         <span class="skill-tag">MySQL</span>
-                        <span class="skill-tag">DevOps & AWS</span>
-                        <span class="skill-tag">AI Integration</span>
+                        <span class="skill-tag">DevOps</span>
+                        <span class="skill-tag">AI Integratsiya</span>
                     </div>
                     <div class="team-links">
                         <a href="https://github.com/abbouse" target="_blank" title="GitHub"><i class="ti ti-brand-github"></i></a>
@@ -1018,12 +1038,12 @@
                 <div class="team-card">
                     <div class="team-avatar">💼</div>
                     <h3 class="team-name">Kamoliddin Hikmatov</h3>
-                    <div class="team-role">Co-Founder & Project / Operations Manager</div>
+                    <div class="team-role">Hammuassis & Loyiha Boshqaruvchisi</div>
                     <div class="team-skills">
-                        <span class="skill-tag">Project Management</span>
-                        <span class="skill-tag">Seller Onboarding</span>
-                        <span class="skill-tag">Logistics</span>
-                        <span class="skill-tag">B2B Sales</span>
+                        <span class="skill-tag">Boshqaruv</span>
+                        <span class="skill-tag">Hamkorlar bilan ishlash</span>
+                        <span class="skill-tag">Logistika</span>
+                        <span class="skill-tag">B2B Savdo</span>
                     </div>
                     <div class="team-links">
                         <a href="https://t.me/kitobchi_support" target="_blank" title="Telegram"><i class="ti ti-brand-telegram"></i></a>
@@ -1034,12 +1054,12 @@
                 <div class="team-card">
                     <div class="team-avatar">🎨</div>
                     <h3 class="team-name">Jonibek Fayzullayev</h3>
-                    <div class="team-role">Lead Product & UI/UX Designer</div>
+                    <div class="team-role">Bosh Mahsulot va UI/UX Dizayneri</div>
                     <div class="team-skills">
                         <span class="skill-tag">Figma</span>
-                        <span class="skill-tag">Design Systems</span>
-                        <span class="skill-tag">Mobile UI/UX</span>
-                        <span class="skill-tag">Prototyping</span>
+                        <span class="skill-tag">Dizayn Tizimlari</span>
+                        <span class="skill-tag">Mobil Interfeys</span>
+                        <span class="skill-tag">Prototip</span>
                     </div>
                     <div class="team-links">
                         <a href="https://t.me/kitobchi_support" target="_blank" title="Telegram"><i class="ti ti-brand-telegram"></i></a>
@@ -1050,12 +1070,12 @@
                 <div class="team-card">
                     <div class="team-avatar">🚀</div>
                     <h3 class="team-name">Abuxusayn Mamatov</h3>
-                    <div class="team-role">Growth & Marketing / SMM Specialist</div>
+                    <div class="team-role">Marketing va SMM Mutaxassisi</div>
                     <div class="team-skills">
-                        <span class="skill-tag">Targeting & Ads</span>
-                        <span class="skill-tag">Community Growth</span>
-                        <span class="skill-tag">Content Strategy</span>
-                        <span class="skill-tag">Influencer Marketing</span>
+                        <span class="skill-tag">Targeting</span>
+                        <span class="skill-tag">SMM Strategiya</span>
+                        <span class="skill-tag">Kontent</span>
+                        <span class="skill-tag">Hamjamiyat</span>
                     </div>
                     <div class="team-links">
                         <a href="https://t.me/kitobchi_support" target="_blank" title="Telegram"><i class="ti ti-brand-telegram"></i></a>
@@ -1066,31 +1086,31 @@
     </section>
 
     <!-- 3. NEGA BIZNING JAMOA? -->
-    <section class="section" id="why">
+    <section class="section subtle-bg" id="why">
         <div class="container">
             <div class="section-header">
-                <div class="section-tag">3. Raqobatbardoshlik</div>
+                <div class="section-tag">3. Ustunliklarimiz</div>
                 <h2 class="section-title">Nima uchun jamoamiz bu muammoni hal qila oladi?</h2>
-                <p class="section-desc">Biz shunchaki g'oya bosqichida emasmiz — soha ichida amaliy tajriba, real infratuzilma va tezkor texnik ustunlikka egamiz.</p>
+                <p class="section-desc">Biz shunchaki g'oya bosqichida emasmiz — soha bo'yicha amaliy tajriba, ishlab turgan infratuzilma va kuchli texnik bilimga egamiz.</p>
             </div>
 
             <div class="why-grid">
                 <div class="why-card">
                     <div class="why-icon"><i class="ti ti-bulb"></i></div>
-                    <h4>Chuqur sohaviy domenga egalik</h4>
-                    <p>Biz kitob bozori, do'konlar, nashriyotlar va xaridorlarning barcha og'riqli nuqtalarini bevosita 2+ yildan beri o'rganib, ularga moslashtirilgan vertikal yechim ishlab chiqdik.</p>
+                    <h4>Kitob bozorini chuqur tushunish</h4>
+                    <p>Biz kitob do'konlari, nashriyotlar va kitobxonlarning barcha ehtiyojlarini bevosita o'rganib, ularga moslashtirilgan qulay milliy yechim ishlab chiqdik.</p>
                 </div>
 
                 <div class="why-card">
                     <div class="why-icon"><i class="ti ti-device-mobile-check"></i></div>
-                    <h4>100% ishlab turgan to'liq mahsulot</h4>
-                    <p>App Store va Google Play'da mobil ilova, do'konlar uchun ERP boshqaruv paneli, avtomatlashgan global katalog va kuryerlik tizimi allaqachon real vaqtda ishlamoqda.</p>
+                    <h4>100% ishlab turgan tayyor mahsulot</h4>
+                    <p>App Store va Google Play'da mobil ilova, do'konlar uchun boshqaruv dasturi, yagona kitoblar bazasi va yetkazib berish tizimi allaqachon ishlab turibdi.</p>
                 </div>
 
                 <div class="why-card">
                     <div class="why-icon"><i class="ti ti-chart-arrows-vertical"></i></div>
-                    <h4>Haqiqiy traksiya va o'sish dinamikasi</h4>
-                    <p>10,000+ yuklab olish, 1,000+ muvaffaqiyatli buyurtma, 50+ ulangan do'konlar va barqaror daromad modeli bilan bozor talabi to'liq isbotlandi.</p>
+                    <h4>Haqiqiy natijalar va o'sish</h4>
+                    <p>10,000+ yuklab olish, 1,000+ muvaffaqiyatli buyurtma, 7,000+ kitoblar bazasi va barqaror daromad modeli orqali loyihaga talab yuqori ekani isbotlandi.</p>
                 </div>
             </div>
         </div>
@@ -1102,78 +1122,78 @@
             <div class="section-header">
                 <div class="section-tag">4. Rivojlanish Bosqichlari</div>
                 <h2 class="section-title">Yo'l Xaritasi (Roadmap)</h2>
-                <p class="section-desc">Idea bosqichidan boshlab, MVP, ishga tushirish va kelajakdagi kengayish rejalari.</p>
+                <p class="section-desc">G'oyadan boshlab, dastlabki prototip, MVP, ishga tushirish va kelajakdagi kengayish rejalari.</p>
             </div>
 
             <div class="roadmap-timeline">
                 <!-- Step 1 -->
                 <div class="roadmap-step completed">
                     <span class="step-badge">Bajarildi ✅</span>
-                    <h4>1. Idea</h4>
-                    <p>Bozor tahlili, 50+ do'konlar bilan intervyu va ekotizim arxitekturasi ishlab chiqildi.</p>
+                    <h4>1. G'oya (Idea)</h4>
+                    <p>Bozor tahlili, do'konlar bilan suhbatlar va tizim arxitekturasi ishlab chiqildi.</p>
                 </div>
 
                 <!-- Step 2 -->
                 <div class="roadmap-step completed">
                     <span class="step-badge">Bajarildi ✅</span>
-                    <h4>2. Prototype</h4>
-                    <p>Dastlabki mobil ilova va seller boshqaruv prototipi sinovdan muvaffaqiyatli o'tdi.</p>
+                    <h4>2. Prototip</h4>
+                    <p>Dastlabki mobil ilova va do'konlar boshqaruv paneli sinovdan muvaffaqiyatli o'tdi.</p>
                 </div>
 
                 <!-- Step 3 -->
                 <div class="roadmap-step completed">
                     <span class="step-badge">Bajarildi ✅</span>
                     <h4>3. MVP</h4>
-                    <p>Payme/Click to'lovlari, 10+ do'konlar integratsiyasi va birinchi yetkazib berishlar yo'lga qo'yildi.</p>
+                    <p>To'lov tizimlari (Payme/Click), birinchi hamkor do'konlar ulanishi va yetkazish yo'lga qo'yildi.</p>
                 </div>
 
                 <!-- Step 4 -->
                 <div class="roadmap-step active">
                     <span class="step-badge">Hozirgi Bosqich 🚀</span>
-                    <h4>4. Launched</h4>
-                    <p>10,000+ mijoz, 1,000+ buyurtma, App Store & Google Play, AI katalog va Express yetkazish faol.</p>
+                    <h4>4. Ishga Tushirildi</h4>
+                    <p>10,000+ mijoz, 1,000+ buyurtma, App Store & Google Play'da faol, tezkor yetkazib berish xizmati.</p>
                 </div>
 
                 <!-- Step 5 -->
                 <div class="roadmap-step planned">
                     <span class="step-badge">Kelgusi 📈</span>
-                    <h4>5. Scale & POS</h4>
-                    <p>Respublika bo'ylab Express tarmoq, Smart POS kassa apparatlari va B2B maktab/universitetlar ulanishi.</p>
+                    <h4>5. Kengayish & POS</h4>
+                    <p>Viloyatlarga tezkor yetkazish tarmog'i, qulay kassa apparatlari (POS) va B2B maktab/universitetlar integratsiyasi.</p>
                 </div>
             </div>
         </div>
     </section>
 
     <!-- 5. AMALGA OSHIRISH & TEXNOLOGIYALAR & AI -->
-    <section class="section" id="tech">
+    <section class="section subtle-bg" id="tech">
         <div class="container">
             <div class="section-header">
                 <div class="section-tag">5. Texnik Arxitektura</div>
                 <h2 class="section-title">Yechimni qanday amalga oshiryapmiz?</h2>
-                <p class="section-desc">Zamonaviy texnologiyalar staki, AI vositalari va yuqori yuklamalarga chidamli mikroservis arxitekturasi.</p>
+                <p class="section-desc">Zamonaviy texnologiyalar, sun'iy intellekt vositalari va ishonchli backend infratuzilmasi.</p>
             </div>
 
             <div class="tech-grid">
                 <!-- Tech Stack -->
                 <div class="tech-card">
-                    <h4><i class="ti ti-stack-2 text-primary"></i> Texnologiyalar Staki</h4>
+                    <h4><i class="ti ti-stack-2 text-primary"></i> Texnologiyalar</h4>
                     <ul>
-                        <li><i class="ti ti-brand-flutter"></i> <strong>Mobile:</strong> Flutter (iOS & Android bitta kod bazasi)</li>
-                        <li><i class="ti ti-brand-laravel"></i> <strong>Backend:</strong> Laravel 11 / PHP 8.3 RESTful API</li>
-                        <li><i class="ti ti-database"></i> <strong>Database & Cache:</strong> MySQL + Redis Caching</li>
-                        <li><i class="ti ti-brand-react"></i> <strong>Panel & Web:</strong> Inertia.js + React / TypeScript</li>
-                        <li><i class="ti ti-cloud"></i> <strong>Infratuzilma:</strong> Docker, Nginx, Cloudflare CDN, AWS</li>
+                        <li><i class="ti ti-brand-flutter"></i> <strong>Mobil:</strong> Flutter (iOS & Android uchun yagona sifatli kod)</li>
+                        <li><i class="ti ti-brand-laravel"></i> <strong>Server:</strong> Laravel 11 / PHP 8.3 RESTful API</li>
+                        <li><i class="ti ti-database"></i> <strong>Ma'lumotlar bazasi:</strong> MySQL + Redis Kesh</li>
+                        <li><i class="ti ti-brand-react"></i> <strong>Boshqaruv Paneli:</strong> Inertia.js + React / TypeScript</li>
+                        <li><i class="ti ti-cloud"></i> <strong>Infratuzilma:</strong> Docker, Nginx, Cloudflare, Linux</li>
                     </ul>
                 </div>
 
                 <!-- AI Tools & Solutions -->
                 <div class="tech-card">
-                    <h4><i class="ti ti-sparkles text-warning"></i> AI Vositalari & Yechimlar</h4>
+                    <h4><i class="ti ti-sparkles text-warning"></i> Sun'iy Intellekt (AI)</h4>
                     <ul>
-                        <li><i class="ti ti-brain"></i> <strong>Gemini LLM:</strong> Kitoblar tavsifi, syujet tahlili va janrlarni avtomatik boyitish</li>
-                        <li><i class="ti ti-search"></i> <strong>Vector Search:</strong> Ma'no va kontekst bo'yicha semantik qidiruv</li>
-                        <li><i class="ti ti-photo-ai"></i> <strong>AI OCR & Muqova Tiklash:</strong> Skaner qilingan muqovalarni aniqlash va sifatini oshirish</li>
-                        <li><i class="ti ti-smart-home"></i> <strong>Recommendation Engine:</strong> O'qish odatlariga asoslangan shaxsiy tavsiyalar</li>
+                        <li><i class="ti ti-brain"></i> <strong>Matn Tahlili (LLM):</strong> Kitoblar tavsifi, qisqacha mazmuni va janrlarni avtomatik to'ldirish</li>
+                        <li><i class="ti ti-search"></i> <strong>Aqlli Qidiruv:</strong> Kitob mazmuni va ma'nosi bo'yicha semantik qidiruv</li>
+                        <li><i class="ti ti-photo-ai"></i> <strong>Muqovalarni Tiklash:</strong> Sifatsiz kitob muqovalarini aniqlash va sifatini yaxshilash</li>
+                        <li><i class="ti ti-smart-home"></i> <strong>Tavsiyalar:</strong> Kitobxonning qiziqishiga mos yangi kitoblarni tavsiya qilish</li>
                     </ul>
                 </div>
 
@@ -1181,10 +1201,10 @@
                 <div class="tech-card">
                     <h4><i class="ti ti-building-store text-success"></i> Biznes va Logistika</h4>
                     <ul>
-                        <li><i class="ti ti-arrows-shuffle"></i> <strong>Smart BuyBox:</strong> Eng optimal narx va tezkor kuryerni tanlash</li>
-                        <li><i class="ti ti-device-tablet"></i> <strong>Smart POS App:</strong> Do'konda kassa va shtrix-kod orqali savdo</li>
-                        <li><i class="ti ti-truck-delivery"></i> <strong>Kitobchi Express:</strong> Kuryer ilovasi va buyurtmalarni jonli kuzatish</li>
-                        <li><i class="ti ti-credit-card"></i> <strong>Fintech:</strong> Payme, Click, Uzum Pay va bo'lib to'lash tizimlari</li>
+                        <li><i class="ti ti-arrows-shuffle"></i> <strong>Narxlar Solishtiruvi:</strong> Xaridorga eng yaqin va eng arzon do'konni taklif qilish</li>
+                        <li><i class="ti ti-device-tablet"></i> <strong>Smart POS Kassa:</strong> Do'konda shtrix-kod va chek chiqarish orqali savdo</li>
+                        <li><i class="ti ti-truck-delivery"></i> <strong>Kitobchi Express:</strong> Kuryer ilovasi va xaridni xaritada jonli kuzatish</li>
+                        <li><i class="ti ti-credit-card"></i> <strong>To'lovlar:</strong> Payme, Click, Uzum Pay va naqd to'lovlar</li>
                     </ul>
                 </div>
             </div>
@@ -1196,8 +1216,8 @@
         <div class="container">
             <div class="section-header">
                 <div class="section-tag">6. Taqdimot & Video</div>
-                <h2 class="section-title">🎬 Demo Video & Jonli Prototip</h2>
-                <p class="section-desc">Kitobchi ekotizimining real hayotda ishlashi, mobil ilova va seller boshqaruv tizimi jarayoni.</p>
+                <h2 class="section-title">🎬 Demo Video & Jonli Mahsulot</h2>
+                <p class="section-desc">Kitobchi ekotizimining amaldagi ishlashi: xarid qilish, do'konlar boshqaruvi va yetkazib berish jarayoni.</p>
             </div>
 
             <!-- YouTube Video Embed -->
@@ -1213,8 +1233,8 @@
             <!-- Video Description -->
             <div class="video-desc-box">
                 <h4><i class="ti ti-info-circle text-primary"></i> Demo-videoning qisqacha tavsifi:</h4>
-                <p>Ushbu videoda <strong>Kitobchi</strong> ekotizimining to'liq ishlash jarayoni amalda ko'rsatilgan:
-                foydalanuvchi mobil ilova orqali kitoblarni qidirishi va buyurtma berishi, yagona katalog orqali do'konlar narxlarini taqqoslashi, do'konlar (sellerlar) uchun Boshqaruv ERP panelida buyurtmalarni qabul qilish va ombor hisobini yuritish, shuningdek Kitobchi Express orqali kuryerlik yetkazib berish mexanizmi batafsil namoyish etilgan.</p>
+                <p>Ushbu videoda <strong>Kitobchi</strong> tizimining to'liq ishlash jarayoni amalda ko'rsatilgan:
+                foydalanuvchi mobil ilovadan kitoblarni qidirishi, turli do'konlar narxlarini solishtirib buyurtma berishi, kitob do'konlari uchun Boshqaruv panelida buyurtmalarni qabul qilish va omborni nazorat qilish, shuningdek Kitobchi Express orqali kuryerlik yetkazib berish mexanizmi batafsil namoyish etilgan.</p>
             </div>
 
             <!-- Working Prototype Links -->
@@ -1223,7 +1243,7 @@
                     <div class="proto-icon"><i class="ti ti-brand-apple"></i></div>
                     <div>
                         <strong>App Store (iOS)</strong>
-                        <span>Jonli ilovani yuklab olish &rarr;</span>
+                        <span>Ilovani yuklab olish &rarr;</span>
                     </div>
                 </a>
 
@@ -1231,14 +1251,14 @@
                     <div class="proto-icon"><i class="ti ti-brand-google-play"></i></div>
                     <div>
                         <strong>Google Play (Android)</strong>
-                        <span>Jonli ilovani yuklab olish &rarr;</span>
+                        <span>Ilovani yuklab olish &rarr;</span>
                     </div>
                 </a>
 
-                <a href="https://kitobchi.com" target="_blank" class="proto-card">
+                <a href="https://kitobchi.com" target="_blank" class="proto-card web-card">
                     <div class="proto-icon"><i class="ti ti-world"></i></div>
                     <div>
-                        <strong>Veb Platforma</strong>
+                        <strong>Veb Sayt</strong>
                         <span>kitobchi.com saytiga o'tish &rarr;</span>
                     </div>
                 </a>
@@ -1247,11 +1267,11 @@
     </section>
 
     <!-- 7. SKRINSHOTLAR SHOWCASE -->
-    <section class="section" id="screenshots">
+    <section class="section subtle-bg" id="screenshots">
         <div class="container">
             <div class="section-header">
                 <div class="section-tag">Ilova Interfeysi</div>
-                <h2 class="section-title">📱 Mobil Ilova Skrinshotlari</h2>
+                <h2 class="section-title">📱 Mobil Ilova Ko'rinishi</h2>
                 <p class="section-desc">Foydalanuvchilar va do'konlar uchun qulay, zamonaviy va intuitiv iOS & Android dizayni.</p>
             </div>
 
@@ -1266,7 +1286,7 @@
                     <img src="https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/68/83/eb/6883eb2b-f0f9-95af-bf96-1de51fdd242b/6_1-Frame-en-3.jpg/400x800bb.png" alt="Kitobchi — Buyurtma berish">
                 </div>
                 <div class="screenshot-item">
-                    <img src="https://is1-ssl.mzstatic.com/image/thumb/PurpleSource221/v4/be/d9/cf/bed9cf03-5873-d921-e56c-9fa36a6bf7af/6_1-Frame-en-4-4.jpg/400x800bb.png" alt="Kitobchi — Seller paneli">
+                    <img src="https://is1-ssl.mzstatic.com/image/thumb/PurpleSource221/v4/be/d9/cf/bed9cf03-5873-d921-e56c-9fa36a6bf7af/6_1-Frame-en-4-4.jpg/400x800bb.png" alt="Kitobchi — Do'konlar paneli">
                 </div>
                 <div class="screenshot-item">
                     <img src="https://is1-ssl.mzstatic.com/image/thumb/PurpleSource221/v4/9f/1b/bb/9f1bbbf5-6afc-c886-68a6-0ac31c90e68b/6_1-Frame-en-5.jpg/400x800bb.png" alt="Kitobchi — Express yetkazib berish">
@@ -1280,7 +1300,7 @@
         <div class="container">
             <p class="pitch-tag">Pitch Day 3.0 Tanlovi Uchun Maxsus Tayyorlandi</p>
             <p>&copy; 2026 Kitobchi Ekotizimi. AIFU (Aniq va Ijtimoiy Fanlar Universiteti)</p>
-            <p style="font-size: 13px; color: var(--text-muted); margin-top: 12px;">
+            <p style="font-size: 13px; color: var(--text-muted); margin-top: 10px;">
                 Barcha huquqlar himoyalangan. Toshkent, O'zbekiston.
             </p>
         </div>
