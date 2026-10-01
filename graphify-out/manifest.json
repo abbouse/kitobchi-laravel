@@ -1032,9 +1032,9 @@
     "semantic_hash": "ac6b0c56d41a0519c37339009b0533a4"
   },
   "app/Http/Controllers/Api/UserController.php": {
-    "mtime": 1790601470.8118098,
-    "seen": 1790601768.517335,
-    "ast_hash": "86ffb899170496edf184c250c1328bf2",
+    "mtime": 1790804470.1707597,
+    "seen": 1790804859.80738,
+    "ast_hash": "2225687dc19470d40673a434e7c8781f",
     "semantic_hash": ""
   },
   "app/Http/Controllers/Api/WebhookController.php": {
@@ -2040,9 +2040,9 @@
     "semantic_hash": "9538a3395c82bc17dea2b8c426e1c2f3"
   },
   "app/Models/Sold.php": {
-    "mtime": 1790699986.0289128,
-    "seen": 1790784344.256937,
-    "ast_hash": "8dd67f2a9bb098b7c081c2043f1392e9",
+    "mtime": 1790804465.4037278,
+    "seen": 1790804859.807489,
+    "ast_hash": "591496a94d97065ed2aa9445e5a61548",
     "semantic_hash": ""
   },
   "app/Models/SplitCategoryRule.php": {
@@ -3000,8 +3000,8 @@
     "semantic_hash": "b7b09d68f8893547a7e5fbd5207fc8fa"
   },
   "config/fcm.php": {
-    "mtime": 1790803308.657107,
-    "seen": 1790803361.739276,
+    "mtime": 1790839613.4787798,
+    "seen": 1790845724.0937622,
     "ast_hash": "5ba2ac32c04d161d99057e23212f34b1",
     "semantic_hash": "5ba2ac32c04d161d99057e23212f34b1"
   },
@@ -5100,10 +5100,10 @@
     "semantic_hash": "5494f01c6ed3f688be0d453fa489ff69"
   },
   "resources/views/demo.blade.php": {
-    "mtime": 1776622086.3335876,
-    "seen": 1787659299.02057,
-    "ast_hash": "716f88369595c70f514eaf12efefd1e5",
-    "semantic_hash": "716f88369595c70f514eaf12efefd1e5"
+    "mtime": 1790845709.5490472,
+    "seen": 1790845724.0939798,
+    "ast_hash": "d992929d7072a7f57d83c03d06fafbf4",
+    "semantic_hash": ""
   },
   "resources/views/developers/api-docs.blade.php": {
     "mtime": 1790228598.586676,
@@ -7188,15 +7188,15 @@
     "semantic_hash": ""
   },
   "app/Console/Commands/FixBrokenImages.php": {
-    "mtime": 1790801850.4872987,
-    "seen": 1790801872.14496,
-    "ast_hash": "41c961f78aa4d51f6210b77fe29a6da2",
+    "mtime": 1790804632.8578103,
+    "seen": 1790804859.8072882,
+    "ast_hash": "ecc91221cd4fff548a20e8a4b00e6fc4",
     "semantic_hash": ""
   },
   "app/Services/Catalog/BookCoverResolverService.php": {
-    "mtime": 1790803286.3010948,
-    "seen": 1790803361.7392042,
-    "ast_hash": "171ccf3d905356d5c3d1650f735f6586",
+    "mtime": 1790804684.7123477,
+    "seen": 1790804859.8075168,
+    "ast_hash": "0bec274cb5aa860a50b574ad2aa4e5b3",
     "semantic_hash": ""
   },
   "app/Console/Commands/RefreshSalesStats.php": {
@@ -7536,9 +7536,21 @@
     "semantic_hash": ""
   },
   "app/Console/Commands/BuildCoversMap.php": {
-    "mtime": 1790803297.7640548,
-    "seen": 1790803361.738964,
-    "ast_hash": "4314bcd98d960dc85311226b503f97a8",
+    "mtime": 1790804953.4477212,
+    "seen": 1790809916.851125,
+    "ast_hash": "4d1cd88dcd1ca1ccec25bf3e44a6fc74",
+    "semantic_hash": ""
+  },
+  "storage/app/missing_editions.json": {
+    "mtime": 1790803088.908858,
+    "seen": 1790809916.851646,
+    "ast_hash": "4f2f512c910142ea02034555fdcae5af",
+    "semantic_hash": ""
+  },
+  "storage/app/resolved_covers_map.json": {
+    "mtime": 1790809882.8727686,
+    "seen": 1790809916.851647,
+    "ast_hash": "ea815657528e5618e501e4f3fe210a64",
     "semantic_hash": ""
   }
 }
