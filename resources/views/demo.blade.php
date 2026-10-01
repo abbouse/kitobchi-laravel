@@ -6,8 +6,9 @@
     <meta name="description" content="Kitobchi — Kitob va kanselyariya savdosi uchun yagona ekotizim: Marketplace, Express, Business, POS va AI. Pitch Day 3.0 taqdimoti.">
     <title>Kitobchi — Pitch Day 3.0 Taqdimoti</title>
     
-    <!-- Favicon -->
-    <link rel="icon" type="image/png" href="/favicon.ico">
+    <!-- Favicon & App Icons -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -66,7 +67,7 @@
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
             border-bottom: 1px solid var(--border-color);
-            padding: 16px 36px;
+            padding: 14px 36px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -76,7 +77,7 @@
         .nav-logo {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
             text-decoration: none;
             color: var(--text-primary);
             font-weight: 800;
@@ -84,17 +85,17 @@
             letter-spacing: -0.5px;
         }
 
-        .nav-logo .logo-icon {
+        .nav-logo .logo-img {
             width: 36px;
             height: 36px;
-            background: linear-gradient(135deg, #0071e3 0%, #5e5ce6 100%);
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 19px;
-            color: #fff;
-            box-shadow: 0 4px 12px rgba(0, 113, 227, 0.3);
+            border-radius: 9px;
+            object-fit: cover;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12);
+            transition: transform 0.2s ease;
+        }
+
+        .nav-logo:hover .logo-img {
+            transform: scale(1.05);
         }
 
         .nav-links {
@@ -850,7 +851,7 @@
     <!-- NAVBAR -->
     <nav>
         <a href="#hero" class="nav-logo">
-            <div class="logo-icon">📚</div>
+            <img src="/apple-touch-icon.png" alt="Kitobchi App" class="logo-img">
             <span>Kitobchi</span>
         </a>
         <div class="nav-links">
