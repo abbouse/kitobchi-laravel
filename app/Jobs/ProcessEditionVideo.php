@@ -25,7 +25,7 @@ class ProcessEditionVideo implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $timeout = 3600;
-    public $tries = 2;
+    public $tries = 1;
 
     public function __construct(public int $videoId)
     {
@@ -41,6 +41,11 @@ class ProcessEditionVideo implements ShouldQueue
         $disk = Storage::disk('public');
         $source = $disk->path($video->original_path);
         if (! is_file($source)) {
+            // Agar video boshqa/oldingi jarayon tomonidan allaqachon tayyorlangan bo'lsa — holatni buzmaymiz
+            if ($video->status === BookEditionVideo::STATUS_READY && $video->sd_path && $disk->exists($video->sd_path)) {
+                return;
+            }
+
             $video->update(['status' => BookEditionVideo::STATUS_FAILED, 'error' => 'Asl fayl topilmadi']);
 
             return;
@@ -165,7 +170,12 @@ class ProcessEditionVideo implements ShouldQueue
 
     public function failed(\Throwable $e): void
     {
-        BookEditionVideo::query()->whereKey($this->videoId)->update([
+        $video = BookEditionVideo::query()->find($this->videoId);
+        if ($video && $video->status === BookEditionVideo::STATUS_READY && $video->sd_path) {
+            return;
+        }
+
+        $video?->update([
             'status' => BookEditionVideo::STATUS_FAILED,
             'error' => mb_substr($e->getMessage(), 0, 1000),
         ]);

@@ -30,7 +30,28 @@ class CatalogVideoController extends Controller
 
         $file = $request->file('video');
         $ext = strtolower($file->getClientOriginalExtension() ?: 'mp4');
-        $path = $file->storeAs("edition-videos/{$model->id}", 'original_'.now()->format('YmdHis').'.'.$ext, 'public');
+        $filename = 'original_'.now()->format('YmdHis').'.'.$ext;
+        $dir = "edition-videos/{$model->id}";
+
+        // Papka mavjudligini ta'minlaymiz
+        Storage::disk('public')->makeDirectory($dir);
+
+        $path = $file->storeAs($dir, $filename, 'public');
+
+        // storeAs muvaffaqiyatsiz bo'lsa (ruxsat, disk to'lgan, tmp fayl yo'qolgan)
+        if (! $path || ! Storage::disk('public')->exists($path)) {
+            \Illuminate\Support\Facades\Log::error('Video storeAs failed', [
+                'edition'       => $model->id,
+                'original_name' => $file->getClientOriginalName(),
+                'size_bytes'    => $file->getSize(),
+                'tmp_path'      => $file->getRealPath(),
+                'tmp_exists'    => is_file($file->getRealPath()),
+                'path_result'   => $path,
+                'disk_free'     => disk_free_space(Storage::disk('public')->path('')),
+            ]);
+
+            return back()->with('error', 'Video faylni serverga saqlashda xatolik yuz berdi. Diskda joy yetarli ekanligini tekshiring.');
+        }
 
         $video = BookEditionVideo::query()->firstOrNew(['edition_id' => $model->id]);
         // Avvalgi qayta ishlanmagan asl fayl qolib ketmasin
