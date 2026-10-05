@@ -1,8 +1,9 @@
-import { useState, type FormEvent } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
 import { Link, router, usePage } from '@inertiajs/react';
 import { PageCrumbs } from '../Layout';
 import PaginationControls from '../components/PaginationControls';
 import FormAction from '../components/FormAction';
+import Modal from '../components/AppModal';
 import { EmptyState, StatWidget } from '../components/Axelit';
 import { CoverInputs, EditionFields, editionStatus, type OptionItem } from '../components/CatalogFields';
 
@@ -32,7 +33,7 @@ interface EditionRow {
 type Props = {
   editions: EditionRow[];
   pagination: { page: number; totalPages: number; from: number; to: number; total: number };
-  filters: { search?: string; tab?: string };
+  filters: { search?: string; tab?: string; sort?: string; stock?: string };
   counts: Record<string, number>;
   formOptions: { categories: OptionItem[]; publishers: OptionItem[]; sellers: OptionItem[] };
 };
@@ -52,10 +53,37 @@ export default function Catalog() {
   const [batchLoading, setBatchLoading] = useState(false);
   const [fixingId, setFixingId] = useState<number | null>(null);
   const tab = filters.tab || 'all';
+  const sort = filters.sort || 'new';
+  const stock = filters.stock || '';
+  const [selected, setSelected] = useState<number[]>([]);
+  // Sotuvdan olish oynasi: bitta karta yoki tanlanganlar
+  const [banTarget, setBanTarget] = useState<{ ids: number[]; title: string; offers: number } | null>(null);
 
   const load = (params: Record<string, string | number>) => {
-    router.get('/boshqaruv/catalog', { search, tab, ...params }, { preserveState: true, preserveScroll: true, replace: true });
+    setSelected([]);
+    router.get('/boshqaruv/catalog', { search, tab, sort, stock, ...params }, { preserveState: true, preserveScroll: true, replace: true });
   };
+
+  const pageIds = useMemo(() => editions.map((e) => e.id), [editions]);
+  const allChecked = pageIds.length > 0 && pageIds.every((id) => selected.includes(id));
+  const toggle = (id: number) => setSelected((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
+  const toggleAll = () => setSelected(allChecked ? [] : pageIds);
+  const selectedRows = editions.filter((e) => selected.includes(e.id));
+  const selectedBanned = selectedRows.filter((e) => e.banned || e.deleted).length;
+
+  const bulk = (action: 'verify' | 'ban' | 'unban', ids: number[], reason?: string) => {
+    router.post('/boshqaruv/catalog/bulk', { action, ids, reason: reason || '' }, {
+      preserveScroll: true,
+      onSuccess: () => { setSelected([]); setBanTarget(null); },
+    });
+  };
+
+  const unbanOne = (edition: EditionRow) => {
+    if (!confirm(`"${edition.title}" sotuvga qaytarilsinmi?`)) return;
+    bulk('unban', [edition.id]);
+  };
+
+  const verifyOne = (edition: EditionRow) => router.post(`/boshqaruv/catalog/${edition.id}/verify`, {}, { preserveScroll: true });
 
   const copyToClipboard = (isbn: string) => {
     navigator.clipboard.writeText(isbn);
@@ -179,7 +207,7 @@ export default function Catalog() {
             disabled={batchLoading}
             title="Book.uz va Asaxiy orqali muqovasiz yoki noto'g'ri rasmli kitoblarni avtomatik tuzatish"
           >
-            <i className={`ti ${batchLoading ? 'ti-loader rotate' : 'ti-wand'}`}></i>
+            {batchLoading ? <span className="spinner-border spinner-border-sm" /> : <i className="ti ti-wand"></i>}
             <span>{batchLoading ? 'Qidirilmoqda...' : 'Avto-muqova'}</span>
           </button>
 
@@ -263,10 +291,68 @@ export default function Catalog() {
         </div>
 
         <div className="card-body">
+          <div className="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+            <div className="d-flex align-items-center gap-2 flex-wrap">
+              {([
+                ['', 'Hammasi', 'ti-layout-grid'],
+                ['in', 'Sotuvda bor', 'ti-circle-check'],
+                ['out', 'Omborda yo\'q', 'ti-box'],
+                ['no_offers', 'Taklifsiz', 'ti-building-store'],
+              ] as const).map(([key, label, icon]) => (
+                <button
+                  key={key || 'any'}
+                  type="button"
+                  className={`btn btn-sm b-r-22 d-inline-flex align-items-center gap-1 ${stock === key ? 'btn-primary' : 'btn-light-secondary'}`}
+                  onClick={() => load({ stock: key, page: 1 })}
+                >
+                  <i className={`ti ${icon}`}></i>{label}
+                </button>
+              ))}
+            </div>
+            <div className="d-flex align-items-center gap-2">
+              <span className="text-secondary f-s-13 text-nowrap">Saralash:</span>
+              <select className="form-select form-select-sm" style={{ minWidth: 170 }} value={sort} onChange={(e) => load({ sort: e.target.value, page: 1 })} disabled={tab === 'duplicates'}>
+                <option value="new">Avval yangilari</option>
+                <option value="old">Avval eskilari</option>
+                <option value="offers">Ko'p taklifli</option>
+                <option value="price">Arzon narx</option>
+                <option value="title">Nomi (A–Z)</option>
+              </select>
+            </div>
+          </div>
+
+          {selected.length ? (
+            <div className="d-flex align-items-center justify-content-between flex-wrap gap-2 p-2 ps-3 mb-3 b-r-12 bg-light-primary position-sticky" style={{ top: 70, zIndex: 5 }}>
+              <span className="f-w-600 text-primary"><i className="ti ti-checks me-1"></i>{selected.length} ta karta tanlandi</span>
+              <div className="d-flex gap-2 flex-wrap">
+                <button type="button" className="btn btn-sm btn-success" onClick={() => bulk('verify', selected)}>
+                  <i className="ti ti-circle-check me-1"></i>Tasdiqlash
+                </button>
+                {selectedBanned ? (
+                  <button type="button" className="btn btn-sm btn-light-success" onClick={() => confirm(`${selectedBanned} ta karta sotuvga qaytarilsinmi?`) && bulk('unban', selectedRows.filter((e) => e.banned || e.deleted).map((e) => e.id))}>
+                    <i className="ti ti-rotate-clockwise me-1"></i>Sotuvga qaytarish
+                  </button>
+                ) : null}
+                {selectedRows.length - selectedBanned > 0 ? (
+                  <button type="button" className="btn btn-sm btn-light-danger" onClick={() => {
+                    const rows = selectedRows.filter((e) => !e.banned && !e.deleted);
+                    setBanTarget({ ids: rows.map((e) => e.id), title: `${rows.length} ta karta`, offers: rows.reduce((sum, e) => sum + e.offersCount, 0) });
+                  }}>
+                    <i className="ti ti-ban me-1"></i>Sotuvdan olish
+                  </button>
+                ) : null}
+                <button type="button" className="btn btn-sm btn-light-secondary" onClick={() => setSelected([])}>Bekor</button>
+              </div>
+            </div>
+          ) : null}
+
           <div className="table-responsive app-scroll">
             <table className="table table-bottom-border align-middle">
               <thead>
                 <tr>
+                  <th style={{ width: 36 }}>
+                    <input type="checkbox" className="form-check-input" checked={allChecked} onChange={toggleAll} disabled={!pageIds.length} />
+                  </th>
                   <th style={{ width: 60 }}>Muqova</th>
                   <th>Kitob va muallif</th>
                   <th>ISBN va Nashr varianti</th>
@@ -274,7 +360,7 @@ export default function Catalog() {
                   <th>Do'kon takliflari</th>
                   <th>BuyBox narxi</th>
                   <th>Holat</th>
-                  <th className="text-end" style={{ width: 80 }}>Amallar</th>
+                  <th className="text-end" style={{ width: 130 }}>Amallar</th>
                 </tr>
               </thead>
               <tbody>
@@ -283,7 +369,10 @@ export default function Catalog() {
                   const src = edition.source ? SOURCE_LABELS[edition.source] : null;
 
                   return (
-                    <tr key={edition.id}>
+                    <tr key={edition.id} className={selected.includes(edition.id) ? 'table-active' : ''} style={edition.banned ? { background: 'rgba(var(--danger), .04)' } : undefined}>
+                      <td>
+                        <input type="checkbox" className="form-check-input" checked={selected.includes(edition.id)} onChange={() => toggle(edition.id)} />
+                      </td>
                       {/* Muqova */}
                       <td>
                         <div className="position-relative d-inline-block">
@@ -313,7 +402,7 @@ export default function Catalog() {
                               disabled={fixingId === edition.id}
                               style={{ transform: 'translate(25%, 25%)', zIndex: 2 }}
                             >
-                              <i className={`ti ${fixingId === edition.id ? 'ti-loader rotate' : 'ti-wand'} f-s-10`}></i>
+                              {fixingId === edition.id ? <span className="spinner-border" style={{ width: 10, height: 10, borderWidth: 1.5 }} /> : <i className="ti ti-wand f-s-10"></i>}
                             </button>
                           )}
                         </div>
@@ -423,13 +512,27 @@ export default function Catalog() {
                       </td>
 
                       {/* Amallar */}
-                      <td className="text-end">
+                      <td className="text-end text-nowrap">
+                        {!edition.verified && !edition.banned && !edition.deleted && edition.status !== 'merged' ? (
+                          <button type="button" className="btn btn-light-success icon-btn w-30 h-30 b-r-22 me-1" title="Tasdiqlash" onClick={() => verifyOne(edition)}>
+                            <i className="ti ti-circle-check"></i>
+                          </button>
+                        ) : null}
+                        {edition.banned || edition.deleted ? (
+                          <button type="button" className="btn btn-light-success icon-btn w-30 h-30 b-r-22 me-1" title="Sotuvga qaytarish" onClick={() => unbanOne(edition)}>
+                            <i className="ti ti-rotate-clockwise"></i>
+                          </button>
+                        ) : edition.status !== 'merged' ? (
+                          <button type="button" className="btn btn-light-danger icon-btn w-30 h-30 b-r-22 me-1" title="Sotuvdan olish" onClick={() => setBanTarget({ ids: [edition.id], title: edition.title, offers: edition.offersCount })}>
+                            <i className="ti ti-ban"></i>
+                          </button>
+                        ) : null}
                         <Link
                           href={edition.url}
-                          className="btn btn-light-primary icon-btn w-32 h-32 b-r-22"
+                          className="btn btn-light-primary icon-btn w-30 h-30 b-r-22"
                           title="Karta sahifasini ochish"
                         >
-                          <i className="ti ti-arrow-right f-s-15"></i>
+                          <i className="ti ti-arrow-right"></i>
                         </Link>
                       </td>
                     </tr>
@@ -438,7 +541,7 @@ export default function Catalog() {
 
                 {!editions.length ? (
                   <tr>
-                    <td colSpan={8} className="py-5">
+                    <td colSpan={9} className="py-5">
                       <EmptyState text="Ushbu bo'limda birorta kitob kartasi topilmadi" />
                     </td>
                   </tr>
@@ -450,7 +553,41 @@ export default function Catalog() {
           <PaginationControls {...pagination} onPageChange={(page) => load({ page })} />
         </div>
       </div>
+
+      <BanModal target={banTarget} onHide={() => setBanTarget(null)} onSubmit={(reason) => banTarget && bulk('ban', banTarget.ids, reason)} />
     </div>
   );
 }
 
+
+function BanModal({ target, onHide, onSubmit }: { target: { ids: number[]; title: string; offers: number } | null; onHide: () => void; onSubmit: (reason: string) => void }) {
+  const [reason, setReason] = useState("O'zbekistonda taqiqlangan adabiyot yoki sotuv cheklovi");
+  const [busy, setBusy] = useState(false);
+  return (
+    <Modal show={!!target} onHide={onHide} centered>
+      <form className="app-form" onSubmit={(e) => { e.preventDefault(); setBusy(true); onSubmit(reason); setTimeout(() => setBusy(false), 1500); }}>
+        <Modal.Header closeButton><Modal.Title className="f-s-20 f-w-600">Sotuvdan olish</Modal.Title></Modal.Header>
+        <Modal.Body>
+          <div className="d-flex align-items-start gap-3 p-3 b-r-12 bg-light-danger mb-3">
+            <span className="h-40 w-40 d-flex-center b-r-50 bg-white text-danger flex-shrink-0 f-s-20"><i className="ti ti-ban"></i></span>
+            <div className="min-w-0">
+              <div className="f-w-600 text-dark text-truncate">{target?.title}</div>
+              <div className="f-s-13 text-secondary">{target?.offers ?? 0} ta do'kon taklifi yashiriladi, qoldiq 0 ga tushadi, savat va sevimlilardan olinadi. Buyurtmalar tarixi saqlanadi.</div>
+            </div>
+          </div>
+          <label className="form-label f-w-600">Sabab</label>
+          <input className="form-control" value={reason} onChange={(e) => setReason(e.target.value)} required maxLength={255} />
+          <div className="d-flex flex-wrap gap-1 mt-2">
+            {["O'zbekistonda taqiqlangan adabiyot", 'Mualliflik huquqi buzilishi', 'Kontrafakt nashr', "Noto'g'ri karta"].map((r) => (
+              <button type="button" key={r} className="btn btn-sm btn-light-secondary b-r-22" onClick={() => setReason(r)}>{r}</button>
+            ))}
+          </div>
+        </Modal.Body>
+        <Modal.Footer>
+          <button type="button" className="btn btn-light-secondary" onClick={onHide}>Bekor</button>
+          <button type="submit" className="btn btn-danger" disabled={busy}>{busy ? 'Bajarilmoqda…' : 'Sotuvdan olish'}</button>
+        </Modal.Footer>
+      </form>
+    </Modal>
+  );
+}

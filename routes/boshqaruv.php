@@ -77,6 +77,7 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
             Route::post('/catalog/{edition}/video/retry', [\App\Http\Controllers\Boshqaruv\CatalogVideoController::class, 'retry'])->whereNumber('edition')->name('catalog.video.retry');
             Route::delete('/catalog/{edition}/video', [\App\Http\Controllers\Boshqaruv\CatalogVideoController::class, 'destroy'])->whereNumber('edition')->name('catalog.video.destroy');
             Route::post('/catalog/{edition}/auto-cover', [\App\Http\Controllers\Boshqaruv\CatalogController::class, 'autoCover'])->whereNumber('edition')->name('catalog.auto-cover');
+            Route::post('/catalog/bulk', [\App\Http\Controllers\Boshqaruv\CatalogController::class, 'bulk'])->name('catalog.bulk');
             Route::post('/catalog/auto-fix-batch', [\App\Http\Controllers\Boshqaruv\CatalogController::class, 'autoFixBatch'])->name('catalog.auto-fix-batch');
             Route::post('/catalog/{edition}/verify', [\App\Http\Controllers\Boshqaruv\CatalogController::class, 'verify'])->whereNumber('edition')->name('catalog.verify');
             Route::post('/catalog/{edition}/merge', [\App\Http\Controllers\Boshqaruv\CatalogController::class, 'merge'])->whereNumber('edition')->name('catalog.merge');

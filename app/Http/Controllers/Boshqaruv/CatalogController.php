@@ -50,13 +50,21 @@ class CatalogController extends Controller
     {
         $search = trim((string) $request->query('search', ''));
         $tab = (string) $request->query('tab', 'all');
+        $sort = (string) $request->query('sort', 'new');
+        $stock = (string) $request->query('stock', '');
 
         $query = BookEdition::query()
             ->with(['publisher:id,name', 'category:id,name_uz'])
-            ->when($tab === 'deleted', fn ($q) => $q->onlyTrashed(), fn ($q) => $q->where('status', '!=', BookEdition::STATUS_MERGED))
+            // Sotuvdan olingan karta soft-delete qilinadi — "Taqiqlangan" bo'limi
+            // ularni ham ko'rsatadi, "O'chirilgan" esa faqat oddiy o'chirilganlarni.
+            ->when($tab === 'deleted', fn ($q) => $q->onlyTrashed()->where('status', '!=', BookEdition::STATUS_REJECTED))
+            ->when($tab === 'rejected', fn ($q) => $q->withTrashed()->where('status', BookEdition::STATUS_REJECTED))
+            ->when(! in_array($tab, ['deleted', 'rejected'], true), fn ($q) => $q->where('status', '!=', BookEdition::STATUS_MERGED))
             ->when($tab === 'unverified', fn ($q) => $q->whereNull('verified_at')->where('status', BookEdition::STATUS_ACTIVE))
             ->when($tab === 'pending', fn ($q) => $q->where('status', BookEdition::STATUS_PENDING))
-            ->when($tab === 'rejected', fn ($q) => $q->where('status', BookEdition::STATUS_REJECTED))
+            ->when($stock === 'in', fn ($q) => $q->where('in_stock_offers_count', '>', 0))
+            ->when($stock === 'out', fn ($q) => $q->where(fn ($w) => $w->whereNull('in_stock_offers_count')->orWhere('in_stock_offers_count', 0)))
+            ->when($stock === 'no_offers', fn ($q) => $q->where(fn ($w) => $w->whereNull('offers_count')->orWhere('offers_count', 0)))
             ->when($tab === 'no_cover', fn ($q) => $q->where(fn ($w) => $w
                 ->whereNull('front_image')
                 ->orWhere('front_image', '')
@@ -80,20 +88,26 @@ class CatalogController extends Controller
                     ->when($isbn13, fn ($i) => $i->orWhere('isbn13', $isbn13))
                     ->orWhere('isbn13', 'like', "%{$search}%"));
             })
-            ->orderByRaw($tab === 'duplicates' ? 'isbn13, id' : 'id DESC');
+            ->when($tab === 'duplicates', fn ($q) => $q->orderBy('isbn13')->orderBy('id'), fn ($q) => match ($sort) {
+                'offers' => $q->orderByDesc('offers_count')->orderByDesc('id'),
+                'price' => $q->orderByRaw('min_price IS NULL, min_price ASC')->orderByDesc('id'),
+                'title' => $q->orderBy('title'),
+                'old' => $q->orderBy('id'),
+                default => $q->orderByDesc('id'),
+            });
 
         $editions = $query->paginate(30)->withQueryString();
 
         return Inertia::render('Catalog', [
             'editions' => collect($editions->items())->map(fn (BookEdition $e) => $this->editionRow($e))->values(),
             'pagination' => $this->pagination($editions),
-            'filters' => ['search' => $search, 'tab' => $tab],
+            'filters' => ['search' => $search, 'tab' => $tab, 'sort' => $sort, 'stock' => $stock],
             'counts' => [
                 'all' => BookEdition::query()->where('status', '!=', BookEdition::STATUS_MERGED)->count(),
                 'unverified' => BookEdition::query()->whereNull('verified_at')->where('status', BookEdition::STATUS_ACTIVE)->count(),
                 'pending' => BookEdition::query()->where('status', BookEdition::STATUS_PENDING)->count(),
-                'rejected' => BookEdition::query()->where('status', BookEdition::STATUS_REJECTED)->count(),
-                'deleted' => BookEdition::onlyTrashed()->count(),
+                'rejected' => BookEdition::withTrashed()->where('status', BookEdition::STATUS_REJECTED)->count(),
+                'deleted' => BookEdition::onlyTrashed()->where('status', '!=', BookEdition::STATUS_REJECTED)->count(),
                 'no_cover' => BookEdition::query()
                     ->where('status', '!=', BookEdition::STATUS_MERGED)
                     ->where(fn ($w) => $w
@@ -739,6 +753,56 @@ class CatalogController extends Controller
         $result = $this->catalog->banEdition($model, $reason, $adminId);
 
         return back()->with('success', "Kitob sotuvdan olib tashlandi. {$result['offers_count']} ta do'kon taklifi yashirildi, savat va sevimlilardan tozalandi.");
+    }
+
+    /** Ro'yxatdan bir nechta kartaga birdaniga amal: tasdiqlash, sotuvdan olish/qaytarish. */
+    public function bulk(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'action' => 'required|in:verify,ban,unban',
+            'ids' => 'required|array|min:1|max:200',
+            'ids.*' => 'integer',
+            'reason' => 'nullable|string|max:255',
+        ]);
+        $adminId = Auth::guard('panel')->id();
+        $done = 0;
+        $skipped = 0;
+
+        foreach (BookEdition::withTrashed()->whereIn('id', $data['ids'])->get() as $model) {
+            try {
+                if ($data['action'] === 'ban') {
+                    if ($model->status === BookEdition::STATUS_MERGED || $model->status === BookEdition::STATUS_REJECTED) {
+                        $skipped++;
+                        continue;
+                    }
+                    $this->catalog->banEdition($model, $data['reason'] ?: 'Admin tomonidan sotuvdan olindi', $adminId);
+                } elseif ($data['action'] === 'unban') {
+                    if ($model->status !== BookEdition::STATUS_REJECTED && ! $model->trashed()) {
+                        $skipped++;
+                        continue;
+                    }
+                    $this->catalog->unbanEdition($model);
+                } else {
+                    if ($model->trashed() || in_array($model->status, [BookEdition::STATUS_MERGED, BookEdition::STATUS_REJECTED], true)) {
+                        $skipped++;
+                        continue;
+                    }
+                    DB::transaction(function () use ($model) {
+                        $model->forceFill(['status' => BookEdition::STATUS_ACTIVE, 'verified_at' => now()])->save();
+                        $this->approvePendingOffers($model, 'Katalog kartasi admin tomonidan tasdiqlandi.');
+                        $this->catalog->syncOffers($model->fresh());
+                    });
+                }
+                $done++;
+            } catch (\Throwable $e) {
+                report($e);
+                $skipped++;
+            }
+        }
+
+        $label = ['verify' => 'tasdiqlandi', 'ban' => 'sotuvdan olindi', 'unban' => 'sotuvga qaytarildi'][$data['action']];
+
+        return back()->with($done ? 'success' : 'error', "{$done} ta karta {$label}".($skipped ? ", {$skipped} tasi o'tkazib yuborildi" : '').'.');
     }
 
     public function unbanEdition(int $edition): RedirectResponse

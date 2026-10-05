@@ -394,7 +394,7 @@ export default function CatalogEdition() {
               disabled={autoCoverLoading}
               title="Internetdan (Book.uz, Asaxiy) kitob muqovasini avtomatik qidirib topish va o'rnatish"
             >
-              <i className={`ti ${autoCoverLoading ? 'ti-loader rotate' : 'ti-wand'} me-1`}></i>
+              <i className={`ti ${autoCoverLoading ? 'ti-rotate-clockwise' : 'ti-wand'} me-1`}></i>
               {autoCoverLoading ? 'Qidirilmoqda...' : 'Avto-muqova'}
             </button>
           ) : null}
