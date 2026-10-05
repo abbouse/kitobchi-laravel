@@ -12,4 +12,9 @@ return [
     'cta_back' => 'Orqaga',
     'share_open_app' => 'Ilovada ochish',
     'share_download' => 'Yoki do‘konlardan yuklab oling',
+    'product_unavailable_title' => 'Bunday mahsulot mavjud emas',
+    'product_unavailable_lead' => 'Mahsulot sotuvda yo‘q yoki havola eskirgan. Katalogdan o‘xshash kitoblarni topishingiz mumkin.',
+    'product_unavailable_code_hint' => 'Qo‘llab-quvvatlash xizmatiga murojaat qilsangiz, shu kodni yuboring',
+    'cta_catalog' => 'Katalogga o‘tish',
+    'code' => 'Kod',
 ];

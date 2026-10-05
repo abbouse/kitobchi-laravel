@@ -12,4 +12,9 @@ return [
     'cta_back' => '戻る',
     'share_open_app' => 'アプリで開く',
     'share_download' => 'ストアから入手',
+    'product_unavailable_title' => 'この商品は存在しません',
+    'product_unavailable_lead' => '販売終了したか、リンクが古くなっています。カタログで似た本を探せます。',
+    'product_unavailable_code_hint' => 'サポートへのお問い合わせ時にこのコードをお伝えください',
+    'cta_catalog' => 'カタログへ',
+    'code' => 'コード',
 ];

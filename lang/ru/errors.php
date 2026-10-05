@@ -12,4 +12,9 @@ return [
     'cta_back' => 'Назад',
     'share_open_app' => 'Открыть в приложении',
     'share_download' => 'Или скачайте в магазине',
+    'product_unavailable_title' => 'Такого товара не существует',
+    'product_unavailable_lead' => 'Товар снят с продажи или ссылка устарела. Похожие книги можно найти в каталоге.',
+    'product_unavailable_code_hint' => 'При обращении в поддержку укажите этот код',
+    'cta_catalog' => 'Перейти в каталог',
+    'code' => 'Код',
 ];

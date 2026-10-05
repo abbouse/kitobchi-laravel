@@ -14,6 +14,7 @@ use App\Support\ProductVisibilityScope;
 use App\Traits\HasProductVisibility;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use App\Support\ProductUnavailability;
 
 class ProductCatalogController extends Controller
 {
@@ -34,7 +35,8 @@ class ProductCatalogController extends Controller
             $book = $this->visibleBooks(['category', 'publisher', 'seller', 'tags'])
                 ->findOrFail($id);
         } catch (\Throwable $e) {
-            abort(404, 'Mahsulot topilmadi');
+            // Mijozga bir xil matn, pastida sababni bildiruvchi kod (KB-B20 ...)
+            return ProductUnavailability::response(ProductUnavailability::forBook($id), $id);
         }
 
         $expectedSlug = Str::slug($book->name);
@@ -373,7 +375,7 @@ class ProductCatalogController extends Controller
             $item = $this->visibleStationeries(['category', 'seller', 'variants', 'tags'])
                 ->findOrFail($id);
         } catch (\Throwable $e) {
-            abort(404, 'Mahsulot topilmadi');
+            return ProductUnavailability::response(ProductUnavailability::forStationery($id), $id);
         }
 
         $expectedSlug = Str::slug($item->name);
@@ -456,7 +458,7 @@ class ProductCatalogController extends Controller
             // Silence DB missing error
         }
 
-        abort(404, 'Mahsulot topilmadi');
+        return ProductUnavailability::response(ProductUnavailability::forArtikul($artikul));
     }
 
     public function catalog(Request $request)
