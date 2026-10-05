@@ -445,22 +445,17 @@ class PrizeGameService
                 ->pluck('fragment_index')->map(fn ($i) => (int) $i)->values()->all();
         }
 
+        // Mijozga faqat sovg'aning o'zi: qiyinlik, foiz va shartlar ko'rsatilmaydi
         return [
             'id' => $p->id,
             'type' => $p->type,
             'title' => $p->title(),
             'image' => self::imageUrl($p->image) ?? self::imageUrl($p->edition?->coverPath()),
-            'difficulty' => $p->difficulty,
             'coins_amount' => $p->coins_amount,
             'discount_type' => $p->discount_type,
             'discount_value' => $p->discount_value,
-            'scope' => $p->scope,
             'fragments_total' => $p->type === 'fragments' ? max(2, (int) $p->fragments_total) : null,
             'fragments' => $fragments,
-            'edition_id' => $p->edition_id,
-            'min_orders' => $p->min_orders,
-            'valid_days' => $p->valid_days,
-            'ends_at' => $p->ends_at?->toIso8601String(),
         ];
     }
 
