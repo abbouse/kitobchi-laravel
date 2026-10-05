@@ -592,12 +592,16 @@ class CatalogService
                     ->where('product_type', 'book')
                     ->delete();
 
-                // 5. Qoldiqlarni 0 ga tushirish (branch_stocks)
-                if (\Illuminate\Support\Facades\Schema::hasTable('branch_stocks')) {
-                    DB::table('branch_stocks')
-                        ->whereIn('product_id', $offerIds)
-                        ->where('product_type', 'book')
-                        ->update(['stock' => 0, 'updated_at' => $now]);
+                // 5. Qoldiqlarni 0 ga tushirish — filial qoldiqlari jadvalida ustun
+                // `quantity` (avval `stock` deb yozilgan edi va SQL xatosi bilan
+                // butun amal bekor bo'lardi). Admin "arxivlash" bilan bir xil yo'l:
+                // harakat tarixi ham yoziladi.
+                $stock = app(\App\Services\BranchStockService::class);
+                $sellers = Books::query()->whereIn('id', $offerIds)->pluck('seller_id', 'id');
+                foreach ($sellers as $offerId => $sellerId) {
+                    $stock->setTotalFromLegacy('book', (int) $offerId, 0, (int) $sellerId, 0, null, [
+                        'actor_type' => 'admin', 'actor_id' => $adminId, 'note' => 'Katalogdan sotuvdan olindi',
+                    ]);
                 }
             }
         });
@@ -645,9 +649,34 @@ class CatalogService
             $edition->forceFill([
                 'status' => BookEdition::STATUS_ACTIVE,
             ])->save();
+
+            // Taqiq bilan arxivlangan takliflar qaytariladi (do'kon o'zi
+            // arxivlaganlari tegilmaydi). Qoldiq 0 — do'kon qayta kiritadi.
+            $offers = Books::query()->where('edition_id', $edition->id)->whereNotNull('archived_at')->get(['id', 'archived_state']);
+            $restoreIds = $offers->filter(function ($offer) {
+                $state = is_array($offer->archived_state) ? $offer->archived_state : json_decode((string) $offer->archived_state, true);
+
+                return is_array($state) && ! empty($state['banned_at']);
+            })->pluck('id')->all();
+            if ($restoreIds !== []) {
+                Books::writingFromCatalog(fn () => Books::query()->whereIn('id', $restoreIds)->toBase()->update([
+                    'archived_at' => null,
+                    'archived_by' => null,
+                    'archived_state' => null,
+                    'is_hidden' => false,
+                    'status' => true,
+                    'is_approved' => 1,
+                    'updated_at' => now(),
+                ]));
+            }
         });
 
         $this->buyBox->touch((int) $edition->id);
+
+        try {
+            Books::query()->where('edition_id', $edition->id)->whereNull('archived_at')->searchable();
+        } catch (\Throwable) {
+        }
 
         Log::info('Kitob taqiqdan chiqarildi va faollashtirildi', [
             'edition_id' => $edition->id,
