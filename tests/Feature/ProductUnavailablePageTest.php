@@ -66,4 +66,17 @@ class ProductUnavailablePageTest extends TestCase
         $this->assertCode('/p/NOPE-123', 'KB-B10');
         $this->assertSame('KB-S10', ProductUnavailability::forStationery(999999)['code']);
     }
+
+    public function test_api_returns_reason_code_for_web(): void
+    {
+        $book = $this->makeBook($this->makeSeller(), $this->makeCategory());
+        $book->forceFill(['is_hidden' => true])->save();
+
+        $this->getJson("/api/v1/kitobchi/share/product/{$book->id}?type=book")
+            ->assertStatus(404)
+            ->assertJsonPath('error_code', 'product_unavailable')
+            ->assertJsonPath('code', 'KB-B30');
+        $this->getJson('/api/v1/kitobchi/share/product/999999?type=stationery')
+            ->assertStatus(404)->assertJsonPath('code', 'KB-S10');
+    }
 }

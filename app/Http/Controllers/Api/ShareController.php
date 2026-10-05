@@ -30,6 +30,17 @@ class ShareController extends Controller
         return response()->json(['status' => 'error', 'message' => $msg], $code);
     }
 
+    /** Mahsulot ko'rinmaydi: bir xil matn + sabab kodi (admin uchun). */
+    private function unavailable(array $diag)
+    {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Bunday mahsulot mavjud emas',
+            'error_code' => 'product_unavailable',
+            'code' => $diag['code'],
+        ], 404);
+    }
+
     // ── GET /api/share/product/{id}?type=book ─────────────────────────
     // Autentifikatsiyasiz ham ishlaydi
     public function product(Request $request, string $id)
@@ -50,7 +61,10 @@ class ShareController extends Controller
         }
 
         if (!$product) {
-            return $this->err('Mahsulot topilmadi!');
+            // Sabab kodi (KB-B20 ...) — web "mavjud emas" sahifasida ko'rsatiladi
+            return $this->unavailable($type === 'book'
+                ? \App\Support\ProductUnavailability::forBook($numericId)
+                : \App\Support\ProductUnavailability::forStationery($numericId));
         }
 
         // Favourite holati (faqat login qilingan user uchun)
@@ -120,7 +134,7 @@ class ShareController extends Controller
             ]);
         }
 
-        return $this->err('Mahsulot topilmadi!');
+        return $this->unavailable(\App\Support\ProductUnavailability::forArtikul($normalizedArtikul));
     }
 
     private function formatProduct($product, string $type, bool $isFavourite): array

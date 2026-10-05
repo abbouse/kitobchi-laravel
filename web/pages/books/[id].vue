@@ -780,6 +780,7 @@
   </div>
 
   <!-- ====== FULL SHIMMER SKELETON (While loading) ====== -->
+  <ProductUnavailable v-else-if="notFound" :code="unavailableCode" :product-id="rawId" />
   <div v-else class="py-4 md:py-6 min-h-dvh bg-[#f0f2f5] grow">
     <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
       <!-- Breadcrumb shimmer -->
@@ -835,13 +836,25 @@ const rawId = computed(() => {
 // (GET v1/kitobchi/share/product/{id}?type=book), ProductPayloadFormatter
 // orqali 'detail' rejimida formatlanadi (description/isbn/pages/publisher/
 // lang/coverType/year maydonlari shu rejimda qo'shiladi).
-const { data: productData } = await useFetch<any>(
+const { data: productData, error: productError, status: productStatus } = await useFetch<any>(
   () => `${config.public.apiBase}/v1/kitobchi/share/product/${rawId.value}`,
   {
     query: { type: 'book' },
     lazy: false
   }
 )
+
+// Mahsulot ko'rinmasa (topilmadi, do'kon yashirgan, sotuvdan olingan ...)
+// abadiy shimmer o'rniga "Bunday mahsulot mavjud emas" + sabab kodi chiqadi.
+const notFound = computed(() =>
+  !(productData.value?.data || productData.value?.product)
+  && (productStatus.value === 'error' || productStatus.value === 'success'))
+const unavailableCode = computed<string | null>(() =>
+  (productError.value as any)?.data?.code || productData.value?.code
+  || (notFound.value ? 'KB-B99' : null))
+if (import.meta.server && notFound.value) {
+  setResponseStatus(useRequestEvent()!, 404)
+}
 
 const product = computed(() => {
   return productData.value?.data || productData.value?.product || null
