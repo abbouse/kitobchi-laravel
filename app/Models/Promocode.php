@@ -24,6 +24,9 @@ class Promocode extends Model
         'usedCount',
         'status',
         'expires_at',
+        'scope_type',
+        'scope_id',
+        'source',
     ];
 
     protected $casts = [

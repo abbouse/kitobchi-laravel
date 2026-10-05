@@ -180,6 +180,14 @@ Route::middleware('auth:user')->group(function () {
         Route::get('notifications', [BookClubController::class, 'getNotifications']);
         Route::get('notifications/mark-read-bulk', [BookClubController::class, 'readNotifications']);
     });
+    // Sovg'alar g'ildiragi (o'yin)
+    Route::prefix('game')->group(function () {
+        Route::get('state', [\App\Http\Controllers\Api\PrizeGameController::class, 'state']);
+        Route::post('spin', [\App\Http\Controllers\Api\PrizeGameController::class, 'spin'])->middleware('throttle:30,1');
+        Route::post('daily', [\App\Http\Controllers\Api\PrizeGameController::class, 'daily']);
+        Route::post('tasks/{key}/claim', [\App\Http\Controllers\Api\PrizeGameController::class, 'claimTask']);
+        Route::get('rewards', [\App\Http\Controllers\Api\PrizeGameController::class, 'rewards']);
+    });
     // Sovg'alar
     Route::prefix('gifts')->group(function () {
         Route::get('/', [GiftsController::class, 'index']);

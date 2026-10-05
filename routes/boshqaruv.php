@@ -402,6 +402,17 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
             Route::patch('/mystery-box/subscriptions/{subscription}/cancel', [MysteryBoxController::class, 'cancelSubscription'])->name('mystery-box.cancel');
 
             Route::get('/sovgalar', fn (AdminController $controller) => $controller->page('Sovgalar'))->name('sovgalar');
+
+            // Sovg'alar g'ildiragi (o'yin)
+            Route::get('/prize-game', [\App\Http\Controllers\Boshqaruv\PrizeGameController::class, 'index'])->name('prize-game');
+            Route::get('/prize-game/lookup', [\App\Http\Controllers\Boshqaruv\PrizeGameController::class, 'lookup'])->name('prize-game.lookup');
+            Route::post('/prize-game/settings', [\App\Http\Controllers\Boshqaruv\PrizeGameController::class, 'saveSettings'])->name('prize-game.settings');
+            Route::post('/prize-game/chances', [\App\Http\Controllers\Boshqaruv\PrizeGameController::class, 'updateChances'])->name('prize-game.chances');
+            Route::post('/prize-game/prizes', [\App\Http\Controllers\Boshqaruv\PrizeGameController::class, 'storePrize'])->name('prize-game.prizes.store');
+            Route::post('/prize-game/prizes/{prize}', [\App\Http\Controllers\Boshqaruv\PrizeGameController::class, 'updatePrize'])->whereNumber('prize')->name('prize-game.prizes.update');
+            Route::patch('/prize-game/prizes/{prize}/toggle', [\App\Http\Controllers\Boshqaruv\PrizeGameController::class, 'togglePrize'])->whereNumber('prize')->name('prize-game.prizes.toggle');
+            Route::delete('/prize-game/prizes/{prize}', [\App\Http\Controllers\Boshqaruv\PrizeGameController::class, 'destroyPrize'])->whereNumber('prize')->name('prize-game.prizes.destroy');
+            Route::put('/prize-game/tasks/{task}', [\App\Http\Controllers\Boshqaruv\PrizeGameController::class, 'updateTask'])->whereNumber('task')->name('prize-game.tasks.update');
         });
 
         // ══════════════════════════ SOZLAMALAR / SIYOSATLAR / API MIJOZLAR ══════════════════════════

@@ -227,7 +227,48 @@ class PurchaseController extends Controller
     //  PROMOKOD TEKSHIRUVI
     // =========================================================================
 
-    private function validatePromocode(string $rawCode, int $userId, float $total): array
+    /**
+     * Savat qatorlari promokod qamrovi uchun: edition_id, seller_id, price, qty.
+     *
+     * @param  iterable<MyCart>  $cartItems
+     */
+    private function promoLinesFromCart(iterable $cartItems): array
+    {
+        $lines = [];
+        foreach ($cartItems as $i) {
+            $lines[] = [
+                'edition_id' => $i->product_type === 'book' ? ($i->product?->edition_id ? (int) $i->product->edition_id : null) : null,
+                'seller_id' => (int) ($i->product?->seller_id ?? 0),
+                'price' => (float) $this->effectiveCartItemUnitPrice($i),
+                'qty' => (int) $i->count_item,
+            ];
+        }
+
+        return $lines;
+    }
+
+    /** buy_book ichidagi $allItems → promokod qatorlari. */
+    private function promoLinesFromItems(array $items): array
+    {
+        $bookIds = collect($items)->where('type', 'book')->pluck('item_id')->filter()->all();
+        $editions = $bookIds ? DB::table('books')->whereIn('id', $bookIds)->pluck('edition_id', 'id')->all() : [];
+        $lines = [];
+        foreach ($items as $it) {
+            if (($it['type'] ?? null) === 'gift') {
+                continue;
+            }
+            $lines[] = [
+                'edition_id' => ($it['type'] ?? null) === 'book' && ! empty($editions[$it['item_id']]) ? (int) $editions[$it['item_id']] : null,
+                'seller_id' => (int) ($it['seller_id'] ?? 0),
+                'price' => (float) ($it['item_price'] ?? 0),
+                'qty' => (int) ($it['count_item'] ?? 1),
+            ];
+        }
+
+        return $lines;
+    }
+
+    private function validatePromocode(string $rawCode, int $userId, float $total, array $lines = []): array
     {
         $code = strtoupper(trim($rawCode));
         $promo = DB::table('promocodes')->where('code', $code)->first();
@@ -273,10 +314,31 @@ class PurchaseController extends Controller
             return ['error' => "Promokod {$promo->min_order_amount} so'mdan yuqori buyurtmalarga amal qiladi."];
         }
 
+        // Qamrov: faqat ma'lum kitob (global katalog) yoki do'kon mahsulotlari
+        $scopeType = $promo->scope_type ?? null;
+        $base = $total;
+        $matching = [];
+        if ($scopeType || ($promo->type ?? null) === 'free_item') {
+            $scopeId = (int) ($promo->scope_id ?? 0);
+            $matching = array_values(array_filter($lines, fn ($l) => match ($scopeType) {
+                'edition' => (int) ($l['edition_id'] ?? 0) === $scopeId,
+                'seller' => (int) ($l['seller_id'] ?? 0) === $scopeId,
+                default => true,
+            }));
+            if (! $matching) {
+                return ['error' => $scopeType === 'seller'
+                    ? "Bu promokod faqat ma'lum do'kon mahsulotlariga amal qiladi."
+                    : "Bu promokod faqat ma'lum kitobga amal qiladi — uni savatga qo'shing."];
+            }
+            $base = array_sum(array_map(fn ($l) => $l['price'] * $l['qty'], $matching));
+        }
+
         $discount = match ($promo->type) {
-            'uzs', 'fixed' => (int) min($promo->amount, $total),
-            'percent' => (function () use ($promo, $total) {
-                $percentDiscount = (int) round(($promo->amount / 100) * $total);
+            // Bitta dona bepul (eng qimmat mos dona)
+            'free_item' => (int) min($total, max(array_map(fn ($l) => $l['price'], $matching ?: [['price' => 0]]))),
+            'uzs', 'fixed' => (int) min($promo->amount, $base),
+            'percent' => (function () use ($promo, $base) {
+                $percentDiscount = (int) round(($promo->amount / 100) * $base);
                 $maxDiscount = (int) ($promo->max_discount_amount ?? 0);
 
                 if ($maxDiscount > 0) {
@@ -1188,7 +1250,7 @@ class PurchaseController extends Controller
         }
 
         $total = $cartItems->sum(fn ($i) => $this->effectiveCartItemUnitPrice($i) * $i->count_item);
-        $res = $this->validatePromocode($code, $user->id, $total);
+        $res = $this->validatePromocode($code, $user->id, $total, $this->promoLinesFromCart($cartItems));
 
         if (isset($res['error'])) {
             return $this->err($res['error']);
@@ -1440,7 +1502,7 @@ class PurchaseController extends Controller
             $appliedPromoId = null;
 
             if ($request->filled('promocode')) {
-                $res = $this->validatePromocode($request->promocode, $user->id, $priceBeforePromo);
+                $res = $this->validatePromocode($request->promocode, $user->id, $priceBeforePromo, $this->promoLinesFromItems($allItems));
                 if (isset($res['error'])) {
                     DB::rollBack();
 
@@ -1992,6 +2054,9 @@ class PurchaseController extends Controller
                     'promocode_id' => (int) $appliedPromoId,
                 ]);
                 DB::table('promocodes')->where('id', $appliedPromoId)->increment('usedCount');
+                // O'yinda yutilgan kod bo'lsa — "ishlatildi" deb belgilanadi
+                DB::table('game_rewards')->where('promocode_id', $appliedPromoId)->whereNull('used_at')
+                    ->update(['used_at' => now(), 'updated_at' => now()]);
             }
 
             // ── Gift Sertifikat ishlatish ──────────────────────────

@@ -82,6 +82,7 @@ const nav = [
   { group: 'Premium', section: "O'sish", icon: 'ti-diamond', ax: 'iconoir-crown', items: [
     { to: '/boshqaruv/mystery-box', match: '/boshqaruv/mystery-box', label: 'Mystery Box', icon: 'ti-package', perm: 'premium' },
     { to: '/boshqaruv/sovgalar', match: '/boshqaruv/sovgalar', label: "Sovg'alar", icon: 'ti-gift', perm: 'premium' },
+    { to: '/boshqaruv/prize-game', match: '/boshqaruv/prize-game', label: "Sovg'alar g'ildiragi", icon: 'ti-rotate-clockwise', perm: 'premium' },
   ]},
   { group: 'Tizim va xavfsizlik', section: 'Jamoa va tizim', icon: 'ti-settings', ax: 'iconoir-settings', items: [
     { to: '/boshqaruv/security', match: '/boshqaruv/security', label: 'Kiberxavfsizlik & Server', icon: 'ti-shield-check', ax: 'iconoir-security-pass', perm: 'settings' },
