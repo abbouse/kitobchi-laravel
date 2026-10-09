@@ -882,6 +882,9 @@ class UserController extends Controller
         if (!$user) {
             return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
         }
+        // Tokeni o'chgan ("o'lik") sessiyalar ro'yxatda qolmasin
+        app(\App\Services\UserDeviceService::class)->prune((int) $user->id);
+
         $devices = DB::table('connected_devices')
             ->where('user_id', $user->id)
             ->where('user_type', 'user')
@@ -917,7 +920,10 @@ class UserController extends Controller
 
     public function logout(Request $request)
     {
-        $request->user()->currentAccessToken()->delete();
+        $token = $request->user()->currentAccessToken();
+        // Chiqilgan qurilma "Ulangan qurilmalar"da qolib ketmasin
+        app(\App\Services\UserDeviceService::class)->forgetToken((int) $request->user()->id, $token?->token);
+        $token->delete();
         return response()->json(['status' => 'success']);
     }
 

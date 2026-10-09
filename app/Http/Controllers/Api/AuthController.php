@@ -246,6 +246,7 @@ class AuthController extends Controller
                 ->pluck('token')
                 ->toArray();
             $user->tokens()->whereNotIn('token', $activeTokens)->delete();
+            app(\App\Services\UserDeviceService::class)->prune((int) $user->id);
 
             $user->update([
                 'verifyCode' => null,
@@ -502,6 +503,7 @@ class AuthController extends Controller
             ->toArray();
 
         $user->tokens()->whereNotIn('token', $activeTokens)->delete();
+        app(\App\Services\UserDeviceService::class)->prune((int) $user->id);
 
         return $plainTextToken;
     }
