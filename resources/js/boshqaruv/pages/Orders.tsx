@@ -516,7 +516,6 @@ type DeliveryScheduleData = { days: ScheduleDay[]; overdue: number; slots: Array
  */
 function DeliveryScheduleStrip({ schedule, day, slot, onPick }: { schedule: DeliveryScheduleData; day: string; slot: string; onPick: (day: string, slot?: string) => void }) {
   if (!schedule) return null;
-  const max = Math.max(1, ...schedule.days.map((d) => d.count));
   const active = schedule.days.find((d) => d.date === day);
 
   return (
@@ -541,10 +540,12 @@ function DeliveryScheduleStrip({ schedule, day, slot, onPick }: { schedule: Deli
               className={`btn text-start b-r-10 flex-shrink-0 ${isActive ? 'btn-primary' : d.count ? 'btn-light-primary' : 'btn-light-secondary'}`} style={{ minWidth: 112 }}>
               <span className="d-flex align-items-center justify-content-between f-s-12"><span>{d.label}</span><span className="opacity-75">{d.weekday}</span></span>
               <span className="d-block f-w-700 f-s-18">{d.count}</span>
-              <span className="d-flex gap-1 align-items-end" style={{ height: 14 }} title={schedule.slots.map((sl) => `${sl.label}: ${d.slots[sl.key] || 0}`).join('\n')}>
-                {schedule.slots.map((sl) => (
-                  <span key={sl.key} className={`flex-fill b-r-4 ${isActive ? 'bg-white' : 'bg-primary'}`}
-                    style={{ height: `${Math.max(2, Math.round(((d.slots[sl.key] || 0) / max) * 14))}px`, opacity: d.slots[sl.key] ? 0.85 : 0.25 }}></span>
+              {/* Vaqt oraliqlari: faqat buyurtma bor oraliqlar soni bilan */}
+              <span className="d-flex flex-wrap gap-1" style={{ minHeight: 18 }}>
+                {schedule.slots.filter((sl) => (d.slots[sl.key] || 0) > 0).map((sl) => (
+                  <span key={sl.key} className={`badge f-s-11 ${isActive ? 'bg-white text-primary' : 'text-light-primary'}`} title={sl.label}>
+                    {sl.key.replace('-', '–')} <b>{d.slots[sl.key]}</b>
+                  </span>
                 ))}
               </span>
               {d.moved > 0 ? <span className="d-block f-s-11 mt-1 opacity-75"><i className="ti ti-arrow-forward-up"></i> {d.moved} ko‘chirilgan</span> : null}
@@ -554,10 +555,12 @@ function DeliveryScheduleStrip({ schedule, day, slot, onPick }: { schedule: Deli
       </div>
       {active ? (
         <div className="nav kc-segment kc-segment-sm mt-2">
-          <div className="nav-item"><button type="button" className={`nav-link ${!slot ? 'active' : ''}`} onClick={() => onPick(day, '')}>Hammasi <span className="badge">{active.count}</span></button></div>
+          <div className="nav-item"><button type="button" className={`nav-link ${!slot ? 'active' : ''}`} onClick={() => onPick(day, '')}>Hammasi {active.count > 0 ? <span className="badge">{active.count}</span> : null}</button></div>
           {schedule.slots.map((sl) => (
             <div className="nav-item" key={sl.key}>
-              <button type="button" className={`nav-link ${slot === sl.key ? 'active' : ''}`} onClick={() => onPick(day, sl.key)}>{sl.label} <span className="badge">{active.slots[sl.key] || 0}</span></button>
+              <button type="button" className={`nav-link ${slot === sl.key ? 'active' : ''}`} onClick={() => onPick(day, sl.key)}>
+                {sl.label} {(active.slots[sl.key] || 0) > 0 ? <span className="badge">{active.slots[sl.key]}</span> : null}
+              </button>
             </div>
           ))}
         </div>
