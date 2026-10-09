@@ -39,6 +39,11 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
         Route::get('/dashboard/export', [AdminController::class, 'exportReport'])->name('dashboard.export');
         Route::get('/live', [AdminController::class, 'live'])->name('live');
         Route::get('/live/data', [AdminController::class, 'liveData'])->name('live.data');
+        // Jamoa KPI: xodimlar faolligi (superadmin, auditor va adminlarni boshqaruvchilar)
+        Route::middleware('panel.permission:audit-logs,admins')->group(function () {
+            Route::get('/team', [AdminController::class, 'team'])->name('team');
+            Route::get('/team/{admin}/data', [AdminController::class, 'teamMember'])->name('team.member');
+        });
         // Xaritalardagi manzil qidiruvi — Yandex kaliti serverda
         Route::get('/geocode/search', [\App\Http\Controllers\Api\GeocodeController::class, 'search'])->middleware('throttle:120,1')->name('geocode.search');
         Route::get('/geocode/reverse', [\App\Http\Controllers\Api\GeocodeController::class, 'reverse'])->middleware('throttle:120,1')->name('geocode.reverse');

@@ -102,7 +102,7 @@ interface MiniStatProps {
 }
 export function MiniStat({ label, value, icon, meta, help, tone = 'primary', valueTone = '', className = '' }: MiniStatProps) {
   return (
-    <div className={`bg-white b-1-light b-r-15 p-3 h-100 d-flex align-items-start gap-3 ${className}`}>
+    <div className={`kc-surface b-1-light b-r-15 p-3 h-100 d-flex align-items-start gap-3 ${className}`}>
       {icon ? <span className={`h-40 w-40 d-flex-center b-r-10 f-s-20 flex-shrink-0 text-light-${tone}`}><i className={icon}></i></span> : null}
       <div className="min-w-0 flex-grow-1">
         <p className="mb-0 text-secondary f-s-13 f-w-500 d-flex align-items-center gap-1">

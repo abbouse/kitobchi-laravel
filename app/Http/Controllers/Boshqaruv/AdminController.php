@@ -200,9 +200,253 @@ class AdminController extends Controller
 
     public function dashboard(Request $request): Response
     {
+        /** @var Admin $admin */
+        $admin = Auth::guard('panel')->user();
+        $access = $this->dashboardAccess($admin);
+
         return Inertia::render('Dashboard', [
-            'dashboard' => $this->dashboardPayload($request),
+            // Har bir xodimga: o'z navbatlari, o'z KPI va ruxsatiga mos bo'limlar
+            'workspace' => $this->dashboardWorkspace($admin, $access),
+            // Biznes ko'rinishi — faqat tegishli rollarga (support/HR kabi rollar uchun hisoblanmaydi ham)
+            'dashboard' => $access['business'] ? $this->dashboardCorePayload($request) : null,
+            // Og'ir tahlillar — tab ochilganda alohida yuklanadi
+            'economics' => Inertia::optional(fn () => $access['finance'] ? $this->dashboardEconomicsPayload($request) : null),
+            'growth' => Inertia::optional(fn () => $access['business'] ? $this->dashboardGrowthPayload($request) : null),
+            'partners' => Inertia::optional(fn () => $access['partners'] ? $this->dashboardPartnersPayload() : null),
         ]);
+    }
+
+    /**
+     * @return array{business: bool, finance: bool, partners: bool, team: bool, live: bool}
+     */
+    private function dashboardAccess(?Admin $admin): array
+    {
+        $super = (bool) $admin?->isSuperAdmin();
+        $can = fn (string $m) => $super || (bool) $admin?->hasPermission($m);
+        $business = $super || collect(['orders', 'finance', 'sellers', 'couriers', 'hubs', 'logistika', 'marketing', 'users', 'audit-logs'])->contains(fn ($m) => $can($m));
+
+        return [
+            'business' => $business,
+            'finance' => $can('finance'),
+            'partners' => $can('sellers') || $can('finance') || $can('marketing'),
+            'team' => $can('audit-logs') || $can('admins'),
+            'live' => $business,
+        ];
+    }
+
+    private function dashboardWorkspace(?Admin $admin, array $access): array
+    {
+        if (! $admin) {
+            return [];
+        }
+
+        $hour = (int) now()->format('G');
+        $greeting = match (true) {
+            $hour < 5 => 'Xayrli tun',
+            $hour < 12 => 'Xayrli tong',
+            $hour < 18 => 'Xayrli kun',
+            default => 'Xayrli kech',
+        };
+
+        $from = now()->subDays(6)->startOfDay();
+        $to = now()->endOfDay();
+
+        return [
+            'greeting' => $greeting,
+            'today' => now()->toDateString(),
+            'access' => $access,
+            'queues' => app(\App\Services\Staff\WorkQueueService::class)->forAdmin($admin),
+            'me' => app(\App\Services\Staff\StaffKpiService::class)->personal($admin, $from, $to),
+            'links' => [
+                'team' => $access['team'] ? route('boshqaruv.team') : null,
+                'live' => $access['live'] ? route('boshqaruv.live') : null,
+                'supportKpi' => $admin->hasPermission('support') ? route('boshqaruv.support.kpi') : null,
+            ],
+        ];
+    }
+
+    /** Asosiy (yengil) biznes ko'rinishi. */
+    private function dashboardCorePayload(Request $request): array
+    {
+        $range = $this->dashboardDateRange($request);
+        $currentStats = $this->dashboardPeriodStats($range['from'], $range['to']);
+        $previousStats = $range['previousFrom'] && $range['previousTo']
+            ? $this->dashboardPeriodStats($range['previousFrom'], $range['previousTo'])
+            : null;
+
+        $totalOrders = $this->tableCount('solds');
+        $finance = $this->marketplaceFinancialSnapshot($range['from'], $range['to']);
+        $salesTrend = $this->dashboardSalesTrend($range['from'], $range['to'], $finance);
+        $mainCounts = [
+            'all' => $totalOrders,
+            'new' => $this->countStatuses(Sold::query(), ['pending', 'A']),
+            'packing' => $this->countStatuses(Sold::query(), ['packing', 'P']),
+            'onway' => $this->countStatuses(Sold::query(), ['in_delivery', 'B']),
+            'done' => $this->countStatuses(Sold::query(), ['customer_received', 'D']),
+            'cancelled' => $this->countStatuses(Sold::query(), ['cancelled', 'returned', 'F', 'R']),
+        ];
+        $sellerCounts = [
+            'all' => $this->tableCount('seller_orders'),
+            'payment_pending' => Schema::hasTable('seller_orders') ? $this->countStatuses(SellerOrder::query(), ['payment_pending']) : 0,
+            'new' => Schema::hasTable('seller_orders') ? $this->countStatuses(SellerOrder::query(), ['new']) : 0,
+            'accepted' => Schema::hasTable('seller_orders') ? $this->countStatuses(SellerOrder::query(), ['accepted']) : 0,
+            'handover' => Schema::hasTable('seller_orders') ? $this->countStatuses(SellerOrder::query(), ['handed_to_courier']) : 0,
+            'cancelled' => Schema::hasTable('seller_orders') ? $this->countStatuses(SellerOrder::query(), ['cancelled']) : 0,
+        ];
+        $courierCounts = [
+            'all' => $this->tableCount('courier_orders'),
+            'pending' => Schema::hasTable('courier_orders') ? $this->countStatuses(CourierOrder::query(), ['pending']) : 0,
+            'in_delivery' => Schema::hasTable('courier_orders') ? $this->countStatuses(CourierOrder::query(), ['in_delivery']) : 0,
+            'delivered' => Schema::hasTable('courier_orders') ? $this->countStatuses(CourierOrder::query(), ['delivered']) : 0,
+            'customer_received' => Schema::hasTable('courier_orders') ? $this->countStatuses(CourierOrder::query(), ['customer_received']) : 0,
+            'rejected' => Schema::hasTable('courier_orders') ? $this->countStatuses(CourierOrder::query(), ['cancelled', 'returned']) : 0,
+        ];
+
+        $payload = [
+            'generatedAt' => now()->format('Y-m-d H:i:s'),
+            'metrics' => [
+                'orders' => $totalOrders,
+                'paidOrders' => (int) $this->paidOrdersQuery()->count(),
+                'users' => $this->tableCount('users'),
+                'premiumUsers' => Schema::hasColumn('users', 'is_premium') ? (int) User::query()->where('is_premium', true)->count() : 0,
+                'onlineUsers' => Schema::hasColumn('users', 'last_seen_at') ? (int) User::query()->where('last_seen_at', '>=', now()->subMinutes(5))->count() : 0,
+                'books' => $this->tableCount('books'),
+                'stationeries' => $this->tableCount('stationeries'),
+                'sellers' => $this->tableCount('sellers'),
+                'pendingSellers' => Schema::hasTable('sellers') ? (int) Seller::query()->where('status', 'pending')->count() : 0,
+                'couriers' => $this->tableCount('couriers'),
+                'tickets' => $this->tableCount('bot_tickets'),
+                'complaints' => $this->tableCount('reports'),
+            ],
+            'periods' => [
+                'current' => $this->periodCard($currentStats),
+                'previous' => $previousStats ? $this->periodCard($previousStats) : null,
+            ],
+            'range' => [
+                'key' => $range['key'],
+                'label' => $range['label'],
+                'from' => $range['from']?->toDateString(),
+                'to' => $range['displayTo']?->toDateString(),
+                'canCompare' => $previousStats !== null,
+            ],
+            'status' => ['main' => $mainCounts, 'seller' => $sellerCounts, 'courier' => $courierCounts],
+            'salesByMonth' => $salesTrend['rows'],
+            'salesTrend' => ['label' => $range['label'], 'granularity' => $salesTrend['granularity']],
+            'categoryShare' => $this->dashboardCategoryShare($range['from'], $range['to']),
+            'topProducts' => $this->liveTopProducts($range['from'], $range['to']),
+            'recentOrders' => $this->liveRecentOrders(),
+            'alerts' => $this->liveAlerts($mainCounts, $sellerCounts, $courierCounts),
+            'exportUrl' => route('boshqaruv.dashboard.export'),
+        ];
+
+        return $this->redactFinancialsForNonSuperAdmin($payload);
+    }
+
+    /** "Moliya" tabi: P&L, unit economics. */
+    private function dashboardEconomicsPayload(Request $request): array
+    {
+        $range = $this->dashboardDateRange($request);
+        $currentStats = $this->dashboardPeriodStats($range['from'], $range['to']);
+        $monthStats = $this->dashboardPeriodStats(now()->startOfMonth(), now());
+        $finance = $this->marketplaceFinancialSnapshot($range['from'], $range['to']);
+        $grossRevenue = $finance['grossRevenue'];
+
+        return $this->redactFinancialsForNonSuperAdmin([
+            'financial' => [
+                'grossRevenue' => $grossRevenue,
+                'monthRevenue' => $monthStats['revenue'],
+                ...$finance,
+                'avgOrderValue' => $currentStats['paidOrders'] > 0 ? round($grossRevenue / $currentStats['paidOrders']) : 0,
+                'netMargin' => $grossRevenue > 0 ? round($finance['platformProfit'] / $grossRevenue * 100, 1) : 0,
+            ],
+            'unitEconomics' => $this->dashboardUnitEconomics($range['from'], $range['to']),
+            'unitEconomicsMonthly' => $this->dashboardUnitEconomicsMonthly(),
+            'paymentSplit' => $this->paymentSplit([], $range['from'], $range['to']),
+            'deliverySplit' => $this->deliverySplit($range['from'], $range['to']),
+        ]);
+    }
+
+    /** "O'sish" tabi: voronka, kogortalar, platformalar, hududlar. */
+    private function dashboardGrowthPayload(Request $request): array
+    {
+        $range = $this->dashboardDateRange($request);
+        $totalOrders = $this->tableCount('solds');
+        $paidCount = (int) $this->paidOrdersQuery()->count();
+        $mainCounts = [
+            'all' => $totalOrders,
+            'new' => $this->countStatuses(Sold::query(), ['pending', 'A']),
+            'packing' => $this->countStatuses(Sold::query(), ['packing', 'P']),
+            'onway' => $this->countStatuses(Sold::query(), ['in_delivery', 'B']),
+            'done' => $this->countStatuses(Sold::query(), ['customer_received', 'D']),
+            'cancelled' => $this->countStatuses(Sold::query(), ['cancelled', 'returned', 'F', 'R']),
+        ];
+
+        return $this->redactFinancialsForNonSuperAdmin([
+            'business' => $this->dashboardBusinessKpis($totalOrders, $paidCount, $mainCounts),
+            'funnel' => $this->dashboardConversionFunnel($range['from'], $range['to']),
+            'retention' => $this->dashboardRetentionCohorts(),
+            'platformAnalysis' => \Illuminate\Support\Facades\Cache::remember('boshqaruv.dashboard.platform-analysis.v1', now()->addMinutes(10), fn () => $this->dashboardPlatformAnalysis()),
+            'regions' => $this->liveRegionStats($range['from'], $range['to']),
+        ]);
+    }
+
+    /** "Hamkorlar" tabi: do'konlar reytingi, premium hamkorlar iqtisodiyoti. */
+    private function dashboardPartnersPayload(): array
+    {
+        return $this->redactFinancialsForNonSuperAdmin([
+            'sellerScorecard' => $this->dashboardSellerScorecard(),
+            'partnerEconomics' => $this->dashboardPartnerEconomics(),
+        ]);
+    }
+
+    /** Jamoa KPI sahifasi. */
+    public function team(Request $request): Response
+    {
+        [$from, $to, $range] = $this->teamRange($request);
+
+        return Inertia::render('Team', [
+            'team' => app(\App\Services\Staff\StaffKpiService::class)->team($from, $to),
+            'teamFilters' => ['range' => $range, 'from' => $from->toDateString(), 'to' => $to->toDateString()],
+        ]);
+    }
+
+    /** Jamoa sahifasida bitta xodim tafsiloti (JSON). */
+    public function teamMember(Request $request, Admin $admin): JsonResponse
+    {
+        [$from, $to] = $this->teamRange($request);
+
+        return response()->json(app(\App\Services\Staff\StaffKpiService::class)->personal($admin, $from, $to));
+    }
+
+    /** @return array{0: \Carbon\Carbon, 1: \Carbon\Carbon, 2: string} */
+    private function teamRange(Request $request): array
+    {
+        $range = (string) $request->query('range', '7d');
+        $to = now()->endOfDay();
+        $from = match ($range) {
+            'today' => now()->startOfDay(),
+            '30d' => now()->subDays(29)->startOfDay(),
+            default => now()->subDays(6)->startOfDay(),
+        };
+        if ($range === 'custom') {
+            try {
+                $from = \Carbon\Carbon::parse((string) $request->query('from'))->startOfDay();
+                $to = \Carbon\Carbon::parse((string) $request->query('to'))->endOfDay();
+                if ($from->gt($to)) {
+                    [$from, $to] = [$to->copy()->startOfDay(), $from->copy()->endOfDay()];
+                }
+                if ($from->diffInDays($to) > 92) {
+                    $from = $to->copy()->subDays(91)->startOfDay();
+                }
+            } catch (\Throwable) {
+                $range = '7d';
+                $from = now()->subDays(6)->startOfDay();
+            }
+        } elseif (! in_array($range, ['today', '7d', '30d'], true)) {
+            $range = '7d';
+        }
+
+        return [$from, $to, $range];
     }
 
     public function live(): Response
@@ -278,6 +522,10 @@ class AdminController extends Controller
      */
     public function exportReport(Request $request)
     {
+        // Moliyaviy eksport faqat superadmin va "Moliya" ruxsatiga ega xodimlarga
+        $admin = Auth::guard('panel')->user();
+        abort_unless($admin && ($admin->isSuperAdmin() || $admin->hasPermission('finance')), 403, 'Moliyaviy eksport uchun ruxsat yo‘q.');
+
         $payload = $this->dashboardPayload($request);
         $range = $this->dashboardDateRange($request);
         $type = (string) $request->query('export_type', 'investor');

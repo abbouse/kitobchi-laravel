@@ -78,6 +78,7 @@ const nav = [
   { group: 'HR va boshqaruv', section: 'Jamoa va tizim', icon: 'ti-users', ax: 'iconoir-community', items: [
     { to: '/boshqaruv/vakansiyalar', match: '/boshqaruv/vakansiyalar', label: 'Vakansiyalar', icon: 'ti-id-badge', perm: 'hr' },
     { to: '/boshqaruv/karyera-arizalari', match: '/boshqaruv/karyera-arizalari', label: 'Karyera arizalari', icon: 'ti-file-certificate', perm: 'hr' },
+    { to: '/boshqaruv/team', match: '/boshqaruv/team', label: 'Jamoa KPI', icon: 'ti-users-group', badge: 'NEW', perm: 'audit-logs|admins' },
     { to: '/boshqaruv/adminlar', match: '/boshqaruv/adminlar', label: 'Adminlar', icon: 'ti-shield-lock', perm: 'admins' },
   ]},
   { group: 'Premium', section: "O'sish", icon: 'ti-diamond', ax: 'iconoir-crown', items: [
@@ -93,6 +94,12 @@ const nav = [
   ]},
 ];
 
+type WorkQueue = {
+  items: Array<{ key: string; label: string; count: number; tone: string; icon: string; url: string }>;
+  nav: Record<string, number> | Record<string, never>;
+  total: number;
+};
+
 type NavItem = { to: string; match: string; label: string; icon: string; ax?: string; badge?: string; perm: string | null };
 type NavGroup = { group: string; section: string; icon: string; ax: string; items: NavItem[] };
 
@@ -104,7 +111,8 @@ type PanelAdmin = { name?: string; email?: string; role?: string; roleKey?: stri
 function filterNavByPermissions(admin?: PanelAdmin): NavGroup[] {
   const isSuper = !!admin?.isSuperAdmin;
   const perms = new Set(admin?.permissions || []);
-  const allowed = (perm: string | null) => perm === null || isSuper || perms.has(perm);
+  // "a|b" — kamida bittasi bo'lsa kifoya
+  const allowed = (perm: string | null) => perm === null || isSuper || perm.split('|').some((p) => perms.has(p));
 
   return (nav as NavGroup[])
     .map((g) => ({ ...g, items: g.items.filter((it) => allowed(it.perm)) }))
@@ -116,7 +124,7 @@ function navMatches(url: string, match: string) {
   if (match === '/boshqaruv') return url === '/boshqaruv' || url === '/boshqaruv/';
   if (match.includes('?')) return url.startsWith(match);
   if (match === '/boshqaruv/tickets' && url.includes('tickets_source=seller')) return false;
-  if (match === '/boshqaruv/catalog' && url.startsWith('/boshqaruv/catalog/submissions')) return false;
+  if (match === '/boshqaruv/catalog' && (url.startsWith('/boshqaruv/catalog/submissions') || url.startsWith('/boshqaruv/catalog-slots'))) return false;
   if (match === '/boshqaruv/sellers' && url.startsWith('/boshqaruv/seller-orders')) return false;
   if (match === '/boshqaruv/couriers' && url.startsWith('/boshqaruv/courier-orders')) return false;
   return url.startsWith(match);
@@ -157,12 +165,12 @@ const SECTIONS = ['Savdo', 'Hamkorlar va logistika', 'Moliya', "O'sish", 'Jamoa 
 
 // ── Global qidiruv: bo'lim nomi bo'yicha sakrash + asosiy ro'yxatlarda qidirish ──
 const searchTargets = [
-  { label: 'Buyurtmalardan qidirish', path: '/boshqaruv/orders', icon: 'ti-receipt', tone: 'primary' },
-  { label: 'Talab analitikasidan qidirish', path: '/boshqaruv/demand-analytics', icon: 'ti-chart-bar', tone: 'success' },
-  { label: 'Foydalanuvchilardan qidirish', path: '/boshqaruv/users', icon: 'ti-users', tone: 'info' },
-  { label: 'Kitoblardan qidirish', path: '/boshqaruv/books', icon: 'ti-book', tone: 'warning' },
-  { label: 'Sotuvchi va Mualliflardan qidirish', path: '/boshqaruv/sellers', icon: 'ti-building-store', tone: 'primary' },
-  { label: 'Tranzaksiyalardan qidirish', path: '/boshqaruv/transactions', icon: 'ti-coins', tone: 'danger' },
+  { label: 'Buyurtmalardan qidirish', path: '/boshqaruv/orders', param: 'orders_search', perm: 'orders', icon: 'ti-receipt', tone: 'primary' },
+  { label: 'Talab analitikasidan qidirish', path: '/boshqaruv/demand-analytics', param: 'search', perm: 'orders', icon: 'ti-chart-bar', tone: 'success' },
+  { label: 'Foydalanuvchilardan qidirish', path: '/boshqaruv/users', param: 'users_search', perm: 'users', icon: 'ti-users', tone: 'info' },
+  { label: 'Kitoblardan qidirish', path: '/boshqaruv/books', param: 'books_search', perm: 'catalog', icon: 'ti-book', tone: 'warning' },
+  { label: 'Sotuvchi va Mualliflardan qidirish', path: '/boshqaruv/sellers', param: 'sellers_search', perm: 'sellers', icon: 'ti-building-store', tone: 'primary' },
+  { label: 'Tranzaksiyalardan qidirish', path: '/boshqaruv/transactions', param: 'transactions_search', perm: 'finance', icon: 'ti-coins', tone: 'danger' },
 ];
 
 const TONES = ['primary', 'success', 'warning', 'info', 'danger', 'secondary'];
@@ -194,13 +202,14 @@ function SearchCanvas({ visibleNav, open, onClose }: { visibleNav: NavGroup[]; o
         go: () => router.visit(it.to),
       }));
     if (!q) return sections;
-    const jumps: QuickResult[] = searchTargets.map((t) => ({
+    const allowedPaths = new Set(navItems.map((it) => it.to));
+    const jumps: QuickResult[] = searchTargets.filter((t) => allowedPaths.has(t.path)).map((t) => ({
       key: `jump:${t.path}`,
       label: `${t.label}: "${query.trim()}"`,
       icon: t.icon,
       hint: 'Ro\'yxat ichida qidirish',
       tone: t.tone,
-      go: () => router.get(t.path, { search: query.trim() }),
+      go: () => router.get(t.path, { [t.param]: query.trim() }),
     }));
     return [...sections, ...jumps];
   }, [query, navItems]);
@@ -354,7 +363,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [scroll, setScroll] = useState(0);
   const { url, props } = usePage<{
     auth?: { admin?: PanelAdmin };
+    workQueue?: WorkQueue | null;
   }>();
+  const queue = props.workQueue || null;
+  const navCount = (to: string) => (queue?.nav && (queue.nav as Record<string, number>)[to]) || 0;
+  const [bellOpen, setBellOpen] = useState(false);
   const admin = props.auth?.admin;
   const initials = initialsOf(admin?.name);
   const { toasts, dismiss } = useFlashToasts();
@@ -363,6 +376,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setProfileOpen(false);
     setSearchOpen(false);
+    setBellOpen(false);
     if (viewportMode() === 'mobile') setSemi(false);
   }, [url]);
   useEffect(() => { applyTheme(darkMode); }, [darkMode]);
@@ -379,7 +393,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         setProfileOpen(false);
         setSearchOpen(true);
       }
-      if (event.key === 'Escape') { setProfileOpen(false); setSearchOpen(false); }
+      if (event.key === 'Escape') { setProfileOpen(false); setSearchOpen(false); setBellOpen(false); }
     };
     window.addEventListener('resize', onResize);
     window.addEventListener('scroll', onScroll, { passive: true });
@@ -427,13 +441,18 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const renderBadge = (badge?: string) => (badge
-    ? <span className={`badge ${badge === 'LIVE' ? 'text-danger-dark bg-danger-300' : 'text-primary-dark bg-primary-300'} badge-notification ms-2`}>{badge}</span>
-    : null);
+  // Navbatdagi ishlar soni bo'lsa — statik "NEW"/"LIVE" o'rniga son ko'rsatiladi (faqat > 0)
+  const renderBadge = (badge?: string, to?: string) => {
+    const count = to ? navCount(to) : 0;
+    if (count > 0) return <span className="badge bg-danger text-white badge-notification ms-2" title="Diqqat talab qiladi">{count > 99 ? '99+' : count}</span>;
+    return badge
+      ? <span className={`badge ${badge === 'LIVE' ? 'text-danger-dark bg-danger-300' : 'text-primary-dark bg-primary-300'} badge-notification ms-2`}>{badge}</span>
+      : null;
+  };
 
   const canSettings = visibleNav.some((g) => g.items.some((it) => it.to === '/boshqaruv/settings'));
   const canSecurity = visibleNav.some((g) => g.items.some((it) => it.to === '/boshqaruv/security'));
-  const overlayOpen = profileOpen || searchOpen;
+  const overlayOpen = profileOpen || searchOpen || bellOpen;
 
   return (
     <div className="app-wrapper">
@@ -459,7 +478,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                     <Link href={it.to} className={isActive(it.match) ? 'active' : ''} title={it.label}>
                       <i className={it.ax || 'iconoir-page'}></i>
                       {it.label}
-                      {renderBadge(it.badge)}
+                      {renderBadge(it.badge, it.to)}
                     </Link>
                   </li>
                 ))}
@@ -474,6 +493,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   <li className="menu-title"><span>{section}</span></li>
                   {inSection.map((g) => {
                     const isOpen = openGroup === g.group;
+                    const groupCount = g.items.reduce((sum, it) => sum + navCount(it.to), 0);
                     const subId = `nav-${g.group.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}`;
                     return (
                       <li key={g.group}>
@@ -486,12 +506,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                         >
                           <i className={g.ax}></i>
                           {g.group}
+                          {!isOpen && groupCount > 0 ? <span className="badge bg-danger text-white badge-notification ms-2">{groupCount > 99 ? '99+' : groupCount}</span> : null}
                         </a>
                         <ul className={`collapse ${isOpen ? 'show' : ''}`} id={subId}>
                           {g.items.map((it) => (
                             <li key={it.to} className={isActive(it.match) ? 'active' : ''}>
-                              <Link href={it.to}>{it.label}</Link>
-                              {renderBadge(it.badge)}
+                              <Link href={it.to}>{it.label}{renderBadge(it.badge, it.to)}</Link>
                             </li>
                           ))}
                         </ul>
@@ -521,6 +541,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   >
                     <i className="iconoir-view-grid"></i>
                   </span>
+                  {currentNav ? (
+                    <div className="d-none d-md-flex flex-column lh-sm min-w-0">
+                      <span className="f-s-11 text-secondary text-truncate">{currentNav.group}</span>
+                      <span className="f-w-600 text-dark text-truncate">{currentNav.label}</span>
+                    </div>
+                  ) : null}
                 </div>
 
                 <div className="col-6 col-sm-8 d-flex align-items-center justify-content-end header-right p-0">
@@ -538,6 +564,41 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                         <i className="iconoir-search"></i>
                       </a>
                       <SearchCanvas visibleNav={visibleNav} open={searchOpen} onClose={() => setSearchOpen(false)} />
+                    </li>
+
+                    <li className="position-relative">
+                      <a
+                        className="d-block head-icon position-relative"
+                        href="#"
+                        role="button"
+                        aria-label="Navbatdagi ishlar"
+                        title="Navbatdagi ishlar"
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setProfileOpen(false); setSearchOpen(false); setBellOpen((v) => !v); }}
+                      >
+                        <i className="iconoir-bell"></i>
+                        {queue && queue.total > 0 ? (
+                          <span className="position-absolute translate-middle badge rounded-pill bg-danger" style={{ top: 6, left: '78%', fontSize: 10 }}>{queue.total > 99 ? '99+' : queue.total}</span>
+                        ) : null}
+                      </a>
+                      {bellOpen ? (
+                        <div className="card position-absolute end-0 mt-2 shadow kc-bell-menu" onClick={(e) => e.stopPropagation()}>
+                          <div className="card-header py-2 px-3 d-flex align-items-center justify-content-between">
+                            <span className="f-w-600">Navbatdagi ishlar</span>
+                            <Link href="/boshqaruv" className="f-s-12">Dashboard</Link>
+                          </div>
+                          <div className="card-body p-0">
+                            {queue && queue.items.length ? queue.items.map((item) => (
+                              <Link key={item.key} href={item.url} className="d-flex align-items-center gap-2 px-3 py-2 border-bottom kc-last-0 text-reset kc-bell-row">
+                                <span className={`h-35 w-35 d-flex-center b-r-10 flex-shrink-0 text-light-${item.tone}`}><i className={`ti ${item.icon}`}></i></span>
+                                <span className="flex-grow-1 text-truncate f-s-13">{item.label}</span>
+                                <span className={`badge text-light-${item.tone}`}>{item.count}</span>
+                              </Link>
+                            )) : (
+                              <div className="p-4 text-center text-secondary f-s-13"><i className="ti ti-circle-check text-success f-s-24 d-block mb-1"></i>Navbatda ish yo‘q — hammasi joyida</div>
+                            )}
+                          </div>
+                        </div>
+                      ) : null}
                     </li>
 
                     {canSecurity ? (
@@ -647,7 +708,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               </div>
             </div>
             {overlayOpen ? (
-              <div className="offcanvas-backdrop fade show" onClick={() => { setProfileOpen(false); setSearchOpen(false); }}></div>
+              <div className="offcanvas-backdrop fade show" onClick={() => { setProfileOpen(false); setSearchOpen(false); setBellOpen(false); }}></div>
             ) : null}
           </header>
 
@@ -684,7 +745,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </div>
             <div className="col-md-3 d-none d-md-block">
               <ul className="footer-text text-end">
-                <li><Link href="/boshqaruv/tickets">Yordam <i className="ti ti-help"></i></Link></li>
+                <li><Link href="/boshqaruv">Bosh sahifa <i className="ti ti-home"></i></Link></li>
               </ul>
             </div>
           </div>
@@ -695,7 +756,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className={`toast d-block bg-white ${toast.type === 'success' ? 'b-1-success' : 'b-1-danger'}`}
+            className={`toast d-block kc-toast ${toast.type === 'success' ? 'b-1-success' : 'b-1-danger'}`}
             role={toast.type === 'success' ? 'status' : 'alert'}
             aria-live="assertive"
             aria-atomic="true"

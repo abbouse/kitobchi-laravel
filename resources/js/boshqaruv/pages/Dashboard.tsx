@@ -1,5 +1,5 @@
 import { usePalette, categoryColor } from '../utils/palette';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, router, usePage } from '@inertiajs/react';
 import {
   Area,
@@ -189,10 +189,241 @@ const financialHelps: Record<string, string> = {
 // Axelit ro'yxatlaridagi rang navbati
 const DASH_TONES = ['primary', 'success', 'info', 'warning', 'danger', 'secondary'];
 
+// ─── Xodim ish joyi (rolga mos) ─────────────────────────────────────────────
+
+type QueueItem = { key: string; module: string; label: string; hint: string; count: number; tone: string; icon: string; url: string };
+type Highlight = { label: string; value: number | string; hint: string; tone: Tone; icon: string };
+type RecentAction = { id: number; text: string; module: string; moduleLabel: string; ok: boolean; at: string | null };
+type PersonalKpi = {
+  range: { from: string; to: string };
+  admin: { id: number; name: string; role: string; roleKey: string };
+  activity: { total: number; failed: number; activeDays: number; modules: Array<{ module: string; label: string; count: number }>; days: Array<{ date: string; count: number }> };
+  support: { replies: number; closed: number; good: number; bad: number; satisfaction: number | null; avgFirstResponse: number | null; openNow: number } | null;
+  highlights: Highlight[];
+  recent: RecentAction[];
+};
+type Workspace = {
+  greeting: string;
+  today: string;
+  access: { business: boolean; finance: boolean; partners: boolean; team: boolean; live: boolean };
+  queues: QueueItem[];
+  me: PersonalKpi;
+  links: { team: string | null; live: string | null; supportKpi: string | null };
+};
+
+type TabKey = 'overview' | 'finance' | 'growth' | 'partners';
+
+const MONTHS_UZ = ['yanvar', 'fevral', 'mart', 'aprel', 'may', 'iyun', 'iyul', 'avgust', 'sentabr', 'oktabr', 'noyabr', 'dekabr'];
+const WEEKDAYS_UZ = ['yakshanba', 'dushanba', 'seshanba', 'chorshanba', 'payshanba', 'juma', 'shanba'];
+
+function longDate(iso: string) {
+  const d = new Date(`${iso}T00:00:00`);
+  return `${d.getDate()}-${MONTHS_UZ[d.getMonth()]}, ${WEEKDAYS_UZ[d.getDay()]}`;
+}
+
+function agoLabel(iso: string | null) {
+  if (!iso) return '';
+  const min = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+  if (min < 1) return 'hozir';
+  if (min < 60) return `${min} daq oldin`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `${h} soat oldin`;
+  return `${Math.floor(h / 24)} kun oldin`;
+}
+
+function QueueBoard({ queues }: { queues: QueueItem[] }) {
+  const [showAll, setShowAll] = useState(false);
+  const active = queues.filter((q) => q.count > 0);
+  const calm = queues.filter((q) => q.count === 0);
+
+  return (
+    <div className="card">
+      <div className="card-header d-flex align-items-center justify-content-between gap-2 flex-wrap">
+        <div>
+          <h5 className="f-w-600 mb-0">Diqqat talab qiladi</h5>
+          <p className="mb-0 text-secondary f-s-13">Sizning bo‘limlaringizdagi navbatdagi ishlar — har 30 soniyada yangilanadi</p>
+        </div>
+        {calm.length ? (
+          <button type="button" className="btn btn-sm btn-light-secondary b-r-10" onClick={() => setShowAll((v) => !v)}>
+            {showAll ? 'Faqat ishlar' : `Hammasini ko‘rsatish (${queues.length})`}
+          </button>
+        ) : null}
+      </div>
+      <div className="card-body">
+        {active.length === 0 && !showAll ? (
+          <div className="d-flex align-items-center gap-3 p-3 b-r-15 text-light-success">
+            <span className="h-45 w-45 d-flex-center b-r-50 bg-success text-white flex-shrink-0"><i className="ti ti-check f-s-22"></i></span>
+            <div>
+              <div className="f-w-600">Navbatda ish yo‘q</div>
+              <div className="f-s-13">Barcha arizalar, buyurtmalar va murojaatlar ko‘rib chiqilgan. Ajoyib!</div>
+            </div>
+          </div>
+        ) : (
+          <div className="row g-3">
+            {(showAll ? queues : active).map((q) => (
+              <div className="col-sm-6 col-lg-4 col-xxl-3" key={q.key}>
+                <Link href={q.url} className={`kc-queue-tile d-flex align-items-center gap-3 p-3 b-r-15 h-100 text-reset ${q.count > 0 ? `kc-queue-${q.tone}` : 'kc-queue-calm'}`}>
+                  <span className={`h-45 w-45 d-flex-center b-r-12 flex-shrink-0 f-s-20 text-light-${q.count > 0 ? q.tone : 'secondary'}`}><i className={`ti ${q.icon}`}></i></span>
+                  <span className="min-w-0 flex-grow-1">
+                    <span className="d-block f-w-600 text-dark text-truncate">{q.label}</span>
+                    <span className="d-block f-s-12 text-secondary text-truncate">{q.hint}</span>
+                  </span>
+                  <span className={`f-w-700 f-s-22 ${q.count > 0 ? `text-${q.tone}` : 'text-secondary'}`}>{fmt(q.count)}</span>
+                </Link>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function MyWork({ me, links }: { me: PersonalKpi; links: Workspace['links'] }) {
+  const palette = usePalette();
+  const days = me.activity.days.map((d) => ({ ...d, label: new Date(`${d.date}T00:00:00`).getDate() }));
+  const maxModule = Math.max(1, ...me.activity.modules.map((m) => m.count));
+
+  return (
+    <div className="card">
+      <div className="card-header d-flex align-items-center justify-content-between gap-2 flex-wrap">
+        <div>
+          <h5 className="f-w-600 mb-0">Mening ishim · so‘nggi 7 kun</h5>
+          <p className="mb-0 text-secondary f-s-13">Paneldagi amallaringiz va rolingizga mos ko‘rsatkichlar</p>
+        </div>
+        <div className="d-flex gap-2">
+          {links.supportKpi ? <Link href={links.supportKpi} className="btn btn-sm btn-light-primary b-r-10"><i className="ti ti-chart-histogram me-1"></i>Support KPI</Link> : null}
+          {links.team ? <Link href={links.team} className="btn btn-sm btn-light-primary b-r-10"><i className="ti ti-users-group me-1"></i>Jamoa KPI</Link> : null}
+        </div>
+      </div>
+      <div className="card-body">
+        <div className="row g-3 mb-3">
+          {me.highlights.map((h) => (
+            <div className="col-6 col-xl-3" key={h.label}>
+              <MiniStat label={h.label} value={typeof h.value === 'number' ? fmt(h.value) : h.value} icon={`ti ${h.icon}`} tone={h.tone} meta={h.hint} />
+            </div>
+          ))}
+        </div>
+        <div className="row g-3">
+          <div className="col-lg-5">
+            <div className="f-w-600 mb-2 f-s-14">Kunlik faollik</div>
+            <ResponsiveContainer width="100%" height={150}>
+              <BarChart data={days} margin={{ left: 0, right: 0, top: 4, bottom: 0 }}>
+                <XAxis dataKey="label" stroke={palette.line} tick={{ fill: palette.muted }} fontSize={11} />
+                <YAxis allowDecimals={false} hide />
+                <Tooltip cursor={{ fill: palette.grid }} formatter={(v: number) => [`${fmt(v)} ta amal`, 'Faollik']} labelFormatter={() => ''} />
+                <Bar dataKey="count" fill={palette.indigo} radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+            {me.activity.modules.length ? (
+              <div className="mt-2">
+                {me.activity.modules.slice(0, 5).map((m) => (
+                  <div className="mb-2" key={m.module}>
+                    <div className="d-flex justify-content-between f-s-12 mb-1"><span className="text-secondary">{m.label}</span><span className="f-w-600">{fmt(m.count)}</span></div>
+                    <div className="progress h-5"><div className="progress-bar bg-primary" style={{ width: `${Math.max(4, (m.count / maxModule) * 100)}%` }}></div></div>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </div>
+          <div className="col-lg-7">
+            <div className="f-w-600 mb-2 f-s-14">So‘nggi amallar</div>
+            {me.recent.length ? (
+              <ul className="list-unstyled mb-0">
+                {me.recent.slice(0, 8).map((r) => (
+                  <li key={r.id} className="d-flex align-items-start gap-2 py-2 border-bottom kc-last-0">
+                    <span className={`h-30 w-30 d-flex-center b-r-50 flex-shrink-0 f-s-14 ${r.ok ? 'text-light-primary' : 'text-light-danger'}`}><i className={`ti ${r.ok ? 'ti-check' : 'ti-alert-triangle'}`}></i></span>
+                    <span className="min-w-0 flex-grow-1">
+                      <span className="d-block f-s-13 text-dark text-truncate">{r.text}</span>
+                      <span className="d-block f-s-11 text-secondary">{r.moduleLabel} · {agoLabel(r.at)}</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : <EmptyState text="Bu hafta hali amal bajarilmagan." icon="ti ti-mood-smile" />}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PipelinePanel({ counts }: { counts: Record<string, number> }) {
+  const steps = [
+    { key: 'new', label: 'Yangi', tone: 'primary', icon: 'ti-sparkles' },
+    { key: 'packing', label: 'Qadoqlanmoqda', tone: 'info', icon: 'ti-package' },
+    { key: 'onway', label: 'Yo‘lda', tone: 'warning', icon: 'ti-truck-delivery' },
+    { key: 'done', label: 'Yetkazildi', tone: 'success', icon: 'ti-circle-check' },
+    { key: 'cancelled', label: 'Bekor / qaytgan', tone: 'danger', icon: 'ti-circle-x' },
+  ];
+  const total = Math.max(1, steps.reduce((a, s) => a + (counts[s.key] || 0), 0));
+
+  return (
+    <div className="card h-100">
+      <div className="card-header d-flex align-items-center justify-content-between">
+        <h5 className="f-w-600 mb-0">Buyurtmalar oqimi</h5>
+        <Link href="/boshqaruv/orders" className="f-s-13">Barchasi</Link>
+      </div>
+      <div className="card-body">
+        <div className="progress mb-3" style={{ height: 10 }}>
+          {steps.map((s) => (
+            <div key={s.key} className={`progress-bar bg-${s.tone}`} style={{ width: `${((counts[s.key] || 0) / total) * 100}%` }} title={s.label}></div>
+          ))}
+        </div>
+        <ul className="list-unstyled mb-0">
+          {steps.map((s) => (
+            <li key={s.key} className="d-flex align-items-center gap-2 py-2 border-bottom kc-last-0">
+              <span className={`h-35 w-35 d-flex-center b-r-10 flex-shrink-0 text-light-${s.tone}`}><i className={`ti ${s.icon}`}></i></span>
+              <span className="flex-grow-1 text-secondary f-s-14">{s.label}</span>
+              <span className="f-w-600 text-dark">{fmt(counts[s.key] || 0)}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+function TabLoading() {
+  return (
+    <div className="card"><div className="card-body text-center text-secondary py-5">
+      <span className="spinner-border spinner-border-sm me-2"></span>Tahlil hisoblanmoqda…
+    </div></div>
+  );
+}
+
 export default function Dashboard() {
   const palette = usePalette();
-  const { dashboard = emptyDashboard } = usePage<{ dashboard?: DashboardPayload }>().props;
-  const [chartMetric, setChartMetric] = useState<'revenue' | 'profit' | 'orders'>('revenue');
+  const page = usePage<{
+    workspace: Workspace;
+    dashboard: DashboardPayload | null;
+    economics?: Partial<DashboardPayload> | null;
+    growth?: Partial<DashboardPayload> | null;
+    partners?: Partial<DashboardPayload> | null;
+    auth?: { admin?: { name?: string; role?: string } };
+  }>();
+  const { workspace, economics, growth, partners, auth } = page.props;
+  const base = page.props.dashboard;
+  const dashboard: DashboardPayload = { ...emptyDashboard, ...(base || {}), ...(economics || {}), ...(growth || {}), ...(partners || {}) } as DashboardPayload;
+  const access = workspace.access;
+  const finance = access.finance;
+
+  const tabs = ([
+    { key: 'overview', label: 'Umumiy', icon: 'ti-layout-dashboard', show: true },
+    { key: 'finance', label: 'Moliya', icon: 'ti-coins', show: access.finance },
+    { key: 'growth', label: 'O‘sish', icon: 'ti-trending-up', show: true },
+    { key: 'partners', label: 'Hamkorlar', icon: 'ti-building-store', show: access.partners },
+  ] as Array<{ key: TabKey; label: string; icon: string; show: boolean }>).filter((t) => t.show);
+
+  const [tab, setTab] = useState<TabKey>(() => {
+    try {
+      const saved = localStorage.getItem('kc-dashboard-tab') as TabKey | null;
+      return saved && tabs.some((t) => t.key === saved) ? saved : 'overview';
+    } catch { return 'overview'; }
+  });
+  const [stale, setStale] = useState<Record<string, boolean>>({});
+  const [loadingTab, setLoadingTab] = useState(false);
+  const [chartMetric, setChartMetric] = useState<'revenue' | 'profit' | 'orders'>(finance ? 'revenue' : 'orders');
   const [showCustomRange, setShowCustomRange] = useState(dashboard.range.key === 'custom');
   const [customFrom, setCustomFrom] = useState(dashboard.range.from || '');
   const [customTo, setCustomTo] = useState(dashboard.range.to || '');
@@ -202,13 +433,50 @@ export default function Dashboard() {
   const localNow = new Date();
   const today = `${localNow.getFullYear()}-${String(localNow.getMonth() + 1).padStart(2, '0')}-${String(localNow.getDate()).padStart(2, '0')}`;
 
+  const propOf: Record<TabKey, 'economics' | 'growth' | 'partners' | null> = { overview: null, finance: 'economics', growth: 'growth', partners: 'partners' };
+  const loadedOf: Record<TabKey, unknown> = { overview: true, finance: economics, growth, partners };
+
+  const periodParams = () => {
+    const params: Record<string, string> = { dashboard_period: dashboard.range.key };
+    if (dashboard.range.key === 'custom' && dashboard.range.from && dashboard.range.to) {
+      params.dashboard_from = dashboard.range.from;
+      params.dashboard_to = dashboard.range.to;
+    }
+    return params;
+  };
+
+  const loadTab = (key: TabKey, force = false) => {
+    const prop = propOf[key];
+    if (!prop) return;
+    if (!force && loadedOf[key] !== undefined && !stale[key]) return;
+    setLoadingTab(true);
+    router.reload({
+      only: [prop],
+      data: periodParams(),
+      onFinish: () => { setLoadingTab(false); setStale((s) => ({ ...s, [key]: false })); },
+    });
+  };
+
+  const openTab = (key: TabKey) => {
+    setTab(key);
+    try { localStorage.setItem('kc-dashboard-tab', key); } catch { /* yo'q */ }
+    loadTab(key);
+  };
+
+  useEffect(() => {
+    if (tab !== 'overview') loadTab(tab);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const selectPeriod = (dashboardPeriod: string, from?: string, to?: string) => {
     setIsFiltering(true);
+    const prop = propOf[tab];
+    setStale({ finance: tab !== 'finance', growth: tab !== 'growth', partners: tab !== 'partners' });
     router.get('/boshqaruv', {
       dashboard_period: dashboardPeriod,
       ...(dashboardPeriod === 'custom' ? { dashboard_from: from, dashboard_to: to } : {}),
     }, {
-      only: ['dashboard'],
+      only: prop ? ['dashboard', prop] : ['dashboard'],
       preserveScroll: true,
       preserveState: true,
       replace: true,
@@ -224,92 +492,69 @@ export default function Dashboard() {
   // Excel eksport joriy davr bilan bir xil bo'lishi uchun period paramlarini qo'shamiz.
   const exportHref = (exportType: 'investor' | 'dashboard' | 'unit' = 'investor') => {
     if (!dashboard.exportUrl) return '#';
-    const params = new URLSearchParams({ dashboard_period: dashboard.range.key, export_type: exportType });
-    if (dashboard.range.key === 'custom' && dashboard.range.from && dashboard.range.to) {
-      params.set('dashboard_from', dashboard.range.from);
-      params.set('dashboard_to', dashboard.range.to);
-    }
+    const params = new URLSearchParams({ ...periodParams(), export_type: exportType });
     return `${dashboard.exportUrl}?${params.toString()}`;
   };
 
+  const firstName = (auth?.admin?.name || workspace.me.admin.name || '').split(/\s+/)[0];
+  const tabLoaded = tab === 'overview' || (loadedOf[tab] !== undefined && loadedOf[tab] !== null);
+
   return (
     <div>
+      {/* ── Sarlavha ── */}
       <div className="d-flex align-items-end justify-content-between flex-wrap gap-3 mx-1 mb-3">
-        <div className="d-flex align-items-center gap-2">
-          <h4 className="main-title mb-0">Boshqaruv dashboard</h4>
-          <Link
-            href="/boshqaruv/security"
-            className="badge bg-light-primary text-primary text-decoration-none d-inline-flex align-items-center"
-            title="Kiberxavfsizlik va Server monitoringi"
-          >
-            <i className="ti ti-shield-check me-1"></i>Server & Xavfsizlik
-          </Link>
+        <div>
+          <h4 className="main-title mb-1">{workspace.greeting}, {firstName}!</h4>
+          <p className="mb-0 text-secondary">
+            <span className="badge text-light-primary me-2">{workspace.me.admin.role}</span>
+            {longDate(workspace.today)}
+          </p>
         </div>
-        <div className="d-flex gap-2 align-items-center flex-wrap justify-content-end">
-          <span className="badge text-light-info"><i className="ti ti-calendar me-1"></i>{dashboard.range.label}</span>
-          <div className="nav kc-segment" role="tablist" aria-label="Dashboard davri">
-            {([
-              ['today', 'Bugun'],
-              ['week', 'Hafta'],
-              ['month', 'Oy'],
-              ['year', 'Yil'],
-              ['all', 'Barchasi'],
-            ] as const).map(([key, label]) => (
-              <div className="nav-item" key={key}>
-                <button type="button" role="tab" aria-selected={dashboard.range.key === key} disabled={isFiltering} className={`nav-link ${dashboard.range.key === key ? 'active' : ''}`} onClick={() => selectPeriod(key)}>
-                  {label}
+        {base ? (
+          <div className="d-flex gap-2 align-items-center flex-wrap justify-content-end">
+            <div className="nav kc-segment" role="tablist" aria-label="Dashboard davri">
+              {([
+                ['today', 'Bugun'],
+                ['week', 'Hafta'],
+                ['month', 'Oy'],
+                ['year', 'Yil'],
+                ['all', 'Barchasi'],
+              ] as const).map(([key, label]) => (
+                <div className="nav-item" key={key}>
+                  <button type="button" role="tab" aria-selected={dashboard.range.key === key} disabled={isFiltering} className={`nav-link ${dashboard.range.key === key ? 'active' : ''}`} onClick={() => selectPeriod(key)}>
+                    {label}
+                  </button>
+                </div>
+              ))}
+              <div className="nav-item">
+                <button type="button" role="tab" aria-selected={dashboard.range.key === 'custom'} disabled={isFiltering} className={`nav-link ${dashboard.range.key === 'custom' ? 'active' : ''}`} onClick={() => setShowCustomRange((value) => !value)}>
+                  <i className="ti ti-calendar-stats"></i>Sana
                 </button>
               </div>
-            ))}
-            <div className="nav-item">
-              <button type="button" role="tab" aria-selected={dashboard.range.key === 'custom'} disabled={isFiltering} className={`nav-link ${dashboard.range.key === 'custom' ? 'active' : ''}`} onClick={() => setShowCustomRange((value) => !value)}>
-                <i className="ti ti-calendar-stats"></i>Sana
-              </button>
             </div>
-          </div>
-          {dashboard.exportUrl ? (
-            <div className="d-flex align-items-center gap-1">
+            {dashboard.exportUrl ? (
               <div className="btn-group btn-group-sm">
-                <a href={exportHref('investor')} className="btn btn-outline-success" title="To'liq investor paketi: assumptions, unit economics, P&L, sales trend, sellers va h.k. — bir nechta varaqda.">
-                  <i className="ti ti-file-spreadsheet me-1"></i>Excel export
+                <a href={exportHref('investor')} className="btn btn-light-success" title="Investor paketi: unit economics, P&L, trend, sellers">
+                  <i className="ti ti-file-spreadsheet me-1"></i>Excel
                 </a>
-                <button type="button" className="btn btn-outline-success dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                <button type="button" className="btn btn-light-success dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
                   <span className="visually-hidden">Export turlari</span>
                 </button>
                 <ul className="dropdown-menu dropdown-menu-end">
-                  <li><a className="dropdown-item" href={exportHref('investor')}>
-                    <i className="ti ti-sparkles me-2"></i>Investor pack · multi-sheet
-                    <small className="d-block text-muted ms-4">Barcha varaqlar: summary, unit econ, P&L, trend, sellers</small>
-                  </a></li>
-                  <li><hr className="dropdown-divider" /></li>
-                  <li><a className="dropdown-item" href={exportHref('unit')}>
-                    <i className="ti ti-calculator me-2"></i>Unit economics + Partners MRR
-                    <small className="d-block text-muted ms-4">Xaridor CAC/LTV va hamkorlar (premium) MRR/churn, oylik</small>
-                  </a></li>
-                  <li><hr className="dropdown-divider" /></li>
-                  <li><a className="dropdown-item" href={exportHref('dashboard')}>
-                    <i className="ti ti-table me-2"></i>Dashboard snapshot
-                    <small className="d-block text-muted ms-4">Ekrandagi asosiy KPI'lar — tezkor umumiy jadval</small>
-                  </a></li>
+                  <li><a className="dropdown-item" href={exportHref('investor')}><i className="ti ti-sparkles me-2"></i>Investor pack</a></li>
+                  <li><a className="dropdown-item" href={exportHref('unit')}><i className="ti ti-calculator me-2"></i>Unit economics + MRR</a></li>
+                  <li><a className="dropdown-item" href={exportHref('dashboard')}><i className="ti ti-table me-2"></i>Dashboard snapshot</a></li>
                 </ul>
               </div>
-              <InfoHint text="Excel fayl joriy tanlangan davr (yuqoridagi filtr) bilan bir xil ma'lumotdan generatsiya qilinadi — ekrandagi raqamlar bilan aynan mos keladi. Katta marketpleyslar kabi: bir tugma, tayyor .xlsx." />
-            </div>
-          ) : null}
-          <Link href="/boshqaruv/live" className="btn btn-outline-secondary btn-sm"><i className="ti ti-broadcast me-1"></i>Live</Link>
-        </div>
+            ) : null}
+            {workspace.links.live ? <Link href={workspace.links.live} className="btn btn-light-danger btn-sm"><i className="ti ti-broadcast me-1"></i>Live</Link> : null}
+          </div>
+        ) : null}
       </div>
 
-      {dashboard.financialRestricted ? (
-        <div className="alert alert-light-secondary d-flex align-items-center gap-2 mb-3">
-          <i className="ti ti-lock"></i>
-          <div>Sizning rolingizda moliyaviy ko'rsatkichlar (daromad, marja, komissiya, CAC/LTV va h.k.) ko'rsatilmaydi — faqat operatsion sonlar (buyurtma, foydalanuvchi soni va h.k.) ochiq. Kerak bo'lsa, "Moliya" ruxsatiga ega admindan so'rang.</div>
-        </div>
-      ) : null}
-
-      {showCustomRange ? (
+      {base && showCustomRange ? (
         <div className="card">
-<div className="card-body py-2 px-3">
+          <div className="card-body py-2 px-3">
             <div className="d-flex align-items-end gap-2 flex-wrap">
               <label className="f-s-13 text-muted">
                 <span className="d-block mb-1">Boshlanish</span>
@@ -321,177 +566,272 @@ export default function Dashboard() {
               </label>
               <button className="btn btn-primary btn-sm" disabled={!customFrom || !customTo || isFiltering} onClick={applyCustomRange}>
                 {isFiltering ? <span className="spinner-border spinner-border-sm me-1"></span> : <i className="ti ti-filter me-1"></i>}
-                Ko'rsatish
+                Ko‘rsatish
               </button>
-              <small className="text-muted ms-auto">Savdo sanasi mijoz buyurtmani qabul qilgan vaqt bo'yicha olinadi.</small>
             </div>
           </div>
-</div>
+        </div>
       ) : null}
 
-      {/* ── 1. Axelit Asosiy eCommerce Marquee Vidjetlari (Daromad, Orderlar, Chek, Userlar) ── */}
-      <div className="row mb-1">
-        <PeriodCard index={0} label="Daromad" value={money(current.revenue)} delta={previous ? change(current.revenue, previous.revenue) : null} icon="ti-coins" help={periodHelps.revenue} />
-        <PeriodCard index={1} label="Yakuniy savdolar" value={fmt(current.orders)} delta={previous ? change(current.orders, previous.orders) : null} icon="ti-shopping-bag" help={periodHelps.orders} />
-        <PeriodCard index={2} label="O'rtacha chek" value={money(current.aov)} delta={previous ? change(current.aov, previous.aov) : null} icon="ti-receipt" help={periodHelps.aov} />
-        <PeriodCard index={3} label="Yangi userlar" value={fmt(current.users)} delta={previous ? change(current.users, previous.users) : null} icon="ti-user-plus" help={periodHelps.users} />
-      </div>
+      {/* ── 1. Navbatdagi ishlar (rolga mos) ── */}
+      <QueueBoard queues={workspace.queues} />
 
-      {/* ── 2. Operatsion Ko'rsatkichlar (12 ta Metric vidjeti) ── */}
-      <div className="row">
-        <Metric index={0} label="Buyurtmalar" value={dashboard.metrics.orders} icon="ti-receipt" href="/boshqaruv/orders" help={metricHelps.orders} />
-        <Metric index={1} label="Yakuniy savdo" value={dashboard.metrics.paidOrders} icon="ti-credit-card" href="/boshqaruv/orders" help={metricHelps.paidOrders} />
-        <Metric index={2} label="Foydalanuvchilar" value={dashboard.metrics.users} icon="ti-users" href="/boshqaruv/users" help={metricHelps.users} />
-        <Metric index={3} label="Kitoblar" value={dashboard.metrics.books} icon="ti-book" href="/boshqaruv/books" help={metricHelps.books} />
-        <Metric index={4} label="Sotuvchilar" value={dashboard.metrics.sellers} icon="ti-building-store" href="/boshqaruv/sellers" help={metricHelps.sellers} />
-        <Metric index={5} label="Kuryerlar" value={dashboard.metrics.couriers} icon="ti-bike" href="/boshqaruv/couriers" help={metricHelps.couriers} />
-        <Metric index={6} label="Premium user" value={dashboard.metrics.premiumUsers} icon="ti-sparkles" href="/boshqaruv/users" help={metricHelps.premiumUsers} />
-        <Metric index={7} label="Online user" value={dashboard.metrics.onlineUsers} icon="ti-broadcast" href="/boshqaruv/users" help={metricHelps.onlineUsers} />
-        <Metric index={8} label="Kanselyariya" value={dashboard.metrics.stationeries} icon="ti-edit" href="/boshqaruv/stationeries" help={metricHelps.stationeries} />
-        <Metric index={9} label="Pending seller" value={dashboard.metrics.pendingSellers} icon="ti-hourglass" href="/boshqaruv/sellers" help={metricHelps.pendingSellers} />
-        <Metric index={10} label="Support ticket" value={dashboard.metrics.tickets} icon="ti-headset" href="/boshqaruv/tickets" help={metricHelps.tickets} />
-        <Metric index={11} label="Shikoyatlar" value={dashboard.metrics.complaints} icon="ti-alert-triangle" href="/boshqaruv/shikoyatlar" help={metricHelps.complaints} />
-      </div>
+      {/* ── 2. Mening ishim ── */}
+      <MyWork me={workspace.me} links={workspace.links} />
 
-      <UnitEconomics data={dashboard.unitEconomics} monthly={dashboard.unitEconomicsMonthly} />
-
-      <PartnerEconomics data={dashboard.partnerEconomics} />
-
-      <div className="row">
-        <div className="col-xl-8">
-          <div className="card h-100">
-<div className="card-header d-flex align-items-center justify-content-between gap-2 flex-wrap">
-              <div>
-                <div className="d-flex align-items-center gap-2">
-                  <h5 className="f-w-600">{dashboard.salesTrend.label} savdo trendi</h5>
-                  <InfoHint text="Grafik tanlangan davr uzunligiga qarab soatlik, kunlik, oylik yoki yillik bo'linadi. Daromad va order faqat yakuniy savdolardan olinadi; Signal tanlangan davr P&L marjasining vaqt nuqtalariga mutanosib taqsimotidir." />
+      {/* ── 3. Biznes ko'rinishi ── */}
+      {base ? (
+        <>
+          <div className="d-flex align-items-center justify-content-between flex-wrap gap-2 mx-1 mb-3 mt-2">
+            <h5 className="f-w-600 mb-0">Biznes ko‘rinishi · <span className="text-secondary f-w-500">{dashboard.range.label}</span></h5>
+            <div className="nav kc-segment" role="tablist" aria-label="Bo‘limlar">
+              {tabs.map((t) => (
+                <div className="nav-item" key={t.key}>
+                  <button type="button" role="tab" aria-selected={tab === t.key} className={`nav-link ${tab === t.key ? 'active' : ''}`} onClick={() => openTab(t.key)}>
+                    <i className={`ti ${t.icon}`}></i>{t.label}
+                  </button>
                 </div>
-                <p className="mb-0 text-secondary">{dashboard.salesTrend.granularity} · yakuniy savdolar va platform signal</p>
-              </div>
-              <div className="nav kc-segment kc-segment-sm" role="tablist" aria-label="Grafik ko'rsatkichi">
-                {([['revenue', 'Daromad'], ['profit', 'Signal'], ['orders', 'Order']] as const).map(([key, label]) => (
-                  <div className="nav-item" key={key}>
-                    <button type="button" role="tab" aria-selected={chartMetric === key} className={`nav-link ${chartMetric === key ? 'active' : ''}`} onClick={() => setChartMetric(key)}>{label}</button>
-                  </div>
-                ))}
-              </div>
+              ))}
             </div>
-<div className="card-body">
+          </div>
 
-              <div className="app-scroll overflow-x-auto overflow-y-hidden">
-                <div style={{ minWidth: Math.max(720, dashboard.salesByMonth.length * 54) }}>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <AreaChart data={dashboard.salesByMonth} margin={{ left: 4, right: 18, top: 8, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="dashRevenue" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor={palette.indigo} stopOpacity={0.45} />
-                          <stop offset="100%" stopColor={palette.indigo} stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke={palette.grid} vertical={false} />
-                      <XAxis dataKey="month" stroke={palette.line} tick={{ fill: palette.muted }} fontSize={11} interval={0} minTickGap={10} />
-                      <YAxis stroke={palette.line} tick={{ fill: palette.muted }} fontSize={11} width={54} tickFormatter={(value) => chartMetric === 'orders' ? fmt(Number(value)) : compact(Number(value))} />
-                      <Tooltip formatter={(value: number) => chartMetric === 'orders' ? fmt(value) : money(value)} />
-                      <Area type="monotone" dataKey={chartMetric} stroke={chartMetric === 'revenue' ? palette.indigo : chartMetric === 'profit' ? palette.green : palette.amber} fill={chartMetric === 'revenue' ? 'url(#dashRevenue)' : 'transparent'} strokeWidth={2} />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            </div>
-</div>
-        </div>
-
-        <div className="col-xl-4">
-          <div className="card h-100">
-<div className="card-header d-flex align-items-center gap-2">
-                <h5 className="f-w-600">Kategoriya bo'yicha savdo · {dashboard.range.label}</h5>
-              <InfoHint text="To'langan order itemlari kategoriya bo'yicha guruhlanadi. Kitoblar o'z categorylari bilan chiqadi, kanselyariya esa ichki bo'limlariga bo'linmay bitta Kanselyariya sifatida hisoblanadi. Gift sovg'alar kirmaydi." />
-            </div>
-<div className="card-body">
-
-              {dashboard.categoryShare.length ? (
-                <>
-                  <ResponsiveContainer width="100%" height={190}>
-                    <PieChart>
-                      <Pie data={dashboard.categoryShare} dataKey="value" innerRadius={52} outerRadius={78} paddingAngle={3}>
-                        {dashboard.categoryShare.map((row, index) => <Cell key={row.name} fill={categoryColor(palette, index)} />)}
-                      </Pie>
-                      <Tooltip formatter={(value: number) => `${value}%`} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <ul className="list-group list-group-flush">
-                    {dashboard.categoryShare.map((row, index) => (
-                      <li className="list-group-item d-flex align-items-center justify-content-between gap-3 px-0" key={row.name}>
-                        <span className="d-flex align-items-center gap-2 min-w-0 text-secondary"><span className="d-inline-block h-10 w-10 b-r-50 flex-shrink-0" style={{ background: categoryColor(palette, index) }}></span><span className="text-truncate">{row.name}</span></span>
-                        <strong className="text-nowrap text-dark">{row.value}% · {money(row.revenue)}</strong>
-                      </li>
-                    ))}
-                  </ul>
-                </>
-              ) : <EmptyState text="To'langan order itemlari hali topilmadi." />}
-            </div>
-</div>
-        </div>
-      </div>
-
-      <div className="row">
-        <FinancialPanel dashboard={dashboard} />
-        <StatusPanel title="Main orderlar" counts={dashboard.status.main} labels={{ all: 'Jami', new: 'Yangi', packing: 'Qadoq', onway: "Yo'lda", done: 'Done', cancelled: 'Bekor' }} />
-        <StatusPanel title="Seller orderlar" counts={dashboard.status.seller} labels={{ all: 'Jami', payment_pending: "To'lov", new: 'Yangi', accepted: 'Qabul', handover: 'Kuryerda', cancelled: 'Bekor' }} />
-        <StatusPanel title="Kuryer orderlar" counts={dashboard.status.courier} labels={{ all: 'Jami', pending: 'Kutmoqda', in_delivery: "Yo'lda", delivered: 'Yetdi', customer_received: 'Qabul', rejected: 'Bekor' }} />
-      </div>
-
-      <BusinessKpis dashboard={dashboard} />
-
-      <PlatformAnalysis rows={dashboard.platformAnalysis} />
-
-      <FunnelPanel funnel={dashboard.funnel} />
-
-      <CohortPanel retention={dashboard.retention} />
-
-      <SellerScorecard rows={dashboard.sellerScorecard} />
-
-      <div className="row">
-        <div className="col-xl-4">
-          <RankPanel title={`Top mahsulotlar · ${dashboard.range.label}`} help="Tanlangan davrda yakunlangan savdolardagi mahsulotlar dona bo'yicha saralanadi. Gift turidagi sovg'alar tekin bo'lgani uchun bu ro'yxatga kirmaydi." rows={dashboard.topProducts.map((row) => ({ name: row.name, meta: `${fmt(row.quantity)} dona`, value: money(row.revenue) }))} />
-        </div>
-        <div className="col-xl-4">
-          <RecentOrders rows={dashboard.recentOrders} />
-        </div>
-        <div className="col-xl-4">
-          <div className="card h-100">
-<div className="card-header">
-              <h5 className="mb-0">Operatsion ogohlantirishlar</h5>
-            </div>
-<div className="card-body">
-
-              <ul className="order-content-list">
-                {dashboard.alerts.length ? dashboard.alerts.map((alert, index) => {
-                  const tone = ['warning', 'danger', 'info', 'primary'][index % 4];
-                  return (
-                    <li className={`bg-${tone}-300`} key={alert.title}>
-                      <Link href={alert.url || '/boshqaruv'} className="d-block text-decoration-none">
-                        <h6 className={`text-${tone}-dark f-w-600 mb-0`}><i className={`${tiIcon(alert.icon)} me-1`}></i>{alert.title}</h6>
-                        <p className={`text-${tone}-dark mb-0 f-s-13 txt-ellipsis-2`}>{alert.text}</p>
-                      </Link>
-                    </li>
-                  );
-                }) : (
-                  <li className="bg-success-300">
-                    <h6 className="text-success-dark f-w-600 mb-0"><i className="ti ti-circle-check me-1"></i>Hammasi joyida</h6>
-                    <p className="text-success-dark mb-0 f-s-13">Kritik ogohlantirish yo'q.</p>
-                  </li>
+          {tab === 'overview' ? (
+            <>
+              <div className="row mb-1">
+                {finance ? (
+                  <>
+                    <PeriodCard index={0} label="Daromad" value={money(current.revenue)} delta={previous ? change(current.revenue, previous.revenue) : null} icon="ti-coins" help={periodHelps.revenue} />
+                    <PeriodCard index={1} label="Yakuniy savdolar" value={fmt(current.orders)} delta={previous ? change(current.orders, previous.orders) : null} icon="ti-shopping-bag" help={periodHelps.orders} />
+                    <PeriodCard index={2} label="O‘rtacha chek" value={money(current.aov)} delta={previous ? change(current.aov, previous.aov) : null} icon="ti-receipt" help={periodHelps.aov} />
+                    <PeriodCard index={3} label="Yangi foydalanuvchilar" value={fmt(current.users)} delta={previous ? change(current.users, previous.users) : null} icon="ti-user-plus" help={periodHelps.users} />
+                  </>
+                ) : (
+                  <>
+                    <PeriodCard index={0} label="Yakuniy savdolar" value={fmt(current.orders)} delta={previous ? change(current.orders, previous.orders) : null} icon="ti-shopping-bag" help={periodHelps.orders} />
+                    <PeriodCard index={1} label="Yangi foydalanuvchilar" value={fmt(current.users)} delta={previous ? change(current.users, previous.users) : null} icon="ti-user-plus" help={periodHelps.users} />
+                    <PeriodCard index={2} label="Jarayondagi buyurtmalar" value={fmt((dashboard.status.main.new || 0) + (dashboard.status.main.packing || 0) + (dashboard.status.main.onway || 0))} delta={null} icon="ti-hourglass" />
+                    <PeriodCard index={3} label="Hozir onlayn" value={fmt(dashboard.metrics.onlineUsers || 0)} delta={null} icon="ti-broadcast" help={metricHelps.onlineUsers} />
+                  </>
                 )}
-              </ul>
-            </div>
-</div>
-        </div>
-      </div>
+              </div>
 
-      <div className="row">
-        <DistributionPanel title={`To'lov kesimi · ${dashboard.range.label}`} help="Tanlangan davrda yaratilgan buyurtmalar to'lov statusi bo'yicha guruhlanadi: qancha order va jami ichidagi ulushi." rows={dashboard.paymentSplit.map((row) => ({ name: row.name, value: `${fmt(row.count)} ta · ${row.share}%` }))} />
-        <DistributionPanel title={`Yetkazish kesimi · ${dashboard.range.label}`} help="Tanlangan davrda yakunlangan savdolar yetkazish turi bo'yicha guruhlanadi. Yonidagi summa shu turdagi savdolar tushumi." rows={dashboard.deliverySplit.map((row) => ({ name: row.name, value: `${fmt(row.count)} ta · ${money(row.revenue)}` }))} />
-        <DistributionPanel title={`Hududlar · ${dashboard.range.label}`} help="Tanlangan davrda yakunlangan savdolarning address snapshotidan viloyat/shahar olinadi. Noma'lum addresslar alohida guruhga tushadi." rows={dashboard.regions.map((row) => ({ name: row.name, value: `${fmt(row.value)} ta · ${money(row.revenue)}` }))} />
+              <div className="row">
+                <div className="col-xl-8">
+                  <div className="card h-100">
+                    <div className="card-header d-flex align-items-center justify-content-between gap-2 flex-wrap">
+                      <div>
+                        <h5 className="f-w-600 mb-0">Savdo trendi</h5>
+                        <p className="mb-0 text-secondary f-s-13">{dashboard.salesTrend.granularity} · yakunlangan savdolar</p>
+                      </div>
+                      <div className="nav kc-segment kc-segment-sm" role="tablist" aria-label="Grafik ko‘rsatkichi">
+                        {(finance ? [['revenue', 'Daromad'], ['profit', 'Marja'], ['orders', 'Buyurtma']] : [['orders', 'Buyurtma']]).map(([key, label]) => (
+                          <div className="nav-item" key={key}>
+                            <button type="button" role="tab" aria-selected={chartMetric === key} className={`nav-link ${chartMetric === key ? 'active' : ''}`} onClick={() => setChartMetric(key as typeof chartMetric)}>{label}</button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="card-body">
+                      <ResponsiveContainer width="100%" height={300}>
+                        <AreaChart data={dashboard.salesByMonth} margin={{ left: 0, right: 12, top: 8, bottom: 0 }}>
+                          <defs>
+                            <linearGradient id="dashTrend" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor={palette.indigo} stopOpacity={0.35} />
+                              <stop offset="100%" stopColor={palette.indigo} stopOpacity={0} />
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" stroke={palette.grid} vertical={false} />
+                          <XAxis dataKey="month" stroke={palette.line} tick={{ fill: palette.muted }} fontSize={11} minTickGap={16} />
+                          <YAxis stroke={palette.line} tick={{ fill: palette.muted }} fontSize={11} width={48} tickFormatter={(value) => chartMetric === 'orders' ? fmt(Number(value)) : compact(Number(value))} />
+                          <Tooltip formatter={(value: number) => chartMetric === 'orders' ? `${fmt(value)} ta` : money(value)} />
+                          <Area type="monotone" dataKey={chartMetric} stroke={chartMetric === 'profit' ? palette.green : palette.indigo} fill="url(#dashTrend)" strokeWidth={2.5} />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                </div>
+                <div className="col-xl-4">
+                  <PipelinePanel counts={dashboard.status.main} />
+                </div>
+              </div>
+
+              <div className="row">
+                <div className="col-xl-4 col-md-6">
+                  <RankPanel title="Top mahsulotlar" help="Tanlangan davrda yakunlangan savdolardagi mahsulotlar dona bo‘yicha. Sovg‘alar kirmaydi." rows={dashboard.topProducts.map((row) => ({ name: row.name, meta: `${fmt(row.quantity)} dona`, value: finance ? money(row.revenue) : `${fmt(row.quantity)} ta` }))} />
+                </div>
+                <div className="col-xl-4 col-md-6">
+                  <div className="card h-100">
+                    <div className="card-header d-flex align-items-center gap-2">
+                      <h5 className="f-w-600 mb-0">Kategoriyalar ulushi</h5>
+                      <InfoHint text="Yakunlangan savdolardagi mahsulotlar kategoriya bo‘yicha. Kanselyariya bitta guruh sifatida hisoblanadi." />
+                    </div>
+                    <div className="card-body">
+                      {dashboard.categoryShare.length ? (
+                        <>
+                          <ResponsiveContainer width="100%" height={170}>
+                            <PieChart>
+                              <Pie data={dashboard.categoryShare} dataKey="value" innerRadius={48} outerRadius={74} paddingAngle={3}>
+                                {dashboard.categoryShare.map((row, index) => <Cell key={row.name} fill={categoryColor(palette, index)} />)}
+                              </Pie>
+                              <Tooltip formatter={(value: number) => `${value}%`} />
+                            </PieChart>
+                          </ResponsiveContainer>
+                          <ul className="list-unstyled mb-0">
+                            {dashboard.categoryShare.slice(0, 5).map((row, index) => (
+                              <li className="d-flex align-items-center justify-content-between gap-3 py-1 f-s-13" key={row.name}>
+                                <span className="d-flex align-items-center gap-2 min-w-0 text-secondary"><span className="d-inline-block h-10 w-10 b-r-50 flex-shrink-0" style={{ background: categoryColor(palette, index) }}></span><span className="text-truncate">{row.name}</span></span>
+                                <strong className="text-nowrap text-dark">{row.value}%</strong>
+                              </li>
+                            ))}
+                          </ul>
+                        </>
+                      ) : <EmptyState text="Yakunlangan savdo hali yo‘q." />}
+                    </div>
+                  </div>
+                </div>
+                <div className="col-xl-4">
+                  <div className="card h-100">
+                    <div className="card-header"><h5 className="mb-0 f-w-600">Operatsion ogohlantirishlar</h5></div>
+                    <div className="card-body">
+                      <ul className="order-content-list">
+                        {dashboard.alerts.length ? dashboard.alerts.map((alert, index) => {
+                          const tone = ['warning', 'danger', 'info', 'primary'][index % 4];
+                          return (
+                            <li className={`bg-${tone}-300`} key={alert.title}>
+                              <Link href={alert.url || '/boshqaruv'} className="d-block text-decoration-none">
+                                <h6 className={`text-${tone}-dark f-w-600 mb-0`}><i className={`${tiIcon(alert.icon)} me-1`}></i>{alert.title}</h6>
+                                <p className={`text-${tone}-dark mb-0 f-s-13 txt-ellipsis-2`}>{alert.text}</p>
+                              </Link>
+                            </li>
+                          );
+                        }) : (
+                          <li className="bg-success-300">
+                            <h6 className="text-success-dark f-w-600 mb-0"><i className="ti ti-circle-check me-1"></i>Hammasi joyida</h6>
+                            <p className="text-success-dark mb-0 f-s-13">Kritik ogohlantirish yo‘q.</p>
+                          </li>
+                        )}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="row">
+                <div className="col-xl-8">
+                  <RecentOrders rows={dashboard.recentOrders} showAmount={finance} />
+                </div>
+                <div className="col-xl-4">
+                  <div className="card h-100">
+                    <div className="card-header"><h5 className="mb-0 f-w-600">Platforma</h5></div>
+                    <div className="card-body">
+                      <div className="row g-2">
+                        {[
+                          ['Foydalanuvchilar', dashboard.metrics.users, 'ti-users', '/boshqaruv/users'],
+                          ['Premium', dashboard.metrics.premiumUsers, 'ti-sparkles', '/boshqaruv/users'],
+                          ['Kitoblar', dashboard.metrics.books, 'ti-book', '/boshqaruv/books'],
+                          ['Kanselyariya', dashboard.metrics.stationeries, 'ti-edit', '/boshqaruv/stationeries'],
+                          ['Do‘konlar', dashboard.metrics.sellers, 'ti-building-store', '/boshqaruv/sellers'],
+                          ['Kuryerlar', dashboard.metrics.couriers, 'ti-bike', '/boshqaruv/couriers'],
+                        ].map(([label, value, icon, href]) => (
+                          <div className="col-6" key={label as string}>
+                            <Link href={href as string} className="d-flex align-items-center gap-2 p-2 b-r-10 b-1-light text-reset h-100">
+                              <span className="h-35 w-35 d-flex-center b-r-10 text-light-primary flex-shrink-0"><i className={`ti ${icon}`}></i></span>
+                              <span className="min-w-0">
+                                <span className="d-block f-w-600 text-dark">{fmt(Number(value) || 0)}</span>
+                                <span className="d-block f-s-11 text-secondary text-truncate">{label}</span>
+                              </span>
+                            </Link>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : null}
+
+          {tab !== 'overview' && (loadingTab || !tabLoaded) ? <TabLoading /> : null}
+
+          {tab === 'finance' && tabLoaded && !loadingTab ? (
+            <>
+              <div className="row"><FinancialPanel dashboard={dashboard} />
+                <div className="col-xl-6">
+                  <div className="row">
+                    <DistributionPanel colClass="col-12" title="To‘lov holati" help="Tanlangan davrda yaratilgan buyurtmalar to‘lov statusi bo‘yicha." rows={dashboard.paymentSplit.map((row) => ({ name: row.name, value: `${fmt(row.count)} ta · ${row.share}%` }))} />
+                    <DistributionPanel colClass="col-12" title="Yetkazish turlari" help="Yakunlangan savdolar yetkazish turi bo‘yicha." rows={dashboard.deliverySplit.map((row) => ({ name: row.name, value: `${fmt(row.count)} ta · ${money(row.revenue)}` }))} />
+                  </div>
+                </div>
+              </div>
+              <UnitEconomics data={dashboard.unitEconomics} monthly={dashboard.unitEconomicsMonthly} />
+            </>
+          ) : null}
+
+          {tab === 'growth' && tabLoaded && !loadingTab ? (
+            <>
+              <BusinessKpis dashboard={dashboard} />
+              <FunnelPanel funnel={dashboard.funnel} />
+              <CohortPanel retention={dashboard.retention} />
+              <PlatformAnalysis rows={dashboard.platformAnalysis} />
+              <div className="row">
+                <DistributionPanel colClass="col-xl-6" title="Hududlar" help="Yakunlangan savdolarning manzilidan viloyat/shahar olinadi." rows={dashboard.regions.map((row) => ({ name: row.name, value: finance ? `${fmt(row.value)} ta · ${money(row.revenue)}` : `${fmt(row.value)} ta` }))} />
+              </div>
+            </>
+          ) : null}
+
+          {tab === 'partners' && tabLoaded && !loadingTab ? (
+            <>
+              <div className="row">
+                <StatusPanel colClass="col-md-6" title="Do‘kon buyurtmalari" counts={dashboard.status.seller} labels={{ all: 'Jami', payment_pending: 'To‘lov kutilmoqda', new: 'Yangi', accepted: 'Qabul qilingan', handover: 'Kuryerga berilgan', cancelled: 'Bekor' }} />
+                <StatusPanel colClass="col-md-6" title="Kuryer buyurtmalari" counts={dashboard.status.courier} labels={{ all: 'Jami', pending: 'Kutmoqda', in_delivery: 'Yo‘lda', delivered: 'Yetkazildi', customer_received: 'Qabul qilindi', rejected: 'Bekor' }} />
+              </div>
+              <SellerScorecard rows={dashboard.sellerScorecard} />
+              {finance ? <PartnerEconomics data={dashboard.partnerEconomics} /> : null}
+            </>
+          ) : null}
+        </>
+      ) : (
+        <QuickLinks />
+      )}
+    </div>
+  );
+}
+
+/** Biznes ko'rinishi bo'lmagan rollar uchun: o'z bo'limlariga tezkor havolalar. */
+function QuickLinks() {
+  const { props } = usePage<{ auth?: { admin?: { permissions?: string[]; isSuperAdmin?: boolean } } }>();
+  const perms = new Set(props.auth?.admin?.permissions || []);
+  const links = [
+    ['support', '/boshqaruv/support/inbox', 'Support inbox', 'ti-messages'],
+    ['support', '/boshqaruv/support/kpi', 'Support KPI', 'ti-chart-histogram'],
+    ['support', '/boshqaruv/shikoyatlar', 'Shikoyatlar', 'ti-alert-triangle'],
+    ['catalog', '/boshqaruv/catalog/submissions', 'Kitob arizalari', 'ti-inbox'],
+    ['catalog', '/boshqaruv/books', 'Kitoblar', 'ti-book'],
+    ['catalog', '/boshqaruv/catalog', 'Global katalog', 'ti-stack-2'],
+    ['book-club', '/boshqaruv/book-club', 'Book Club', 'ti-bookmark'],
+    ['hr', '/boshqaruv/karyera-arizalari', 'Karyera arizalari', 'ti-file-certificate'],
+    ['hr', '/boshqaruv/vakansiyalar', 'Vakansiyalar', 'ti-id-badge'],
+    ['push', '/boshqaruv/push', 'Push bildirishnomalar', 'ti-bell'],
+    ['premium', '/boshqaruv/mystery-box', 'Mystery Box', 'ti-package'],
+    ['settings', '/boshqaruv/settings', 'Sozlamalar', 'ti-settings'],
+  ].filter(([perm]) => props.auth?.admin?.isSuperAdmin || perms.has(perm));
+
+  if (!links.length) return null;
+
+  return (
+    <div className="card">
+      <div className="card-header"><h5 className="f-w-600 mb-0">Mening bo‘limlarim</h5></div>
+      <div className="card-body">
+        <div className="row g-3">
+          {links.map(([, href, label, icon]) => (
+            <div className="col-6 col-md-4 col-xl-3" key={href}>
+              <Link href={href} className="d-flex align-items-center gap-3 p-3 b-r-15 b-1-light text-reset h-100 kc-queue-tile">
+                <span className="h-45 w-45 d-flex-center b-r-12 text-light-primary flex-shrink-0 f-s-20"><i className={`ti ${icon}`}></i></span>
+                <span className="f-w-600 text-dark">{label}</span>
+              </Link>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -1219,9 +1559,9 @@ function PeriodCard({ label, value, delta, help, index }: { label: string; value
   );
 }
 
-function DistributionPanel({ title, rows, help }: { title: string; rows: Array<{ name: string; value: string }>; help?: string }) {
+function DistributionPanel({ title, rows, help, colClass = 'col-xl-4' }: { title: string; rows: Array<{ name: string; value: string }>; help?: string; colClass?: string }) {
   return (
-    <div className="col-xl-4"><div className="card h-100">
+    <div className={colClass}><div className="card h-100">
       <div className="card-header d-flex align-items-center gap-2"><h5 className="f-w-600">{title}</h5>{help ? <InfoHint text={help} /> : null}</div>
       <div className="card-body">{rows.length ? <ul className="list-group list-group-flush">{rows.slice(0, 8).map((row, index) => <li className="list-group-item d-flex align-items-center justify-content-between gap-3 px-0" key={row.name}><span className="d-flex align-items-center gap-2 min-w-0 text-secondary"><span className={`d-inline-block h-10 w-10 b-r-50 flex-shrink-0 bg-${DASH_TONES[index % DASH_TONES.length]}`}></span><span className="text-truncate">{row.name}</span></span><strong className="text-nowrap text-dark">{row.value}</strong></li>)}</ul> : <EmptyState text="Ma'lumot topilmadi." />}</div>
     </div></div>
@@ -1280,12 +1620,12 @@ const STATUS_TONES: Record<string, string> = {
   handover: 'secondary', done: 'success', delivered: 'success', customer_received: 'success', cancelled: 'danger', rejected: 'danger',
 };
 
-function StatusPanel({ title, counts, labels }: { title: string; counts: Record<string, number>; labels: Record<string, string> }) {
+function StatusPanel({ title, counts, labels, colClass = 'col-xl-2 col-md-4' }: { title: string; counts: Record<string, number>; labels: Record<string, string>; colClass?: string }) {
   const entries = Object.entries(labels).filter(([key]) => key !== 'all');
   const sum = entries.reduce((acc, [key]) => acc + (counts[key] || 0), 0);
   const total = Math.max(counts.all || 0, sum, 1);
   return (
-    <div className="col-xl-2 col-md-4">
+    <div className={colClass}>
       <div className="card h-100">
         <div className="card-header">
           <h5 className="mb-0 f-s-18">{title}</h5>
@@ -1340,7 +1680,7 @@ function RankPanel({ title, rows, help }: { title: string; rows: Array<{ name: s
   );
 }
 
-function RecentOrders({ rows }: { rows: DashboardPayload['recentOrders'] }) {
+function RecentOrders({ rows, showAmount = true }: { rows: DashboardPayload['recentOrders']; showAmount?: boolean }) {
   return (
     <div className="card h-100">
       <div className="card-header">
@@ -1357,7 +1697,7 @@ function RecentOrders({ rows }: { rows: DashboardPayload['recentOrders'] }) {
                   <h6 className="mb-0 f-s-15 txt-ellipsis-1">{row.customer || 'Mijoz'} <span className="text-secondary f-w-500 f-s-12">#{row.id}</span></h6>
                   <p className="mb-0 f-s-12 text-secondary txt-ellipsis-1">{row.status} · {row.updated_at || ''}</p>
                 </div>
-                <span className="f-w-600 text-dark f-s-14 text-nowrap ms-auto">{money(row.amount)}</span>
+                {showAmount ? <span className="f-w-600 text-dark f-s-14 text-nowrap ms-auto">{money(row.amount)}</span> : <span className="ms-auto"></span>}
                 {row.url ? <a href={row.url} className="btn btn-light-primary icon-btn w-30 h-30 b-r-22 flex-shrink-0" title="Buyurtmani ochish"><i className="ti ti-eye"></i></a> : null}
               </li>
             ))}

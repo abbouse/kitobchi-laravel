@@ -245,3 +245,18 @@ body.dark .kc-inbox-chat { background: rgba(var(--white), .6); }
   .kc-inbox-info { width: 100%; }
   .kc-bubble { max-width: 86%; }
 }
+
+/* ── Header: navbat qo'ng'irog'i va toast ── */
+.kc-bell-menu { width: min(360px, calc(100vw - 24px)); max-height: 70vh; overflow-y: auto; z-index: 1060; top: 100%; border-radius: var(--app-border-radius, 14px); }
+.kc-bell-row:hover { background: rgba(var(--primary), .06); }
+.kc-toast { background: rgba(var(--white), 1); }
+header.header-main .header-left .lh-sm { line-height: 1.2; }
+
+/* ── Dashboard: navbat plitalari ── */
+.kc-queue-tile { border: 1px solid var(--bs-border-color); background: rgba(var(--white), 1); transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease; }
+.kc-queue-tile:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0, 0, 0, .07); border-color: rgba(var(--primary), .35); }
+.kc-queue-danger { border-color: rgba(var(--danger), .35); background: rgba(var(--danger), .04); }
+.kc-queue-warning { border-color: rgba(var(--warning), .4); background: rgba(var(--warning), .05); }
+.kc-queue-primary, .kc-queue-info { border-color: rgba(var(--primary), .25); }
+.kc-queue-calm { opacity: .7; }
+.kc-surface { background: rgba(var(--white), 1); }
