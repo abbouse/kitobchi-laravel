@@ -189,10 +189,19 @@ class CourierOrderController extends Controller
                 }
 
                 $orderModel->loadMissing('fulfillment');
-                $targetLegs = $this->courierTaskOrchestratorService->targetLegsForCurrentPhase($orderModel->fulfillment);
+                // Faqat "yangi, egasi yo'q" bosqichdagi topshiriqlar: buyurtma hubda
+                // (qabul, tekshiruv, qadoqlash, yorliq, pochta) bo'lsa yoki allaqachon
+                // yo'lda/yetkazilgan bo'lsa — kuryerlar ro'yxatida umuman chiqmaydi.
+                if (! $this->orderOpenForCourierFeed($orderModel)) {
+                    return false;
+                }
+                $targetLegs = $this->availableLegsForFeed($orderModel->fulfillment, $orderModel);
+                if ($targetLegs === []) {
+                    return false;
+                }
                 $tasks = $this->courierTaskOrchestratorService->ensureTasksForOrder($orderModel)
                     ->filter(fn ($task) => $task->courier_id === null && $task->status_code === 'assigned');
-                if ($targetLegs !== []) {
+                if ($targetLegs !== null) {
                     $tasks = $tasks->whereIn('leg', $targetLegs);
                 }
                 $tasks = $this->courierVisibleTasksForAvailableFeed($tasks, $orderModel);
@@ -1244,6 +1253,52 @@ class CourierOrderController extends Controller
         return $sellerOrder->created_at
             ? $sellerOrder->created_at->lte(now()->subMinutes(30))
             : false;
+    }
+
+    /**
+     * Kuryerlar uchun "Yangi buyurtmalar" ro'yxatiga qaysi topshiriq turi
+     * chiqishi mumkin. [] — hech biri (buyurtma hozir kuryerga tegishli
+     * bosqichda emas), null — fulfillment yo'q (eski buyurtmalar, filtr yo'q).
+     *
+     * @return array<int, string>|null
+     */
+    private function availableLegsForFeed(?\App\Models\OrderFulfillment $fulfillment, Sold $order): ?array
+    {
+        if (! $fulfillment) {
+            return null;
+        }
+
+        $status = (string) ($fulfillment->status_code ?? '');
+        // Do'kondan hali olib ketilmagan bosqich (buyurtma o'zi ham yo'lga chiqmagan)
+        $beforePickup = in_array($status, [
+            '',
+            FulfillmentStatusCode::AWAITING_SELLER_PREP->value,
+            FulfillmentStatusCode::READY_FOR_PICKUP->value,
+        ], true) && OrderStatusCode::fromLegacy($order->status_code ?? $order->status) !== OrderStatusCode::IN_DELIVERY;
+
+        return match ($fulfillment->fulfillment_mode) {
+            \App\Enums\FulfillmentMode::DIRECT_COURIER->value => $beforePickup ? [CourierTaskLeg::DIRECT_DELIVERY->value] : [],
+            \App\Enums\FulfillmentMode::POSTAL_ONLY_VIA_HUB->value => $beforePickup ? [CourierTaskLeg::FIRST_MILE->value] : [],
+            \App\Enums\FulfillmentMode::HUB_BASED->value => $beforePickup
+                ? [CourierTaskLeg::FIRST_MILE->value]
+                // Hub "kuryerlarga chiqarish"ni bosgandan keyingina oxirgi masofa ochiladi
+                : ($status === FulfillmentStatusCode::ASSIGNED_LAST_MILE->value ? [CourierTaskLeg::LAST_MILE->value] : []),
+            \App\Enums\FulfillmentMode::PICKUP_ONLY->value => [],
+            default => $this->courierTaskOrchestratorService->targetLegsForCurrentPhase($fulfillment) ?: null,
+        };
+    }
+
+    /** Buyurtmaning o'zi yopilmagan va hali yo'lga chiqmagan bo'lsin. */
+    private function orderOpenForCourierFeed(Sold $order): bool
+    {
+        $status = OrderStatusCode::fromLegacy($order->status_code ?? $order->status);
+
+        return ! in_array($status, [
+            OrderStatusCode::DELIVERED,
+            OrderStatusCode::CUSTOMER_RECEIVED,
+            OrderStatusCode::CANCELLED,
+            OrderStatusCode::RETURNED,
+        ], true);
     }
 
     private function allSellerPickupTasksReadyForCourier(\Illuminate\Support\Collection $tasks, Sold $order): bool
