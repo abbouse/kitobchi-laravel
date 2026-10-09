@@ -17,7 +17,7 @@ Route::middleware('auth:hub')->group(function () {
 
     Route::get('dashboard', [HubFulfillmentController::class, 'dashboard']);
     Route::get('queues/{queue}', [HubFulfillmentController::class, 'queue'])
-        ->whereIn('queue', ['inbound', 'qc', 'packing', 'dispatch']);
+        ->whereIn('queue', ['inbound', 'qc', 'packing', 'dispatch', 'incoming', 'prepare', 'send', 'courier']);
     Route::get('exceptions', [HubFulfillmentController::class, 'exceptions']);
     Route::get('activity', [HubFulfillmentController::class, 'activity']);
     Route::get('staff', [HubStaffController::class, 'index']);
@@ -30,6 +30,7 @@ Route::middleware('auth:hub')->group(function () {
     Route::post('fulfillments/{fulfillment}/arrive', [HubFulfillmentController::class, 'arrive']);
     Route::post('fulfillments/{fulfillment}/qc', [HubFulfillmentController::class, 'qc']);
     Route::post('fulfillments/{fulfillment}/pack', [HubFulfillmentController::class, 'pack']);
+    Route::post('fulfillments/{fulfillment}/prepare', [HubFulfillmentController::class, 'prepare']);
     Route::post('fulfillments/{fulfillment}/label', [HubFulfillmentController::class, 'label']);
     Route::post('fulfillments/{fulfillment}/dispatch', [HubFulfillmentController::class, 'dispatch']);
     Route::post('fulfillments/{fulfillment}/handover-last-mile', [HubFulfillmentController::class, 'handoverLastMile']);

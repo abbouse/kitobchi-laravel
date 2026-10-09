@@ -66,6 +66,15 @@ class HubFulfillmentController extends Controller
                         FulfillmentStatusCode::ASSIGNED_LAST_MILE->value,
                     ])->count(),
                     'exceptions' => $this->openExceptions($this->baseQuery($hubId))->count(),
+                    // Soddalashtirilgan ilova bosqichlari
+                    'incoming' => $this->baseQuery($hubId)->whereIn('status_code', self::SIMPLE_QUEUES['incoming'])->count(),
+                    'prepare' => $this->baseQuery($hubId)->whereIn('status_code', self::SIMPLE_QUEUES['prepare'])->count(),
+                    'send' => $this->baseQuery($hubId)->whereIn('status_code', self::SIMPLE_QUEUES['send'])->count(),
+                    'courier' => $this->baseQuery($hubId)->whereIn('status_code', self::SIMPLE_QUEUES['courier'])->count(),
+                    'sent_today' => $this->baseQuery($hubId)
+                        ->where(fn ($q) => $q->where('dispatched_to_post_at', '>=', today())
+                            ->orWhere('out_for_delivery_at', '>=', today()))
+                        ->count(),
                     'active_couriers' => CourierTask::query()
                         ->where('hub_id', $hubId)
                         ->whereNotNull('courier_id')
@@ -85,21 +94,35 @@ class HubFulfillmentController extends Controller
         ]);
     }
 
+    /**
+     * Soddalashtirilgan ish oqimi (yangi hub ilovasi):
+     *  incoming — hubga kelishi kutilayotgan, prepare — qabul qilingan, tekshirib
+     *  qadoqlanadigan, send — jo'natishga tayyor (pochta/kuryer), courier —
+     *  kuryerga chiqarilgan, kuryer kelib olib ketishi kutilmoqda.
+     */
+    public const SIMPLE_QUEUES = [
+        'incoming' => ['awaiting_seller_prep', 'ready_for_pickup', 'picked_from_seller'],
+        'prepare' => ['arrived_at_hub', 'qc_checked', 'packed'],
+        'send' => ['labeled'],
+        'courier' => ['assigned_last_mile'],
+    ];
+
     public function queue(Request $request, string $queue)
     {
         $staff = $this->staff($request);
         $permission = match ($queue) {
-            'inbound' => 'queue.inbound.view',
+            'inbound', 'incoming' => 'queue.inbound.view',
             'qc' => 'queue.qc.view',
             'packing' => 'queue.packing.view',
-            'dispatch' => 'queue.dispatch.view',
+            'prepare' => $this->hubRoleAccessService->can($staff, 'queue.packing.view') ? 'queue.packing.view' : 'queue.qc.view',
+            'dispatch', 'send', 'courier' => 'queue.dispatch.view',
             default => null,
         };
         if (! $permission || ! $this->hubRoleAccessService->can($staff, $permission)) {
             return response()->json(['status' => 'error', 'message' => 'Bu queue sizga ruxsat etilmagan.'], 403);
         }
 
-        $statuses = match ($queue) {
+        $statuses = self::SIMPLE_QUEUES[$queue] ?? match ($queue) {
             'inbound' => [FulfillmentStatusCode::PICKED_FROM_SELLER->value, FulfillmentStatusCode::ARRIVED_AT_HUB->value],
             'qc' => [FulfillmentStatusCode::ARRIVED_AT_HUB->value, FulfillmentStatusCode::QC_CHECKED->value],
             'packing' => [FulfillmentStatusCode::QC_CHECKED->value, FulfillmentStatusCode::PACKED->value, FulfillmentStatusCode::LABELED->value],
@@ -573,6 +596,44 @@ class HubFulfillmentController extends Controller
         return response()->json(['status' => 'success', 'fulfillment' => $this->serializeFulfillment($fulfillment->fresh())]);
     }
 
+    /**
+     * Bir bosishda "tekshirildi → qadoqlandi → yorliq" (yangi ilova uchun).
+     * Hubga qabul qilingan buyurtmani jo'natishga tayyor holatga keltiradi.
+     */
+    public function prepare(Request $request, OrderFulfillment $fulfillment)
+    {
+        $staff = $this->staff($request);
+        if (! $this->hubRoleAccessService->can($staff, 'queue.packing.pack')) {
+            return response()->json(['status' => 'error', 'message' => 'Bu action sizga ruxsat etilmagan.'], 403);
+        }
+        if ($response = $this->ensureSameHub($staff, $fulfillment)) {
+            return $response;
+        }
+        if (! in_array($fulfillment->status_code, self::SIMPLE_QUEUES['prepare'], true)) {
+            return response()->json(['status' => 'error', 'message' => 'Buyurtma hali hubga qabul qilinmagan yoki allaqachon tayyor.'], 422);
+        }
+
+        if ($fulfillment->status_code === FulfillmentStatusCode::ARRIVED_AT_HUB->value) {
+            $fulfillment = $this->statusSync->updateFulfillmentStatus($fulfillment, FulfillmentStatusCode::QC_CHECKED);
+            $this->appendTimeline($fulfillment, $staff, 'qc_checked', 'Tekshirildi');
+        }
+        if ($fulfillment->status_code === FulfillmentStatusCode::QC_CHECKED->value) {
+            $fulfillment = $this->statusSync->updateFulfillmentStatus($fulfillment, FulfillmentStatusCode::PACKED);
+            $this->appendTimeline($fulfillment, $staff, 'packed', 'Qadoqlandi');
+        }
+        if ($fulfillment->status_code === FulfillmentStatusCode::PACKED->value) {
+            $fulfillment = $this->statusSync->updateFulfillmentStatus($fulfillment, FulfillmentStatusCode::LABELED);
+            $fulfillment->label_code = $fulfillment->label_code ?: ('LBL-'.$fulfillment->order_id.'-'.now()->format('His'));
+            $this->appendTimeline($fulfillment, $staff, 'labeled', 'Yorliq tayyor', [
+                'label_code' => $fulfillment->label_code,
+            ]);
+        }
+        $this->clearException($fulfillment);
+        $fulfillment->save();
+
+        return response()->json(['status' => 'success', 'fulfillment' => $this->serializeFulfillment($fulfillment->fresh())]);
+    }
+
     public function label(Request $request, OrderFulfillment $fulfillment)
     {
         $staff = $this->staff($request);
@@ -876,6 +937,8 @@ class HubFulfillmentController extends Controller
             'cash_collect_amount' => (int) ($fulfillment->cash_collect_amount ?? 0),
             'label_code' => $fulfillment->label_code,
             'postal_tracking_number' => $fulfillment->postal_tracking_number,
+            'items_count' => (int) collect($order?->items ?? [])->filter(fn ($i) => is_array($i) && ($i['type'] ?? '') !== 'gift')->sum(fn ($i) => (int) ($i['count_item'] ?? $i['quantity'] ?? 1)),
+            'updated_at' => optional($fulfillment->updated_at)?->toIso8601String(),
             'exception' => is_array($exception) ? $exception : null,
             'courier_tasks' => $fulfillment->courierTasks
                 ->filter(fn (CourierTask $task) => $task->courier_id
