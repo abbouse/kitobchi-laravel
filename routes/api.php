@@ -18,6 +18,13 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
    return $request->user();
 });
 
+// Real-vaqt kanallari (Pusher/Reverb) avtorizatsiyasi.
+// Saytda faqat /api/* Laravel'ga yo'naltiriladi, /broadcasting/auth esa Nuxt'ga tushib 404 berardi.
+// Shu sabab ilovalar uchun /api/broadcasting/auth ham ochiq.
+Route::match(['get', 'post'], 'broadcasting/auth', [\Illuminate\Broadcasting\BroadcastController::class, 'authenticate'])
+    ->middleware('auth:user,seller,courier')
+    ->name('api.broadcasting.auth');
+
 // Autentifikatsiya yo'llari
 Route::post('auth', [AuthController::class, 'store'])->middleware('throttle:auth-user');
 Route::get('auth/telegram/config', [AuthController::class, 'telegramConfig']);
