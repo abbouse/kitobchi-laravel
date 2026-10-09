@@ -6428,7 +6428,24 @@ PROMPT;
             default => [],
         };
 
-        if ($statuses !== []) {
+        // Yetkazish jadvali (kelgusi kunlar): kun tanlansa, status tabidan qat'i nazar
+        // shu kunga rejalashtirilgan va hali yetkazilmagan buyurtmalar ko'rsatiladi.
+        $day = trim((string) request('orders_day', ''));
+        $slot = trim((string) request('orders_slot', ''));
+        $scheduleOn = $day !== '' && \App\Support\DeliverySchedule::supported()
+            && ($day === 'overdue' || preg_match('/^\d{4}-\d{2}-\d{2}$/', $day));
+
+        if ($scheduleOn) {
+            \App\Support\DeliveryRescheduler::scopeActive($query);
+            if ($day === 'overdue') {
+                $query->whereNotNull('delivery_date')->whereDate('delivery_date', '<', today()->toDateString());
+            } else {
+                $query->whereDate('delivery_date', $day);
+            }
+            if ($slot !== '' && array_key_exists($slot, \App\Support\DeliverySchedule::SLOTS)) {
+                $query->where('delivery_slot', $slot);
+            }
+        } elseif ($statuses !== []) {
             $this->applyMainOrderStatuses($query, $statuses);
         }
 
@@ -6442,7 +6459,10 @@ PROMPT;
             });
         }
 
-        $orders = $query->latest()->paginate(25, ['*'], 'orders_page')->withQueryString();
+        $orders = ($scheduleOn
+            ? $query->orderBy('delivery_date')->orderBy('delivery_slot')->orderBy('id')
+            : $query->latest()
+        )->paginate(25, ['*'], 'orders_page')->withQueryString();
 
         // Nasiya buyurtmalarini ro'yxatda belgilash uchun (bitta batch so'rov, N+1 emas)
         $splitByOrder = Schema::hasTable('split_contracts')
@@ -6464,7 +6484,60 @@ PROMPT;
                 'returned' => $this->mainOrderStatusCount([OrderStatusCode::RETURNED]),
                 'cancelled' => $this->mainOrderStatusCount([OrderStatusCode::CANCELLED]),
             ],
-            'orderFilters' => ['tab' => $tab, 'search' => $search],
+            'orderFilters' => ['tab' => $tab, 'search' => $search, 'day' => $scheduleOn ? $day : '', 'slot' => $scheduleOn ? $slot : ''],
+            'deliverySchedule' => $this->deliverySchedulePayload(),
+        ];
+    }
+
+    /**
+     * Kelgusi kunlar bo'yicha yetkazishlar: bugun + mijoz tanlay oladigan 7 kun.
+     * Har kun uchun vaqt oralig'lari kesimi va ko'chirilganlar soni.
+     */
+    private function deliverySchedulePayload(): ?array
+    {
+        if (! \App\Support\DeliverySchedule::supported()) {
+            return null;
+        }
+
+        $today = today();
+        $lastDay = $today->copy()->addDays(\App\Support\DeliverySchedule::FIRST_DAY_OFFSET + \App\Support\DeliverySchedule::DAYS - 1);
+        $hasReschedule = \App\Support\DeliveryRescheduler::supported();
+
+        $rows = \App\Support\DeliveryRescheduler::scopeActive(Sold::query())
+            ->whereNotNull('delivery_date')
+            ->whereDate('delivery_date', '>=', $today->toDateString())
+            ->whereDate('delivery_date', '<=', $lastDay->toDateString())
+            ->selectRaw('DATE(delivery_date) AS d, delivery_slot AS s, COUNT(*) AS n')
+            ->when($hasReschedule, fn ($q) => $q->selectRaw('SUM(CASE WHEN delivery_rescheduled_count > 0 THEN 1 ELSE 0 END) AS moved'))
+            ->groupByRaw('DATE(delivery_date), delivery_slot')
+            ->get();
+
+        $monthsUz = ['yan', 'fev', 'mar', 'apr', 'may', 'iyun', 'iyul', 'avg', 'sen', 'okt', 'noy', 'dek'];
+        $weekdays = [1 => 'Dush', 2 => 'Sesh', 3 => 'Chor', 4 => 'Pay', 5 => 'Jum', 6 => 'Shan', 7 => 'Yak'];
+
+        $days = [];
+        for ($cursor = $today->copy(); $cursor->lte($lastDay); $cursor->addDay()) {
+            $date = $cursor->toDateString();
+            $dayRows = $rows->filter(fn ($r) => (string) $r->d === $date);
+            $slots = [];
+            foreach (array_keys(\App\Support\DeliverySchedule::SLOTS) as $key) {
+                $slots[$key] = (int) $dayRows->where('s', $key)->sum('n');
+            }
+            $offset = (int) $today->diffInDays($cursor);
+            $days[] = [
+                'date' => $date,
+                'label' => match ($offset) { 0 => 'Bugun', 1 => 'Ertaga', default => $cursor->day.'-'.$monthsUz[$cursor->month - 1] },
+                'weekday' => $weekdays[$cursor->dayOfWeekIso],
+                'count' => (int) $dayRows->sum('n'),
+                'slots' => $slots,
+                'moved' => $hasReschedule ? (int) $dayRows->sum('moved') : 0,
+            ];
+        }
+
+        return [
+            'days' => $days,
+            'overdue' => \App\Support\DeliveryRescheduler::overdueQuery($today)->count(),
+            'slots' => \App\Support\DeliverySchedule::slots(),
         ];
     }
 
@@ -6526,6 +6599,9 @@ PROMPT;
             },
             'source' => $order->order_source ?: 'app',
             'sourceLabel' => ($order->order_source ?: 'app') === 'web' ? 'Veb-sayt' : 'Ilova',
+            'deliveryWindow' => \App\Support\DeliverySchedule::windowLabel($order),
+            'deliveryRescheduled' => (int) ($order->delivery_rescheduled_count ?? 0),
+            'deliveryOriginalDate' => $order->delivery_original_date ? \Illuminate\Support\Carbon::parse($order->delivery_original_date)->format('d.m') : null,
             'dataUrl' => route('boshqaruv.orders.data', $order),
             'statusUrl' => route('boshqaruv.orders.status', $order),
             'labelUrl' => route('boshqaruv.orders.print.label', $order),
@@ -13699,6 +13775,9 @@ PROMPT;
             'deliveryType' => $order->deliveryType,
             // Mijoz tanlagan yetkazish kuni va vaqti ("02.10 · 14:00–18:00")
             'deliveryWindow' => \App\Support\DeliverySchedule::windowLabel($order),
+            // Kechikib keyingi kunga ko'chirilgan bo'lsa: necha marta va asl kun
+            'deliveryRescheduled' => (int) ($order->delivery_rescheduled_count ?? 0),
+            'deliveryOriginalDate' => $order->delivery_original_date ? \Illuminate\Support\Carbon::parse($order->delivery_original_date)->format('d.m') : null,
             'orderKind' => $order->order_kind,
             'postalReturnStatus' => $order->postal_return_status,
             'postalReturnFee' => (float) ($order->postal_return_fee ?? 0),

@@ -146,6 +146,8 @@ interface Ord {
   paymentStatus?: string;
   deliveryType?: string;
   deliveryWindow?: string | null;
+  deliveryRescheduled?: number;
+  deliveryOriginalDate?: string | null;
   orderKind?: string;
   postalReturnStatus?: string;
   postalReturnFee?: number;
@@ -505,15 +507,75 @@ interface PaginationMeta {
   total: number;
 }
 
+type ScheduleDay = { date: string; label: string; weekday: string; count: number; slots: Record<string, number>; moved: number };
+type DeliveryScheduleData = { days: ScheduleDay[]; overdue: number; slots: Array<{ key: string; label: string }> } | null;
+
+/**
+ * Yetkazish jadvali: bugun + mijoz tanlay oladigan kunlar. Kunni tanlasangiz,
+ * shu kunga rejalashtirilgan va hali yetkazilmagan buyurtmalar ro'yxati chiqadi.
+ */
+function DeliveryScheduleStrip({ schedule, day, slot, onPick }: { schedule: DeliveryScheduleData; day: string; slot: string; onPick: (day: string, slot?: string) => void }) {
+  if (!schedule) return null;
+  const max = Math.max(1, ...schedule.days.map((d) => d.count));
+  const active = schedule.days.find((d) => d.date === day);
+
+  return (
+    <div className="mb-3">
+      <div className="d-flex align-items-center justify-content-between mb-2">
+        <div className="f-w-600"><i className="ti ti-calendar-event me-1 text-primary"></i>Yetkazish jadvali</div>
+        {day ? <button type="button" className="btn btn-sm btn-light-secondary b-r-10" onClick={() => onPick('')}><i className="ti ti-x me-1"></i>Jadvalni yopish</button> : <span className="f-s-12 text-secondary">Kunni tanlang — shu kunga rejalashtirilgan buyurtmalar chiqadi</span>}
+      </div>
+      <div className="d-flex gap-2 overflow-auto pb-1">
+        {schedule.overdue > 0 ? (
+          <button type="button" onClick={() => onPick('overdue')}
+            className={`btn text-start b-r-10 flex-shrink-0 ${day === 'overdue' ? 'btn-danger' : 'btn-light-danger'}`} style={{ minWidth: 112 }}>
+            <span className="d-block f-s-12">Kechikkan</span>
+            <span className="d-block f-w-700 f-s-18">{schedule.overdue}</span>
+            <span className="d-block f-s-11 opacity-75">kechasi ko‘chadi</span>
+          </button>
+        ) : null}
+        {schedule.days.map((d) => {
+          const isActive = d.date === day;
+          return (
+            <button key={d.date} type="button" onClick={() => onPick(d.date)}
+              className={`btn text-start b-r-10 flex-shrink-0 ${isActive ? 'btn-primary' : d.count ? 'btn-light-primary' : 'btn-light-secondary'}`} style={{ minWidth: 112 }}>
+              <span className="d-flex align-items-center justify-content-between f-s-12"><span>{d.label}</span><span className="opacity-75">{d.weekday}</span></span>
+              <span className="d-block f-w-700 f-s-18">{d.count}</span>
+              <span className="d-flex gap-1 align-items-end" style={{ height: 14 }} title={schedule.slots.map((sl) => `${sl.label}: ${d.slots[sl.key] || 0}`).join('\n')}>
+                {schedule.slots.map((sl) => (
+                  <span key={sl.key} className={`flex-fill b-r-4 ${isActive ? 'bg-white' : 'bg-primary'}`}
+                    style={{ height: `${Math.max(2, Math.round(((d.slots[sl.key] || 0) / max) * 14))}px`, opacity: d.slots[sl.key] ? 0.85 : 0.25 }}></span>
+                ))}
+              </span>
+              {d.moved > 0 ? <span className="d-block f-s-11 mt-1 opacity-75"><i className="ti ti-arrow-forward-up"></i> {d.moved} ko‘chirilgan</span> : null}
+            </button>
+          );
+        })}
+      </div>
+      {active ? (
+        <div className="nav kc-segment kc-segment-sm mt-2">
+          <div className="nav-item"><button type="button" className={`nav-link ${!slot ? 'active' : ''}`} onClick={() => onPick(day, '')}>Hammasi <span className="badge">{active.count}</span></button></div>
+          {schedule.slots.map((sl) => (
+            <div className="nav-item" key={sl.key}>
+              <button type="button" className={`nav-link ${slot === sl.key ? 'active' : ''}`} onClick={() => onPick(day, sl.key)}>{sl.label} <span className="badge">{active.slots[sl.key] || 0}</span></button>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export default function Orders() {
   const {
     orders = [], orderPagination = { page: 1, totalPages: 1, from: 0, to: 0, total: 0 }, orderCounts = {}, orderFilters = {},
-    reassignSellers = [], auth,
+    reassignSellers = [], auth, deliverySchedule = null,
   } = usePage<{
     orders?: Ord[];
     orderPagination?: PaginationMeta;
     orderCounts?: Record<string, number>;
-    orderFilters?: { tab?: string; search?: string };
+    orderFilters?: { tab?: string; search?: string; day?: string; slot?: string };
+    deliverySchedule?: DeliveryScheduleData;
     // Do'kon-egalik almashtirish (2026-09): tanlov ro'yxati va
     // superadminlikni bilish uchun. MUHIM: superadmin bayrog'i
     // HandleInertiaRequests middleware orqali `auth.admin.isSuperAdmin`
@@ -526,14 +588,19 @@ export default function Orders() {
   const isSuperAdmin = !!auth?.admin?.isSuperAdmin;
   const [activeTab, setActiveTab] = useState(orderFilters.tab || 'pending');
   const [search, setSearch] = useState(orderFilters.search || '');
+  const [day, setDay] = useState(orderFilters.day || '');
+  const [slot, setSlot] = useState(orderFilters.slot || '');
   const [showView, setShowView] = useState(false);
   const [selectedOrd, setSelectedOrd] = useState<Ord | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [autoOpenedSearch, setAutoOpenedSearch] = useState('');
   const [reassignOrder, setReassignOrder] = useState<SellerOrder | null>(null);
 
-  const loadOrders = (page = 1, tab = activeTab, term = search) => {
-    router.get('/boshqaruv/orders', { orders_page: page, orders_tab: tab, orders_search: term }, {
+  const loadOrders = (page = 1, tab = activeTab, term = search, d = day, sl = slot) => {
+    const params: Record<string, string | number> = { orders_page: page, orders_tab: tab, orders_search: term };
+    if (d) params.orders_day = d;
+    if (d && sl) params.orders_slot = sl;
+    router.get('/boshqaruv/orders', params, {
       preserveState: true,
       preserveScroll: true,
       replace: true,
@@ -662,12 +729,15 @@ export default function Orders() {
               ['cancelled', 'Bekor qilingan'],
             ].map(([status, label]) => (
               <div key={status} className="nav-item"><button
-                  className={`nav-link ${activeTab === status ? 'active' : ''}`}
-                  onClick={() => { setActiveTab(status); loadOrders(1, status); }}>
+                  className={`nav-link ${activeTab === status && !day ? 'active' : ''}`}
+                  onClick={() => { setActiveTab(status); setDay(''); setSlot(''); loadOrders(1, status, search, '', ''); }}>
                   {label} <span className="badge">{orderCounts[status] || 0}</span>
                 </button></div>
             ))}
           </div>
+
+          <DeliveryScheduleStrip schedule={deliverySchedule} day={day} slot={slot}
+            onPick={(d, sl = '') => { const next = d === day && sl === slot && !sl ? '' : d; setDay(next); setSlot(next ? sl : ''); loadOrders(1, activeTab, search, next, next ? sl : ''); }} />
 
           <form className="d-flex align-items-center gap-2 flex-wrap mb-3" onSubmit={(event) => { event.preventDefault(); loadOrders(1); }}>
             <div className="app-form app-icon-form position-relative" style={{ width: 'min(280px, 100%)' }}>
@@ -741,6 +811,11 @@ export default function Orders() {
                       <td className="f-s-13 text-secondary">
                         {deliveryShort(order.deliveryType)}
                         {order.deliveryWindow ? <div className="f-s-12 text-primary text-nowrap">{order.deliveryWindow}</div> : null}
+                        {order.deliveryRescheduled ? (
+                          <div className="f-s-11 text-warning-dark text-nowrap" title="Kechikkani uchun avtomatik keyingi kunga ko‘chirilgan">
+                            <i className="ti ti-arrow-forward-up"></i> {order.deliveryRescheduled} marta ko‘chdi{order.deliveryOriginalDate ? ` (asli ${order.deliveryOriginalDate})` : ''}
+                          </div>
+                        ) : null}
                       </td>
                       <td><span className={`badge text-uppercase ${toneBadge(statusTone(order.status))}`}>{statusLabel(order.status)}</span></td>
                       <td className="text-end f-s-13 text-secondary"><span className="f-w-600 text-nowrap">{order.date}</span></td>

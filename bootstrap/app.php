@@ -61,6 +61,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('orders:cancel-unpaid')
             ->everyFiveMinutes()->timezone($tz);
 
+        // Kuni o'tib ketgan, yetkazilmagan buyurtmalar keyingi kunga ko'chadi (yo'qolib qolmasligi uchun)
+        $schedule->command('orders:roll-overdue-deliveries')
+            ->dailyAt('00:10')->timezone($tz)->withoutOverlapping();
+
         $schedule->command('cashback:release-pending')
             ->everyTenMinutes()->timezone($tz)->withoutOverlapping();
 
