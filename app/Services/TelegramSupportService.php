@@ -39,6 +39,53 @@ class TelegramSupportService
         return $lastPayload;
     }
 
+    /**
+     * Murojaat yopilganda mijozdan "yaxshi / yomon" baho so'rash.
+     */
+    public function sendFeedbackRequest(int|string $chatId, int $ticketId): void
+    {
+        $token = (string) config('nutgram.token');
+        if ($token === '') {
+            throw new RuntimeException('Telegram bot token sozlanmagan.');
+        }
+
+        $response = Http::asForm()->timeout(10)->post("https://api.telegram.org/bot{$token}/sendMessage", [
+            'chat_id' => (string) $chatId,
+            'text' => "Murojaatingiz yakunlandi.\n\nYordamimiz foydali bo'ldimi?",
+            'reply_markup' => json_encode([
+                'inline_keyboard' => [[
+                    ['text' => '👍 Ha, yordam berdi', 'callback_data' => "fb:{$ticketId}:good"],
+                    ['text' => '👎 Yo\'q', 'callback_data' => "fb:{$ticketId}:bad"],
+                ]],
+            ]),
+        ]);
+
+        if (! $response->ok() || ! $response->json('ok')) {
+            throw new RuntimeException('Telegram: ' . ($response->json('description') ?? $response->status()));
+        }
+    }
+
+    /**
+     * Telegram fayl yo'lini olish (getFile). 20 MB gacha fayllar.
+     *
+     * @return array{url: string, path: string}|null
+     */
+    public function resolveFile(string $fileId): ?array
+    {
+        $token = (string) config('nutgram.token');
+        if ($token === '' || $fileId === '') {
+            return null;
+        }
+
+        $response = Http::timeout(10)->get("https://api.telegram.org/bot{$token}/getFile", ['file_id' => $fileId]);
+        $path = (string) $response->json('result.file_path', '');
+        if (! $response->ok() || $path === '') {
+            return null;
+        }
+
+        return ['url' => "https://api.telegram.org/file/bot{$token}/{$path}", 'path' => $path];
+    }
+
     public function sendChatAction(int|string $chatId, string $action = 'typing'): void
     {
         $token = (string) config('nutgram.token');

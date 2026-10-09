@@ -31,6 +31,8 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
 
     Route::middleware(['auth.panel', 'admin.audit'])->group(function () {
         Route::post('/logout', [AdminController::class, 'logout'])->name('logout');
+        // Real-vaqt kanallari (support inbox) — panel sessiyasi orqali avtorizatsiya
+        Route::post('/broadcasting/auth', [\App\Http\Controllers\Boshqaruv\SupportInboxController::class, 'broadcastingAuth'])->name('broadcasting.auth');
 
         // ── Dashboard: barcha autentifikatsiyalangan adminlarga ochiq ──
         Route::get('/', [AdminController::class, 'dashboard'])->name('dashboard');
@@ -344,6 +346,23 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
 
         // ══════════════════════════ MIJOZLARGA XIZMAT ══════════════════════════
         Route::middleware('panel.permission:support')->group(function () {
+            // Support inbox (Telegram Web uslubida) va KPI
+            Route::get('/support/inbox', [\App\Http\Controllers\Boshqaruv\SupportInboxController::class, 'page'])->name('support.inbox');
+            Route::get('/support/kpi', [\App\Http\Controllers\Boshqaruv\SupportInboxController::class, 'kpiPage'])->name('support.kpi');
+            Route::prefix('/support/inbox/api')->name('support.inbox.')->controller(\App\Http\Controllers\Boshqaruv\SupportInboxController::class)->group(function () {
+                Route::get('/threads', 'threads')->name('threads');
+                Route::get('/thread', 'thread')->name('thread');
+                Route::get('/older', 'older')->name('older');
+                Route::post('/reply', 'reply')->name('reply');
+                Route::post('/assign', 'assign')->name('assign');
+                Route::post('/close', 'close')->name('close');
+                Route::post('/read', 'read')->name('read');
+                Route::get('/kpi', 'kpi')->name('kpi');
+                Route::post('/templates', 'templateStore')->name('templates.store');
+                Route::put('/templates/{template}', 'templateUpdate')->name('templates.update');
+                Route::delete('/templates/{template}', 'templateDestroy')->name('templates.destroy');
+                Route::get('/media/{attachment}', 'media')->name('media');
+            });
             Route::get('/tickets', fn (AdminController $controller) => $controller->page('Tickets'))->name('tickets');
             Route::get('/shikoyatlar', fn (AdminController $controller) => $controller->page('Shikoyatlar'))->name('shikoyatlar');
             Route::get('/chat', fn (AdminController $controller) => $controller->page('ChatKuzatuv'))->name('chat');

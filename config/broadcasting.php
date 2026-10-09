@@ -28,6 +28,16 @@ return [
     |
     */
 
+    /*
+    | Boshqaruv paneli (brauzer) uchun WebSocket manzili.
+    | Bo'sh bo'lsa sayt domeni va 443 port ishlatiladi (ilovalar bilan bir xil).
+    */
+    'panel_client' => [
+        'host' => env('PANEL_WS_HOST', env('VITE_REVERB_HOST')),
+        'port' => env('PANEL_WS_PORT', env('VITE_REVERB_PORT', 443)),
+        'scheme' => env('PANEL_WS_SCHEME', env('VITE_REVERB_SCHEME', 'https')),
+    ],
+
     'connections' => [
 
         'reverb' => [

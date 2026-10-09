@@ -11,6 +11,7 @@ class BotTicketAttachment extends Model
 
     protected $fillable = [
         'ticket_id',
+        'message_id',
         'file_id',
         'file_type',
         'file_name',

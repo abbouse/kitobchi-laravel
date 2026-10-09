@@ -47,6 +47,9 @@ class AdminAuditLogger
     {
         return ! $request->isMethod('GET')
             && ! $request->is('boshqaruv/login')
+            // Tez-tez chaqiriladigan texnik so'rovlar (socket auth, "o'qildi")
+            && ! $request->is('boshqaruv/broadcasting/auth')
+            && ! $request->is('boshqaruv/support/inbox/api/read')
             && Schema::hasTable('admin_audit_logs');
     }
 

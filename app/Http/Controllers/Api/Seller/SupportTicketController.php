@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Seller;
 use App\Http\Controllers\Controller;
 use App\Models\SellerSupportTicket;
 use App\Models\SellerSupportTicketMessage;
+use App\Services\Support\SupportInboxService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -70,12 +71,13 @@ class SupportTicketController extends Controller
             'admin_unread_count' => 1,
         ]);
 
-        SellerSupportTicketMessage::create([
+        $message = SellerSupportTicketMessage::create([
             'ticket_id' => $ticket->id,
             'sender_type' => 'seller',
             'sender_id' => $seller?->id,
             'message' => $data['message'],
         ]);
+        app(SupportInboxService::class)->afterSellerMessage($message, true);
 
         return response()->json([
             'status' => 'success',
@@ -88,7 +90,15 @@ class SupportTicketController extends Controller
     {
         abort_unless((int) $ticket->seller_id === $this->storeSellerId(), 403);
 
-        $ticket->update(['seller_unread_count' => 0]);
+        if ((int) $ticket->seller_unread_count > 0) {
+            $ticket->update(['seller_unread_count' => 0]);
+            // Operator panelida "o'qildi" belgisi yangilanadi
+            try {
+                $inbox = app(SupportInboxService::class);
+                $inbox->broadcastThread($inbox->shopSummary($ticket->fresh()));
+            } catch (\Throwable) {
+            }
+        }
         $ticket->load(['messages.admin', 'seller']);
 
         return response()->json([
@@ -111,7 +121,7 @@ class SupportTicketController extends Controller
 
         $seller = Auth::guard('seller')->user();
 
-        SellerSupportTicketMessage::create([
+        $message = SellerSupportTicketMessage::create([
             'ticket_id' => $ticket->id,
             'sender_type' => 'seller',
             'sender_id' => $seller?->id,
@@ -122,7 +132,9 @@ class SupportTicketController extends Controller
             'status' => 'open',
             'last_message_at' => now(),
             'admin_unread_count' => $ticket->admin_unread_count + 1,
+            'seller_unread_count' => 0,
         ]);
+        app(SupportInboxService::class)->afterSellerMessage($message, true);
 
         return response()->json([
             'status' => 'success',
@@ -142,10 +154,51 @@ class SupportTicketController extends Controller
         $ticket->update([
             'status' => 'closed',
             'closed_at' => now(),
-            'close_reason' => $request->input('close_reason'),
+            'close_reason' => $request->input('close_reason') ?: 'seller_closed',
         ]);
 
-        return response()->json(['status' => 'success', 'message' => 'Murojaat yopildi.']);
+        $message = SellerSupportTicketMessage::create([
+            'ticket_id' => $ticket->id,
+            'sender_type' => 'system',
+            'sender_id' => null,
+            'message' => 'Do‘kon murojaatni yopdi.',
+            'is_internal' => true,
+        ]);
+        app(SupportInboxService::class)->afterSellerMessage($message, true);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Murojaat yopildi.',
+            'data' => $this->ticketDetailPayload($ticket->fresh(['messages.admin', 'seller'])),
+        ]);
+    }
+
+    /**
+     * Yopilgan murojaatga baho: good | bad (bir marta).
+     */
+    public function feedback(Request $request, SellerSupportTicket $ticket): JsonResponse
+    {
+        abort_unless((int) $ticket->seller_id === $this->storeSellerId(), 403);
+
+        $data = $request->validate([
+            'value' => ['required', 'in:good,bad'],
+        ]);
+
+        if ($ticket->status !== 'closed') {
+            return response()->json(['status' => 'error', 'message' => 'Baho faqat yopilgan murojaatga qo‘yiladi.'], 422);
+        }
+
+        if ($ticket->feedback) {
+            return response()->json(['status' => 'error', 'message' => 'Bu murojaat allaqachon baholangan.'], 422);
+        }
+
+        app(SupportInboxService::class)->recordShopFeedback($ticket, $data['value']);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Rahmat! Bahoingiz qabul qilindi.',
+            'data' => $this->ticketDetailPayload($ticket->fresh(['messages.admin', 'seller'])),
+        ]);
     }
 
     private function storeSellerId(): int
@@ -164,7 +217,9 @@ class SupportTicketController extends Controller
             'status' => $ticket->status,
             'messages_count' => (int) ($ticket->messages_count ?? 0),
             'unread_count' => (int) $ticket->seller_unread_count,
-            'last_message' => $ticket->latestMessage?->message,
+            'feedback' => $ticket->feedback,
+            'can_rate' => $ticket->status === 'closed' && ! $ticket->feedback,
+            'last_message' => $ticket->latestMessage && ! $ticket->latestMessage->is_internal ? $ticket->latestMessage->message : null,
             'last_message_at' => optional($ticket->last_message_at ?: $ticket->updated_at)->format('d.m.Y H:i'),
             'created_at' => optional($ticket->created_at)->format('d.m.Y H:i'),
         ];
@@ -177,9 +232,11 @@ class SupportTicketController extends Controller
             'subject' => $ticket->subject ?: 'Kitobchi bilan suhbat',
             'status' => $ticket->status,
             'close_reason' => $ticket->close_reason,
+            'feedback' => $ticket->feedback,
+            'can_rate' => $ticket->status === 'closed' && ! $ticket->feedback,
             'closed_at' => optional($ticket->closed_at)->format('d.m.Y H:i'),
             'created_at' => optional($ticket->created_at)->format('d.m.Y H:i'),
-            'messages' => $ticket->messages->map(fn (SellerSupportTicketMessage $message) => [
+            'messages' => $ticket->messages->reject(fn (SellerSupportTicketMessage $message) => (bool) $message->is_internal)->map(fn (SellerSupportTicketMessage $message) => [
                 'id' => $message->id,
                 'sender_type' => $message->sender_type,
                 'sender_name' => $message->sender_type === 'admin'

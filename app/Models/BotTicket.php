@@ -21,10 +21,22 @@ class BotTicket extends Model
         'rating',
         'close_reason',
         'closed_at',
+        'admin_id',
+        'last_message_at',
+        'admin_unread_count',
+        'first_response_at',
+        'feedback',
+        'feedback_at',
+        'feedback_requested_at',
     ];
 
     protected $casts = [
         'closed_at' => 'datetime',
+        'last_message_at' => 'datetime',
+        'first_response_at' => 'datetime',
+        'feedback_at' => 'datetime',
+        'feedback_requested_at' => 'datetime',
+        'admin_unread_count' => 'integer',
         'rating' => 'integer',
         'source_conversation_id' => 'integer',
     ];
@@ -32,6 +44,11 @@ class BotTicket extends Model
     public function operator()
     {
         return $this->belongsTo(BotOperator::class, 'operator_id', 'telegram_id');
+    }
+
+    public function admin()
+    {
+        return $this->belongsTo(Admin::class, 'admin_id');
     }
 
     public function attachments()

@@ -206,11 +206,24 @@ class SessionService
             try {
                 $botTicketModel = \App\Models\BotTicket::find($ticketId);
                 if ($botTicketModel) {
+                    if (Schema::hasColumn('bot_tickets', 'feedback_requested_at') && $reason !== 'user_cancelled') {
+                        $botTicketModel->forceFill(['feedback_requested_at' => now()])->saveQuietly();
+                    }
                     app(SupportChatBridgeService::class)->notifyConversationTicketClosed($botTicketModel, $reason);
                 }
             } catch (\Throwable $e) {
                 Log::warning("[SessionService] shop_chat close bildirishnoma xatosi: " . $e->getMessage());
             }
+        }
+
+        try {
+            $fresh = \App\Models\BotTicket::find($ticketId);
+            if ($fresh) {
+                $inbox = app(\App\Services\Support\SupportInboxService::class);
+                $inbox->broadcastThread($inbox->customerSummary($fresh, null, true));
+            }
+        } catch (\Throwable $e) {
+            Log::info('[SessionService] inbox close broadcast: ' . $e->getMessage());
         }
     }
 
@@ -259,10 +272,11 @@ class SessionService
         string $fileType,
         string $sentBy,
         ?string $fileName = null,
-        ?int $fileSize = null
+        ?int $fileSize = null,
+        ?int $messageId = null
     ): void {
         try {
-            DB::table('bot_ticket_attachments')->insert([
+            $row = [
                 'ticket_id'  => $ticketId,
                 'file_id'    => $fileId,
                 'file_type'  => $fileType,
@@ -271,7 +285,11 @@ class SessionService
                 'sent_by'    => $sentBy,
                 'created_at' => now(),
                 'updated_at' => now(),
-            ]);
+            ];
+            if ($messageId && Schema::hasColumn('bot_ticket_attachments', 'message_id')) {
+                $row['message_id'] = $messageId;
+            }
+            DB::table('bot_ticket_attachments')->insert($row);
         } catch (\Throwable $e) {
             Log::error("[SessionService] saveAttachment xatosi", ['error' => $e->getMessage()]);
         }
@@ -289,7 +307,7 @@ class SessionService
         bool $isDelivered = true,
         ?string $deliveryError = null
     ): BotTicketMessage {
-        return BotTicketMessage::create([
+        $saved = BotTicketMessage::create([
             'ticket_id'           => $ticketId,
             'sent_by'             => $sentBy,
             'operator_id'         => $operatorId,
@@ -301,6 +319,15 @@ class SessionService
             'is_delivered'        => $isDelivered,
             'delivery_error'      => $deliveryError,
         ]);
+
+        // Boshqaruvdagi support inbox: hisoblagichlar va real-vaqt yangilanishi
+        try {
+            app(\App\Services\Support\SupportInboxService::class)->afterTicketMessage($saved);
+        } catch (\Throwable $e) {
+            Log::warning('[SessionService] support inbox hook xatosi: ' . $e->getMessage());
+        }
+
+        return $saved;
     }
 
     public static function saveSystemMessage(int $ticketId, string $message): BotTicketMessage

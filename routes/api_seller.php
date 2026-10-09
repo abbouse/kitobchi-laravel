@@ -123,6 +123,7 @@ Route::middleware('auth:seller')->group(function () {
         Route::get('{ticket}', [SupportTicketController::class, 'show']);
         Route::post('{ticket}/reply', [SupportTicketController::class, 'reply']);
         Route::post('{ticket}/close', [SupportTicketController::class, 'close']);
+        Route::post('{ticket}/feedback', [SupportTicketController::class, 'feedback']);
     });
 
     Route::get('ban-logs', [BanLogController::class, 'index'])->name('seller.index_banlog');

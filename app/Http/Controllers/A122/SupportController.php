@@ -105,8 +105,8 @@ class SupportController extends Controller
 
         if ($ticket->source_type !== 'shop_chat') {
             try {
-                $bot = app(\SergiX44\Nutgram\Nutgram::class);
-                \App\Handlers\UserHandler::sendRatingRequest($bot, (int) $ticket->user_id, (int) $ticket->id);
+                app(TelegramSupportService::class)->sendFeedbackRequest((int) $ticket->user_id, (int) $ticket->id);
+                $ticket->forceFill(['feedback_requested_at' => now()])->save();
             } catch (\Throwable) {}
         }
 

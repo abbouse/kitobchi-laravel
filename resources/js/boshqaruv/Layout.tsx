@@ -68,8 +68,9 @@ const nav = [
     { to: '/boshqaruv/book-club', match: '/boshqaruv/book-club', label: 'Book Club', icon: 'ti-bookmark', perm: 'book-club' },
   ]},
   { group: 'Mijozlarga xizmat', section: 'Jamoa va tizim', icon: 'ti-headset', ax: 'iconoir-headset-help', items: [
-    { to: '/boshqaruv/tickets', match: '/boshqaruv/tickets', label: 'Support', icon: 'ti-headset', perm: 'support' },
-    { to: '/boshqaruv/tickets?tickets_source=seller', match: '/boshqaruv/tickets?tickets_source=seller', label: 'Seller tiketlari', icon: 'ti-message', perm: 'support' },
+    { to: '/boshqaruv/support/inbox', match: '/boshqaruv/support/inbox', label: 'Support inbox', icon: 'ti-messages', ax: 'iconoir-chat-bubble', badge: 'LIVE', perm: 'support' },
+    { to: '/boshqaruv/support/kpi', match: '/boshqaruv/support/kpi', label: 'Support KPI', icon: 'ti-chart-histogram', perm: 'support' },
+    { to: '/boshqaruv/tickets', match: '/boshqaruv/tickets', label: 'Murojaatlar arxivi', icon: 'ti-archive', perm: 'support' },
     { to: '/boshqaruv/shikoyatlar', match: '/boshqaruv/shikoyatlar', label: 'Shikoyatlar', icon: 'ti-alert-triangle', perm: 'support' },
     { to: '/boshqaruv/chat', match: '/boshqaruv/chat', label: 'Chat kuzatuv', icon: 'ti-message-dots', perm: 'support' },
     { to: '/boshqaruv/push', match: '/boshqaruv/push', label: 'Push bildirishnomalar', icon: 'ti-bell', perm: 'push' },

@@ -15,6 +15,11 @@ class SellerSupportTicketMessage extends Model
         'sender_type',
         'sender_id',
         'message',
+        'is_internal',
+    ];
+
+    protected $casts = [
+        'is_internal' => 'boolean',
     ];
 
     public function ticket(): BelongsTo

@@ -171,19 +171,8 @@ class UserHandler
             return;
         }
 
-        $opId = $ticket->operator_id;
-        SessionService::closeTicket($ticket->id, 'user_cancelled');
         SessionService::saveSystemMessage($ticket->id, "Foydalanuvchi murojaatni bekor qildi.");
-
-        if ($opId) {
-            try {
-                $bot->sendMessage(
-                    "🔴 <b>Mijoz murojaatni bekor qildi.</b>\n🎫 Ticket #{$ticket->id}",
-                    chat_id: (int) $opId,
-                    parse_mode: 'HTML'
-                );
-            } catch (\Throwable) {}
-        }
+        SessionService::closeTicket($ticket->id, 'user_cancelled');
 
         $bot->sendMessage("✅ <b>Murojaatingiz bekor qilindi.</b>\nYana savollaringiz bo'lsa, bemalol murojaat qiling! 👋", parse_mode: 'HTML');
     }
@@ -235,15 +224,13 @@ class UserHandler
 
                 $bot->sendMessage(
                     "✅ <b>Murojaatingiz qabul qilindi!</b>\n🎫 Ticket #<b>{$ticket->id}</b>\n\n" .
-                    "Operatorlarimizga xabar berildi. Tez orada javob beramiz ⏳\n" .
+                    "Operatorlarimiz tez orada shu yerda javob beradi ⏳\n" .
                     "Qo'shimcha ma'lumotlarni yuborishingiz mumkin.{$workingHoursNote}\n\n/cancel — Bekor qilish",
                     parse_mode: 'HTML'
                 );
 
-                self::saveUserMessage($message, (int) $ticket->id, $cid);
-                self::saveMediaAttachment($message, (int) $ticket->id, 'user');
-
-                self::dispatchTicket($bot, (array) $ticket);
+                $saved = self::saveUserMessage($message, (int) $ticket->id, $cid);
+                self::saveMediaAttachment($message, (int) $ticket->id, 'user', (int) $saved->id);
             } catch (\Throwable $e) {
                 Log::error("[User] Ticket yaratishda xatolik", ['error' => $e->getMessage()]);
                 $bot->sendMessage("⚠️ Murojaatni qabul qilishda xatolik yuz berdi. Iltimos, qayta urinib ko'ring.");
@@ -251,87 +238,31 @@ class UserHandler
             return;
         }
 
-        // 2. Ticket Navbatda (Queue) holatida
+        // 2. Navbatdagi yoki faol murojaat: xabar saqlanadi va boshqaruvdagi support inboxga real-vaqtda tushadi.
+        // Operatorlar endi faqat boshqaruv panelidan javob beradi.
+        $saved = self::saveUserMessage($message, (int) $ticket->id, $cid);
+        self::saveMediaAttachment($message, (int) $ticket->id, 'user', (int) $saved->id);
+
         if ($ticket->status === SessionService::STATUS_QUEUE) {
-            $pos = SessionService::getQueuePosition($ticket->id);
-            $bot->sendMessage("📨 Xabaringiz qabul qilindi. Navbatda: <b>{$pos}-o'rinda</b> ⏳", parse_mode: 'HTML');
-
-            self::saveUserMessage($message, (int) $ticket->id, $cid);
-            self::saveMediaAttachment($message, (int) $ticket->id, 'user');
-
-            // Online operatorlarga yangi xabar haqida yetkazish
-            $operators = SessionService::getOperators();
-            foreach ($operators as $opId) {
-                if (SessionService::getOperatorStatus($opId) === SessionService::OP_OFFLINE) continue;
-                try {
-                    $bot->copyMessage(chat_id: $opId, from_chat_id: $cid, message_id: $message->message_id);
-                } catch (\Throwable) {}
-            }
-            return;
-        }
-
-        // 3. Ticket Faol (Active) — Operator bilan suhbat
-        if ($ticket->status === SessionService::STATUS_ACTIVE) {
-            $opId = (int) $ticket->operator_id;
-
-            // Chat action operatorga
-            app(TelegramSupportService::class)->sendChatAction($opId, self::resolveChatAction($message));
-
-            $savedMsg = self::saveUserMessage($message, (int) $ticket->id, $cid);
-            self::saveMediaAttachment($message, (int) $ticket->id, 'user');
-
-            try {
-                $copied = $bot->copyMessage(
-                    chat_id: $opId,
-                    from_chat_id: $cid,
-                    message_id: $message->message_id
-                );
-
-                // Operatorga borgan xabar ID sini saqlash (Reply-To bog'lanishi uchun!)
-                if ($copied?->message_id) {
-                    SessionService::saveMessage(
-                        ticketId: (int) $ticket->id,
-                        sentBy: 'user',
-                        message: $message->text ?? $message->caption ?? '[Media]',
-                        messageType: $savedMsg->message_type,
-                        telegramActorId: $opId,
-                        telegramMessageId: $copied->message_id,
-                        isDelivered: true
-                    );
-                }
-            } catch (\Throwable $e) {
-                Log::error("[User] Operatorga nusxalashda xato", ['error' => $e->getMessage(), 'op_id' => $opId]);
+            $recent = \App\Models\BotTicketMessage::query()
+                ->where('ticket_id', $ticket->id)
+                ->where('sent_by', 'user')
+                ->where('id', '<', $saved->id)
+                ->where('created_at', '>=', now()->subMinutes(10))
+                ->exists();
+            if (!$recent) {
+                $bot->sendMessage("📨 Xabaringiz qabul qilindi. Operatorimiz tez orada javob beradi ⏳");
             }
         }
     }
 
+    /**
+     * Eski oqim: yangi murojaat Telegram operatorlarga yuborilardi.
+     * Endi murojaatlar boshqaruvdagi support inboxga real-vaqtda tushadi (SupportInboxService).
+     */
     public static function dispatchTicket(Nutgram $bot, object|array $ticket): void
     {
-        $ticketObj   = is_array($ticket) ? (object) $ticket : $ticket;
-        $operators   = SessionService::getOperators();
-        $userDisplay = SessionService::formatUser($ticketObj->name ?? null, $ticketObj->username ?? null, (int) ($ticketObj->user_id ?? 0));
-        $preview     = mb_substr($ticketObj->first_msg ?? '[Media]', 0, 150);
-        $time        = \Carbon\Carbon::parse($ticketObj->created_at ?? now())->format('H:i');
-
-        $text  = "🆕 <b>Yangi murojaat #{$ticketObj->id}</b>\n\n";
-        $text .= "👤 Mijoz: $userDisplay\n";
-        $text .= "🕐 Vaqt: $time\n\n";
-        $text .= "💬 <i>" . htmlspecialchars($preview) . "</i>";
-
-        $keyboard = InlineKeyboardMarkup::make()->addRow(
-            InlineKeyboardButton::make("✋ Qabul qilish", callback_data: "take_ticket:{$ticketObj->id}")
-        );
-
-        foreach ($operators as $opId) {
-            $status = SessionService::getOperatorStatus($opId);
-            if ($status === SessionService::OP_OFFLINE || $status === SessionService::OP_BREAK) continue;
-
-            try {
-                $bot->sendMessage($text, chat_id: $opId, parse_mode: 'HTML', reply_markup: $keyboard);
-            } catch (\Throwable $e) {
-                Log::warning("[User] Operatorga bildirishnoma xatosi", ['op_id' => $opId, 'error' => $e->getMessage()]);
-            }
-        }
+        // ataylab bo'sh
     }
 
     public static function sendRatingRequest(Nutgram $bot, int $userId, int $ticketId): void
@@ -375,6 +306,8 @@ class UserHandler
         SessionService::updateTicket($ticketId, [
             'rating' => $score,
             'status' => SessionService::STATUS_RATED,
+            'feedback' => $score >= 4 ? 'good' : 'bad',
+            'feedback_at' => now(),
         ]);
 
         if ($ticket->operator_id) {
@@ -464,7 +397,8 @@ class UserHandler
     private static function saveMediaAttachment(
         \SergiX44\Nutgram\Telegram\Types\Message\Message $message,
         int $ticketId,
-        string $sentBy
+        string $sentBy,
+        ?int $messageId = null
     ): void {
         $fileId   = null;
         $fileType = null;
@@ -505,7 +439,7 @@ class UserHandler
         }
 
         if ($fileId) {
-            SessionService::saveAttachment($ticketId, $fileId, $fileType, $sentBy, $fileName, $fileSize);
+            SessionService::saveAttachment($ticketId, $fileId, $fileType, $sentBy, $fileName, $fileSize, $messageId);
         }
     }
 }

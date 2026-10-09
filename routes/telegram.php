@@ -1,241 +1,56 @@
 <?php
 
 use App\Handlers\UserHandler;
-use App\Handlers\OperatorHandler;
-use App\Handlers\AdminHandler;
-use App\Services\SessionService;
 use SergiX44\Nutgram\Nutgram;
 use Illuminate\Support\Facades\Log;
 
 /** @var Nutgram $bot */
 
-// ─── BUYRUQLAR (COMMANDS) ──────────────────────────────────────────────────────
+/*
+| Kitobchi support bot — faqat MIJOZLAR uchun.
+| Operatorlar endi Telegram orqali javob bermaydi: barcha murojaatlar boshqaruvdagi
+| "Support inbox" bo'limiga real-vaqtda tushadi va javob o'sha yerdan yuboriladi.
+*/
 
-$bot->onCommand('start', function (Nutgram $bot) {
-    $cid = $bot->chatId();
-    if (AdminHandler::isAdmin($bot, $cid))       { AdminHandler::handleStart($bot);    return; }
-    if (OperatorHandler::isOperator($bot, $cid)) { OperatorHandler::handleStart($bot); return; }
-    UserHandler::handleStart($bot);
-});
+// ─── BUYRUQLAR ────────────────────────────────────────────────────────────────
 
-$bot->onCommand('help', function (Nutgram $bot) {
-    $cid = $bot->chatId();
-    if (AdminHandler::isAdmin($bot, $cid))       { AdminHandler::handleHelp($bot);    return; }
-    if (OperatorHandler::isOperator($bot, $cid)) { OperatorHandler::handleHelp($bot); return; }
-    UserHandler::handleHelp($bot);
-});
-
-// ─── OPERATOR VA TICKET BUYRUQLARI ─────────────────────────────────────────────
-
-$bot->onCommand('queue',   fn(Nutgram $bot) => OperatorHandler::handleQueue($bot));
-$bot->onCommand('take {ticketId}', function (Nutgram $bot, string $ticketId) {
-    OperatorHandler::handleTake($bot, (int) $ticketId);
-});
-$bot->onCommand('take',    fn(Nutgram $bot) => OperatorHandler::handleTake($bot));
-$bot->onCommand('current', fn(Nutgram $bot) => OperatorHandler::handleCurrent($bot));
-
-$bot->onCommand('end {ticketId}', function (Nutgram $bot, string $ticketId) {
-    OperatorHandler::handleEnd($bot, (int) $ticketId);
-});
-$bot->onCommand('end',     fn(Nutgram $bot) => OperatorHandler::handleEnd($bot));
-
-$bot->onCommand('close {ticketId}', function (Nutgram $bot, string $ticketId) {
-    OperatorHandler::handleEnd($bot, (int) $ticketId);
-});
-$bot->onCommand('close',   fn(Nutgram $bot) => OperatorHandler::handleEnd($bot));
-
-$bot->onCommand('note', function (Nutgram $bot) {
-    $fullText = $bot->message()?->text ?? '';
-    $noteText = trim(preg_replace('/^\/note\s*/i', '', $fullText));
-    OperatorHandler::handleNote($bot, $noteText);
-});
-
-$bot->onCommand('status',  fn(Nutgram $bot) => OperatorHandler::handleStatus($bot));
-$bot->onCommand('stats',   fn(Nutgram $bot) => OperatorHandler::handleStats($bot));
-$bot->onCommand('quick',   fn(Nutgram $bot) => OperatorHandler::handleQuickReplies($bot));
-$bot->onCommand('shablon', fn(Nutgram $bot) => OperatorHandler::handleQuickReplies($bot));
-
-$bot->onCommand('history {ticketId}', function (Nutgram $bot, string $ticketId) {
-    OperatorHandler::handleHistory($bot, $ticketId);
-});
-$bot->onCommand('history', function (Nutgram $bot) {
-    OperatorHandler::handleHistory($bot);
-});
-
-// ─── ADMIN BUYRUQLARI ─────────────────────────────────────────────────────────
-
-$bot->onCommand('closeall', fn(Nutgram $bot) => AdminHandler::handleCloseAllPrompt($bot));
-$bot->onCommand('setupmenu', fn(Nutgram $bot) => AdminHandler::handleSetupMenu($bot));
-
-$bot->onCommand('addop', function (Nutgram $bot) {
-    $cid = $bot->chatId();
-    if (!AdminHandler::isAdmin($bot, $cid)) return;
-
-    $fullText = $bot->message()?->text ?? '';
-    // Format: /addop 123456789 Jasur Aliyev
-    if (preg_match('/^\/addop\s+(\d+)(?:\s+(.*))?$/i', trim($fullText), $matches)) {
-        $newId = (int) $matches[1];
-        $name  = !empty($matches[2]) ? trim($matches[2]) : null;
-        AdminHandler::handleAddOperator($bot, $newId, $name);
-    } else {
-        $bot->sendMessage(
-            "Foydalanish: /addop <code>[TelegramID]</code> <code>[Ism]</code>\n\nMisol: /addop 123456789 Jasur Aliyev",
-            parse_mode: 'HTML'
-        );
-    }
-});
-
-$bot->onCommand('removeop {id}', function (Nutgram $bot, string $id) {
-    AdminHandler::handleRemoveOperator($bot, (int) $id);
-});
-
-$bot->onCommand('operators', fn(Nutgram $bot) => AdminHandler::handleListOperators($bot));
-
-$bot->onCommand('broadcast', function (Nutgram $bot) {
-    $cid = $bot->chatId();
-    if (!AdminHandler::isAdmin($bot, $cid)) return;
-
-    $fullText = $bot->message()?->text ?? '';
-    $msgText  = trim(preg_replace('/^\/broadcast\s*/i', '', $fullText));
-    AdminHandler::handleBroadcast($bot, $msgText);
-});
-
-$bot->onCommand('allstats', fn(Nutgram $bot) => AdminHandler::handleAllStats($bot));
-
-// ─── UMUMIY BUYRUQLAR ─────────────────────────────────────────────────────────
-
-$bot->onCommand('myid', fn(Nutgram $bot) =>
+$bot->onCommand('start', fn (Nutgram $bot) => UserHandler::handleStart($bot));
+$bot->onCommand('help', fn (Nutgram $bot) => UserHandler::handleHelp($bot));
+$bot->onCommand('cancel', fn (Nutgram $bot) => UserHandler::handleCancel($bot));
+$bot->onCommand('myid', fn (Nutgram $bot) =>
     $bot->sendMessage("🪪 Sizning Telegram ID: <code>{$bot->chatId()}</code>", parse_mode: 'HTML')
 );
 
-$bot->onCommand('cancel', function (Nutgram $bot) {
-    $cid = $bot->chatId();
-    if (!OperatorHandler::isOperator($bot, $cid) && !AdminHandler::isAdmin($bot, $cid)) {
-        UserHandler::handleCancel($bot);
-    }
-});
-
 // ─── CALLBACK QUERIES ─────────────────────────────────────────────────────────
 
-// Foydalanuvchi FAQ menyulari
-$bot->onCallbackQueryData('user_faq_menu', fn(Nutgram $bot) => UserHandler::handleStart($bot));
-$bot->onCallbackQueryData('user_faq_order', fn(Nutgram $bot) => UserHandler::handleFaqOrder($bot));
-$bot->onCallbackQueryData('user_faq_delivery', fn(Nutgram $bot) => UserHandler::handleFaqDelivery($bot));
-$bot->onCallbackQueryData('user_faq_payment', fn(Nutgram $bot) => UserHandler::handleFaqPayment($bot));
-$bot->onCallbackQueryData('user_faq_cashback', fn(Nutgram $bot) => UserHandler::handleFaqCashback($bot));
-$bot->onCallbackQueryData('user_faq_app', fn(Nutgram $bot) => UserHandler::handleFaqApp($bot));
+$bot->onCallbackQueryData('user_faq_menu', fn (Nutgram $bot) => UserHandler::handleStart($bot));
+$bot->onCallbackQueryData('user_faq_order', fn (Nutgram $bot) => UserHandler::handleFaqOrder($bot));
+$bot->onCallbackQueryData('user_faq_delivery', fn (Nutgram $bot) => UserHandler::handleFaqDelivery($bot));
+$bot->onCallbackQueryData('user_faq_payment', fn (Nutgram $bot) => UserHandler::handleFaqPayment($bot));
+$bot->onCallbackQueryData('user_faq_cashback', fn (Nutgram $bot) => UserHandler::handleFaqCashback($bot));
+$bot->onCallbackQueryData('user_faq_app', fn (Nutgram $bot) => UserHandler::handleFaqApp($bot));
 $bot->onCallbackQueryData('user_connect_operator', function (Nutgram $bot) {
     $bot->answerCallbackQuery();
-    $bot->sendMessage("💬 <b>Operatorga xabar yo'llash:</b>\n\nSavolingiz yoki murojaatingizni yozing (matn, rasm, ovozli xabar yoki hujjat) — navbatdagi bo'sh operatorimiz tez orada javob beradi!", parse_mode: 'HTML');
+    $bot->sendMessage("💬 <b>Operatorga xabar yo'llash:</b>\n\nSavolingizni yozing (matn, rasm, ovozli xabar yoki hujjat) — operatorimiz tez orada shu yerda javob beradi!", parse_mode: 'HTML');
 });
 
-// Operator va Admin callbacks
-$bot->onCallbackQueryData('take_ticket:{ticketId}',
-    fn(Nutgram $bot) => OperatorHandler::handleTakeCallback($bot));
+// Baho: yangi (yaxshi/yomon) va eski (1–5 yulduz) xabarlar uchun
+$bot->onCallbackQueryData('fb:{ticketId}:{value}', fn (Nutgram $bot) => UserHandler::handleFeedbackCallback($bot));
+$bot->onCallbackQueryData('rate:{ticketId}:{score}', fn (Nutgram $bot) => UserHandler::handleRatingCallback($bot));
 
-$bot->onCallbackQueryData('confirm_close:{ticketId}',
-    fn(Nutgram $bot) => OperatorHandler::handleConfirmClose($bot));
-
-$bot->onCallbackQueryData('transfer_ticket:{ticketId}',
-    fn(Nutgram $bot) => OperatorHandler::handleTransferCallback($bot));
-
-$bot->onCallbackQueryData('cancel_close', function (Nutgram $bot) {
-    $bot->answerCallbackQuery(text: "❌ Bekor qilindi");
-    try {
-        $bot->editMessageText("❌ Amal bekor qilindi.");
-    } catch (\Throwable) {}
-});
-
-$bot->onCallbackQueryData('admin_close_all_prompt',
-    fn(Nutgram $bot) => AdminHandler::handleCloseAllPrompt($bot));
-
-$bot->onCallbackQueryData('admin_close_queue_prompt',
-    fn(Nutgram $bot) => AdminHandler::handleCloseAllPrompt($bot));
-
-$bot->onCallbackQueryData('admin_confirm_close_all',
-    fn(Nutgram $bot) => AdminHandler::handleConfirmCloseAll($bot));
-
-$bot->onCallbackQueryData('op_status:{status}',
-    fn(Nutgram $bot) => OperatorHandler::handleOpStatusCallback($bot));
-
-$bot->onCallbackQueryData('op_canned_list',
-    fn(Nutgram $bot) => OperatorHandler::handleQuickReplies($bot));
-
-$bot->onCallbackQueryData('op_canned_cat:{category}', function (Nutgram $bot) {
-    $data = $bot->callbackQuery()->data;
-    $cat  = explode(':', $data)[1] ?? null;
-    OperatorHandler::handleQuickReplies($bot, $cat);
-});
-
-$bot->onCallbackQueryData('op_current_ticket',
-    fn(Nutgram $bot) => OperatorHandler::handleCurrent($bot));
-
-$bot->onCallbackQueryData('op_canned_send:{key}', function (Nutgram $bot) {
-    $data = $bot->callbackQuery()->data;
-    $key  = explode(':', $data)[1] ?? '';
-    OperatorHandler::handleSendQuickReply($bot, $key);
-});
-
-// ─── INLINE QUERY QIDIRUV (TELEGRAM BOT API) ──────────────────────────────────
-
-$bot->onInlineQuery(fn(Nutgram $bot) => OperatorHandler::handleInlineQuery($bot));
-
-$bot->onCallbackQueryData('op_view_queue',
-    fn(Nutgram $bot) => OperatorHandler::handleQueue($bot));
-
-$bot->onCallbackQueryData('op_history:{ticketId}', function (Nutgram $bot) {
-    $data     = $bot->callbackQuery()->data;
-    $ticketId = explode(':', $data)[1] ?? null;
-    OperatorHandler::handleHistory($bot, $ticketId);
-});
-
-$bot->onCallbackQueryData('admin_view_operators',
-    fn(Nutgram $bot) => AdminHandler::handleListOperators($bot));
-
-$bot->onCallbackQueryData('admin_view_stats',
-    fn(Nutgram $bot) => AdminHandler::handleAllStats($bot));
-
-$bot->onCallbackQueryData('rate:{ticketId}:{score}',
-    fn(Nutgram $bot) => UserHandler::handleRatingCallback($bot));
-
-// ─── ODDIY XABARLAR (MESSAGES) ─────────────────────────────────────────────────
+// ─── ODDIY XABARLAR ───────────────────────────────────────────────────────────
 
 $bot->onMessage(function (Nutgram $bot) {
     $message = $bot->message();
     if (!$message) return;
 
     $text = trim($message->text ?? '');
-
-    // Buyruqlarni o'tkazib yuborish
-    if (str_starts_with($text, '/')) return;
-
-    $cid = $bot->chatId();
-    $isOperator = OperatorHandler::isOperator($bot, $cid);
-    $isAdmin    = AdminHandler::isAdmin($bot, $cid);
-
-    // Operator klaviatura tugmalari bosilganda
-    if ($isOperator || $isAdmin) {
-        match ($text) {
-            '📋 Navbat'          => OperatorHandler::handleQueue($bot),
-            '🎫 Faol murojaat'   => OperatorHandler::handleCurrent($bot),
-            '⚡ Tezkor javoblar' => OperatorHandler::handleQuickReplies($bot),
-            '📊 Statistika'      => OperatorHandler::handleStats($bot),
-            '⚙️ Status'          => OperatorHandler::handleStatus($bot),
-            default              => null,
-        };
-
-        if (in_array($text, ['📋 Navbat', '🎫 Faol murojaat', '⚡ Tezkor javoblar', '📊 Statistika', '⚙️ Status'])) {
-            return;
+    if (str_starts_with($text, '/')) {
+        // Eski operator buyruqlari (/take, /queue, /end ...) — endi boshqaruv panelida
+        $command = strtolower(ltrim(strtok($text, " @") ?: '', '/'));
+        if (in_array($command, ['queue', 'take', 'current', 'end', 'close', 'note', 'status', 'stats', 'quick', 'shablon', 'history', 'closeall', 'addop', 'removeop', 'operators', 'broadcast', 'allstats', 'setupmenu'], true)) {
+            $bot->sendMessage("ℹ️ Operatorlar endi murojaatlarga Kitobchi boshqaruv panelidagi «Support inbox» bo'limidan javob beradi.");
         }
-    }
-
-    if ($isAdmin) {
-        AdminHandler::handleMessage($bot);
-        return;
-    }
-
-    if ($isOperator) {
-        OperatorHandler::handleMessage($bot);
         return;
     }
 
@@ -247,7 +62,6 @@ $bot->onMessage(function (Nutgram $bot) {
 $bot->onException(function (Nutgram $bot, \Throwable $e) {
     $msg = $e->getMessage();
 
-    // Telegram API normal ogohlantirishlarini (masalan: message not modified, query too old, bot blocked) e'tiborsiz qoldiramiz
     if (
         str_contains($msg, 'message is not modified') ||
         str_contains($msg, 'query is too old') ||

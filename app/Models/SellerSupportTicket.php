@@ -21,11 +21,16 @@ class SellerSupportTicket extends Model
         'admin_unread_count',
         'closed_at',
         'close_reason',
+        'first_response_at',
+        'feedback',
+        'feedback_at',
     ];
 
     protected $casts = [
         'last_message_at' => 'datetime',
         'closed_at' => 'datetime',
+        'first_response_at' => 'datetime',
+        'feedback_at' => 'datetime',
         'seller_unread_count' => 'integer',
         'admin_unread_count' => 'integer',
     ];

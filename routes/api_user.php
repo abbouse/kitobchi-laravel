@@ -25,6 +25,7 @@ use App\Http\Controllers\Api\SearchController;
 use App\Http\Controllers\Api\ShareController;
 use App\Http\Controllers\Api\SharedCartController;
 use App\Http\Controllers\Api\ShopApiController;
+use App\Http\Controllers\Api\SupportFeedbackController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -263,6 +264,10 @@ Route::middleware('auth:user')->group(function () {
         Route::post('{conversationId}/read', [ChatController::class, 'markAsRead']);
         Route::post('{conversationId}/typing', [ChatController::class, 'typing']);
     });
+
+    // Support chat: yopilgan murojaatga baho (yaxshi / yomon)
+    Route::get('support/feedback', [SupportFeedbackController::class, 'pending']);
+    Route::post('support/feedback', [SupportFeedbackController::class, 'store']);
 
     // Boshqa foydalanuvchi yo'llari
     Route::get('notifications', [UserController::class, 'notifications']);

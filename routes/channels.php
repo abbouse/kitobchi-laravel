@@ -97,3 +97,10 @@ Broadcast::channel('global-online', function ($user) {
 Broadcast::channel('user.bot.{userId}', function ($user, $userId) {
     return (int) $user->id === (int) $userId;
 }, ['guards' => ['user']]);
+
+// Boshqaruv: support inbox (operatorlar). Panel sessiyasi orqali /boshqaruv/broadcasting/auth
+Broadcast::channel('support.inbox', function ($admin) {
+    return $admin instanceof \App\Models\Admin
+        && (bool) ($admin->is_active ?? true)
+        && $admin->hasPermission('support');
+}, ['guards' => ['panel']]);

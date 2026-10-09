@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Handlers\UserHandler;
 use App\Events\ConversationUpdated;
 use App\Events\MessageSent;
 use App\Jobs\SendMessagePushNotification;
@@ -12,7 +11,6 @@ use App\Models\Message;
 use App\Models\Seller;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use SergiX44\Nutgram\Nutgram;
 
 class SupportChatBridgeService
 {
@@ -45,37 +43,7 @@ class SupportChatBridgeService
             telegramActorId: $conversation->user_id
         );
 
-        $bot = app(Nutgram::class);
-
-        if ((int) ($ticket->operator_id ?? 0) > 0 && $ticket->status === SessionService::STATUS_ACTIVE) {
-            $bot->sendMessage(
-                "💬 <b>Support chat #{$ticket->id}</b>\n👤 "
-                . SessionService::formatUser($ticket->name, $ticket->username, $ticket->user_id)
-                . "\n\n" . e($message->message),
-                chat_id: (int) $ticket->operator_id,
-                parse_mode: 'HTML'
-            );
-            return;
-        }
-
-        if ($ticket->status !== SessionService::STATUS_QUEUE) {
-            $ticket->update([
-                'status' => SessionService::STATUS_QUEUE,
-                'operator_id' => null,
-                'closed_at' => null,
-                'close_reason' => null,
-            ]);
-            SessionService::saveSystemMessage((int) $ticket->id, "Mijoz support chatga yana yozdi, ticket qayta navbatga tushdi.");
-        }
-
-        UserHandler::dispatchTicket($bot, [
-            'id' => $ticket->id,
-            'user_id' => $ticket->user_id,
-            'username' => $ticket->username,
-            'name' => $ticket->name,
-            'first_msg' => $message->message,
-            'created_at' => optional($ticket->created_at)->toDateTimeString() ?? now()->toDateTimeString(),
-        ]);
+        // Javob endi boshqaruvdagi support inboxdan beriladi (SessionService::saveMessage → SupportInboxService hook).
     }
 
     public function sendReplyToConversation(object|array $ticket, string $body, ?int $operatorTelegramId = null, ?int $adminId = null): Message
@@ -131,7 +99,7 @@ class SupportChatBridgeService
         }
 
         try {
-            SendMessagePushNotification::dispatch($message->id)->delay(now()->addSeconds(2));
+            SendMessagePushNotification::dispatch($message->id)->delay(now()->addSeconds(8));
         } catch (\Throwable $e) {
             Log::warning('Support chat push yuborishda xato', [
                 'ticket_id' => $ticketId,
@@ -189,7 +157,7 @@ class SupportChatBridgeService
         }
 
         $senderSeller = $conversation->shop;
-        $closeText = "✅ Murojaatingiz yakunlandi. Kitobchi xizmatidan foydalanganingiz uchun rahmat!";
+        $closeText = "Murojaatingiz yakunlandi. Yordamimiz foydali bo'ldimi? Iltimos, quyida baholang.";
 
         try {
             $message = $conversation->messages()->create([
@@ -206,12 +174,18 @@ class SupportChatBridgeService
             $freshConversation = $conversation->fresh();
             $this->safeBroadcast(
                 event: new MessageSent($message->load('replyTo')),
-                context: ['ticket_id' => $ticket->id, 'conversation_id' => $conversation->id]
+                context: ['ticket_id' => $ticketId, 'conversation_id' => $conversation->id]
             );
             $this->safeBroadcast(
                 event: new ConversationUpdated($freshConversation, (int) $conversation->user_id, 'user'),
-                context: ['ticket_id' => $ticket->id, 'conversation_id' => $conversation->id]
+                context: ['ticket_id' => $ticketId, 'conversation_id' => $conversation->id]
             );
+
+            try {
+                SendMessagePushNotification::dispatch($message->id)->delay(now()->addSeconds(8));
+            } catch (\Throwable $e) {
+                Log::info('[SupportChatBridgeService] yopilish push navbatga qo‘yilmadi: ' . $e->getMessage());
+            }
         } catch (\Throwable $e) {
             Log::warning("[SupportChatBridgeService] notifyConversationTicketClosed xatosi: " . $e->getMessage());
         }
