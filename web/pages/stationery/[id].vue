@@ -838,8 +838,7 @@ const rawId = computed(() => {
   return param.split('-')[0]
 })
 
-// Real backend: ShareController::product (GET v1/kitobchi/share/product/{id}?type=stationery)
-const { data: productData, error: productError, status: productStatus } = await useFetch<any>(
+const { data: productData, error: productError, status: productStatus, pending: productPending } = await useFetch<any>(
   () => `${config.public.apiBase}/v1/kitobchi/share/product/${rawId.value}`,
   {
     query: { type: 'stationery' },
@@ -847,21 +846,33 @@ const { data: productData, error: productError, status: productStatus } = await 
   }
 )
 
-// Mahsulot ko'rinmasa (topilmadi, do'kon yashirgan, sotuvdan olingan ...)
-// abadiy shimmer o'rniga "Bunday mahsulot mavjud emas" + sabab kodi chiqadi.
-const notFound = computed(() =>
-  !(productData.value?.data || productData.value?.product)
-  && (productStatus.value === 'error' || productStatus.value === 'success'))
-const unavailableCode = computed<string | null>(() =>
-  (productError.value as any)?.data?.code || productData.value?.code
-  || (notFound.value ? 'KB-S99' : null))
-if (import.meta.server && notFound.value) {
-  setResponseStatus(useRequestEvent()!, 404)
-}
-
 const product = computed(() => {
   return productData.value?.data || productData.value?.product || null
 })
+
+// Mahsulot ko'rinmasa (topilmadi, do'kon yashirgan, sotuvdan olingan ...)
+// abadiy shimmer o'rniga "Bunday mahsulot mavjud emas" + sabab kodi chiqadi.
+const notFound = computed(() => {
+  if (product.value) return false
+  if (Boolean(productError.value)) return true
+  if (productData.value?.status === 'error') return true
+  if (productData.value && !productData.value?.data && !productData.value?.product) return true
+  if (!productPending.value && productStatus.value !== 'pending') return true
+  return false
+})
+
+const unavailableCode = computed<string | null>(() => {
+  const err = productError.value as any
+  const errData = err?.data || err?.response?._data
+  return errData?.code || productData.value?.code || (notFound.value ? 'KB-S10' : null)
+})
+
+if (import.meta.server && notFound.value) {
+  const event = useRequestEvent()
+  if (event) {
+    setResponseStatus(event, 404)
+  }
+}
 
 // TUZATILDI (2026-08-26): reyting/sharh yo'q mahsulotlarga SOXTA "5.0"
 // qo'yilmasin (na sahifada, na JSON-LD'da) — faqat haqiqiy ugc_aggregate_score
@@ -979,14 +990,14 @@ const galleryImages = computed(() => {
 // O'xshash mahsulotlar — piyoladagi kabi, HAQIQIY backend qidiruv
 // endpointidan (bir xil category_id, "popular" saralash, joriy mahsulot
 // chiqarib tashlanadi).
-const { data: similarRes } = await useFetch<any>(`${config.public.apiBase}/v1/kitobchi/search/`, {
+const { data: similarRes } = useLazyFetch<any>(() => `${config.public.apiBase}/v1/kitobchi/search/`, {
   query: computed(() => ({
     type: 'stationery',
     category_id: product.value?.category_id || undefined,
     sort: 'popular',
     page: 1
   })),
-  lazy: true,
+  immediate: Boolean(product.value?.category_id),
   watch: [() => product.value?.category_id]
 })
 

@@ -34,29 +34,18 @@ class AiBuyerWishService
             return null;
         }
 
-        // 3. Buyurtma qilingan mahsulotlar nomi (promptga yordamchi kontekst)
-        $items = is_array($order->items) ? $order->items : json_decode((string) $order->items, true);
-        $bookTitles = [];
-        if (is_array($items)) {
-            foreach (array_slice($items, 0, 2) as $item) {
-                $title = trim((string) ($item['name'] ?? $item['title'] ?? ''));
-                if ($title !== '') {
-                    $bookTitles[] = $title;
-                }
-            }
-        }
-        $contextBooks = ! empty($bookTitles) ? implode(', ', $bookTitles) : 'yaxshi kitob';
-
-        // 4. OpenAI Prompt — haqiqiy oddiy o'zbek kitobxoni uslubida
-        $prompt = "Sen 'Kitobchi' platformasida kitob xarid qilgan oddiy, samimiy o'zbek yosh kitobxonisan. "
-            . "Sen xarid qilgan kitob: {$contextBooks}. "
-            . "Senda keyingi xaridorga chekda chiqadigan juda samimiy, do'stona, qisqa tilak yozish imkoni bor.\n\n"
+        // 3. OpenAI Prompt — o'zidan keyingi notanish kitobxonga samimiy tilak
+        // MUHIM: Xaridor o'zidan keyin kim, qaysi kitobni olishini bilmaydi (ism, jins, kitob nomi noma'lum).
+        // Tilak har qanday kitobxonga mos keladigan, mutlaqo neytral, samimiy va insoniy bo'lishi shart!
+        $prompt = "Sen 'Kitobchi' internet do'konida kitob sotib olgan oddiy o'zbek kitobxonisan. "
+            . "Senda o'zingdan keyin buyurtma beradigan MUTLAQO NOTANISH navbatdagi kitobxonga (uning ismi, jinsi va qanday kitob olgani senga noma'lum) chekda chop etiladigan samimiy, do'stona, qisqa tilak yozish imkoni bor.\n\n"
             . "TALABLAR:\n"
-            . "- Mutlaqo kitobiy, balandparvoz yoki robotona jumlalar YOZMA.\n"
-            . "- Xuddi Telegramda o'z tengdoshingga yozayotgandek tabiiy, og'zaki xalqona tilda yoz.\n"
-            . "- Kerakli joyda ataylab xalqona so'zlashuv xatolari yoki qisqartmalari bo'lsin (masalan: 'mazza qb oqing', 'vaxtiz unumli otsin', 'zor kitob tanlabsiz', 'choy bn zor ketadi', 'foydasi tegsin', 'yaxwi mutolaa', 'rosa tasirli', 'do'stlarizga ham ulashing').\n"
+            . "- U qanday kitob olganini BILMAYSAN, shuning uchun aniq kitob nomi yoki janriga bog'lama ('zo'r asar tanlabsiz' yoki 'buni o'qiganman' DEMA). Har qanday kitobga/mutolaaga tushadigan umumiy samimiy tilak bo'lsin.\n"
+            . "- Uning jinsi yoki yoshini BILMAYSAN, 'aka', 'uka', 'opa', 'singil' deb atama. Neytral, hurmatli va do'stona bo'lsin.\n"
+            . "- Mutlaqo kitobiy, rasmiy yoki robotona jumlalar YOZMA. Xuddi Telegramda do'stona yozayotgandek tabiiy, og'zaki xalqona tilda yoz.\n"
+            . "- Kerakli joyda ataylab xalqona so'zlashuv xatolari yoki qisqartmalari bo'lsin (masalan: 'mazza qb oqing', 'vaxtiz unumli otsin', 'choy bn zor ketadi', 'foydali bsin', 'yaxwi mutolaa', 'kayfiyatiz kutarilsin').\n"
             . "- EMOJI (smaylik) UMUMAN ISHLATMA! Chek printeri emojilarni chiqara olmaydi.\n"
-            . "- Uzunligi: 1 yoki 2 qisqa jumla (80-130 belgi orasida bo'lsin).\n"
+            . "- Uzunligi: 1 yoki 2 qisqa jumla (60-120 belgi orasida bo'lsin).\n"
             . "- Qo'shtirnoqsiz, faqat tilak matnining o'zini qaytar.";
 
         try {
@@ -135,12 +124,12 @@ class AiBuyerWishService
     protected function getFallbackWish(): string
     {
         $fallbacks = [
-            'zor kitob tanlabsiz, o\'zim ham mazza qb o\'qigandim, vaqtiz maroqli o\'tsin!',
+            'mazza qb o\'qing, vaqtingiz maroqli va unumli o\'tsin!',
             'yaxshi mutolaa tilayman, choy bilan birga juda ajoyib ketadi!',
-            'foydasi tegsin, har bir sahifasi manfaatli bo\'lsin!',
-            'juda yaxshi asar, o\'qib bo\'lib do\'stlaringizga ham tavsiya qiling!',
+            'har bir sahifasi manfaatli bo\'lsin, yaxshi kayfiyat tilayman!',
             'vaqtingiz mazmunli o\'tsin, yangi fikrlar va ilhom olib kelsin!',
-            'ajoyib tanlov! oxirigacha qiziqib o\'qishingizni tilayman.',
+            'mutolaa maroqli bo\'lsin, o\'qishdan charchamang!',
+            'yaxwi mutolaa, har doim yaxshi kitoblar hamrohingiz bo\'lsin!',
         ];
 
         return $fallbacks[array_rand($fallbacks)];

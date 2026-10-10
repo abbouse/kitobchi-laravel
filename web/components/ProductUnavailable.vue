@@ -1,8 +1,8 @@
 <template>
-  <!-- Mahsulot topilmadi / do'kon yashirgan / sotuvdan olingan — hammasida bir xil
-       matn, pastida sababni bildiruvchi kod (masalan KB-B20). Jadval:
-       app/Support/ProductUnavailability.php -->
   <div class="min-h-dvh bg-[#f0f2f5] grow flex items-center justify-center px-4 py-16">
+    <!-- Mahsulot topilmadi / do'kon yashirgan / sotuvdan olingan — hammasida bir xil
+         matn, pastida sababni bildiruvchi kod (masalan KB-B20). Jadval:
+         app/Support/ProductUnavailability.php -->
     <div class="w-full max-w-md bg-white rounded-3xl shadow-sm p-8 text-center">
       <div class="mx-auto mb-5 w-20 h-20 rounded-full bg-secondary-50 flex items-center justify-center text-4xl">📚</div>
       <h1 class="text-xl font-bold text-neutral-900 mb-2">{{ tr.title }}</h1>
