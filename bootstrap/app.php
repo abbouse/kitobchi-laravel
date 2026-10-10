@@ -61,6 +61,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('orders:cancel-unpaid')
             ->everyFiveMinutes()->timezone($tz);
 
+        // 30 daqiqa oldin qilingan, tilaksiz yangi/qadoqlanayotgan buyurtmalarga fonda OpenAI orqali tilak generatsiya qilish
+        $schedule->command('orders:generate-ai-wishes')
+            ->everyTenMinutes()->timezone($tz)->withoutOverlapping()->runInBackground();
+
         // Kuni o'tib ketgan, yetkazilmagan buyurtmalar keyingi kunga ko'chadi (yo'qolib qolmasligi uchun)
         $schedule->command('orders:roll-overdue-deliveries')
             ->dailyAt('00:10')->timezone($tz)->withoutOverlapping();

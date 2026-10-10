@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\OrderFulfillment;
+use App\Models\Sold;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Endroid\QrCode\Builder\Builder;
@@ -44,6 +45,8 @@ class HubPrintViewService
             $scanCode = 'ORD-'.$fulfillment->order_id;
         }
 
+        $wishInfo = $this->resolvePreviousBuyerWish($order, $fulfillment, $locale);
+
         return [
             'order_number' => '#ORD-'.$fulfillment->order_id,
             'locale' => $locale,
@@ -69,7 +72,11 @@ class HubPrintViewService
             'delivery_type_label' => $this->resolveDeliveryTypeLabel((string) ($order?->deliveryType ?? 'delivery'), $locale),
             'total_amount' => (int) round((float) ($order?->amount ?? 0)),
             'meta_hub_name' => $fulfillment->hub?->name ?: $this->text($locale, 'hub_unknown'),
-            'delight_message' => $this->resolveReceiptDelightMessage($fulfillment, $locale),
+            'delight_message' => $wishInfo['message'],
+            'prev_buyer_author' => $wishInfo['author'],
+            'prev_buyer_wish' => $wishInfo['message'],
+            'has_prev_buyer_wish' => $wishInfo['has_wish'],
+            'schedule_window' => $order ? \App\Support\DeliverySchedule::windowLabel($order) : null,
             'cancel_state_label' => $this->text($locale, 'cancelled_item_label'),
             'more_items_label' => $this->text($locale, 'more_items'),
         ];
@@ -241,6 +248,59 @@ class HubPrintViewService
         $index = ((int) $fulfillment->order_id) % count($variants);
 
         return $variants[$index];
+    }
+
+    private function resolvePreviousBuyerWish(?Sold $order, OrderFulfillment $fulfillment, string $locale): array
+    {
+        $defaultMsg = $this->resolveReceiptDelightMessage($fulfillment, $locale);
+
+        if (! $order) {
+            return [
+                'has_wish' => false,
+                'author' => 'Kitobchi',
+                'message' => $defaultMsg,
+            ];
+        }
+
+        try {
+            $prev = Sold::query()
+                ->where('id', '<', $order->id)
+                ->whereNotNull('buyerWish')
+                ->where('buyerWish', '!=', '')
+                ->whereNotIn('buyerWish', ['—', '-', '.', 'none'])
+                ->where('buyerWish', 'not like', 'Veb-sayt orqali buyurtma%')
+                ->latest('id')
+                ->first(['id', 'recipient_name', 'buyerWish', 'user_id']);
+
+            if ($prev && trim((string) $prev->buyerWish) !== '') {
+                $rawName = trim((string) ($prev->recipient_name ?? $prev->user?->full_name ?? 'Kitobxon'));
+                $author = $this->formatBuyerShortName($rawName);
+
+                return [
+                    'has_wish' => true,
+                    'author' => $author,
+                    'message' => trim((string) $prev->buyerWish),
+                ];
+            }
+        } catch (\Throwable) {
+            // Agar so'rovda kutilmagan holat bo'lsa, xavfsiz defaultga qaytish
+        }
+
+        return [
+            'has_wish' => false,
+            'author' => 'Kitobchi',
+            'message' => $defaultMsg,
+        ];
+    }
+
+    private function formatBuyerShortName(string $fullName): string
+    {
+        $parts = preg_split('/\s+/', trim($fullName)) ?: [];
+        if (count($parts) >= 2) {
+            return $parts[0] . ' ' . mb_substr($parts[1], 0, 1) . '.';
+        }
+
+        return $fullName !== '' ? $fullName : 'Kitobxon';
     }
 
     private function resolveDeliveryTypeLabel(string $deliveryType, string $locale): string

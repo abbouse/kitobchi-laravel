@@ -20,6 +20,7 @@ use App\Services\CourierOrderSettlementService;
 use App\Services\ProductReviewPromptService;
 use App\Services\OrderService;
 use App\Services\UserReputationService;
+use App\Jobs\GenerateOrderAiBuyerWishJob;
 use App\Services\UserPositionService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -34,6 +35,19 @@ class SoldObserver
         private readonly OrderService $orderService,
         private readonly UserReputationService $userReputationService,
     ) {}
+
+    /**
+     * Yangi buyurtma yaratilganda chaqiriladi.
+     * Agar xaridor tilak kiritmagan bo'lsa, 30 daqiqadan so'ng fonda OpenAI orqali
+     * shu xaridor nomidan samimiy tilak generatsiya qiluvchi job rejalashtiriladi.
+     */
+    public function created(Sold $order): void
+    {
+        if (empty(trim((string) $order->buyerWish))) {
+            GenerateOrderAiBuyerWishJob::dispatch($order->id)->delay(now()->addMinutes(30));
+            Log::info("SoldObserver: buyurtma #{$order->id} uchun 30 daqiqalik AI tilak jobi rejalashtirildi.");
+        }
+    }
 
     /**
      * Sold model yangilanganda chaqiriladi.
