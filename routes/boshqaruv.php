@@ -363,6 +363,7 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
                 Route::post('/close', 'close')->name('close');
                 Route::post('/read', 'read')->name('read');
                 Route::get('/kpi', 'kpi')->name('kpi');
+                Route::get('/chat-monitor', 'chatMonitorList')->name('chat.monitor');
                 Route::post('/templates', 'templateStore')->name('templates.store');
                 Route::put('/templates/{template}', 'templateUpdate')->name('templates.update');
                 Route::delete('/templates/{template}', 'templateDestroy')->name('templates.destroy');

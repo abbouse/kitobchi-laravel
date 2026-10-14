@@ -42,6 +42,11 @@ class ProjectSetting extends Model
         'review_cashback_enabled', 'review_cashback_amount',
         // AI bot qo'llanmasi (boshqaruvdan tahrir qilinadi)
         'ai_bot_extra_notes',
+        // Flash delivery — kunlik bepul yetkazish aksiyasi
+        'flash_delivery_enabled',
+        'flash_delivery_start_time',
+        'flash_delivery_duration',
+        'flash_delivery_promo_code',
     ];
 
     protected $casts = [
@@ -72,6 +77,9 @@ class ProjectSetting extends Model
         'split_card_delete_lock_enabled' => 'boolean',
         'review_cashback_enabled' => 'boolean',
         'review_cashback_amount' => 'integer',
+        // Flash delivery
+        'flash_delivery_enabled'  => 'boolean',
+        'flash_delivery_duration' => 'integer',
     ];
 
     /**

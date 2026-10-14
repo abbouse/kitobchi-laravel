@@ -868,7 +868,7 @@ class ProductCatalogController extends Controller
     public function robots()
     {
         $sitemapUrl = url('/sitemap.xml');
-        $content = "User-agent: *\nAllow: /\nDisallow: /a122/\nDisallow: /boshqaruv/\nDisallow: /api/\n\nSitemap: {$sitemapUrl}\n";
+        $content = "User-agent: *\nAllow: /\nDisallow: /a122/\nDisallow: /boshqaruv/\nDisallow: /api/\nDisallow: /cart\nDisallow: /cart/\nDisallow: /checkout\nDisallow: /checkout/\nDisallow: /profile\nDisallow: /profile/\nDisallow: /orders\nDisallow: /orders/\nDisallow: /auth/\nDisallow: /login\nDisallow: /login/\nDisallow: /search\nDisallow: /share/\nDisallow: /art/\nDisallow: /*?*sort=\nDisallow: /*?*min_price=\nDisallow: /*?*max_price=\nDisallow: /*?*seller_ids=\nDisallow: /*?*publisher_ids=\nDisallow: /*?*lang_types=\nDisallow: /*?*cover_types=\nDisallow: /*?*filter=\nDisallow: /*?*ref=\nDisallow: /*?*utm_\n\nUser-agent: Yandex\nAllow: /\nDisallow: /a122/\nDisallow: /boshqaruv/\nDisallow: /api/\nDisallow: /cart\nDisallow: /cart/\nDisallow: /checkout\nDisallow: /checkout/\nDisallow: /profile\nDisallow: /profile/\nDisallow: /orders\nDisallow: /orders/\nDisallow: /auth/\nDisallow: /login\nDisallow: /login/\nDisallow: /search\nDisallow: /share/\nDisallow: /art/\nClean-param: ref&utm_source&utm_medium&utm_campaign&sort&min_price&max_price&seller_ids&publisher_ids&lang_types&cover_types /\n\nHost: https://kitobchi.com\nSitemap: {$sitemapUrl}\n";
 
         return response($content, 200)->header('Content-Type', 'text/plain');
     }

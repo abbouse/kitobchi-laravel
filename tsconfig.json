@@ -13,7 +13,8 @@
     "allowJs": true,
     "paths": {
       "@/*": ["./resources/js/*"]
-    }
+    },
+    "types": ["vite/client"]
   },
   "include": [
     "resources/js/**/*"

@@ -1178,7 +1178,15 @@ watchEffect(() => {
     reviewsCount: reviewsCount.value,
     reviews: structuredReviews.value,
     categoryName: typeof product.value.category === 'string' ? product.value.category : (product.value.category?.name_uz || product.value.category?.name),
-    urlPath: `/books/${route.params.id}`,
+    urlPath: (() => {
+      const pName = product.value?.name || '';
+      const clean = pName.toLowerCase()
+        .replace(/[^a-z0-9а-яёўқғҳ\s-]/gi, '')
+        .trim()
+        .replace(/[\s_-]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+      return clean ? `/books/${rawId.value}-${clean}` : `/books/${route.params.id}`;
+    })(),
   })
 })
 </script>

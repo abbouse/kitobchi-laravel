@@ -30,7 +30,12 @@ interface Promo {
 
 const emptyPromo: Partial<Promo> = { code: '', type: 'percent', discount: 10, max: 0, minOrder: 0, maxDiscount: 0, perUserLimit: 1, eligibleOrderCount: 0, status: 'Active' };
 const isPercentPromo = (type?: string | null) => type === 'percent';
-const promoTypeLabel = (type?: string | null) => isPercentPromo(type) ? 'Foiz' : 'Summa';
+const isFreeDelivery = (type?: string | null) => type === 'free_delivery';
+const promoTypeLabel = (type?: string | null) => {
+  if (isPercentPromo(type)) return 'Foiz';
+  if (isFreeDelivery(type)) return '🚀 Bepul yetkazish';
+  return 'Summa';
+};
 const orderRuleLabel = (count?: number | null) => {
   const value = Number(count || 0);
   if (value <= 0) return 'Barchaga';

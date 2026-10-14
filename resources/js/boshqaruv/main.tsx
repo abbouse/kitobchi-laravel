@@ -25,7 +25,7 @@ createInertiaApp({
       throw new Error(`Boshqaruv page topilmadi: ${name}`);
     }
 
-    if (!['Login', 'LiveDashboard'].includes(name)) {
+    if (!['Login', 'LiveDashboard', 'SupportInbox'].includes(name)) {
       page.default.layout = (component: React.ReactNode) => <Layout>{component}</Layout>;
     }
 

@@ -9,6 +9,10 @@
     <AuthModal />
     <SearchOverlay />
     <AppDownloadBottomSheet />
+    <!-- Flash Delivery Banner: AppBottomNav ustida, client-side only -->
+    <ClientOnly>
+      <FlashDeliveryBanner />
+    </ClientOnly>
   </div>
 </template>
 

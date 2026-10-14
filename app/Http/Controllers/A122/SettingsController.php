@@ -207,9 +207,29 @@ class SettingsController extends Controller
             'packaging_threshold'   => 'required|integer|min:1',
             'review_cashback_amount' => 'nullable|integer|min:0|max:100000',
             'ai_bot_extra_notes' => 'nullable|string|max:2000',
+            // Flash delivery
+            'flash_delivery_start_time' => 'nullable|date_format:H:i',
+            'flash_delivery_duration'   => 'nullable|integer|min:1|max:120',
+            'flash_delivery_promo_code' => 'nullable|string|max:50',
         ]);
 
         $settings = $this->projectSettings();
+
+        $flashPayload = [];
+        if (\Illuminate\Support\Facades\Schema::hasColumn('project_settings', 'flash_delivery_enabled')) {
+            $flashPayload = [
+                'flash_delivery_enabled'    => $request->boolean('flash_delivery_enabled'),
+                'flash_delivery_start_time' => $request->filled('flash_delivery_start_time')
+                    ? $request->input('flash_delivery_start_time')
+                    : ($settings->flash_delivery_start_time ?? '20:00'),
+                'flash_delivery_duration'   => $request->filled('flash_delivery_duration')
+                    ? (int) $request->input('flash_delivery_duration')
+                    : ($settings->flash_delivery_duration ?? 15),
+                'flash_delivery_promo_code' => $request->filled('flash_delivery_promo_code')
+                    ? strtoupper(trim($request->input('flash_delivery_promo_code')))
+                    : ($settings->flash_delivery_promo_code ?? null),
+            ];
+        }
 
         $settings->update([
             'on_premium'            => $request->boolean('on_premium'),
@@ -229,9 +249,11 @@ class SettingsController extends Controller
                 : (int) ($settings->review_cashback_amount ?? 100),
             // AI bot qo'llanmasi
             'ai_bot_extra_notes' => trim((string) $request->input('ai_bot_extra_notes', '')) ?: null,
+            ...$flashPayload,
         ]);
 
         Cache::forget('project_settings');
+        Cache::forget('flash_delivery:setting');
         \App\Services\ReviewCashbackService::forgetSettingsCache();
         \App\Services\ChatBotKnowledgeService::forgetCache();
 

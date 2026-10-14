@@ -14,7 +14,8 @@
     @include('partials.seo-social', [
         'title' => $pageTitle,
         'description' => $pageDesc,
-        'canonical' => request()->url(),
+        'canonical' => !empty($webUrl) ? $webUrl : request()->url(),
+        'robots' => 'noindex, follow',
         'ogImage' => $productImg,
         'ogType' => 'product',
     ])

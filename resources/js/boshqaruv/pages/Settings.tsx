@@ -341,14 +341,47 @@ export default function Settings() {
               <div className="col-md-4"><TextInput name="packaging_price_large" label="Katta qadoqlash (UZS)" type="number" min={0} required defaultValue={value(project, 'packaging_price_large', '40000')} /></div>
               <div className="col-md-4"><TextInput name="packaging_threshold" label="Chegara (ta kitob)" type="number" min={1} required defaultValue={value(project, 'packaging_threshold', '4')} /></div>
               <div className="col-12"><hr className="my-1" /></div>
-              <div className="col-lg-6"><Toggle name="review_cashback_enabled" label="Izoh uchun keshbek yoqilgan" icon="ti-message-circle-2-filled" defaultChecked={project.review_cashback_enabled === undefined ? true : checked(project, 'review_cashback_enabled')} /></div>
-              <div className="col-md-4"><TextInput name="review_cashback_amount" label="Izoh keshbek miqdori (UZS)" type="number" min={0} max={100000} defaultValue={value(project, 'review_cashback_amount', '100')} /></div>
-              <div className="col-12 f-s-13 text-muted">Mijoz o'zi sotib olgan mahsulotga izoh qoldirsa shu miqdorda keshbek oladi. Har bir mahsulot uchun faqat 1 marta beriladi (nechta izoh yozishidan qat'i nazar).</div>
-              <div className="col-12"><hr className="my-1" /></div>
+              {/* ── Flash Delivery ──────────────────────────────── */}
               <div className="col-12">
-                <label className="form-label f-s-13 text-muted f-w-600">AI bot qo'shimcha qo'llanmasi</label>
-                <textarea name="ai_bot_extra_notes" className="form-control" rows={4} maxLength={2000} placeholder="Masalan: Ramazon aksiyasi davomida barcha buyurtmalarga sovg'a qo'shiladi. Ish vaqti: 9:00–21:00." defaultValue={value(project, 'ai_bot_extra_notes', '')} />
-                <div className="f-s-13 text-muted mt-1">Bu matn AI chatbot bilimiga qo'shiladi — aksiyalar, ish vaqti, maxsus qoidalarni shu yerga yozing. Tariflar, yetkazish narxlari va to'lov qoidalari tizimdan avtomatik olinadi, ularni yozish shart emas.</div>
+                <div className="d-flex align-items-center gap-2 mb-2">
+                  <i className="ti ti-rocket f-s-18 text-success" />
+                  <strong className="f-s-14">Flash Delivery — Kunlik bepul yetkazish aksiyasi</strong>
+                </div>
+              </div>
+              <div className="col-lg-6"><Toggle name="flash_delivery_enabled" label="Flash Delivery yoqilgan" icon="ti-rocket" defaultChecked={checked(project, 'flash_delivery_enabled')} /></div>
+              <div className="col-md-3">
+                <TextInput
+                  name="flash_delivery_start_time"
+                  label="Boshlanish vaqti (HH:MM)"
+                  type="time"
+                  defaultValue={value(project, 'flash_delivery_start_time', '20:00')}
+                />
+              </div>
+              <div className="col-md-3">
+                <TextInput
+                  name="flash_delivery_duration"
+                  label="Davomiylik (daqiqa)"
+                  type="number"
+                  min={1}
+                  max={120}
+                  defaultValue={value(project, 'flash_delivery_duration', '15')}
+                />
+              </div>
+              <div className="col-md-4">
+                <TextInput
+                  name="flash_delivery_promo_code"
+                  label="Promokod kodi"
+                  type="text"
+                  placeholder="BEPULYETKAZISH"
+                  defaultValue={value(project, 'flash_delivery_promo_code', '')}
+                />
+              </div>
+              <div className="col-12 f-s-13 text-muted">
+                <i className="ti ti-info-circle me-1" />
+                Belgilangan vaqtda har kuni {value(project, 'flash_delivery_duration', '15')} daqiqa davomida yetkazish bepul bo'ladi.
+                Foydalanuvchi bu promokodni checkout'da kiritsa yetkazish narxi <strong>0</strong> bo'ladi.
+                <br />
+                <span className="text-warning"><i className="ti ti-alert-triangle me-1" />Promokod avval "Promokodlar" bo'limida <code>type=free_delivery</code> bilan yaratilgan bo'lishi kerak.</span>
               </div>
             </div>
             <div className="f-s-13 text-muted mt-3">Agar bu flag o'chirilsa, mystery box va gift certificate sectionlari ilovada yashiriladi va top bannerlar homepage ichida ularning o'rniga tushadi.</div>

@@ -1925,6 +1925,10 @@ class AdminController extends Controller
 
     public function chatData(int $conversation): JsonResponse
     {
+        /** @var Admin|null $admin */
+        $admin = auth('panel')->user();
+        abort_unless($admin && $admin->isSuperAdmin(), 403, 'Chat kuzatuv faqat bosh administrator uchun ruxsat etilgan.');
+
         return response()->json($this->chatDetailPayload($conversation));
     }
 
@@ -10104,12 +10108,21 @@ PROMPT;
             return ['conversations' => [], 'conversationCounts' => [], 'conversationPagination' => $this->emptyPagination()];
         }
 
-        $tab = (string) request('chat_tab', 'all');
+        $tab    = (string) request('chat_tab', 'all');
         $search = trim((string) request('chat_search', ''));
+
+        // "user" tab — faqat user↔user suhbatlar:
+        // shop_id NULL bo'lgan va receiver_id BIRINCHI admin akkauntiga tegishli bo'lmagan.
+        // Kitobchi tizimida id=1 bo'lgan foydalanuvchi — asosiy platforma akkaunti
+        // (support bot/admin), u bilan bo'lgan yozishmalar "seller" kontekstida yoki
+        // support kanalida bo'ladi, shuning uchun bu yerda chiqarilmaydi.
+        $kitobchiUserId = 1; // Platforma asosiy foydalanuvchi ID
+
         $query = DB::table('conversations')
             ->select([
                 'conversations.id',
                 'conversations.shop_id',
+                'conversations.receiver_id',
                 'conversations.type',
                 'conversations.last_message_at',
                 'u1.name as user_name',
@@ -10130,6 +10143,11 @@ PROMPT;
                     ->whereColumn('messages.conversation_id', 'conversations.id')
                     ->where('messages.is_deleted', false);
             })
+            ->where('conversations.user_id', '!=', $kitobchiUserId)
+            ->where(fn ($nested) => $nested
+                ->whereNull('conversations.receiver_id')
+                ->orWhere('conversations.receiver_id', '!=', $kitobchiUserId))
+            // "user" tab: faqat user↔user suhbatlar (shop yo'q, receiver platforma akkaunti emas)
             ->when($tab === 'user', fn ($builder) => $builder->whereNull('conversations.shop_id'))
             ->when($tab === 'seller', fn ($builder) => $builder->whereNotNull('conversations.shop_id'))
             ->when($search !== '', fn ($builder) => $builder->where(fn ($nested) => $nested
@@ -10137,36 +10155,41 @@ PROMPT;
                 ->orWhere('u1.lastname', 'like', "%{$search}%")
                 ->orWhere('u1.phone_number', 'like', "%{$search}%")
                 ->orWhere('s.shop_name', 'like', "%{$search}%")));
+
         $conversations = $query->orderByDesc('conversations.last_message_at')->paginate(25, ['*'], 'chat_page')->withQueryString();
 
         return [
             'conversations' => $conversations->getCollection()->map(fn ($conversation) => [
-                'id' => $conversation->id,
-                'kind' => $conversation->shop_id ? 'seller' : 'user',
-                'type' => $conversation->type,
-                'user' => trim(($conversation->user_name ?? '').' '.($conversation->user_lastname ?? '')) ?: 'Foydalanuvchi',
-                'phone' => $conversation->user_phone,
-                'agent' => $conversation->seller_name ?: trim(($conversation->receiver_name ?? '').' '.($conversation->receiver_lastname ?? '')) ?: 'Foydalanuvchi',
+                'id'      => $conversation->id,
+                'kind'    => $conversation->shop_id ? 'seller' : 'user',
+                'type'    => $conversation->type,
+                'user'    => trim(($conversation->user_name ?? '').' '.($conversation->user_lastname ?? '')) ?: 'Foydalanuvchi',
+                'phone'   => $conversation->user_phone,
+                'agent'   => $conversation->seller_name ?: trim(($conversation->receiver_name ?? '').' '.($conversation->receiver_lastname ?? '')) ?: 'Foydalanuvchi',
                 'messages' => (int) ($conversation->messages_count ?? 0),
-                'lastMsg' => $conversation->last_message ?: 'Xabar yo‘q',
-                'date' => $this->dateTime($conversation->last_message_at),
+                'lastMsg' => $conversation->last_message ?: 'Xabar yo\'q',
+                'date'    => $this->dateTime($conversation->last_message_at),
                 'dataUrl' => route('boshqaruv.chat.data', $conversation->id),
             ])
                 ->values()
                 ->all(),
-            'conversationCounts' => $this->conversationCounts(),
+            'conversationCounts' => $this->conversationCounts($kitobchiUserId),
             'conversationPagination' => $this->paginationMeta($conversations),
-            'conversationFilters' => ['tab' => $tab, 'search' => $search],
+            'conversationFilters'    => ['tab' => $tab, 'search' => $search],
         ];
     }
 
-    private function conversationCounts(): array
+    private function conversationCounts(int $kitobchiUserId = 1): array
     {
         if (! Schema::hasTable('conversations')) {
             return ['all' => 0, 'user' => 0, 'seller' => 0];
         }
 
         $base = DB::table('conversations')
+            ->where('conversations.user_id', '!=', $kitobchiUserId)
+            ->where(fn ($nested) => $nested
+                ->whereNull('conversations.receiver_id')
+                ->orWhere('conversations.receiver_id', '!=', $kitobchiUserId))
             ->whereExists(function ($subquery) {
                 $subquery->selectRaw('1')
                     ->from('messages')
@@ -10175,8 +10198,8 @@ PROMPT;
             });
 
         return [
-            'all' => (int) (clone $base)->count(),
-            'user' => (int) (clone $base)->whereNull('shop_id')->count(),
+            'all'    => (int) (clone $base)->count(),
+            'user'   => (int) (clone $base)->whereNull('shop_id')->count(),
             'seller' => (int) (clone $base)->whereNotNull('shop_id')->count(),
         ];
     }

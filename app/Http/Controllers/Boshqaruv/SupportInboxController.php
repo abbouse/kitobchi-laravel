@@ -13,7 +13,9 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 use Inertia\Response;
 use InvalidArgumentException;
@@ -42,12 +44,17 @@ class SupportInboxController extends Controller
     public function page(Request $request): Response
     {
         $me = $this->me();
-        $segment = $request->query('segment') === 'shop' ? 'shop' : 'customer';
+        $segment = $request->query('segment') === 'shop' ? 'shop' : ($request->query('segment') === 'chat_monitor' && $me->isSuperAdmin() ? 'chat_monitor' : 'customer');
         $filter = (string) $request->query('filter', 'open');
 
         return Inertia::render('SupportInbox', [
             'inbox' => [
-                'me' => ['id' => (int) $me->id, 'name' => $me->name, 'readOnly' => (bool) ($me->is_read_only ?? false)],
+                'me' => [
+                    'id' => (int) $me->id,
+                    'name' => $me->name,
+                    'readOnly' => (bool) ($me->is_read_only ?? false),
+                    'isSuperAdmin' => (bool) $me->isSuperAdmin(),
+                ],
                 'agents' => $this->agents(),
                 'templates' => $this->templatesPayload(),
                 'realtime' => $this->realtimeConfig($request),
@@ -55,7 +62,7 @@ class SupportInboxController extends Controller
                     'segment' => $segment,
                     'filter' => $filter,
                     'key' => (string) $request->query('key', ''),
-                    'list' => $this->inbox->threads($segment, $filter, '', $me),
+                    'list' => $segment === 'chat_monitor' ? ['items' => [], 'next' => null, 'counts' => [], 'segments' => ['customer' => ['open' => 0, 'unread' => 0], 'shop' => ['open' => 0, 'unread' => 0]]] : $this->inbox->threads($segment, $filter, '', $me),
                 ],
                 'urls' => [
                     'threads' => route('boshqaruv.support.inbox.threads'),
@@ -67,6 +74,8 @@ class SupportInboxController extends Controller
                     'read' => route('boshqaruv.support.inbox.read'),
                     'templates' => route('boshqaruv.support.inbox.templates.store'),
                     'kpi' => route('boshqaruv.support.kpi'),
+                    'chatMonitor' => route('boshqaruv.support.inbox.chat.monitor'),
+                    'chatData' => url('/boshqaruv/chat'),
                     'broadcastAuth' => route('boshqaruv.broadcasting.auth'),
                 ],
             ],
@@ -169,6 +178,88 @@ class SupportInboxController extends Controller
         return response()->json($this->inbox->kpi($from, $to));
     }
 
+    public function chatMonitorList(Request $request): JsonResponse
+    {
+        $me = $this->me();
+        abort_unless($me->isSuperAdmin(), 403, 'Chat kuzatuv faqat bosh administrator uchun ruxsat etilgan.');
+
+        if (! Schema::hasTable('conversations')) {
+            return response()->json([
+                'items' => [],
+                'next' => null,
+                'counts' => ['all' => 0, 'user' => 0, 'seller' => 0],
+            ]);
+        }
+
+        $tab = (string) $request->query('tab', 'all');
+        $search = trim((string) $request->query('q', ''));
+        $kitobchiUserId = 1;
+
+        $base = DB::table('conversations')
+            ->where('conversations.user_id', '!=', $kitobchiUserId)
+            ->where(fn ($nested) => $nested
+                ->whereNull('conversations.receiver_id')
+                ->orWhere('conversations.receiver_id', '!=', $kitobchiUserId))
+            ->whereExists(function ($subquery) {
+                $subquery->selectRaw('1')
+                    ->from('messages')
+                    ->whereColumn('messages.conversation_id', 'conversations.id')
+                    ->where('messages.is_deleted', false);
+            });
+
+        $query = (clone $base)
+            ->select([
+                'conversations.id',
+                'conversations.shop_id',
+                'conversations.receiver_id',
+                'conversations.type',
+                'conversations.last_message_at',
+                'u1.name as user_name',
+                'u1.lastname as user_lastname',
+                'u1.phone_number as user_phone',
+                'u2.name as receiver_name',
+                'u2.lastname as receiver_lastname',
+                's.shop_name as seller_name',
+            ])
+            ->selectSub(DB::table('messages')->selectRaw('count(*)')->whereColumn('messages.conversation_id', 'conversations.id')->where('is_deleted', false), 'messages_count')
+            ->selectSub(DB::table('messages')->select('message')->whereColumn('messages.conversation_id', 'conversations.id')->where('is_deleted', false)->latest('created_at')->limit(1), 'last_message')
+            ->leftJoin('users as u1', 'u1.id', '=', 'conversations.user_id')
+            ->leftJoin('users as u2', 'u2.id', '=', 'conversations.receiver_id')
+            ->leftJoin('sellers as s', 's.id', '=', 'conversations.shop_id')
+            ->when($tab === 'user', fn ($b) => $b->whereNull('conversations.shop_id'))
+            ->when($tab === 'seller', fn ($b) => $b->whereNotNull('conversations.shop_id'))
+            ->when($search !== '', fn ($b) => $b->where(fn ($nested) => $nested
+                ->where('u1.name', 'like', "%{$search}%")
+                ->orWhere('u1.lastname', 'like', "%{$search}%")
+                ->orWhere('u1.phone_number', 'like', "%{$search}%")
+                ->orWhere('s.shop_name', 'like', "%{$search}%")));
+
+        $conversations = $query->orderByDesc('conversations.last_message_at')->paginate(30)->withQueryString();
+
+        $items = $conversations->getCollection()->map(fn ($c) => [
+            'id' => $c->id,
+            'kind' => $c->shop_id ? 'seller' : 'user',
+            'type' => $c->type,
+            'user' => trim(($c->user_name ?? '').' '.($c->user_lastname ?? '')) ?: 'Foydalanuvchi',
+            'phone' => $c->user_phone,
+            'agent' => $c->seller_name ?: trim(($c->receiver_name ?? '').' '.($c->receiver_lastname ?? '')) ?: 'Foydalanuvchi',
+            'messages' => (int) ($c->messages_count ?? 0),
+            'lastMsg' => $c->last_message ?: 'Xabar yo\'q',
+            'date' => $c->last_message_at ? Carbon::parse($c->last_message_at)->toIso8601String() : null,
+            'dataUrl' => route('boshqaruv.chat.data', $c->id),
+        ])->values()->all();
+
+        return response()->json([
+            'items' => $items,
+            'next' => $conversations->hasMorePages() ? (string) ($conversations->currentPage() + 1) : null,
+            'counts' => [
+                'all' => (int) (clone $base)->count(),
+                'user' => (int) (clone $base)->whereNull('shop_id')->count(),
+                'seller' => (int) (clone $base)->whereNotNull('shop_id')->count(),
+            ],
+        ]);
+    }
+
     // ─── SHABLONLAR ──────────────────────────────────────────────────────────
 
     public function templateStore(Request $request): JsonResponse
@@ -207,8 +298,45 @@ class SupportInboxController extends Controller
         return $data;
     }
 
+    public static function defaultTemplates(): array
+    {
+        return [
+            ['title' => 'Salomlashish', 'body' => "Assalomu alaykum, {name}! Kitobchi qo'llab-quvvatlash xizmati. Sizga qanday yordam bera olaman?", 'audience' => 'all', 'category' => 'umumiy', 'shortcut' => 'salom'],
+            ['title' => 'Kutib turing', 'body' => "Iltimos, bir oz kutib turing — ma'lumotni tekshirib, hozir javob beraman.", 'audience' => 'all', 'category' => 'umumiy', 'shortcut' => 'kut'],
+            ['title' => 'Buyurtma raqami', 'body' => "Buyurtmangiz holatini aniqlash uchun iltimos buyurtma raqamingizni yuboring.", 'audience' => 'customer', 'category' => 'buyurtma', 'shortcut' => 'buyurtma'],
+            ['title' => 'Yetkazish muddati', 'body' => "Toshkent shahri bo'ylab yetkazib berish 24 soat ichida, viloyatlarga 2–3 ish kuni ichida amalga oshiriladi. Kuryer yetkazishdan avval siz bilan bog'lanadi.", 'audience' => 'customer', 'category' => 'yetkazish', 'shortcut' => 'yetkazish'],
+            ['title' => 'Flash Bepul Yetkazish', 'body' => "Bizda har kuni 15 daqiqalik Flash Bepul Yetkazish aksiyasi bo'lib o'tadi! Ilovadagi maxsus banner orqali buyurtma qilsangiz, yetkazib berish mutlaqo bepul bo'ladi.", 'audience' => 'customer', 'category' => 'aksiya', 'shortcut' => 'bepul'],
+            ['title' => 'Split (Nasiya / Bo\'lib to\'lash)', 'body' => "Kitobchi Muddatli To'lov (Split) orqali sevimli kitoblaringizni foizsiz va ortiqcha to'lovlarsiz bo'lib to'lashingiz mumkin. Buyurtma berishda to'lov usulidan 'Split'ni tanlang.", 'audience' => 'customer', 'category' => 'moliya', 'shortcut' => 'split'],
+            ['title' => 'To\'lov muammosi', 'body' => "To'lov Click, Payme, Uzum bank kartasi yoki kuryerga naqd to'lash orqali amalga oshiriladi. Mablag' yechilib, buyurtma tasdiqlanmagan bo'lsa, to'lov kvitansiyasini (chek) yuboring.", 'audience' => 'customer', 'category' => 'moliya', 'shortcut' => 'tolov'],
+            ['title' => 'Keshbek', 'body' => "Xaridingizdan hisoblangan keshbek balansingizda saqlanadi va keyingi buyurtmalaringizda to'liq chegirma sifatida ishlatilishi mumkin.", 'audience' => 'customer', 'category' => 'moliya', 'shortcut' => 'keshbek'],
+            ['title' => 'Kitob topilmadi', 'body' => "Agar siz qidirgan kitob ilovada topilmasa, kitob nomi va muallifini qoldiring, hamkor nashriyotlar va do'konlardan topib, katalogga qo'shib beramiz.", 'audience' => 'customer', 'category' => 'katalog', 'shortcut' => 'kitob'],
+            ['title' => 'Buyurtma holati', 'body' => "Buyurtmangiz tayyorlandi va kuryerga topshirildi. Kuryer yetkazish vaqtida siz bilan telefon orqali bog'lanadi.", 'audience' => 'customer', 'category' => 'buyurtma', 'shortcut' => 'holat'],
+            ['title' => 'Buyurtmani bekor qilish', 'body' => "Buyurtmangiz bekor qilindi. Agar to'lov oldindan amalga oshirilgan bo'lsa, mablag' 1–3 ish kuni ichida bank kartangizga qaytariladi.", 'audience' => 'customer', 'category' => 'buyurtma', 'shortcut' => 'bekor'],
+            ['title' => 'Do\'kon: moderatsiya', 'body' => "Mahsulotingiz moderatsiyada. Odatda 24 soat ichida ko'rib chiqiladi. Rad etilsa, sababi seller kabinetida ko'rsatiladi.", 'audience' => 'shop', 'category' => 'katalog', 'shortcut' => 'moderatsiya'],
+            ['title' => 'Do\'kon: pul yechish', 'body' => "Do'kon hisobidan pul yechish so'rovi 1–3 ish kunida bank hisob raqamingizga o'tkazib beriladi.", 'audience' => 'shop', 'category' => 'moliya', 'shortcut' => 'pul'],
+            ['title' => 'Do\'kon: buyurtma tayyorlash', 'body' => "Buyurtmani 'Tayyor' deb belgilang — tizim avtomatik kuryer biriktiradi va mahsulotni olib ketadi.", 'audience' => 'shop', 'category' => 'buyurtma', 'shortcut' => 'tayyor'],
+            ['title' => 'Rahmat / Hal qilindi', 'body' => "Murojaatingiz uchun tashakkur! Har doim xizmatingizdamiz. Kitobchi bilan qolganingiz uchun rahmat, maroqli mutolaa tilaymiz!", 'audience' => 'all', 'category' => 'umumiy', 'shortcut' => 'rahmat'],
+        ];
+    }
+
     private function templatesPayload(): array
     {
+        if (Schema::hasTable('support_templates') && SupportTemplate::query()->count() < 10) {
+            $now = now();
+            foreach (self::defaultTemplates() as $i => $row) {
+                SupportTemplate::query()->firstOrCreate(
+                    ['shortcut' => $row['shortcut']],
+                    array_merge($row, [
+                        'sort' => $i,
+                        'is_active' => true,
+                        'usage_count' => 0,
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ])
+                );
+            }
+        }
+
         return SupportTemplate::query()
             ->where('is_active', true)
             ->orderBy('sort')

@@ -1192,7 +1192,15 @@ watchEffect(() => {
     reviewsCount: reviewsCount.value,
     reviews: structuredReviews.value,
     categoryName: typeof product.value.category === 'string' ? product.value.category : (product.value.category?.name_uz || product.value.category?.name),
-    urlPath: `/stationery/${route.params.id}`,
+    urlPath: (() => {
+      const pName = product.value?.name || '';
+      const clean = pName.toLowerCase()
+        .replace(/[^a-z0-9а-яёўқғҳ\s-]/gi, '')
+        .trim()
+        .replace(/[\s_-]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+      return clean ? `/stationery/${rawId.value}-${clean}` : `/stationery/${route.params.id}`;
+    })(),
   })
 })
 </script>

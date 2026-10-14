@@ -333,6 +333,9 @@ class PurchaseController extends Controller
             $base = array_sum(array_map(fn ($l) => $l['price'] * $l['qty'], $matching));
         }
 
+        // free_delivery: mahsulot chegirmasi yo'q — faqat yetkazish bepul bo'ladi
+        $isFreeDelivery = $promo->type === 'free_delivery';
+
         $discount = match ($promo->type) {
             // Bitta dona bepul (eng qimmat mos dona)
             'free_item' => (int) min($total, max(array_map(fn ($l) => $l['price'], $matching ?: [['price' => 0]]))),
@@ -347,10 +350,12 @@ class PurchaseController extends Controller
 
                 return $percentDiscount;
             })(),
+            // Bepul yetkazish — mahsulot narxiga chegirma yo'q, yetkazish 0 bo'ladi
+            'free_delivery' => 0,
             default => 0,
         };
 
-        return ['discount' => $discount, 'promo' => $promo];
+        return ['discount' => $discount, 'promo' => $promo, 'free_delivery' => $isFreeDelivery];
     }
 
     private function completedPaidOrdersCount(int $userId): int
@@ -1516,6 +1521,11 @@ class PurchaseController extends Controller
 
             // ── Yetkazish narxi ───────────────────────────────────
             $deliveryPrice = (int) ($selectedDeliveryOffer['calculated_price'] ?? 0);
+
+            // Bepul yetkazish promokodi bo'lsa — yetkazishni 0 ga tushiramiz
+            if (($res['free_delivery'] ?? false) === true) {
+                $deliveryPrice = 0;
+            }
 
             // To'plam buyurtmasi: yetkazish narxi flat (to'plamga biriktirilgan),
             // joylashuvdan qat'i nazar bir xil; 0 bo'lsa bepul.

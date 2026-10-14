@@ -41,6 +41,8 @@ Route::get('home/shops', [\App\Http\Controllers\Api\HomeLayoutController::class,
 Route::get('home/category/{id}', [\App\Http\Controllers\Api\HomeLayoutController::class, 'category'])->whereNumber('id')->middleware('throttle:120,1');
 Route::get('counts', [UserController::class, 'getGlobalCounts']);
 Route::get('split-preview', [PurchaseController::class, 'splitPreview']);
+// Flash delivery aksiyasi holati (public, throttle)
+Route::get('flash-delivery/status', [\App\Http\Controllers\Api\FlashDeliveryController::class, 'status'])->middleware('throttle:60,1');
 Route::get('news', [NewsController::class, 'index']);
 Route::get('blog', [NewsController::class, 'blog']);
 Route::prefix('collections')->group(function () {
