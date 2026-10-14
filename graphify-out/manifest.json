@@ -2760,9 +2760,9 @@
     "semantic_hash": "08d145991e6f93f0093d3cceb35e1bd7"
   },
   "app/Services/SessionService.php": {
-    "mtime": 1791585448.498758,
-    "seen": 1791651444.3802922,
-    "ast_hash": "7df984ddc13f0528381527be743da906",
+    "mtime": 1792007890.094898,
+    "seen": 1792008400.996372,
+    "ast_hash": "c99cd01450c7ec9e1b576a99c3b55fa2",
     "semantic_hash": ""
   },
   "app/Services/SmsService.php": {
@@ -3000,8 +3000,8 @@
     "semantic_hash": "b7b09d68f8893547a7e5fbd5207fc8fa"
   },
   "config/fcm.php": {
-    "mtime": 1792003112.3535013,
-    "seen": 1792004873.576488,
+    "mtime": 1792007785.5079837,
+    "seen": 1792008400.996407,
     "ast_hash": "5ba2ac32c04d161d99057e23212f34b1",
     "semantic_hash": "5ba2ac32c04d161d99057e23212f34b1"
   },
@@ -7686,9 +7686,9 @@
     "semantic_hash": ""
   },
   "app/Services/Support/SupportInboxService.php": {
-    "mtime": 1791585448.496486,
-    "seen": 1791651444.380299,
-    "ast_hash": "1383bdc8d95a1d5af6f238a72b4fdb98",
+    "mtime": 1792007941.8362246,
+    "seen": 1792008400.9963799,
+    "ast_hash": "937204c1c12041077cc9f1c59f58ce17",
     "semantic_hash": ""
   },
   "app/Services/UserDeviceService.php": {
@@ -7734,9 +7734,9 @@
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/SupportInbox.tsx": {
-    "mtime": 1792007179.6189373,
-    "seen": 1792007204.3516889,
-    "ast_hash": "26ab8e361320f163e460f6b431e75dc1",
+    "mtime": 1792008373.0786111,
+    "seen": 1792008400.996608,
+    "ast_hash": "01c1ded028171fb8d30bc18f1f4b3d32",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/SupportKpi.tsx": {
@@ -7869,6 +7869,24 @@
     "mtime": 1792001998.2006867,
     "seen": 1792004873.576803,
     "ast_hash": "f2b9ed63680cb95a0c16d0b90a2a2814",
+    "semantic_hash": ""
+  },
+  "app/Jobs/ProcessGuliSupportReply.php": {
+    "mtime": 1792007871.4315286,
+    "seen": 1792008400.996219,
+    "ast_hash": "1d7488f50d2e95e6f1ffb8f5858cd465",
+    "semantic_hash": ""
+  },
+  "app/Services/Support/GuliAgentService.php": {
+    "mtime": 1792007863.7866132,
+    "seen": 1792008400.996379,
+    "ast_hash": "165bfc20779180d71d368f667019c401",
+    "semantic_hash": ""
+  },
+  "database/migrations/2026_10_15_010000_add_ai_fields_to_bot_tickets_table.php": {
+    "mtime": 1792007805.5280201,
+    "seen": 1792008400.996535,
+    "ast_hash": "e851a7708e32230a0b41828ab676bd53",
     "semantic_hash": ""
   }
 }

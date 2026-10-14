@@ -383,6 +383,24 @@ export default function Settings() {
                 <br />
                 <span className="text-warning"><i className="ti ti-alert-triangle me-1" />Promokod avval "Promokodlar" bo'limida <code>type=free_delivery</code> bilan yaratilgan bo'lishi kerak.</span>
               </div>
+              <div className="col-12"><hr className="my-2" /></div>
+              <div className="col-12">
+                <div className="d-flex align-items-center gap-2 mb-2">
+                  <i className="ti ti-robot f-s-18 text-primary" />
+                  <strong className="f-s-14">Guli AI Support & Chatbot uchun qo'shimcha ko'rsatmalar (Knowledge / Hints)</strong>
+                </div>
+                <div className="f-s-12 text-muted mb-2">
+                  Bu yerda yozilgan barcha qoidalar, eslatmalar va aksiyalarni Guli AI muloqot paytida o'qiydi va mijozlarga shunga tayanib javob beradi.
+                </div>
+                <textarea
+                  name="ai_bot_extra_notes"
+                  className="form-control b-r-8"
+                  rows={6}
+                  maxLength={2000}
+                  placeholder="Masalan: Yetkazish muddatlari, bayram aksiyalari, buyurtma qoidalari..."
+                  defaultValue={value(project, 'ai_bot_extra_notes', '')}
+                />
+              </div>
             </div>
             <div className="f-s-13 text-muted mt-3">Agar bu flag o'chirilsa, mystery box va gift certificate sectionlari ilovada yashiriladi va top bannerlar homepage ichida ularning o'rniga tushadi.</div>
             <div className="text-end mt-3"><SaveButton /></div>
