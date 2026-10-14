@@ -70,9 +70,7 @@ const nav = [
   { group: 'Mijozlarga xizmat', section: 'Jamoa va tizim', icon: 'ti-headset', ax: 'iconoir-headset-help', items: [
     { to: '/boshqaruv/support/inbox', match: '/boshqaruv/support/inbox', label: 'Support inbox', icon: 'ti-messages', ax: 'iconoir-chat-bubble', badge: 'LIVE', perm: 'support' },
     { to: '/boshqaruv/support/kpi', match: '/boshqaruv/support/kpi', label: 'Support KPI', icon: 'ti-chart-histogram', perm: 'support' },
-    { to: '/boshqaruv/tickets', match: '/boshqaruv/tickets', label: 'Murojaatlar arxivi', icon: 'ti-archive', perm: 'support' },
     { to: '/boshqaruv/shikoyatlar', match: '/boshqaruv/shikoyatlar', label: 'Shikoyatlar', icon: 'ti-alert-triangle', perm: 'support' },
-    { to: '/boshqaruv/chat', match: '/boshqaruv/chat', label: 'Chat kuzatuv', icon: 'ti-message-dots', perm: 'support' },
     { to: '/boshqaruv/push', match: '/boshqaruv/push', label: 'Push bildirishnomalar', icon: 'ti-bell', perm: 'push' },
   ]},
   { group: 'HR va boshqaruv', section: 'Jamoa va tizim', icon: 'ti-users', ax: 'iconoir-community', items: [

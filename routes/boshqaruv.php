@@ -369,9 +369,9 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
                 Route::delete('/templates/{template}', 'templateDestroy')->name('templates.destroy');
                 Route::get('/media/{attachment}', 'media')->name('media');
             });
-            Route::get('/tickets', fn (AdminController $controller) => $controller->page('Tickets'))->name('tickets');
+            Route::redirect('/tickets', '/boshqaruv/support/inbox')->name('tickets');
             Route::get('/shikoyatlar', fn (AdminController $controller) => $controller->page('Shikoyatlar'))->name('shikoyatlar');
-            Route::get('/chat', fn (AdminController $controller) => $controller->page('ChatKuzatuv'))->name('chat');
+            Route::redirect('/chat', '/boshqaruv/support/inbox')->name('chat');
             Route::get('/support/{ticket}/data', [AdminController::class, 'ticketData'])->name('support.data');
             Route::post('/support/{ticket}/reply', [\App\Http\Controllers\A122\SupportController::class, 'reply'])->name('support.reply');
             Route::patch('/support/{ticket}/close', [\App\Http\Controllers\A122\SupportController::class, 'close'])->name('support.close');
