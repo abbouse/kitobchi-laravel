@@ -58,6 +58,11 @@ class OpenAIService
         return $this->longClient;
     }
 
+    public function getClient(): \OpenAI\Client
+    {
+        return $this->client;
+    }
+
     // ─── Oddiy matn ─────────────────────────────────────────────────────────
 
     public function askSimple(string $prompt, int $maxTokens = 400, float $temperature = 0.7): string
