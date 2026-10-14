@@ -4560,9 +4560,9 @@
     "semantic_hash": "78f909acc19aea4717eddca5a87c1ba3"
   },
   "resources/js/boshqaruv/Layout.tsx": {
-    "mtime": 1791586857.4833894,
-    "seen": 1791651444.3804958,
-    "ast_hash": "c90278cddef5d2d171ef49c825429c42",
+    "mtime": 1792006747.3895428,
+    "seen": 1792006911.434796,
+    "ast_hash": "b7525fdd01396c4a6f0b0049f41aeb4e",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/components/ImageGalleryEditor.tsx": {
@@ -4871,12 +4871,6 @@
     "ast_hash": "dbbc78d7f14e9076fde2df16cb8ddf0f",
     "semantic_hash": ""
   },
-  "resources/js/boshqaruv/pages/Tickets.tsx": {
-    "mtime": 1790046816.3670352,
-    "seen": 1790356883.423281,
-    "ast_hash": "44be882d61367d87ef7a722d25408451",
-    "semantic_hash": ""
-  },
   "resources/js/boshqaruv/pages/Transaksiyalar.tsx": {
     "mtime": 1790016457.5756996,
     "seen": 1790356883.423281,
@@ -4908,9 +4902,9 @@
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/misc-admin3.tsx": {
-    "mtime": 1790016457.5602293,
-    "seen": 1790356883.423284,
-    "ast_hash": "81912d4f5a3b444a6e5e6399a9eaf9e7",
+    "mtime": 1792006844.9647253,
+    "seen": 1792006911.4348412,
+    "ast_hash": "5c39cf079b7400a00da03f318ca5d695",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/misc-admin4.tsx": {
@@ -5364,9 +5358,9 @@
     "semantic_hash": ""
   },
   "routes/boshqaruv.php": {
-    "mtime": 1792003174.9415457,
-    "seen": 1792004873.576753,
-    "ast_hash": "1124f03faa9b6717070b733301a0ac31",
+    "mtime": 1792006760.3469763,
+    "seen": 1792006911.434888,
+    "ast_hash": "d099d506ea2fdc071fe9a775d07cce5d",
     "semantic_hash": ""
   },
   "routes/channels.php": {

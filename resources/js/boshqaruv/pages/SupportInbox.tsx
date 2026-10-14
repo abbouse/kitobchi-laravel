@@ -1,5 +1,5 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { Component, ErrorInfo, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Dropdown } from 'react-bootstrap';
 import Modal from '../components/AppModal';
 import { apiJson, getEcho, RealtimeConfig, RealtimeState, watchState } from '../utils/realtime';
@@ -27,6 +27,7 @@ import {
   TbBrandTelegram,
   TbDeviceMobile,
   TbShieldLock,
+  TbShieldCheck,
   TbUserCheck,
   TbArrowLeft,
   TbHandGrab,
@@ -35,6 +36,18 @@ import {
   TbMoodEmpty,
   TbAlertCircle,
   TbCalendar,
+  TbPlus,
+  TbEdit,
+  TbCopy,
+  TbInfoCircle,
+  TbMapPin,
+  TbStar,
+  TbPackage,
+  TbAt,
+  TbId,
+  TbShoppingBag,
+  TbCash,
+  TbCoin,
 } from 'react-icons/tb';
 
 /*
@@ -355,6 +368,46 @@ function Bubble({ m, showAuthor }: { m: Message; showAuthor: boolean }) {
       </div>
     </div>
   );
+}
+
+// ─── Xatolik ushlagich (Oq ekran bo'lishini oldini oladi) ─────────────────
+
+class InboxErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; error: Error | null }> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('SupportInbox UI error:', error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="h-100 d-flex flex-column align-items-center justify-content-center p-4 text-center">
+          <div className="alert alert-light-danger b-r-12 p-3 text-start mb-3" style={{ maxWidth: 440 }}>
+            <div className="d-flex align-items-center gap-2 f-w-600 text-danger mb-1">
+              <TbAlertCircle size={18} />
+              <span>Suhbatni ko‘rsatishda xatolik yuz berdi</span>
+            </div>
+            <div className="f-s-12 text-secondary mb-2">
+              {this.state.error?.message || 'Kutilmagan xatolik'}
+            </div>
+            <button
+              type="button"
+              className="btn btn-sm btn-primary b-r-8"
+              onClick={() => this.setState({ hasError: false, error: null })}
+            >
+              Qayta urinish
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
 }
 
 // ─── Asosiy sahifa ──────────────────────────────────────────────────────────
@@ -752,7 +805,7 @@ export default function SupportInbox() {
     let lastDay = '';
     let lastTicket = 0;
     let lastFrom = '';
-    const ticketMap = new Map(data.context.tickets.map((t) => [t.id, t]));
+    const ticketMap = new Map((data.context?.tickets || []).map((t) => [t.id, t]));
     data.messages.forEach((m) => {
       const day = m.at ? dayLabel(m.at) : '';
       if (day && day !== lastDay) {
@@ -1028,6 +1081,7 @@ export default function SupportInbox() {
 
         {/* ═══ O'RTA: SUHBAT ═══ */}
         <section className="kc-inbox-chat">
+          <InboxErrorBoundary>
           {segment === 'chat_monitor' ? (
             <>
               {!activeChatId && !chatDetailLoading ? (
@@ -1252,27 +1306,32 @@ export default function SupportInbox() {
               ) : null}
             </>
           )}
+          </InboxErrorBoundary>
         </section>
 
         {/* ═══ O'NG: MA'LUMOTLAR ═══ */}
         {segment === 'chat_monitor' && chatDetail && showInfo ? (
           <aside className="kc-inbox-info">
-            <div className="kc-inbox-scroll p-3">
-              <div className="d-flex d-xxl-none justify-content-end mb-2">
-                <button type="button" className="btn btn-sm btn-light-secondary icon-btn b-r-10" onClick={toggleInfo} aria-label="Yopish"><i className="ti ti-x"></i></button>
+            <InboxErrorBoundary>
+              <div className="kc-inbox-scroll p-3">
+                <div className="d-flex d-xxl-none justify-content-end mb-2">
+                  <button type="button" className="btn btn-sm btn-light-secondary icon-btn b-r-10" onClick={toggleInfo} aria-label="Yopish"><i className="ti ti-x"></i></button>
+                </div>
+                <ChatMonitorInfoPanel detail={chatDetail} />
               </div>
-              <ChatMonitorInfoPanel detail={chatDetail} />
-            </div>
+            </InboxErrorBoundary>
           </aside>
         ) : thread && showInfo && data ? (
           <aside className="kc-inbox-info">
-            <div className="kc-inbox-scroll p-3">
-              <div className="d-flex d-xxl-none justify-content-end mb-2">
-                <button type="button" className="btn btn-sm btn-light-secondary icon-btn b-r-10" onClick={toggleInfo} aria-label="Yopish"><i className="ti ti-x"></i></button>
+            <InboxErrorBoundary>
+              <div className="kc-inbox-scroll p-3">
+                <div className="d-flex d-xxl-none justify-content-end mb-2">
+                  <button type="button" className="btn btn-sm btn-light-secondary icon-btn b-r-10" onClick={toggleInfo} aria-label="Yopish"><i className="ti ti-x"></i></button>
+                </div>
+                <InfoPanel data={data} />
+                <TemplatesPanel templates={visibleTemplates} onUse={applyTemplate} onEdit={(t) => { setTemplateTpl(t); setTemplateModal(true); }} onAdd={() => { setTemplateTpl(null); setTemplateModal(true); }} readOnly={me.readOnly} />
               </div>
-              <InfoPanel data={data} />
-              <TemplatesPanel templates={visibleTemplates} onUse={applyTemplate} onEdit={(t) => { setTemplateTpl(t); setTemplateModal(true); }} onAdd={() => { setTemplateTpl(null); setTemplateModal(true); }} readOnly={me.readOnly} />
-            </div>
+            </InboxErrorBoundary>
           </aside>
         ) : null}
         </div>
@@ -1347,16 +1406,21 @@ function ChatMonitorInfoPanel({ detail }: { detail: ChatDetailPayload }) {
 // ─── O'ng panel ─────────────────────────────────────────────────────────────
 
 function InfoPanel({ data }: { data: ThreadData }) {
-  const { context: c, thread } = data;
-  const p = c.profile;
-  const totalRated = c.feedback.good + c.feedback.bad;
-  const pct = totalRated ? Math.round((c.feedback.good * 100) / totalRated) : null;
+  const c = data?.context;
+  const thread = data?.thread;
+  if (!c || !thread) return null;
+  const p = c.profile || {};
+  const feedback = c.feedback || { good: 0, bad: 0, items: [] };
+  const totalRated = (feedback.good || 0) + (feedback.bad || 0);
+  const pct = totalRated ? Math.round(((feedback.good || 0) * 100) / totalRated) : null;
+  const orders = c.orders || [];
+  const tickets = c.tickets || [];
 
   return (
     <>
       <div className="text-center mb-3">
         <div className="d-flex justify-content-center mb-2">
-          <Avatar name={thread.name} src={(p.avatar as string) || thread.avatar} size={72} icon={c.kind === 'shop' && !p.avatar ? 'ti ti-building-store' : undefined} />
+          <Avatar name={thread.name} src={(p.avatar as string) || thread.avatar} size={72} icon={c.kind === 'shop' && !p.avatar ? <TbBuildingStore size={32} /> : undefined} />
         </div>
         <h6 className="f-w-600 mb-0">{(p.name as string) || thread.name}</h6>
         <div className="f-s-12 text-secondary">{c.kind === 'shop' ? (p.owner as string) || 'Do‘kon' : (p.channel as string)}</div>
@@ -1381,9 +1445,9 @@ function InfoPanel({ data }: { data: ThreadData }) {
             <InfoRow icon="ti-id" label="Foydalanuvchi ID" value={p.user_id ? String(p.user_id) : null} copy />
             {c.stats ? (
               <>
-                <InfoRow icon="ti-shopping-bag" label="Buyurtmalar" value={String(c.stats.orders_count)} />
-                <InfoRow icon="ti-cash" label="Jami xarid" value={money(c.stats.total_spent)} />
-                <InfoRow icon="ti-coin" label="Keshbek" value={money(c.stats.cashback)} />
+                <InfoRow icon="ti-shopping-bag" label="Buyurtmalar" value={String(c.stats.orders_count || 0)} />
+                <InfoRow icon="ti-cash" label="Jami xarid" value={money(c.stats.total_spent || 0)} />
+                <InfoRow icon="ti-coin" label="Keshbek" value={money(c.stats.cashback || 0)} />
               </>
             ) : <div className="f-s-12 text-secondary">Ilova akkaunti topilmadi (telefon raqami so‘ralsa, avtomatik bog‘lanadi).</div>}
             {p.user_url ? <a href={p.user_url as string} className="btn btn-sm btn-light-primary w-100 mt-2 b-r-10">Foydalanuvchi profili</a> : null}
@@ -1397,14 +1461,14 @@ function InfoPanel({ data }: { data: ThreadData }) {
           {pct !== null ? <span className={`badge ${pct >= 80 ? 'text-light-success' : pct >= 50 ? 'text-light-warning' : 'text-light-danger'}`}>{pct}% mamnun</span> : null}
         </div>
         <div className="d-flex gap-2 mb-2">
-          <div className="flex-fill text-light-success b-r-10 p-2 text-center"><i className="ti ti-thumb-up me-1"></i><span className="f-w-600">{c.feedback.good}</span></div>
-          <div className="flex-fill text-light-danger b-r-10 p-2 text-center"><i className="ti ti-thumb-down me-1"></i><span className="f-w-600">{c.feedback.bad}</span></div>
+          <div className="flex-fill text-light-success b-r-10 p-2 text-center"><TbThumbUp size={16} className="me-1" /><span className="f-w-600">{feedback.good || 0}</span></div>
+          <div className="flex-fill text-light-danger b-r-10 p-2 text-center"><TbThumbDown size={16} className="me-1" /><span className="f-w-600">{feedback.bad || 0}</span></div>
         </div>
-        {c.feedback.items.length === 0 ? <div className="f-s-12 text-secondary">Hali baho qo‘yilmagan.</div> : (
+        {(!feedback.items || feedback.items.length === 0) ? <div className="f-s-12 text-secondary">Hali baho qo‘yilmagan.</div> : (
           <ul className="list-unstyled mb-0 f-s-12">
-            {c.feedback.items.map((f) => (
+            {feedback.items.map((f) => (
               <li key={f.ticket_id} className="d-flex align-items-center gap-2 py-1">
-                <i className={`ti ${f.value === 'good' ? 'ti-thumb-up text-success' : 'ti-thumb-down text-danger'}`}></i>
+                {f.value === 'good' ? <TbThumbUp size={14} className="text-success" /> : <TbThumbDown size={14} className="text-danger" />}
                 <span>#{f.ticket_id}</span>
                 <span className="text-secondary text-truncate">{f.agent || '—'}</span>
                 <span className="ms-auto text-secondary">{f.at ? listTime(f.at) : ''}</span>
@@ -1414,12 +1478,12 @@ function InfoPanel({ data }: { data: ThreadData }) {
         )}
       </div>
 
-      {c.orders.length > 0 ? (
+      {orders.length > 0 ? (
         <div className="b-1-light b-r-15 p-3 mb-3">
           <div className="f-w-600 mb-2">So‘nggi buyurtmalar</div>
-          {c.orders.map((o) => (
+          {orders.map((o) => (
             <a key={o.id} href={o.url} className="d-flex align-items-center gap-2 py-2 text-reset border-bottom kc-last-0">
-              <span className="h-35 w-35 d-flex-center b-r-10 text-light-primary flex-shrink-0"><i className="ti ti-receipt"></i></span>
+              <span className="h-35 w-35 d-flex-center b-r-10 text-light-primary flex-shrink-0"><TbReceipt size={16} /></span>
               <span className="min-w-0 flex-grow-1">
                 <span className="d-block f-w-600 f-s-13">#{o.id} · {money(o.amount)}</span>
                 <span className="d-block f-s-11 text-secondary text-truncate">{o.status}{o.delivery_date ? ` · yetkazish ${o.delivery_date}` : ''}</span>
@@ -1432,14 +1496,14 @@ function InfoPanel({ data }: { data: ThreadData }) {
 
       <div className="b-1-light b-r-15 p-3 mb-3">
         <div className="f-w-600 mb-2">Murojaatlar tarixi</div>
-        {c.tickets.map((t) => (
+        {tickets.map((t) => (
           <div key={t.id} className="d-flex align-items-start gap-2 py-2 border-bottom kc-last-0">
             <span className={`badge ${t.status === 'open' ? 'text-light-success' : 'text-light-secondary'} mt-1`}>#{t.id}</span>
             <span className="min-w-0 flex-grow-1">
               <span className="d-block f-s-13 text-truncate">{t.title || '—'}</span>
               <span className="d-block f-s-11 text-secondary">{t.created_at ? listTime(t.created_at) : ''}{t.agent ? ` · ${t.agent}` : ''}</span>
             </span>
-            {t.feedback ? <i className={`ti ${t.feedback === 'good' ? 'ti-thumb-up text-success' : 'ti-thumb-down text-danger'} mt-1`}></i> : null}
+            {t.feedback ? (t.feedback === 'good' ? <TbThumbUp size={14} className="text-success mt-1" /> : <TbThumbDown size={14} className="text-danger mt-1" />) : null}
           </div>
         ))}
       </div>
@@ -1460,6 +1524,14 @@ function renderIcon(icon: string | React.ReactNode, size = 15) {
     case 'ti-receipt': return <TbReceipt size={size} />;
     case 'ti-shield-check': return <TbShieldCheck size={size} />;
     case 'ti-brand-telegram': return <TbBrandTelegram size={size} />;
+    case 'ti-map-pin': return <TbMapPin size={size} />;
+    case 'ti-star': return <TbStar size={size} />;
+    case 'ti-package': return <TbPackage size={size} />;
+    case 'ti-at': return <TbAt size={size} />;
+    case 'ti-id': return <TbId size={size} />;
+    case 'ti-shopping-bag': return <TbShoppingBag size={size} />;
+    case 'ti-cash': return <TbCash size={size} />;
+    case 'ti-coin': return <TbCoin size={size} />;
     default: return <TbInfoCircle size={size} />;
   }
 }
