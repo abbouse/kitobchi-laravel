@@ -48,6 +48,7 @@ import {
   TbShoppingBag,
   TbCash,
   TbCoin,
+  TbRobot,
 } from 'react-icons/tb';
 
 /*
@@ -123,6 +124,8 @@ type Thread = {
   legacy_operator: string | null;
   feedback: 'good' | 'bad' | null;
   peer_read?: boolean;
+  ai_enabled?: boolean;
+  ai_summary?: string | null;
 };
 
 type Attachment = { id: number; type: string; name: string | null; size: number | null; url: string };
@@ -1046,6 +1049,11 @@ export default function SupportInbox() {
                           <span className="d-flex align-items-center gap-1 min-w-0">
                             <span className="f-w-600 text-truncate kc-thread-name">{t.name}</span>
                             <SourceIcon source={t.source} />
+                            {t.ai_summary ? (
+                              <span className="badge bg-light-warning text-warning px-1 py-0 f-s-10" title={t.ai_summary}>⚠️ Gulidan</span>
+                            ) : (!t.assignee && t.ai_enabled && t.status === 'open') ? (
+                              <span className="badge bg-light-info text-info px-1 py-0 f-s-10" title="Guli AI javob bermoqda">🤖 Guli</span>
+                            ) : null}
                           </span>
                           <span className={`f-s-11 flex-shrink-0 ${t.waiting && waitMinutes(t.last_message_at) >= 15 ? 'text-danger f-w-600' : 'text-secondary'}`}>
                             {listTime(t.last_message_at)}
@@ -1192,6 +1200,15 @@ export default function SupportInbox() {
                       <div className="d-flex align-items-center gap-2">
                         <span className="f-w-600 text-truncate">{thread.name}</span>
                         <span className={`badge ${thread.status === 'open' ? 'text-light-success' : 'text-light-secondary'}`}>{thread.status === 'open' ? 'Ochiq' : 'Yopilgan'}</span>
+                        {thread.ai_summary ? (
+                          <span className="badge bg-light-warning text-warning d-inline-flex align-items-center gap-1" title={thread.ai_summary}>
+                            <TbRobot size={13} /> Gulidan uzatildi
+                          </span>
+                        ) : (!thread.assignee && thread.ai_enabled && thread.status === 'open') ? (
+                          <span className="badge bg-light-info text-info d-inline-flex align-items-center gap-1" title="Guli AI javob bermoqda">
+                            <TbRobot size={13} /> Guli faol
+                          </span>
+                        ) : null}
                       </div>
                       <div className="f-s-12 text-secondary text-truncate">
                         <SourceIcon source={thread.source} /> {thread.source === 'telegram' ? 'Telegram' : thread.source === 'app' ? 'Ilova' : 'Do‘kon'} · {thread.subtitle}
@@ -1425,6 +1442,15 @@ function InfoPanel({ data }: { data: ThreadData }) {
         <h6 className="f-w-600 mb-0">{(p.name as string) || thread.name}</h6>
         <div className="f-s-12 text-secondary">{c.kind === 'shop' ? (p.owner as string) || 'Do‘kon' : (p.channel as string)}</div>
       </div>
+
+      {thread.ai_summary ? (
+        <div className="alert alert-light-warning b-r-12 p-3 mb-3 f-s-12">
+          <div className="f-w-600 d-flex align-items-center gap-1 mb-1 text-warning-dark">
+            <TbRobot size={16} /> Guli xulosasi:
+          </div>
+          <div className="text-secondary lh-sm">{thread.ai_summary}</div>
+        </div>
+      ) : null}
 
       <div className="b-1-light b-r-15 p-3 mb-3">
         {c.kind === 'shop' ? (

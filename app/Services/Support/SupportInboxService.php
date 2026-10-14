@@ -297,6 +297,8 @@ class SupportInboxService
             'assignee' => $ticket->admin_id ? ['id' => (int) $ticket->admin_id, 'name' => $this->adminName((int) $ticket->admin_id)] : null,
             'legacy_operator' => (! $ticket->admin_id && $ticket->operator_id) ? $this->operatorName((int) $ticket->operator_id) : null,
             'feedback' => $ticket->feedback,
+            'ai_enabled' => (bool) ($ticket->ai_enabled ?? true),
+            'ai_summary' => $ticket->ai_summary ?: null,
         ];
     }
 
@@ -736,6 +738,7 @@ class SupportInboxService
             $ticket->update([
                 'status' => SessionService::STATUS_ACTIVE,
                 'admin_id' => $ticket->admin_id ?: $me->id,
+                'ai_enabled' => false,
             ]);
         }
 
@@ -845,7 +848,7 @@ class SupportInboxService
         }
 
         $ticket = BotTicket::query()->where('source_type', $parsed['source'])->where('user_id', $parsed['id'])->latest('id')->firstOrFail();
-        $updates = ['admin_id' => $target?->id];
+        $updates = ['admin_id' => $target?->id, 'ai_enabled' => $target ? false : true];
         if ($target && $ticket->status === SessionService::STATUS_QUEUE) {
             $updates['status'] = SessionService::STATUS_ACTIVE;
         }

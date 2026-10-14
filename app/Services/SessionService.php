@@ -327,6 +327,18 @@ class SessionService
             Log::warning('[SessionService] support inbox hook xatosi: ' . $e->getMessage());
         }
 
+        // 🤖 "Guli" AI Support Agenti: agar xabar mijozdan bo'lsa va operator biriktirilmagan bo'lsa
+        if ($sentBy === 'user' && $message && trim($message) !== '') {
+            try {
+                $ticket = BotTicket::query()->find($ticketId);
+                if ($ticket && empty($ticket->admin_id) && empty($ticket->operator_id) && ! in_array($ticket->status, ['closed', 'rated'], true) && ($ticket->ai_enabled ?? true)) {
+                    \App\Jobs\ProcessGuliSupportReply::dispatch($ticketId, trim($message))->delay(now()->addSeconds(1));
+                }
+            } catch (\Throwable $e) {
+                Log::warning('[SessionService] Guli AI dispatch xatosi: ' . $e->getMessage());
+            }
+        }
+
         return $saved;
     }
 
