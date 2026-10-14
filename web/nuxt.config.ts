@@ -33,7 +33,9 @@ export default defineNuxtConfig({
     '/faq': { prerender: true },
     '/legal/**': { swr: 300 },
     '/sitemap.xml': { swr: 3600 },
-    '/google-merchant.xml': { swr: 3600 }
+    '/google-merchant.xml': { swr: 3600 },
+    '/book/**': { redirect: { to: '/books/**', statusCode: 301 } },
+    '/book': { redirect: { to: '/catalog', statusCode: 301 } },
   },
 
   runtimeConfig: {

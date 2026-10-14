@@ -3,6 +3,39 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Dropdown } from 'react-bootstrap';
 import Modal from '../components/AppModal';
 import { apiJson, getEcho, RealtimeConfig, RealtimeState, watchState } from '../utils/realtime';
+import {
+  TbMessages,
+  TbBell,
+  TbBellOff,
+  TbChartHistogram,
+  TbX,
+  TbSearch,
+  TbUser,
+  TbBuildingStore,
+  TbEye,
+  TbCircleCheck,
+  TbClock,
+  TbCheck,
+  TbChecks,
+  TbPaperclip,
+  TbSend,
+  TbMoodSmile,
+  TbBolt,
+  TbLayoutSidebarRight,
+  TbReceipt,
+  TbPhone,
+  TbBrandTelegram,
+  TbDeviceMobile,
+  TbShieldLock,
+  TbUserCheck,
+  TbArrowLeft,
+  TbHandGrab,
+  TbThumbUp,
+  TbThumbDown,
+  TbMoodEmpty,
+  TbAlertCircle,
+  TbCalendar,
+} from 'react-icons/tb';
 
 /*
  * Support inbox — Telegram Web uslubidagi operator ish joyi.
@@ -234,7 +267,7 @@ function writePref(key: string, value: string) {
 
 // ─── Kichik komponentlar ────────────────────────────────────────────────────
 
-function Avatar({ name, src, size = 44, icon }: { name: string; src?: string | null; size?: number; icon?: string }) {
+function Avatar({ name, src, size = 44, icon }: { name: string; src?: string | null; size?: number; icon?: React.ReactNode }) {
   const [broken, setBroken] = useState(false);
   const tone = toneOf(name);
   if (src && !broken) {
@@ -242,15 +275,15 @@ function Avatar({ name, src, size = 44, icon }: { name: string; src?: string | n
   }
   return (
     <span className={`b-r-50 d-flex-center flex-shrink-0 f-w-600 text-light-${tone}`} style={{ width: size, height: size, fontSize: size * 0.36 }}>
-      {icon ? <i className={icon}></i> : initials(name)}
+      {icon ? icon : initials(name)}
     </span>
   );
 }
 
 function SourceIcon({ source }: { source: Thread['source'] }) {
-  const map = { telegram: ['ti ti-brand-telegram', 'Telegram bot'], app: ['ti ti-device-mobile', 'Ilova chati'], shop: ['ti ti-building-store', 'Do‘kon'] } as const;
-  const [icon, label] = map[source];
-  return <i className={`${icon} f-s-14 text-secondary`} title={label}></i>;
+  if (source === 'telegram') return <TbBrandTelegram className="text-info f-s-14" title="Telegram bot" />;
+  if (source === 'shop') return <TbBuildingStore className="text-warning f-s-14" title="Do‘kon" />;
+  return <TbDeviceMobile className="text-secondary f-s-14" title="Ilova chati" />;
 }
 
 function ConnectionDot({ state }: { state: RealtimeState }) {
@@ -314,9 +347,9 @@ function Bubble({ m, showAuthor }: { m: Message; showAuthor: boolean }) {
         <div className="kc-bubble-meta">
           {m.at ? hhmm(new Date(m.at)) : ''}
           {mine && !isNote ? (
-            m.pending ? <i className="ti ti-clock ms-1"></i>
-              : m.error ? <i className="ti ti-alert-circle ms-1 text-danger" title={m.error}></i>
-                : <i className="ti ti-checks ms-1"></i>
+            m.pending ? <TbClock size={13} className="ms-1" />
+              : m.error ? <TbAlertCircle size={13} className="ms-1 text-danger" title={m.error} />
+                : <TbChecks size={14} className="ms-1 text-primary" />
           ) : null}
         </div>
       </div>
@@ -784,59 +817,46 @@ export default function SupportInbox() {
       <Head title="Support Workspace" />
       <div className="kc-workspace">
         {/* ═══ YUQORI: WORKSPACE TOPBAR (Telegram / Bitrix24 uslubi) ═══ */}
-        <header className="kc-workspace-topbar">
-          <div className="d-flex align-items-center gap-3">
-            <div className="d-flex align-items-center gap-2">
-              <span className="h-32 w-32 d-flex-center b-r-10 bg-primary text-white f-w-700 f-s-14 shadow-sm" style={{ width: 32, height: 32 }}>
-                <i className="ti ti-messages"></i>
-              </span>
-              <div className="d-flex flex-column lh-1">
-                <span className="f-w-700 f-s-14 text-dark d-flex align-items-center gap-2">
-                  Kitobchi Support
-                  <span className="badge bg-primary-subtle text-primary border border-primary-subtle f-s-10 px-1 py-0">Workspace</span>
-                </span>
-                <span className="f-s-11 text-secondary mt-1 d-flex align-items-center gap-2">
-                  <ConnectionDot state={rt} />
-                  <span className="d-none d-sm-inline opacity-75">· Operator: <strong className="text-dark">{me.name}</strong></span>
-                </span>
-              </div>
+        <header className="kc-workspace-topbar px-3 d-flex align-items-center justify-content-between">
+          <div className="d-flex align-items-center gap-2">
+            <span className="h-32 w-32 d-flex-center b-r-10 bg-primary text-white shadow-sm flex-shrink-0" style={{ width: 32, height: 32 }}>
+              <TbMessages size={18} />
+            </span>
+            <div className="d-flex align-items-center gap-2 lh-1">
+              <span className="f-w-700 f-s-14 text-dark">Kitobchi Support</span>
+              <ConnectionDot state={rt} />
+              <span className="text-muted f-s-12 d-none d-sm-inline">· {me.name}</span>
             </div>
-          </div>
-
-          <div className="d-none d-md-flex align-items-center gap-3 f-s-12 text-secondary bg-light px-3 py-1 b-r-20 border">
-            <span>Mijozlar: <strong className="text-primary">{list.segments?.customer?.open ?? 0} ochiq</strong></span>
-            <span>·</span>
-            <span>Do‘konlar: <strong className="text-warning">{list.segments?.shop?.open ?? 0} ta</strong></span>
-            {me.isSuperAdmin ? (
-              <>
-                <span>·</span>
-                <span>Chat monitoring: <strong className="text-info">{chatCounts.all} ta</strong></span>
-              </>
-            ) : null}
           </div>
 
           <div className="d-flex align-items-center gap-2">
             <button
               type="button"
-              className="btn btn-sm btn-light-secondary icon-btn b-r-10"
+              className="btn btn-sm btn-light-secondary icon-btn b-r-8 d-flex-center"
+              style={{ width: 32, height: 32 }}
               title={sound ? 'Ovozni o‘chirish' : 'Ovozni yoqish'}
               onClick={() => setSound((v) => { writePref('kc-inbox-sound', v ? '0' : '1'); return !v; })}
             >
-              <i className={`ti ${sound ? 'ti-bell-ringing' : 'ti-bell-off'}`}></i>
+              {sound ? <TbBell size={16} /> : <TbBellOff size={16} className="text-secondary" />}
             </button>
-            <Link href={urls.kpi} className="btn btn-sm btn-light-primary icon-btn b-r-10" title="Support KPI">
-              <i className="ti ti-chart-histogram"></i>
+            <Link
+              href={urls.kpi}
+              className="btn btn-sm btn-light-secondary icon-btn b-r-8 d-flex-center"
+              style={{ width: 32, height: 32 }}
+              title="Support KPI"
+            >
+              <TbChartHistogram size={16} />
             </Link>
-            <div className="vr mx-1 my-2 opacity-25"></div>
+            <div className="vr mx-1 opacity-25" style={{ height: 18 }}></div>
             <button
               type="button"
-              className="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-2 b-r-10 px-3 py-1 shadow-sm"
+              className="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1 b-r-8 px-2 py-1"
               onClick={closeWorkspace}
-              title="Chiqish va boshqaruv paneliga qaytish (Esc)"
+              title="Boshqaruv paneliga qaytish (Esc)"
             >
-              <i className="ti ti-x f-s-16"></i>
-              <span className="f-w-600">Chiqish</span>
-              <kbd className="f-s-10 opacity-75 bg-transparent border-0 text-danger d-none d-sm-inline">Esc</kbd>
+              <TbX size={15} />
+              <span className="f-w-600 f-s-12">Chiqish</span>
+              <kbd className="f-s-10 opacity-75 bg-transparent border-0 text-danger ms-1 d-none d-sm-inline">Esc</kbd>
             </button>
           </div>
         </header>
@@ -847,37 +867,37 @@ export default function SupportInbox() {
           <aside className="kc-inbox-list">
             <div className="p-3 pb-2 border-bottom">
 
-            <div className="nav kc-segment w-100 mb-3">
+            <div className="nav kc-segment w-100 mb-2">
               {(['customer', 'shop'] as Segment[]).map((s) => (
-                <div className="nav-item" key={s}>
-                  <button type="button" className={`nav-link ${segment === s ? 'active' : ''}`} onClick={() => switchSegment(s)}>
-                    <i className={`ti ${s === 'customer' ? 'ti-user' : 'ti-building-store'}`}></i>
-                    {s === 'customer' ? 'Mijoz' : 'Do‘kon'}
-                    {list.segments?.[s]?.unread > 0 ? <span className="badge bg-danger text-white">{list.segments[s].unread}</span> : null}
+                <div className="nav-item flex-fill text-center" key={s}>
+                  <button type="button" className={`nav-link w-100 d-flex-center gap-1 ${segment === s ? 'active' : ''}`} onClick={() => switchSegment(s)}>
+                    {s === 'customer' ? <TbUser size={15} /> : <TbBuildingStore size={15} />}
+                    <span>{s === 'customer' ? 'Mijoz' : 'Do‘kon'}</span>
+                    {list.segments?.[s]?.unread > 0 ? <span className="badge bg-danger text-white rounded-pill ms-1">{list.segments[s].unread}</span> : null}
                   </button>
                 </div>
               ))}
               {me.isSuperAdmin ? (
-                <div className="nav-item">
+                <div className="nav-item flex-fill text-center">
                   <button
                     type="button"
-                    className={`nav-link ${segment === 'chat_monitor' ? 'active text-primary' : ''}`}
+                    className={`nav-link w-100 d-flex-center gap-1 ${segment === 'chat_monitor' ? 'active text-primary' : ''}`}
                     onClick={() => switchSegment('chat_monitor')}
-                    title="Faqat super admin: foydalanuvchilar o‘rtasidagi suhbatlarni kuzatish"
+                    title="Faqat super admin: monitoring"
                   >
-                    <i className="ti ti-eye"></i>
-                    Chat kuzatuv
+                    <TbEye size={15} />
+                    <span>Monitoring</span>
                   </button>
                 </div>
               ) : null}
             </div>
 
             <div className="position-relative mb-2">
-              <i className="ti ti-search position-absolute text-secondary" style={{ left: 12, top: '50%', transform: 'translateY(-50%)' }}></i>
+              <TbSearch size={15} className="position-absolute text-secondary" style={{ left: 12, top: '50%', transform: 'translateY(-50%)' }} />
               <input
                 type="search"
-                className="form-control form-control-sm ps-5"
-                placeholder={segment === 'chat_monitor' ? 'Foydalanuvchi, do‘kon, telefon…' : segment === 'shop' ? 'Do‘kon, telefon, mavzu…' : 'Ism, telefon, @username, ID…'}
+                className="form-control form-control-sm ps-5 b-r-8"
+                placeholder={segment === 'chat_monitor' ? 'Qidirish (telefon, do‘kon…)' : 'Qidirish (ism, telefon, ID…)'}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -888,21 +908,21 @@ export default function SupportInbox() {
                 <button
                   type="button"
                   onClick={() => setChatTab('all')}
-                  className={`btn btn-sm b-r-10 text-nowrap f-s-12 ${chatTab === 'all' ? 'btn-primary' : 'btn-light-secondary'}`}
+                  className={`btn btn-sm b-r-8 text-nowrap f-s-12 ${chatTab === 'all' ? 'btn-primary' : 'btn-light-secondary'}`}
                 >
                   Hammasi <span className="ms-1 opacity-75">{chatCounts.all}</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setChatTab('user')}
-                  className={`btn btn-sm b-r-10 text-nowrap f-s-12 ${chatTab === 'user' ? 'btn-primary' : 'btn-light-secondary'}`}
+                  className={`btn btn-sm b-r-8 text-nowrap f-s-12 ${chatTab === 'user' ? 'btn-primary' : 'btn-light-secondary'}`}
                 >
                   Foydalanuvchilar <span className="ms-1 opacity-75">{chatCounts.user}</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setChatTab('seller')}
-                  className={`btn btn-sm b-r-10 text-nowrap f-s-12 ${chatTab === 'seller' ? 'btn-primary' : 'btn-light-secondary'}`}
+                  className={`btn btn-sm b-r-8 text-nowrap f-s-12 ${chatTab === 'seller' ? 'btn-primary' : 'btn-light-secondary'}`}
                 >
                   Do‘konlar <span className="ms-1 opacity-75">{chatCounts.seller}</span>
                 </button>
@@ -911,7 +931,7 @@ export default function SupportInbox() {
               <div className="d-flex gap-1 overflow-auto kc-no-scrollbar pb-1">
                 {FILTERS.map((f) => (
                   <button key={f.key} type="button" onClick={() => setFilter(f.key)}
-                    className={`btn btn-sm b-r-10 text-nowrap f-s-12 ${filter === f.key ? 'btn-primary' : 'btn-light-secondary'}`}>
+                    className={`btn btn-sm b-r-8 text-nowrap f-s-12 ${filter === f.key ? 'btn-primary' : 'btn-light-secondary'}`}>
                     {f.label}{counts[f.key] !== undefined ? <span className="ms-1 opacity-75">{counts[f.key]}</span> : null}
                   </button>
                 ))}
@@ -927,7 +947,7 @@ export default function SupportInbox() {
                 ) : null}
                 {!chatLoading && chatConversations.length === 0 ? (
                   <div className="p-4 text-center text-secondary">
-                    <i className="ti ti-messages-off f-s-30 d-block mb-2"></i>
+                    <TbMoodEmpty size={28} className="d-block mx-auto mb-2 opacity-50" />
                     Suhbatlar topilmadi
                   </div>
                 ) : null}
@@ -935,22 +955,17 @@ export default function SupportInbox() {
                   const active = c.id === activeChatId;
                   return (
                     <button key={c.id} type="button" onClick={() => openChat(c)} className={`kc-thread ${active ? 'active' : ''}`}>
-                      <Avatar name={c.user} icon={c.kind === 'seller' ? 'ti ti-building-store' : 'ti ti-users'} />
+                      <Avatar name={c.user} icon={c.kind === 'seller' ? <TbBuildingStore size={18} /> : <TbUser size={18} />} />
                       <span className="flex-grow-1 min-w-0 text-start">
-                        <span className="d-flex align-items-center gap-1">
+                        <span className="d-flex align-items-center justify-content-between gap-1 mb-1">
                           <span className="f-w-600 text-truncate kc-thread-name">{c.user} ↔ {c.agent}</span>
-                          <span className="ms-auto f-s-11 text-secondary flex-shrink-0">{listTime(c.date)}</span>
+                          <span className="f-s-11 text-secondary flex-shrink-0">{listTime(c.date)}</span>
                         </span>
-                        <span className="d-flex align-items-center gap-1 mt-1">
+                        <span className="d-flex align-items-center justify-content-between gap-2">
                           <span className="text-truncate f-s-13 text-secondary flex-grow-1">
                             {c.lastMsg || '—'}
                           </span>
-                          <span className="badge bg-light-primary text-primary b-r-50 flex-shrink-0 f-s-11">{c.messages}</span>
-                        </span>
-                        <span className="d-flex align-items-center gap-1 mt-1 f-s-11 text-secondary">
-                          <i className={`ti ${c.kind === 'seller' ? 'ti-building-store' : 'ti-user'} me-1`}></i>
-                          <span>{c.kind === 'seller' ? 'Do‘kon muloqoti' : 'Foydalanuvchilar suhbati'}</span>
-                          {c.phone ? <span className="ms-auto text-truncate" style={{ maxWidth: 100 }}>{c.phone}</span> : null}
+                          <span className="badge bg-light-primary text-primary rounded-pill px-2 py-0 f-s-11 flex-shrink-0">{c.messages}</span>
                         </span>
                       </span>
                     </button>
@@ -964,7 +979,7 @@ export default function SupportInbox() {
                 ) : null}
                 {!listLoading && list.items.length === 0 ? (
                   <div className="p-4 text-center text-secondary">
-                    <i className="ti ti-mood-empty f-s-30 d-block mb-2"></i>
+                    <TbMoodEmpty size={28} className="d-block mx-auto mb-2 opacity-50" />
                     {filter === 'unassigned' ? 'Navbatda hech kim yo‘q' : filter === 'mine' ? 'Sizga biriktirilgan suhbat yo‘q' : 'Suhbat topilmadi'}
                   </div>
                 ) : null}
@@ -972,29 +987,29 @@ export default function SupportInbox() {
                   const active = t.key === activeKey;
                   return (
                     <button key={t.key} type="button" onClick={() => openThread(t.key)} className={`kc-thread ${active ? 'active' : ''}`}>
-                      <Avatar name={t.name} src={t.avatar} icon={t.segment === 'shop' && !t.avatar ? 'ti ti-building-store' : undefined} />
+                      <Avatar name={t.name} src={t.avatar} icon={t.segment === 'shop' && !t.avatar ? <TbBuildingStore size={18} /> : undefined} />
                       <span className="flex-grow-1 min-w-0 text-start">
-                        <span className="d-flex align-items-center gap-1">
-                          <span className="f-w-600 text-truncate kc-thread-name">{t.name}</span>
-                          <SourceIcon source={t.source} />
-                          <span className="ms-auto f-s-11 text-secondary flex-shrink-0">{listTime(t.last_message_at)}</span>
+                        <span className="d-flex align-items-center justify-content-between gap-1 mb-1">
+                          <span className="d-flex align-items-center gap-1 min-w-0">
+                            <span className="f-w-600 text-truncate kc-thread-name">{t.name}</span>
+                            <SourceIcon source={t.source} />
+                          </span>
+                          <span className={`f-s-11 flex-shrink-0 ${t.waiting && waitMinutes(t.last_message_at) >= 15 ? 'text-danger f-w-600' : 'text-secondary'}`}>
+                            {listTime(t.last_message_at)}
+                          </span>
                         </span>
-                        <span className="d-flex align-items-center gap-1 mt-1">
+                        <span className="d-flex align-items-center justify-content-between gap-2">
                           <span className="text-truncate f-s-13 text-secondary flex-grow-1">
-                            {t.last_from === 'agent' ? <span className="text-primary">Siz: </span> : null}
+                            {t.last_from === 'agent' ? <span className="text-primary f-w-600">Siz: </span> : null}
                             {t.last_message || '—'}
                           </span>
-                          {t.unread > 0 ? <span className="badge bg-primary b-r-50 flex-shrink-0">{t.unread}</span> : null}
-                        </span>
-                        <span className="d-flex align-items-center gap-1 mt-1 f-s-11">
-                          {t.status === 'closed'
-                            ? <span className="text-secondary"><i className="ti ti-circle-check me-1"></i>Yopilgan</span>
-                            : t.waiting
-                              ? <span className={waitMinutes(t.last_message_at) >= 15 ? 'text-danger f-w-600' : 'text-warning f-w-600'}><i className="ti ti-clock me-1"></i>Javob kutmoqda · {waitLabel(t.last_message_at)}</span>
-                              : <span className="text-success"><i className="ti ti-message-check me-1"></i>Javob berilgan</span>}
-                          {t.feedback ? <i className={`ti ${t.feedback === 'good' ? 'ti-thumb-up text-success' : 'ti-thumb-down text-danger'} ms-1`}></i> : null}
-                          <span className="ms-auto text-secondary text-truncate" style={{ maxWidth: 110 }}>
-                            {t.assignee ? <><i className="ti ti-user-check me-1"></i>{t.assignee.id === me.id ? 'Siz' : t.assignee.name}</> : t.legacy_operator ? t.legacy_operator : t.status === 'open' ? <span className="text-warning">Navbatda</span> : null}
+                          <span className="d-flex align-items-center gap-1 flex-shrink-0">
+                            {t.waiting ? (
+                              <span className={`d-inline-block b-r-50 ${waitMinutes(t.last_message_at) >= 15 ? 'bg-danger' : 'bg-warning'}`} style={{ width: 8, height: 8 }} title="Javob kutilmoqda"></span>
+                            ) : null}
+                            {t.unread > 0 ? (
+                              <span className="badge bg-primary rounded-pill px-2 py-1 f-s-11">{t.unread}</span>
+                            ) : null}
                           </span>
                         </span>
                       </span>
@@ -1016,10 +1031,12 @@ export default function SupportInbox() {
           {segment === 'chat_monitor' ? (
             <>
               {!activeChatId && !chatDetailLoading ? (
-                <div className="h-100 d-flex flex-column align-items-center justify-content-center text-center p-4 text-secondary">
-                  <span className="h-80 w-80 d-flex-center b-r-50 text-light-primary mb-3" style={{ width: 80, height: 80 }}><i className="ti ti-eye f-s-36"></i></span>
-                  <h6 className="f-w-600 text-dark mb-1">Chat kuzatuv (Monitoring)</h6>
-                  <p className="mb-0 f-s-13">Chapdagi ro‘yxatdan suhbatni tanlang. Bosh administrator sifatida siz foydalanuvchilar o‘rtasidagi yoki do‘kon suhbatlarini to‘liq xolis kuzatishingiz mumkin.</p>
+                <div className="h-100 d-flex flex-column align-items-center justify-content-center text-center p-4">
+                  <div className="mb-3 p-3 b-r-50 bg-white shadow-sm border d-flex-center" style={{ width: 68, height: 68 }}>
+                    <TbEye size={32} className="text-primary opacity-75" />
+                  </div>
+                  <h6 className="f-w-600 text-dark mb-1 f-s-16">Chat monitoring</h6>
+                  <p className="mb-0 f-s-13 text-secondary" style={{ maxWidth: 320 }}>Chapdagi ro‘yxatdan suhbatni tanlang</p>
                 </div>
               ) : null}
 
@@ -1075,7 +1092,7 @@ export default function SupportInbox() {
                             <div className="kc-bubble-text">{m.message}</div>
                             <div className="kc-bubble-meta d-flex align-items-center justify-content-end gap-1 mt-1">
                               {m.date ? hhmm(new Date(m.date)) : ''}
-                              {m.read ? <i className="ti ti-checks text-primary ms-1"></i> : null}
+                              {m.read ? <TbChecks size={14} className="text-primary ms-1" /> : null}
                             </div>
                           </div>
                         </div>
@@ -1085,7 +1102,7 @@ export default function SupportInbox() {
 
                   <div className="kc-composer text-center py-3 bg-light-secondary border-top">
                     <span className="text-secondary f-s-13 d-inline-flex align-items-center gap-2">
-                      <i className="ti ti-lock f-s-16 text-warning"></i>
+                      <TbShieldLock size={16} className="text-warning" />
                       Faqat kuzatuv rejimi — ushbu suhbat foydalanuvchilar orasida kechmoqda.
                     </span>
                   </div>
@@ -1095,10 +1112,14 @@ export default function SupportInbox() {
           ) : (
             <>
               {!thread && !threadLoading ? (
-                <div className="h-100 d-flex flex-column align-items-center justify-content-center text-center p-4 text-secondary">
-                  <span className="h-80 w-80 d-flex-center b-r-50 text-light-primary mb-3" style={{ width: 80, height: 80 }}><i className="ti ti-messages f-s-36"></i></span>
-                  <h6 className="f-w-600 text-dark mb-1">Suhbatni tanlang</h6>
-                  <p className="mb-0 f-s-13">Chapdagi ro‘yxatdan mijoz yoki do‘konni tanlang. Yangi xabarlar shu yerda real vaqtda paydo bo‘ladi.</p>
+                <div className="h-100 d-flex flex-column align-items-center justify-content-center text-center p-4">
+                  <div className="mb-3 p-3 b-r-50 bg-white shadow-sm border d-flex-center" style={{ width: 68, height: 68 }}>
+                    <TbMessages size={34} className="text-primary opacity-75" />
+                  </div>
+                  <h6 className="f-w-600 text-dark mb-1 f-s-16">Suhbatni tanlang</h6>
+                  <p className="mb-0 f-s-13 text-secondary" style={{ maxWidth: 300 }}>
+                    Xabarlashishni boshlash uchun chapdagi ro‘yxatdan suhbatni tanlang
+                  </p>
                 </div>
               ) : null}
 
@@ -1109,10 +1130,10 @@ export default function SupportInbox() {
               {thread ? (
                 <>
                   <header className="kc-chat-head">
-                    <button type="button" className="btn btn-sm btn-light-secondary icon-btn b-r-10 d-md-none me-1" onClick={() => setActiveKey('')} aria-label="Orqaga">
-                      <i className="ti ti-arrow-left"></i>
+                    <button type="button" className="btn btn-sm btn-light-secondary icon-btn b-r-8 d-md-none me-1" onClick={() => setActiveKey('')} aria-label="Orqaga">
+                      <TbArrowLeft size={16} />
                     </button>
-                    <Avatar name={thread.name} src={thread.avatar} size={40} icon={thread.segment === 'shop' && !thread.avatar ? 'ti ti-building-store' : undefined} />
+                    <Avatar name={thread.name} src={thread.avatar} size={40} icon={thread.segment === 'shop' && !thread.avatar ? <TbBuildingStore size={18} /> : undefined} />
                     <div className="min-w-0 flex-grow-1">
                       <div className="d-flex align-items-center gap-2">
                         <span className="f-w-600 text-truncate">{thread.name}</span>
@@ -1126,12 +1147,12 @@ export default function SupportInbox() {
                     <div className="d-flex align-items-center gap-1 flex-shrink-0">
                       {!me.readOnly ? (
                         <Dropdown align="end">
-                          <Dropdown.Toggle size="sm" variant="light-secondary" className="b-r-10 d-flex align-items-center gap-1">
-                            <i className="ti ti-user-check"></i>
+                          <Dropdown.Toggle size="sm" variant="light-secondary" className="b-r-8 d-flex align-items-center gap-1">
+                            <TbUserCheck size={16} />
                             <span className="d-none d-lg-inline">{thread.assignee ? (thread.assignee.id === me.id ? 'Siz' : thread.assignee.name) : 'Biriktirish'}</span>
                           </Dropdown.Toggle>
-                          <Dropdown.Menu className="b-r-10" style={{ maxHeight: 320, overflowY: 'auto' }}>
-                            <Dropdown.Item onClick={() => assign(me.id)}><i className="ti ti-hand-grab me-2"></i>O‘zimga olish</Dropdown.Item>
+                          <Dropdown.Menu className="b-r-8" style={{ maxHeight: 320, overflowY: 'auto' }}>
+                            <Dropdown.Item onClick={() => assign(me.id)}><TbHandGrab size={16} className="me-2" />O‘zimga olish</Dropdown.Item>
                             <Dropdown.Divider />
                             {agents.filter((a) => a.id !== me.id).map((a) => (
                               <Dropdown.Item key={a.id} onClick={() => assign(a.id)} active={thread.assignee?.id === a.id}>{a.name}</Dropdown.Item>
@@ -1141,12 +1162,12 @@ export default function SupportInbox() {
                         </Dropdown>
                       ) : null}
                       {!me.readOnly && thread.status === 'open' ? (
-                        <button type="button" className="btn btn-sm btn-light-success b-r-10 d-flex align-items-center gap-1" onClick={closeThread}>
-                          <i className="ti ti-circle-check"></i><span className="d-none d-lg-inline">Yopish</span>
+                        <button type="button" className="btn btn-sm btn-light-success b-r-8 d-flex align-items-center gap-1" onClick={closeThread}>
+                          <TbCircleCheck size={16} /><span className="d-none d-lg-inline">Yopish</span>
                         </button>
                       ) : null}
-                      <button type="button" className={`btn btn-sm icon-btn b-r-10 ${showInfo ? 'btn-light-primary' : 'btn-light-secondary'}`} onClick={toggleInfo} title="Ma’lumotlar">
-                        <i className="ti ti-layout-sidebar-right"></i>
+                      <button type="button" className={`btn btn-sm icon-btn b-r-8 ${showInfo ? 'btn-light-primary' : 'btn-light-secondary'}`} onClick={toggleInfo} title="Ma’lumotlar">
+                        <TbLayoutSidebarRight size={16} />
                       </button>
                     </div>
                   </header>
@@ -1159,7 +1180,7 @@ export default function SupportInbox() {
                     }}>
                     {data?.has_more ? (
                       <div className="text-center my-2">
-                        <button type="button" className="btn btn-sm btn-light-secondary b-r-10" onClick={loadOlder} disabled={olderLoading}>
+                        <button type="button" className="btn btn-sm btn-light-secondary b-r-8" onClick={loadOlder} disabled={olderLoading}>
                           {olderLoading ? <span className="spinner-border spinner-border-sm"></span> : 'Oldingi xabarlar'}
                         </button>
                       </div>
@@ -1167,13 +1188,13 @@ export default function SupportInbox() {
                     {rendered}
                     {thread.status === 'closed' ? (
                       <div className="text-center my-3 f-s-12 text-secondary">
-                        Suhbat yopilgan{thread.feedback ? <> · baho: {thread.feedback === 'good' ? <span className="text-success f-w-600">yaxshi</span> : <span className="text-danger f-w-600">yomon</span>}</> : ' · baho kutilmoqda'}. Javob yozsangiz, yangi murojaat ochiladi.
+                        Suhbat yopilgan{thread.feedback ? <> · baho: {thread.feedback === 'good' ? <span className="text-success f-w-600">yaxshi</span> : <span className="text-danger f-w-600">yomon</span>}</> : ' · baho kutilmoqda'}. Yangi xabar yozilsa qayta ochiladi.
                       </div>
                     ) : null}
                   </div>
 
                   {error ? (
-                    <div className="px-3 pt-2"><div className="alert alert-light-danger py-2 px-3 mb-0 f-s-13 d-flex align-items-center gap-2"><i className="ti ti-alert-circle"></i><span className="flex-grow-1">{error}</span><button type="button" className="btn-close" style={{ fontSize: 10 }} onClick={() => setError('')}></button></div></div>
+                    <div className="px-3 pt-2"><div className="alert alert-light-danger py-2 px-3 mb-0 f-s-13 d-flex align-items-center gap-2"><TbAlertCircle size={16} /><span className="flex-grow-1">{error}</span><button type="button" className="btn-close" style={{ fontSize: 10 }} onClick={() => setError('')}></button></div></div>
                   ) : null}
 
                   {me.readOnly ? (
@@ -1194,14 +1215,14 @@ export default function SupportInbox() {
 
                       <div className="d-flex align-items-center gap-2 mb-2">
                         <div className="nav kc-segment kc-segment-sm">
-                          <div className="nav-item"><button type="button" className={`nav-link ${!noteMode ? 'active' : ''}`} onClick={() => setNoteMode(false)}><i className="ti ti-send"></i>Javob</button></div>
-                          <div className="nav-item"><button type="button" className={`nav-link ${noteMode ? 'active' : ''}`} onClick={() => setNoteMode(true)}><i className="ti ti-lock"></i>Ichki eslatma</button></div>
+                          <div className="nav-item"><button type="button" className={`nav-link ${!noteMode ? 'active' : ''}`} onClick={() => setNoteMode(false)}><TbSend size={14} className="me-1" />Javob</button></div>
+                          <div className="nav-item"><button type="button" className={`nav-link ${noteMode ? 'active' : ''}`} onClick={() => setNoteMode(true)}><TbShieldLock size={14} className="me-1" />Ichki eslatma</button></div>
                         </div>
                         <Dropdown drop="up" className="ms-auto">
-                          <Dropdown.Toggle size="sm" variant="light-primary" className="b-r-10 d-flex align-items-center gap-1">
-                            <i className="ti ti-template"></i><span className="d-none d-sm-inline">Shablonlar</span>
+                          <Dropdown.Toggle size="sm" variant="light-primary" className="b-r-8 d-flex align-items-center gap-1">
+                            <TbBolt size={15} /><span className="d-none d-sm-inline">Shablonlar</span>
                           </Dropdown.Toggle>
-                          <Dropdown.Menu className="b-r-10 p-0" style={{ width: 340, maxHeight: 360, overflowY: 'auto' }}>
+                          <Dropdown.Menu className="b-r-8 p-0" style={{ width: 340, maxHeight: 360, overflowY: 'auto' }}>
                             {visibleTemplates.map((t) => (
                               <Dropdown.Item key={t.id} onClick={() => applyTemplate(t)} className="py-2 text-wrap">
                                 <span className="f-w-600 f-s-13 d-block">{t.title}{t.shortcut ? <span className="text-secondary f-w-400 ms-2">/{t.shortcut}</span> : null}</span>
@@ -1210,22 +1231,21 @@ export default function SupportInbox() {
                             ))}
                             <Dropdown.Divider className="my-0" />
                             <Dropdown.Item className="py-2 text-primary f-w-600" onClick={() => { setTemplateTpl(null); setTemplateModal(true); }}>
-                              <i className="ti ti-plus me-1"></i>Yangi shablon
+                              <TbPlus size={15} className="me-1" />Yangi shablon
                             </Dropdown.Item>
                           </Dropdown.Menu>
                         </Dropdown>
                       </div>
 
                       <div className="d-flex align-items-end gap-2">
-                        <textarea ref={composerRef} rows={1} className="form-control kc-composer-input" value={composer}
-                          placeholder={noteMode ? 'Faqat jamoa ko‘radi…' : `Javob yozing… («/» — shablonlar)${thread.status === 'closed' ? ' · yangi murojaat ochiladi' : ''}`}
+                        <textarea ref={composerRef} rows={1} className="form-control kc-composer-input b-r-10" value={composer}
+                          placeholder={noteMode ? 'Faqat jamoa ko‘radi…' : `Javob yozing… («/» — shablonlar)`}
                           onChange={(e) => setComposer(e.target.value)} onKeyDown={onComposerKey} disabled={sending && !composer} />
-                        <button type="button" className={`btn ${noteMode ? 'btn-warning' : 'btn-primary'} icon-btn b-r-10 flex-shrink-0`} style={{ width: 44, height: 44 }}
+                        <button type="button" className={`btn ${noteMode ? 'btn-warning' : 'btn-primary'} icon-btn b-r-10 flex-shrink-0 d-flex-center`} style={{ width: 44, height: 44 }}
                           onClick={send} disabled={!composer.trim() || sending} aria-label="Yuborish">
-                          {sending ? <span className="spinner-border spinner-border-sm"></span> : <i className={`ti ${noteMode ? 'ti-note' : 'ti-send'} f-s-18`}></i>}
+                          {sending ? <span className="spinner-border spinner-border-sm"></span> : <TbSend size={18} />}
                         </button>
                       </div>
-                      <div className="f-s-11 text-secondary mt-1 d-none d-md-block">Enter — yuborish · Shift+Enter — yangi qator</div>
                     </div>
                   )}
                 </>
@@ -1427,16 +1447,33 @@ function InfoPanel({ data }: { data: ThreadData }) {
   );
 }
 
-function InfoRow({ icon, label, value, copy }: { icon: string; label: string; value: string | null | undefined; copy?: boolean }) {
+function renderIcon(icon: string | React.ReactNode, size = 15) {
+  if (typeof icon !== 'string') return icon;
+  switch (icon) {
+    case 'ti-phone': return <TbPhone size={size} />;
+    case 'ti-user': return <TbUser size={size} />;
+    case 'ti-user-check': return <TbUserCheck size={size} />;
+    case 'ti-messages': return <TbMessages size={size} />;
+    case 'ti-clock': return <TbClock size={size} />;
+    case 'ti-calendar': return <TbCalendar size={size} />;
+    case 'ti-building-store': return <TbBuildingStore size={size} />;
+    case 'ti-receipt': return <TbReceipt size={size} />;
+    case 'ti-shield-check': return <TbShieldCheck size={size} />;
+    case 'ti-brand-telegram': return <TbBrandTelegram size={size} />;
+    default: return <TbInfoCircle size={size} />;
+  }
+}
+
+function InfoRow({ icon, label, value, copy }: { icon: string | React.ReactNode; label: string; value: string | null | undefined; copy?: boolean }) {
   if (!value) return null;
   return (
     <div className="d-flex align-items-center gap-2 py-1 f-s-13">
-      <i className={`ti ${icon} text-secondary`}></i>
+      <span className="text-secondary d-flex-center flex-shrink-0">{renderIcon(icon)}</span>
       <span className="text-secondary">{label}</span>
       <span className="ms-auto f-w-500 text-truncate" style={{ maxWidth: '55%' }} title={value}>{value}</span>
       {copy ? (
         <button type="button" className="btn btn-link p-0 text-secondary" title="Nusxa olish" onClick={() => navigator.clipboard?.writeText(value)}>
-          <i className="ti ti-copy f-s-14"></i>
+          <TbCopy size={14} />
         </button>
       ) : null}
     </div>
@@ -1450,16 +1487,16 @@ function TemplatesPanel({ templates, onUse, onEdit, onAdd, readOnly }: { templat
     <div className="b-1-light b-r-15 p-3 mb-3">
       <div className="d-flex align-items-center justify-content-between mb-2">
         <span className="f-w-600">Shablon javoblar</span>
-        {!readOnly ? <button type="button" className="btn btn-sm btn-light-primary icon-btn b-r-10" onClick={onAdd} title="Yangi shablon"><i className="ti ti-plus"></i></button> : null}
+        {!readOnly ? <button type="button" className="btn btn-sm btn-light-primary icon-btn b-r-8 d-flex-center" style={{ width: 28, height: 28 }} onClick={onAdd} title="Yangi shablon"><TbPlus size={15} /></button> : null}
       </div>
-      <input type="search" className="form-control form-control-sm mb-2" placeholder="Shablon qidirish…" value={q} onChange={(e) => setQ(e.target.value)} />
+      <input type="search" className="form-control form-control-sm mb-2 b-r-8" placeholder="Shablon qidirish…" value={q} onChange={(e) => setQ(e.target.value)} />
       {items.map((t) => (
         <div key={t.id} className="kc-template-card">
           <button type="button" className="kc-template-use" onClick={() => onUse(t)} disabled={readOnly}>
             <span className="d-block f-w-600 f-s-13">{t.title}{t.shortcut ? <span className="text-secondary f-w-400 ms-1">/{t.shortcut}</span> : null}</span>
             <span className="d-block f-s-12 text-secondary kc-clamp-2">{t.body}</span>
           </button>
-          {!readOnly ? <button type="button" className="btn btn-link p-0 text-secondary" onClick={() => onEdit(t)} title="Tahrirlash"><i className="ti ti-pencil"></i></button> : null}
+          {!readOnly ? <button type="button" className="btn btn-link p-0 text-secondary" onClick={() => onEdit(t)} title="Tahrirlash"><TbEdit size={14} /></button> : null}
         </div>
       ))}
       {items.length === 0 ? <div className="f-s-12 text-secondary">Shablon topilmadi.</div> : null}

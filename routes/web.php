@@ -93,6 +93,9 @@ Route::post('/favorites/toggle', [\App\Http\Controllers\Web\WebFavoritesControll
 Route::get('/checkout', [\App\Http\Controllers\Web\WebCheckoutController::class, 'index'])->name('web.checkout');
 Route::post('/checkout/process', [\App\Http\Controllers\Web\WebCheckoutController::class, 'process'])->name('web.checkout.process');
 Route::get('/books/{id}-{slug?}', [\App\Http\Controllers\Web\ProductCatalogController::class, 'showBook'])->where('id', '[0-9]+')->name('web.books.show');
+Route::get('/book/{path?}', function (?string $path = null) {
+    return redirect('/books/' . ($path ?? ''), 301);
+})->where('path', '.*');
 Route::get('/stationery/{id}-{slug?}', [\App\Http\Controllers\Web\ProductCatalogController::class, 'showStationery'])->where('id', '[0-9]+')->name('web.stationery.show');
 Route::get('/p/{artikul}', [\App\Http\Controllers\Web\ProductCatalogController::class, 'byArtikul'])->where('artikul', '[A-Za-z0-9\-]+')->name('web.by_artikul');
 Route::get('/sitemap.xml', [\App\Http\Controllers\Web\ProductCatalogController::class, 'sitemap'])->name('web.sitemap');
