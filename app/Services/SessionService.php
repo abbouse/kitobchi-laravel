@@ -51,6 +51,14 @@ class SessionService
 
             if ($ticket) {
                 Log::info("[SessionService] ticket yaratildi", ['ticket_id' => $ticket->id, 'user_id' => $userId]);
+
+                if (empty(trim($firstMessage)) || trim($firstMessage) === '/start') {
+                    try {
+                        \App\Jobs\ProcessGuliGreeting::dispatch((int) $ticket->id)->delay(now()->addSeconds(1));
+                    } catch (\Throwable $e) {
+                        Log::warning('[SessionService] ProcessGuliGreeting dispatch xatosi: ' . $e->getMessage());
+                    }
+                }
             }
 
             return $ticket ?: (object) ['id' => $id, 'user_id' => $userId, 'status' => self::STATUS_QUEUE];

@@ -2,12 +2,14 @@
 
 namespace App\Services\Support;
 
+use App\Jobs\ProcessGuliFollowUp;
 use App\Models\Books;
 use App\Models\BotTicket;
 use App\Models\BotTicketMessage;
 use App\Models\Conversation;
 use App\Models\ProjectSetting;
 use App\Models\Sold;
+use App\Models\Split;
 use App\Models\User;
 use App\Services\ChatBotKnowledgeService;
 use App\Services\OpenAIService;
@@ -57,18 +59,27 @@ class GuliAgentService
             return null;
         }
 
+        // Sentiment detection — jiddiy g'azab/norozilik signallari
+        if ($this->detectNegativeSentiment($userText)) {
+            $summary = "Mijoz noroziligini bildirdi: " . mb_substr($userText, 0, 200);
+            $this->toolTransferToHuman($ticket, 'Mijoz g\'azablangan yoki kuchli norozilik bildirmoqda', $summary);
+            $transferMsg = "Tushunarli, siz bilan o'zim gaplashmoqchi bo'lgan xodimimizni chaqirayapman. Biroz sabr qiling 😊\n\n— Guli 🌸";
+            $this->deliverReply($ticket, $transferMsg);
+            return $transferMsg;
+        }
+
         $user = $this->resolveCustomerUser($ticket);
         $userContext = $this->buildCustomerContext($ticket, $user);
         $generalKnowledge = $this->knowledge->buildGeneralKnowledgeOnly();
         $extraSettings = (string) (ProjectSetting::query()->value('ai_bot_extra_notes') ?? '');
 
-        // Suhbat tarixi (oxirgi 12 ta xabar)
+        // Suhbat tarixi (oxirgi 14 ta xabar)
         $history = BotTicketMessage::query()
             ->where('ticket_id', $ticket->id)
             ->whereIn('sent_by', ['user', 'operator', 'admin', 'system'])
             ->where('message_type', '<>', 'note')
             ->orderBy('id', 'desc')
-            ->take(12)
+            ->take(14)
             ->get()
             ->reverse();
 
@@ -94,10 +105,19 @@ class GuliAgentService
         $tools = $this->getToolsDefinition();
 
         try {
+            // Typing delay — tabiiy ko'rinish uchun (2-3 soniya)
+            $this->simulateTypingDelay(mb_strlen($userText));
+
             $reply = $this->executeAiLoop($ticket, $user, $messages, $tools);
 
             if ($reply) {
-                $this->deliverReply($ticket, $reply);
+                $saved = $this->deliverReply($ticket, $reply);
+
+                // Smart follow-up: 2.5 daqiqada mijoz javob bermasagina
+                if ($saved) {
+                    ProcessGuliFollowUp::dispatch($ticket->id, $saved->id)
+                        ->delay(now()->addSeconds(150)); // 2.5 daqiqa
+                }
             }
 
             return $reply;
@@ -110,6 +130,94 @@ class GuliAgentService
 
             return null;
         }
+    }
+
+    /**
+     * Proaktif salom — yangi ticket ochilganda Guli birinchi yozadi.
+     */
+    public function sendGreeting(BotTicket $ticket): void
+    {
+        if (! $this->shouldHandle($ticket)) {
+            return;
+        }
+
+        // Avval xabar bor bo'lsa — salom bermaydi
+        $hasMessages = BotTicketMessage::query()
+            ->where('ticket_id', $ticket->id)
+            ->whereIn('sent_by', ['user', 'operator', 'admin'])
+            ->exists();
+
+        if ($hasMessages) {
+            return;
+        }
+
+        $user = $this->resolveCustomerUser($ticket);
+        $firstName = $user ? trim($user->name ?? '') : ($ticket->name ?: '');
+        $firstName = explode(' ', $firstName)[0] ?: '';
+
+        $greeting = $firstName
+            ? "Assalomu alaykum, {$firstName}! 😊 Kitobchi support xizmatiga xush kelibsiz. Men Guli, sizga qanday yordam bera olaman?"
+            : "Assalomu alaykum! 😊 Kitobchi support xizmatiga xush kelibsiz. Men Guli, sizga qanday yordam bera olaman?";
+
+        $greeting .= "\n\n— Guli 🌸";
+
+        $this->simulateTypingDelay(20);
+        $this->deliverReply($ticket, $greeting);
+    }
+
+    /**
+     * Smart follow-up — mijoz javob bermasa yengil eslatma yuborish.
+     */
+    public function sendFollowUp(BotTicket $ticket): void
+    {
+        if (! $this->shouldHandle($ticket)) {
+            return;
+        }
+
+        $followUps = [
+            "Salom! Savolingiz hal bo'ldimi? Yana yordam kerak bo'lsa aytishingiz mumkin 😊\n\n— Guli 🌸",
+            "Hali biror narsaga yordamim kerakmi? Bemalol yozing! 🌸\n\n— Guli 🌸",
+            "Savolingizga javob topa oldingizmi? Yana murojaat qilishingiz mumkin 😊\n\n— Guli 🌸",
+        ];
+
+        $msg = $followUps[array_rand($followUps)];
+        $this->deliverReply($ticket, $msg);
+    }
+
+    /**
+     * Negatif sentiment aniqlash — g'azab/kuchli norozilik signallari.
+     */
+    protected function detectNegativeSentiment(string $text): bool
+    {
+        $lower = mb_strtolower($text);
+        $signals = [
+            // O'zbek
+            'aldagan', 'aldov', 'firibgar', 'firibgarlik', 'sudga beraman', 'shikoyat qilaman',
+            'pul qaytaring', 'pulimni qaytaring', 'pulimni bering', 'qaytarib bering',
+            'juda yomon', 'dahshatli', 'zo\'rlik', 'yomon xizmat', 'bezori', 'besavod',
+            'haqingdan kelaman', 'haqingizdan', 'ahmoq', 'bema\'ni',
+            // Rus
+            'обман', 'мошенник', 'верните деньги', 'в суд', 'жалоба', 'ужасный сервис',
+            'ненавижу', 'идиоты',
+        ];
+
+        foreach ($signals as $signal) {
+            if (str_contains($lower, $signal)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Typing delay simulyatsiyasi — tabiiy ko'rinish uchun.
+     */
+    protected function simulateTypingDelay(int $inputLength): void
+    {
+        // Qisqa xabarlarga 1.5s, uzun xabarlarga 2.5s
+        $delay = $inputLength < 50 ? 1500000 : 2500000; // microsecond
+        usleep($delay);
     }
 
     /**
@@ -188,11 +296,12 @@ class GuliAgentService
     protected function handleToolCall(BotTicket $ticket, ?User $user, string $name, array $args): mixed
     {
         return match ($name) {
-            'get_order_details' => $this->toolGetOrderDetails($user, (int) ($args['order_id'] ?? 0)),
-            'search_catalog' => $this->toolSearchCatalog((string) ($args['query'] ?? '')),
-            'transfer_to_human' => $this->toolTransferToHuman($ticket, (string) ($args['reason'] ?? ''), (string) ($args['summary'] ?? '')),
-            'close_ticket' => $this->toolCloseTicket($ticket, (string) ($args['reason'] ?? '')),
-            default => ['error' => "Noma'lum funksiya: $name"],
+            'get_order_details'  => $this->toolGetOrderDetails($user, (int) ($args['order_id'] ?? 0)),
+            'search_catalog'     => $this->toolSearchCatalog((string) ($args['query'] ?? '')),
+            'get_credit_status'  => $this->toolGetCreditStatus($user),
+            'transfer_to_human'  => $this->toolTransferToHuman($ticket, (string) ($args['reason'] ?? ''), (string) ($args['summary'] ?? '')),
+            'close_ticket'       => $this->toolCloseTicket($ticket, (string) ($args['reason'] ?? '')),
+            default              => ['error' => "Noma'lum funksiya: $name"],
         };
     }
 
@@ -276,7 +385,63 @@ class GuliAgentService
     }
 
     /**
-     * Tool 3: Operatorga uzatish
+     * Tool 3: Nasiya/kredit holati
+     */
+    protected function toolGetCreditStatus(?User $user): array
+    {
+        if (! $user) {
+            return [
+                'available' => false,
+                'reason' => 'Foydalanuvchi topilmadi. Iltimos, ilovada ro\'yxatdan o\'ting.',
+            ];
+        }
+
+        try {
+            $split = Split::query()
+                ->where('user_id', $user->id)
+                ->orderBy('id', 'desc')
+                ->first();
+
+            $ordersCount = Sold::query()->where('user_id', $user->id)->count();
+
+            return [
+                'user_id'      => $user->id,
+                'orders_count' => $ordersCount,
+                'has_nasiya'   => $split !== null,
+                'nasiya_limit' => $split ? number_format((float) ($split->limit ?? 0), 0, '.', ' ') . " so'm" : null,
+                'nasiya_debt'  => $split ? number_format((float) ($split->debt ?? 0), 0, '.', ' ') . " so'm" : null,
+                'nasiya_status' => $split ? $this->humanSplitStatus($split) : null,
+                'can_use_nasiya' => $split && ($split->is_active ?? false) && ((float) ($split->limit ?? 0) > (float) ($split->debt ?? 0)),
+                'note' => $ordersCount < 3
+                    ? 'Nasiya olish uchun kamida 3 ta muvaffaqiyatli buyurtma tarix kerak.'
+                    : null,
+            ];
+        } catch (\Throwable) {
+            return ['available' => false, 'reason' => 'Nasiya ma\'lumotlari yuklanmadi.'];
+        }
+    }
+
+    protected function humanSplitStatus(mixed $split): string
+    {
+        if (! $split) {
+            return 'Nasiya mavjud emas';
+        }
+        $isActive = (bool) ($split->is_active ?? false);
+        $debt = (float) ($split->debt ?? 0);
+        $limit = (float) ($split->limit ?? 0);
+
+        if (! $isActive) {
+            return 'Nasiya hozir faol emas';
+        }
+        if ($debt <= 0) {
+            return 'Nasiya mavjud, qarzdorlik yo\'q';
+        }
+        $pct = $limit > 0 ? round($debt / $limit * 100) : 0;
+        return "Nasiya faol — {$pct}% ishlatilgan";
+    }
+
+    /**
+     * Tool 4: Operatorga uzatish
      */
     protected function toolTransferToHuman(BotTicket $ticket, string $reason, string $summary): array
     {
@@ -327,14 +492,11 @@ class GuliAgentService
                 'type' => 'function',
                 'function' => [
                     'name' => 'get_order_details',
-                    'description' => "Mijozning ma'lum bir buyurtmasi holatini (status, yetkazish kuni, manzili, kitoblar ro'yxati) olish.",
+                    'description' => "Mijozning buyurtma holatini, yetkazish sanasi va manzilini olish.",
                     'parameters' => [
                         'type' => 'object',
                         'properties' => [
-                            'order_id' => [
-                                'type' => 'integer',
-                                'description' => "Buyurtma ID raqami (masalan 12450)",
-                            ],
+                            'order_id' => ['type' => 'integer', 'description' => 'Buyurtma ID raqami'],
                         ],
                         'required' => ['order_id'],
                     ],
@@ -344,14 +506,11 @@ class GuliAgentService
                 'type' => 'function',
                 'function' => [
                     'name' => 'search_catalog',
-                    'description' => "Kitobchi do'konidagi kitoblar katalogidan qidirish (nomi yoki muallifi bo'yicha).",
+                    'description' => "Kitobchi do'konidagi kitoblar katalogidan qidirish.",
                     'parameters' => [
                         'type' => 'object',
                         'properties' => [
-                            'query' => [
-                                'type' => 'string',
-                                'description' => "Kitob nomi yoki muallif (masalan 'Ufq', 'Chinor', 'Matematika')",
-                            ],
+                            'query' => ['type' => 'string', 'description' => "Kitob nomi yoki muallif"],
                         ],
                         'required' => ['query'],
                     ],
@@ -360,19 +519,25 @@ class GuliAgentService
             [
                 'type' => 'function',
                 'function' => [
+                    'name' => 'get_credit_status',
+                    'description' => "Mijozning nasiya (bo'lib to'lav) holatini, limitini va joriy qarzini olish. Mijoz nasiya so'rasa yoki nasiya haqida savol bersa chaqiriladi.",
+                    'parameters' => [
+                        'type' => 'object',
+                        'properties' => [],
+                        'required' => [],
+                    ],
+                ],
+            ],
+            [
+                'type' => 'function',
+                'function' => [
                     'name' => 'transfer_to_human',
-                    'description' => "Suhbatni jonli inson-operatorga uzatish. Mijoz 'operatorni ula' desa, shikoyat qilsa yoki bot savolga javob bera olmasa chaqiriladi.",
+                    'description' => "Suhbatni jonli operatorga uzatish. Mijoz operator so'rasa, shikoyat qilsa yoki javob bera olmasangiz chaqiriladi.",
                     'parameters' => [
                         'type' => 'object',
                         'properties' => [
-                            'reason' => [
-                                'type' => 'string',
-                                'description' => "Nega operatorga uzatilayotgani sababi",
-                            ],
-                            'summary' => [
-                                'type' => 'string',
-                                'description' => "Mijoz muammosining qisqa xulosasi (operator tez tushunishi uchun)",
-                            ],
+                            'reason'  => ['type' => 'string', 'description' => 'Uzatish sababi'],
+                            'summary' => ['type' => 'string', 'description' => 'Mijoz muammosi xulosasi'],
                         ],
                         'required' => ['reason'],
                     ],
@@ -382,14 +547,11 @@ class GuliAgentService
                 'type' => 'function',
                 'function' => [
                     'name' => 'close_ticket',
-                    'description' => "Mijoz savoli to'liq hal bo'lganda yoki mijoz minnatdorchilik bildirib boshqa savoli yo'qligini aytganda suhbatni yakunlash.",
+                    'description' => "Savol to'liq hal bo'lganda suhbatni yakunlash.",
                     'parameters' => [
                         'type' => 'object',
                         'properties' => [
-                            'reason' => [
-                                'type' => 'string',
-                                'description' => "Suhbat yopilish sababi",
-                            ],
+                            'reason' => ['type' => 'string', 'description' => 'Yopilish sababi'],
                         ],
                         'required' => ['reason'],
                     ],
@@ -412,10 +574,11 @@ SEN HAQINGDA:
 - Har bir xabaring oxirida doim "— Guli 🌸" deb qo'yasan (bu senin imzong).
 
 TIL VA MUOMALA QOIDALARI (JUDA MUHIM):
-- Faqat toza, mehmondo'st, muloyim o'zbek tilida (lotin yozuvida) gapirasaan.
+- Mijoz o'zbek tilida yozsa — O'zbek tilida (lotin yozuvida) javob ber.
+- Mijoz rus tilida yozsa — Rus tilida javob ber.
 - Gaplarni qisqa va tushunarli qil. Ortiqcha rasmiyatchilikdan saqlan.
-- BBCode (masalan [b]...[/b], [i]...[/i]) va markdown (masalan **matn**, _matn_) ishlatma — bular bizning chatda ko'rinmaydi.
-- Emoji ishlatishni yoqtirasan lekin me'yorida: har xabarda 1-2 ta yetarli. Ko'p emoji qo'yma.
+- BBCode (masalan [b]...[/b], [i]...[/i]) va markdown (masalan **matn**, _matn_) ishlatma — bular chatda ko'rinmaydi.
+- Emoji ishlatishni yoqtirasan lekin me'yorida: har xabarda 1-2 ta yetarli.
 - Hech qachon "Bot sifatida", "AI sifatida", "Men sun'iy intellektman" deya o'zingni tanitma. Shunchaki Guli bo'l.
 - Javoblar tabiiy bo'lsin — xuddi yaxshi tanish do'sting yozayotgandek.
 
@@ -535,11 +698,11 @@ PROMPT;
     /**
      * Javobni mijozga yuborish (Telegram yoki Ilova)
      */
-    protected function deliverReply(BotTicket $ticket, string $text): void
+    protected function deliverReply(BotTicket $ticket, string $text): ?BotTicketMessage
     {
         $text = trim($text);
         if ($text === '') {
-            return;
+            return null;
         }
 
         if ($ticket->source_type === 'shop_chat') {
@@ -547,10 +710,15 @@ PROMPT;
             // shu sabab bu yerda qayta saveMessage chaqirmaymiz (ikki marta saqlanib qolmasin!)
             try {
                 app(SupportChatBridgeService::class)->sendReplyToConversation($ticket, $text, null, null);
+                // Saved message ID'ni topib qaytaramiz
+                return BotTicketMessage::query()
+                    ->where('ticket_id', $ticket->id)
+                    ->where('sent_by', 'operator')
+                    ->orderBy('id', 'desc')
+                    ->first();
             } catch (\Throwable $e) {
-                // Yuborish xato bo'lsa ham bazaga saqlab qo'yamiz
                 Log::warning('[GuliAgentService] shop_chat yuborish xatosi: ' . $e->getMessage());
-                SessionService::saveMessage(
+                return SessionService::saveMessage(
                     ticketId: (int) $ticket->id,
                     sentBy: 'operator',
                     message: $text,
@@ -572,7 +740,7 @@ PROMPT;
                 Log::warning('[GuliAgentService] Telegram yuborish xatosi: ' . $error);
             }
 
-            SessionService::saveMessage(
+            return SessionService::saveMessage(
                 ticketId: (int) $ticket->id,
                 sentBy: 'operator',
                 message: $text,

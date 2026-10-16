@@ -54,7 +54,7 @@
     "src": "resources/css/axelit/fonts/tabler-icons.woff2"
   },
   "resources/css/boshqaruv.css": {
-    "file": "assets/boshqaruv-VxBHzao6.css",
+    "file": "assets/boshqaruv-BD6IQDXn.css",
     "src": "resources/css/boshqaruv.css",
     "isEntry": true,
     "name": "boshqaruv",
@@ -172,7 +172,7 @@
     ]
   },
   "resources/js/boshqaruv/main.tsx": {
-    "file": "assets/main-DfNLusPI.js",
+    "file": "assets/main-DY8bbP8G.js",
     "name": "main",
     "src": "resources/js/boshqaruv/main.tsx",
     "isEntry": true,
@@ -181,7 +181,7 @@
     ],
     "css": [
       "assets/main-DRScjw1S.css",
-      "assets/boshqaruv-VxBHzao6.css"
+      "assets/boshqaruv-BD6IQDXn.css"
     ],
     "assets": [
       "assets/tabler-icons-BwPJ5fTl.woff2",

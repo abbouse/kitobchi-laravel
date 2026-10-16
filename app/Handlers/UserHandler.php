@@ -224,7 +224,7 @@ class UserHandler
 
                 $bot->sendMessage(
                     "✅ <b>Murojaatingiz qabul qilindi!</b>\n🎫 Ticket #<b>{$ticket->id}</b>\n\n" .
-                    "Operatorlarimiz tez orada shu yerda javob beradi ⏳\n" .
+                    "Guli 🌸 yoki operatorlarimiz tez orada javob beradi ⏳\n" .
                     "Qo'shimcha ma'lumotlarni yuborishingiz mumkin.{$workingHoursNote}\n\n/cancel — Bekor qilish",
                     parse_mode: 'HTML'
                 );

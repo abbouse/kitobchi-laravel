@@ -484,8 +484,14 @@ class SupportInboxService
     {
         $from = $this->customerFrom($m);
         $author = null;
+        $isGuli = false;
         if ($from === 'agent' || $from === 'note') {
-            $author = $m->admin_id ? $this->adminName((int) $m->admin_id) : ($m->operator_id ? $this->operatorName((int) $m->operator_id) : 'Kitobchi');
+            if ($from === 'agent' && empty($m->admin_id) && empty($m->operator_id)) {
+                $author = 'Guli 🌸';
+                $isGuli = true;
+            } else {
+                $author = $m->admin_id ? $this->adminName((int) $m->admin_id) : ($m->operator_id ? $this->operatorName((int) $m->operator_id) : 'Kitobchi');
+            }
         }
 
         $files ??= BotTicketAttachment::query()->where('message_id', $m->id)->get();
@@ -495,6 +501,7 @@ class SupportInboxService
             'raw_id' => (int) $m->id,
             'ticket_id' => (int) $m->ticket_id,
             'from' => $from,
+            'is_guli' => $isGuli,
             'type' => $m->message_type ?: 'text',
             'text' => (string) ($m->message ?? ''),
             'author' => $author,

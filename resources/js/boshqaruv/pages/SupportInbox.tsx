@@ -143,6 +143,7 @@ type Message = {
   error: string | null;
   attachments: Attachment[];
   pending?: boolean;
+  is_guli?: boolean;
 };
 
 type TicketRow = { id: number; status: 'open' | 'closed'; title: string; created_at: string | null; closed_at: string | null; feedback: 'good' | 'bad' | null; agent: string | null };
@@ -351,13 +352,20 @@ function Bubble({ m, showAuthor }: { m: Message; showAuthor: boolean }) {
 
   const mine = m.from === 'agent' || m.from === 'note';
   const isNote = m.from === 'note';
+  const isGuli = Boolean(m.is_guli || (!isNote && mine && m.author && m.author.includes('Guli')));
   const hideText = m.attachments.length > 0 && isPlaceholder(m.text);
 
   return (
     <div className={`d-flex mb-1 ${mine ? 'justify-content-end' : 'justify-content-start'}`}>
-      <div className={`kc-bubble ${mine ? 'kc-bubble-out' : 'kc-bubble-in'} ${isNote ? 'kc-bubble-note' : ''}`}>
+      <div className={`kc-bubble ${mine ? (isGuli ? 'kc-bubble-guli' : 'kc-bubble-out') : 'kc-bubble-in'} ${isNote ? 'kc-bubble-note' : ''}`}>
         {isNote ? <div className="f-s-11 f-w-600 text-warning-dark mb-1"><i className="ti ti-lock me-1"></i>Ichki eslatma{m.author ? ` · ${m.author}` : ''}</div> : null}
-        {!isNote && mine && showAuthor && m.author ? <div className="f-s-11 f-w-600 text-primary mb-1">{m.author}</div> : null}
+        {!isNote && isGuli && showAuthor ? (
+          <div className="f-s-11 f-w-600 text-primary d-flex align-items-center gap-1 mb-1">
+            <TbRobot size={13} />
+            <span>Guli 🌸 (AI Yordamchi)</span>
+          </div>
+        ) : null}
+        {!isNote && !isGuli && mine && showAuthor && m.author ? <div className="f-s-11 f-w-600 text-primary mb-1">{m.author}</div> : null}
         {m.attachments.map((a) => <AttachmentView key={a.id} a={a} />)}
         {!hideText && m.text ? <div className="kc-bubble-text">{m.text}</div> : null}
         <div className="kc-bubble-meta">
@@ -1216,6 +1224,17 @@ export default function SupportInbox() {
                     </div>
 
                     <div className="d-flex align-items-center gap-1 flex-shrink-0">
+                      {!me.readOnly && !thread.assignee && thread.ai_enabled && thread.status === 'open' ? (
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-light-info b-r-8 d-flex align-items-center gap-1"
+                          onClick={() => assign(me.id)}
+                          title="Gulidan suhbatni o‘zingizga olasiz (AI to‘xtatiladi)"
+                        >
+                          <TbHandGrab size={16} />
+                          <span className="d-none d-sm-inline">O‘zimga olish</span>
+                        </button>
+                      ) : null}
                       {!me.readOnly ? (
                         <Dropdown align="end">
                           <Dropdown.Toggle size="sm" variant="light-secondary" className="b-r-8 d-flex align-items-center gap-1">
