@@ -302,6 +302,8 @@ class GuliAgentService
             'search_catalog'       => $this->toolSearchCatalog((string) ($args['query'] ?? '')),
             'get_credit_status'    => $this->toolGetCreditStatus($user),
             'check_order_cashback' => $this->toolCheckOrderCashback($user, (int) ($args['order_id'] ?? 0)),
+            'get_delivery_rates'   => $this->toolGetDeliveryRates(),
+            'get_store_contacts'   => $this->toolGetStoreContacts(),
             'transfer_to_human'    => $this->toolTransferToHuman(
                 $ticket,
                 (string) ($args['reason'] ?? ''),
@@ -584,6 +586,54 @@ class GuliAgentService
     }
 
     /**
+     * Tool 5: Yetkazib berish xizmatlari va tariflari
+     */
+    protected function toolGetDeliveryRates(): array
+    {
+        try {
+            $services = \App\Models\DeliveryService::query()->active()->get();
+            $items = [];
+            foreach ($services as $s) {
+                $items[] = [
+                    'name' => $s->name,
+                    'price' => number_format((int) $s->priceKg, 0, '.', ' ') . " so'm",
+                    'delivery_days' => "~" . (int) $s->muddat . " kun",
+                    'free_from' => (int) $s->freePriceFrom > 0
+                        ? number_format((int) $s->freePriceFrom, 0, '.', ' ') . " so'mdan oshsa BEPUL"
+                        : "Bepul chegara yo'q",
+                ];
+            }
+            return [
+                'services' => $items,
+                'note' => "Yetkazish butun O'zbekiston bo'ylab amalga oshiriladi. Toshkent shahrida kuryer orqali, viloyatlarga pochta xizmatlari orqali yetkaziladi.",
+            ];
+        } catch (\Throwable $e) {
+            return ['error' => 'Yetkazish ma\'lumotlarini olishda xatolik yuz berdi.'];
+        }
+    }
+
+    /**
+     * Tool 6: Rasmiy kontaktlar, do'kon manzili va ish vaqtlari
+     */
+    protected function toolGetStoreContacts(): array
+    {
+        $settings = ProjectSetting::query()->first();
+        return [
+            'store_name' => "Kitobchi — onlayn kitob do'koni",
+            'phone' => $settings?->kitobchi_phone ?: "+998 71 200 00 00",
+            'email' => $settings?->kitobchi_email ?: "info@kitobchi.com",
+            'work_hours' => "Dushanba - Yakshanba: 09:00 dan 20:00 gacha (dam olish kunlarisiz)",
+            'address' => $settings?->kitobchi_address ?: "Toshkent shahri",
+            'channels' => [
+                'telegram' => "@kitobchicom",
+                'instagram' => "@kitobchi_com",
+                'website' => "https://kitobchi.com",
+            ],
+            'note' => "Ilova orqali buyurtmalarni 24/7 rejimida berish mumkin.",
+        ];
+    }
+
+    /**
      * OpenAI Tools sxemasi
      */
     protected function getToolsDefinition(): array
@@ -642,6 +692,30 @@ class GuliAgentService
                                 'description' => "Tekshirilishi kerak bo'lgan buyurtma ID raqami (agar mijoz bitta buyurtma haqida gapirayotgan bo'lsa yoki mijozda bitta buyurtma bo'lsa, o'shani kiritish mumkin; ixtiyoriy, kiritilmasa oxirgi buyurtma tekshiriladi)",
                             ],
                         ],
+                        'required' => [],
+                    ],
+                ],
+            ],
+            [
+                'type' => 'function',
+                'function' => [
+                    'name' => 'get_delivery_rates',
+                    'description' => "Yetkazib berish xizmatlari turlari, narxlari, muddatlari va bepul yetkazib berish shartlarini olish. Mijoz yetkazish narxi, qachon yetib borishi yoki bepul yetkazish haqida so'rasa chaqiriladi.",
+                    'parameters' => [
+                        'type' => 'object',
+                        'properties' => (object) [],
+                        'required' => [],
+                    ],
+                ],
+            ],
+            [
+                'type' => 'function',
+                'function' => [
+                    'name' => 'get_store_contacts',
+                    'description' => "Kitobchi do'koni manzili, ish vaqti, qo'llab-quvvatlash telefon raqami va ijtimoiy tarmoqlarini olish.",
+                    'parameters' => [
+                        'type' => 'object',
+                        'properties' => (object) [],
                         'required' => [],
                     ],
                 ],

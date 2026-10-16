@@ -6,6 +6,7 @@ use App\Models\Message;
 use App\Models\Couriers;
 use App\Models\User;
 use App\Models\Seller;
+use App\Models\ConnectedDevice;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -131,15 +132,25 @@ class SendMessagePushNotification implements ShouldQueue
                     ->values()
                     ->all();
             } else {
-                // ── Shop → User (Kitobchi App) ─────────────────────────────
+                // ── Shop / Support → User (Kitobchi App) ───────────────────
                 $shop         = Seller::find($conversation->shop_id);
-                $senderName   = $shop->shop_name ?? "Do'kon";
+                $isSupportShop = $shop && ((bool) ($shop->isSupport ?? false) || (int) $shop->id === 1);
+                $senderName   = $isSupportShop ? "Kitobchi Support" : ($shop->shop_name ?? "Do'kon");
                 $senderAvatar = $shop->photo ?? null;
 
-                $user = User::with('devices')->find($conversation->user_id);
-                if ($user) {
-                    $tokens = $user->devices->pluck('fcm_token')->filter()->toArray();
-                }
+                // User qurilma tokenlarini mustahkam qidirish (user_type = 'user' yoki null):
+                $tokens = ConnectedDevice::query()
+                    ->where('user_id', $conversation->user_id)
+                    ->where(function ($q) {
+                        $q->where('user_type', 'user')->orWhereNull('user_type');
+                    })
+                    ->whereNotNull('fcm_token')
+                    ->where('fcm_token', '!=', '')
+                    ->pluck('fcm_token')
+                    ->filter(fn ($t) => is_string($t) && $t !== '')
+                    ->unique()
+                    ->values()
+                    ->all();
             }
         }
 

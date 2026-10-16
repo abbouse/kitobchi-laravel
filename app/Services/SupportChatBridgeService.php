@@ -99,7 +99,7 @@ class SupportChatBridgeService
         }
 
         try {
-            SendMessagePushNotification::dispatch($message->id)->delay(now()->addSeconds(8));
+            SendMessagePushNotification::dispatch($message->id)->delay(now()->addSeconds(3));
         } catch (\Throwable $e) {
             Log::warning('Support chat push yuborishda xato', [
                 'ticket_id' => $ticketId,
@@ -182,7 +182,7 @@ class SupportChatBridgeService
             );
 
             try {
-                SendMessagePushNotification::dispatch($message->id)->delay(now()->addSeconds(8));
+                SendMessagePushNotification::dispatch($message->id)->delay(now()->addSeconds(3));
             } catch (\Throwable $e) {
                 Log::info('[SupportChatBridgeService] yopilish push navbatga qo‘yilmadi: ' . $e->getMessage());
             }

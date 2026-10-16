@@ -37,7 +37,7 @@
     ]
   },
   "resources/css/app.css": {
-    "file": "assets/app-DXWO8m4r.css",
+    "file": "assets/app-BGVBsNjh.css",
     "src": "resources/css/app.css",
     "isEntry": true,
     "name": "app",
@@ -54,7 +54,7 @@
     "src": "resources/css/axelit/fonts/tabler-icons.woff2"
   },
   "resources/css/boshqaruv.css": {
-    "file": "assets/boshqaruv-BD6IQDXn.css",
+    "file": "assets/boshqaruv-DZWL30Nd.css",
     "src": "resources/css/boshqaruv.css",
     "isEntry": true,
     "name": "boshqaruv",
@@ -172,7 +172,7 @@
     ]
   },
   "resources/js/boshqaruv/main.tsx": {
-    "file": "assets/main-DY8bbP8G.js",
+    "file": "assets/main-DAW_2Qva.js",
     "name": "main",
     "src": "resources/js/boshqaruv/main.tsx",
     "isEntry": true,
@@ -181,7 +181,7 @@
     ],
     "css": [
       "assets/main-DRScjw1S.css",
-      "assets/boshqaruv-BD6IQDXn.css"
+      "assets/boshqaruv-DZWL30Nd.css"
     ],
     "assets": [
       "assets/tabler-icons-BwPJ5fTl.woff2",

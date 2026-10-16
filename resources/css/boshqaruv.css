@@ -268,11 +268,15 @@ body.dark .kc-inbox-chat { background: rgba(var(--white), .6); }
   .kc-inbox, .kc-inbox.kc-inbox-with-info { grid-template-columns: 280px minmax(0, 1fr); }
 }
 @media (max-width: 767.98px) {
-  .kc-inbox, .kc-inbox.kc-inbox-with-info { grid-template-columns: minmax(0, 1fr); height: calc(100vh - 120px); }
-  .kc-inbox-mobile-list .kc-inbox-chat { display: none; }
-  .kc-inbox-mobile-chat .kc-inbox-list { display: none; }
+  .kc-workspace { height: 100dvh; }
+  .kc-inbox, .kc-inbox.kc-inbox-with-info { grid-template-columns: minmax(0, 1fr); height: calc(100dvh - 48px); flex: 1 1 auto; }
+  .kc-inbox-mobile-list .kc-inbox-chat { display: none !important; }
+  .kc-inbox-mobile-chat .kc-inbox-list { display: none !important; }
   .kc-inbox-info { width: 100%; }
-  .kc-bubble { max-width: 86%; }
+  .kc-bubble { max-width: 90%; }
+  .kc-chat-foot { padding: 8px 10px; padding-bottom: max(10px, env(safe-area-inset-bottom, 10px)); }
+  .kc-composer-input { font-size: 16px !important; }
+  .kc-chat-head { padding: 8px 10px; gap: 6px; }
 }
 
 /* ── Header: navbat qo'ng'irog'i va toast ── */
