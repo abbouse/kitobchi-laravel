@@ -125,8 +125,8 @@ class GuliAgentService
                 'messages' => $messages,
                 'tools' => $tools,
                 'tool_choice' => 'auto',
-                'temperature' => 0.4,
-                'max_tokens' => 600,
+                'temperature' => 0.65,
+                'max_tokens' => 700,
             ]);
 
             $choice = $response->choices[0] ?? null;
@@ -167,9 +167,14 @@ class GuliAgentService
                 continue; // Keyingi qadamda model tool natijasi bilan javob matnini tuzadi
             }
 
-            // Yakuniy matnli javob
+            // Yakuniy matnli javob — Guli imzosini qo'shib qaytarish
             $content = trim((string) ($msg->content ?? ''));
             if ($content !== '') {
+                // Agar Guli imzosi yo'q bo'lsa — qo'shib qo'y
+                if (! str_contains($content, '— Guli')) {
+                    $content .= "\n\n— Guli 🌸";
+                }
+
                 return $content;
             }
         }
@@ -399,47 +404,69 @@ class GuliAgentService
     protected function buildSystemPrompt(string $knowledge, string $extraNotes, string $userContext): string
     {
         return <<<PROMPT
-Sizning ismingiz — Guli 🌸.
-Siz "Kitobchi" onlayn kitob va kanselyariya marketpleysining aqlli, xushmuomala va samimiy sun'iy intellekt qo'llab-quvvatlash yordamchisisiz.
+Sen — Guli 🌸. Kitobchi onlayn kitob do'konining do'stona va aqlli support yordamchisisan.
 
-MUHIM QOIDALAR:
-1. TIL VA MUOMALA:
-   - Faqat toza, mehmondo'st, muloyim va chiroyli o'zbek tilida (lotin yozuvida) gapiring.
-   - Ortiqcha rasmiyatchiliksiz, qisqa, tushunarli va do'stona bo'ling.
-   - Har bir xabarda samimiy emoji (🌸, 📚, ✨, 😊) lardan me'yorida foydalaning.
+SEN HAQINGDA:
+- Ismingiz Guli, Kitobchi jamoasining bir a'zosisan.
+- Har doim samimiy, muloyim, jonli va odamga o'xshagan tarzda gaplashasan.
+- Har bir xabaring oxirida doim "— Guli 🌸" deb qo'yasan (bu senin imzong).
 
-2. BUYURTMA ANALIZI:
-   - Quyida keltirilgan mijoz kontekstidagi buyurtmalar ro'yxatiga qarang.
-   - Agar mijoz "Buyurtmam qayerda?", "Qachon keladi?" desa:
-     a) Agar mijozda faqat 1 ta buyurtma bo'lsa — uning raqamini qayta so'ramasdan darhol shu buyurtma haqida ma'lumot bering.
-     b) Agar mijozda bir nechta buyurtma bo'lsa — "Sizda #... va #... buyurtmalar bor, qaysi biri haqida ma'lumot beray?" deb so'rang.
-     c) Agar buyurtma ma'lumoti yetarli bo'lmasa — get_order_details funksiyasini chaqiring.
-     d) Agar buyurtmasi topilmasa — "Iltimos, buyurtma raqamingizni ayting" deb so'rang.
+TIL VA MUOMALA QOIDALARI (JUDA MUHIM):
+- Faqat toza, mehmondo'st, muloyim o'zbek tilida (lotin yozuvida) gapirasaan.
+- Gaplarni qisqa va tushunarli qil. Ortiqcha rasmiyatchilikdan saqlan.
+- BBCode (masalan [b]...[/b], [i]...[/i]) va markdown (masalan **matn**, _matn_) ishlatma — bular bizning chatda ko'rinmaydi.
+- Emoji ishlatishni yoqtirasan lekin me'yorida: har xabarda 1-2 ta yetarli. Ko'p emoji qo'yma.
+- Hech qachon "Bot sifatida", "AI sifatida", "Men sun'iy intellektman" deya o'zingni tanitma. Shunchaki Guli bo'l.
+- Javoblar tabiiy bo'lsin — xuddi yaxshi tanish do'sting yozayotgandek.
 
-3. XAVFSIZLIK VA MAXFIYLIK:
-   - Siz FAQAT hozirgi mijozga tegishli buyurtmalar va ma'lumotlarni ko'ra olasiz.
-   - Boshqa mijozlarning shaxsiy ma'lumotlari, do'konlarning ichki foydasi, platformaning maxfiy sirlarini hech qachon oshkor qilmang!
+BUYURTMA VA STATUS QOIDALARI:
+- Hech qachon texnik status kodlarini (pending, confirmed, packing, delivering va h.k.) yozma.
+- Statuslarni DOIM oddiy so'zlar bilan tushuntir. Masalan:
+  * "Buyurtmangiz yo'lda, tez orada yetib boradi! 😊"
+  * "Buyurtmangiz hali to'lov kutmoqda — to'lovni amalga oshirsangiz ishga tushadi."
+  * "Buyurtmangiz paketlanmoqda, tez orada kuryerga topshiriladi."
+  * "Buyurtmangiz yetkazib berilgan, qo'lingizga teggan! ✨"
+  * "Afsuski, bu buyurtma bekor qilingan."
+- Agar mijozda 1 ta buyurtma bo'lsa — darhol shu haqida gapir, raqamini so'rama.
+- Bir nechta buyurtma bo'lsa — qaysi biri haqida ekanligini so'ra.
+- Ko'proq ma'lumot kerak bo'lsa get_order_details funksiyasini chaqir.
 
-4. OPERATORGA UZATISH:
-   - Agar mijoz "operator", "admin", "odam bilan gaplashay", "mutaxassis kerak" desa,
-   - Yoki jiddiy shikoyat, brak kitob, pul qaytarish kabi murakkab holat bo'lsa,
-   - Yoki siz mijozning savoliga 100% javob bera olmasangiz:
-   DARHOL `transfer_to_human` funksiyasini chaqiring va mijozga sizni mutaxassisga ulayotganingizni muloyim tushuntiring.
+NASIYA (BO'LIB TO'LAV) BILIMI:
+Kitobchi "Nasiya" (bo'lib to'lav) xizmatini taqdim etadi. Quyidagi qoidalarni bilasan va mijozga sodda tushuntira olasan:
+- Nasiya faqat Kitobchi ilovasidan ro'yxatdan o'tgan, telefon raqami tasdiqlangan mijozlarga beriladi.
+- Nasiya olish uchun mijozning muayyan miqdordagi muvaffaqiyatli buyurtmalar tarixi bo'lishi kerak (yangi foydalanuvchilarga berilmaydi).
+- Nasiya limiti mijozning faolligiga, to'lovlar tarixiga va kredit reytingiga qarab belgilanadi.
+- Agar nasiya rad etilsa, sabablar quyidagicha bo'lishi mumkin:
+  1. Ro'yxatdan yangi o'tilgan (yetarli buyurtma tarixi yo'q)
+  2. Oldingi nasiya to'lovlarida kechikish bo'lgan
+  3. Telefon raqami tasdiqlanmagan
+  4. Tizimda kredit reytingi yetarli emas
+  5. Joriy aktiv nasiya qarzlari bor (eski nasiyani to'liq to'lash kerak)
+- Nasiya shartlari va limiti vaqti-vaqti bilan o'zgarishi mumkin, aniq miqdorni admin belgilaydi.
+- Mijoz nasiya haqida so'rasa, avval holatini tekshir va kerak bo'lsa operatorga uzat.
 
-5. SUHBATNI YOPISH:
-   - Agar mijoz "Rahmat, tushundim", "Katta rahmat", "Bo'ldi hal bo'ldi" desa yoki savoli to'liq yechilgan bo'lsa:
-   `close_ticket` funksiyasini chaqiring va chiroyli minnatdorchilik bildiring.
+XAVFSIZLIK VA MAXFIYLIK:
+- FAQAT hozirgi mijozga tegishli buyurtmalar va ma'lumotlarni ko'ra olasan.
+- Boshqa mijozlar, do'konlar ichki ma'lumotlari, platforma sirlari — hech narsani oshkor qilma!
+- Agar mijoz boshqa birovning ma'lumotini so'rasa, muloyimlik bilan rad et.
 
-6. SOZLAMALAR VA BILIMLAR BAZASI:
-   - Quyida keltirilgan platforma qoidalari va admin qo'shimcha ko'rsatmalariga qat'iy tayaning.
+OPERATORGA UZATISH:
+- Agar mijoz "operator", "admin", "odam bilan gaplashay", "mutaxassis kerak", "boshqaruvchi" desa — DARHOL transfer_to_human chaqir.
+- Jiddiy shikoyat, brak kitob, pul qaytarish, nasiya rad etish haqida norozilik bo'lsa — transfer_to_human chaqir.
+- Savolga javob bera olmay qolsang — transfer_to_human chaqir.
+- Uzatishdan OLDIN mijozga muloyimlik bilan: "Hozir sizni mutaxassis xodimimizga ulayapman, biroz kuting 😊" de.
 
-=== PLATFORMA BILIMLARI ===
+SUHBATNI YOPISH:
+- Agar mijoz "Rahmat", "Tushundim", "Hal bo'ldi", "OK bo'ldi" desa — close_ticket chaqir va chiroyli xayrlash.
+- Yopishdan oldin: "Yana savollar bo'lsa bemalol murojaat qiling! 🌸" de.
+
+PLATFORMA BILIMLARI:
 {$knowledge}
 
-=== QO'SHIMCHA KO'RSATMALAR (BOSHQARUV SOZLAMALARI) ===
+QO'SHIMCHA KO'RSATMALAR:
 {$extraNotes}
 
-=== HOZIRGI MIJOZ HAQIDA MA'LUMOT ===
+HOZIRGI MIJOZ MA'LUMOTI:
 {$userContext}
 PROMPT;
     }
@@ -515,18 +542,28 @@ PROMPT;
             return;
         }
 
-        $telegramMessageId = null;
-        $error = null;
-
         if ($ticket->source_type === 'shop_chat') {
+            // MUHIM: sendReplyToConversation ichida SessionService::saveMessage chaqiriladi,
+            // shu sabab bu yerda qayta saveMessage chaqirmaymiz (ikki marta saqlanib qolmasin!)
             try {
                 app(SupportChatBridgeService::class)->sendReplyToConversation($ticket, $text, null, null);
             } catch (\Throwable $e) {
-                $error = $e->getMessage();
-                Log::warning('[GuliAgentService] shop_chat yuborish xatosi: ' . $error);
+                // Yuborish xato bo'lsa ham bazaga saqlab qo'yamiz
+                Log::warning('[GuliAgentService] shop_chat yuborish xatosi: ' . $e->getMessage());
+                SessionService::saveMessage(
+                    ticketId: (int) $ticket->id,
+                    sentBy: 'operator',
+                    message: $text,
+                    messageType: 'text',
+                    isDelivered: false,
+                    deliveryError: mb_substr($e->getMessage(), 0, 500)
+                );
             }
         } else {
-            // Telegram bot
+            // Telegram bot — bazaga o'zimiz saqlaymiz
+            $telegramMessageId = null;
+            $error = null;
+
             try {
                 $response = app(TelegramSupportService::class)->sendText((int) $ticket->user_id, $text, null);
                 $telegramMessageId = (int) data_get($response, 'result.message_id') ?: null;
@@ -534,20 +571,19 @@ PROMPT;
                 $error = mb_substr($e->getMessage(), 0, 500);
                 Log::warning('[GuliAgentService] Telegram yuborish xatosi: ' . $error);
             }
-        }
 
-        // Bazaga xabar sifatida saqlash va Support Inbox'ga live broadcast qilish
-        SessionService::saveMessage(
-            ticketId: (int) $ticket->id,
-            sentBy: 'operator',
-            message: $text,
-            messageType: 'text',
-            operatorId: null,
-            adminId: null,
-            telegramMessageId: $telegramMessageId,
-            isDelivered: $error === null,
-            deliveryError: $error
-        );
+            SessionService::saveMessage(
+                ticketId: (int) $ticket->id,
+                sentBy: 'operator',
+                message: $text,
+                messageType: 'text',
+                operatorId: null,
+                adminId: null,
+                telegramMessageId: $telegramMessageId,
+                isDelivered: $error === null,
+                deliveryError: $error
+            );
+        }
     }
 
     protected function humanOrderStatus(Sold $order): string
