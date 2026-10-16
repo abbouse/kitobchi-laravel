@@ -6,6 +6,7 @@ use App\Jobs\ProcessGuliFollowUp;
 use App\Models\Books;
 use App\Models\BotTicket;
 use App\Models\BotTicketMessage;
+use App\Models\CashbackSetting;
 use App\Models\Conversation;
 use App\Models\ProjectSetting;
 use App\Models\Sold;
@@ -17,6 +18,7 @@ use App\Services\SessionService;
 use App\Services\SupportChatBridgeService;
 use App\Services\TelegramSupportService;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class GuliAgentService
@@ -296,12 +298,18 @@ class GuliAgentService
     protected function handleToolCall(BotTicket $ticket, ?User $user, string $name, array $args): mixed
     {
         return match ($name) {
-            'get_order_details'  => $this->toolGetOrderDetails($user, (int) ($args['order_id'] ?? 0)),
-            'search_catalog'     => $this->toolSearchCatalog((string) ($args['query'] ?? '')),
-            'get_credit_status'  => $this->toolGetCreditStatus($user),
-            'transfer_to_human'  => $this->toolTransferToHuman($ticket, (string) ($args['reason'] ?? ''), (string) ($args['summary'] ?? '')),
-            'close_ticket'       => $this->toolCloseTicket($ticket, (string) ($args['reason'] ?? '')),
-            default              => ['error' => "Noma'lum funksiya: $name"],
+            'get_order_details'    => $this->toolGetOrderDetails($user, (int) ($args['order_id'] ?? 0)),
+            'search_catalog'       => $this->toolSearchCatalog((string) ($args['query'] ?? '')),
+            'get_credit_status'    => $this->toolGetCreditStatus($user),
+            'check_order_cashback' => $this->toolCheckOrderCashback($user, (int) ($args['order_id'] ?? 0)),
+            'transfer_to_human'    => $this->toolTransferToHuman(
+                $ticket,
+                (string) ($args['reason'] ?? ''),
+                (string) ($args['summary'] ?? ''),
+                isset($args['internal_note']) ? (string) $args['internal_note'] : null
+            ),
+            'close_ticket'         => $this->toolCloseTicket($ticket, (string) ($args['reason'] ?? '')),
+            default                => ['error' => "Noma'lum funksiya: $name"],
         };
     }
 
@@ -441,9 +449,100 @@ class GuliAgentService
     }
 
     /**
-     * Tool 4: Operatorga uzatish
+     * Tool 4: Buyurtma bo'yicha keshbek holatini chuqur tahlil qilish
      */
-    protected function toolTransferToHuman(BotTicket $ticket, string $reason, string $summary): array
+    protected function toolCheckOrderCashback(?User $user, int $orderId = 0): array
+    {
+        if (! $user) {
+            return [
+                'success' => false,
+                'message' => "Foydalanuvchi tizimdan topilmadi. Mijoz Kitobchida ro'yxatdan o'tgan telefon raqamidan yozishi lozim.",
+            ];
+        }
+
+        $order = null;
+        if ($orderId > 0) {
+            $order = Sold::query()->where('id', $orderId)->where('user_id', $user->id)->first();
+            if (! $order) {
+                return [
+                    'success' => false,
+                    'message' => "#$orderId raqamli buyurtma topilmadi yoki bu buyurtma sizning hisobingizga tegishli emas.",
+                ];
+            }
+        } else {
+            $order = Sold::query()->where('user_id', $user->id)->latest('id')->first();
+            if (! $order) {
+                return [
+                    'success' => false,
+                    'message' => "Sizda hali birorta ham buyurtma tarixi mavjud emas.",
+                ];
+            }
+        }
+
+        $orderAmount = (int) $order->amount;
+        $cashbackType = (bool) ($order->is_instore ?? false)
+            ? CashbackSetting::TYPE_PICKUP
+            : CashbackSetting::TYPE_DELIVERY;
+
+        $percent = CashbackSetting::getCashbackPercentage($orderAmount, $cashbackType);
+        $expectedAmount = (int) (($orderAmount * $percent) / 100);
+        $awardedAmount = (int) ($order->awarded_cashback_amount ?? 0);
+        $isAwarded = $awardedAmount > 0 || ! empty($order->cashback_awarded_at);
+
+        $readyAt = $order->cashback_ready_at ? Carbon::parse($order->cashback_ready_at) : null;
+        $isPendingHold = ! $isAwarded && $readyAt && $readyAt->isFuture();
+
+        $statusAnalysis = 'unknown';
+        $diagnosis = '';
+        $requiresOperator = false;
+
+        if ($order->status_code === 'cancelled') {
+            $statusAnalysis = 'cancelled';
+            $diagnosis = "Buyurtma bekor qilingan, shuning uchun keshbek hisoblanmaydi.";
+        } elseif (! $order->isCompletedAndPaid()) {
+            $statusAnalysis = 'not_completed';
+            $diagnosis = "Buyurtmangiz hali yetkazib berilmagan yoki yakunlanmagan (holati: " . $this->humanOrderStatus($order) . "). Keshbek buyurtma to'liq topshirilgandan keyin hisoblanadi.";
+        } elseif ($isAwarded) {
+            $statusAnalysis = 'awarded';
+            $date = $order->cashback_awarded_at ? Carbon::parse($order->cashback_awarded_at)->format('d.m.Y H:i') : 'avvalroq';
+            $diagnosis = "Ushbu buyurtma uchun {$awardedAmount} so'm keshbek {$date} da hisobingizga o'tkazilgan. Hozirgi umumiy keshbek balansingiz: " . number_format((float) ($user->cashback ?? 0), 0, '.', ' ') . " so'm.";
+        } elseif ($isPendingHold) {
+            $statusAnalysis = 'pending_hold';
+            $releaseDate = $readyAt->format('d.m.Y');
+            $diagnosis = "Buyurtma muvaffaqiyatli topshirilgan! Kitobchi qoidasiga ko'ra (tovarni qaytarish kafolat muddati — 7 kun) keshbek {$releaseDate} kuni avtomatik balansingizga tushadi. Kutilayotgan keshbek summasi: " . number_format($expectedAmount, 0, '.', ' ') . " so'm.";
+        } elseif ($percent <= 0 || $expectedAmount <= 0) {
+            $statusAnalysis = 'zero_cashback';
+            $diagnosis = "Buyurtma summasi (" . number_format($orderAmount, 0, '.', ' ') . " so'm) uchun amaldagi keshbek tarifi 0% bo'lganligi sababli keshbek ko'zda tutilmagan.";
+        } else {
+            // Texnik kechikish yoki nosozlik
+            $statusAnalysis = 'technical_issue';
+            $requiresOperator = true;
+            $diagnosis = "Tizim tahlili: Buyurtma yetkazilgan, ammo keshbek croni yoki hisob-kitobda kechikish bo'lgan (kutilgan: " . number_format($expectedAmount, 0, '.', ' ') . " so'm). Masala operatorga uzatildi.";
+        }
+
+        return [
+            'order_id'              => $order->id,
+            'order_amount'          => number_format($orderAmount, 0, '.', ' ') . " so'm",
+            'order_status'          => $this->humanOrderStatus($order),
+            'cashback_percent'      => "{$percent}%",
+            'expected_cashback'     => number_format($expectedAmount, 0, '.', ' ') . " so'm",
+            'awarded_cashback'      => number_format($awardedAmount, 0, '.', ' ') . " so'm",
+            'cashback_awarded_at'   => $order->cashback_awarded_at ? Carbon::parse($order->cashback_awarded_at)->format('d.m.Y H:i') : null,
+            'cashback_ready_at'     => $readyAt ? $readyAt->format('d.m.Y H:i') : null,
+            'user_total_cashback'   => number_format((float) ($user->cashback ?? 0), 0, '.', ' ') . " so'm",
+            'status_analysis'       => $statusAnalysis,
+            'diagnosis'             => $diagnosis,
+            'requires_operator'     => $requiresOperator,
+            'internal_escalation_note' => $requiresOperator
+                ? "DIAGNOSTIKA: #{$order->id} buyurtma bo'yicha keshbek tushmagan. Buyurtma summasi: {$orderAmount} so'm. Hisoblanishi kerak bo'lgan keshbek ({$percent}%): {$expectedAmount} so'm. Iltimos, mijoz hisobiga to'g'irlab bering."
+                : null,
+        ];
+    }
+
+    /**
+     * Tool 5: Operatorga uzatish (mijoz ko'rmaydigan ichki eslatma bilan)
+     */
+    protected function toolTransferToHuman(BotTicket $ticket, string $reason, string $summary, ?string $internalNote = null): array
     {
         $ticket->update([
             'ai_enabled' => false,
@@ -451,17 +550,19 @@ class GuliAgentService
             'status' => SessionService::STATUS_QUEUE,
         ]);
 
-        // Support Inbox uchun ichki eslatma
+        $details = trim((string) ($internalNote ?: $summary ?: $reason));
+
+        // Support Inbox uchun mijoz ko'rmaydigan maxfiy ichki eslatma (faqat operatorlar ko'radi)
         SessionService::saveMessage(
             ticketId: (int) $ticket->id,
             sentBy: 'system',
-            message: "🤖 Guli: Suhbat operatorga uzatildi.\nSabab: {$reason}\nXulosa: " . ($summary ?: "Operator yordami zarur"),
+            message: "📋 Guli AI Diagnostikasi (Operator uchun ichki eslatma):\n• Sabab: {$reason}\n• Tafsilot: {$details}\n• Vaqt: " . now()->format('d.m.Y H:i'),
             messageType: 'note'
         );
 
         return [
             'status' => 'transferred',
-            'instruction' => "Mijozga sizni jonli operatorga ulayotganingizni muloyim tarzda bildiring va biroz kutishini ayting.",
+            'instruction' => "Mijozga masalasi to'liq o'rganilib, barcha tafsilotlari bilan operatorimizga uzatilganini va operator tez orada yordam berishini ayting.",
         ];
     }
 
@@ -531,13 +632,34 @@ class GuliAgentService
             [
                 'type' => 'function',
                 'function' => [
+                    'name' => 'check_order_cashback',
+                    'description' => "Mijozning buyurtmasiga keshbek nima uchun berilgani, qancha berilgani yoki nima uchun hali berilmagani/kechikayotganini kod va baza darajasida chuqur tekshirish.",
+                    'parameters' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'order_id' => [
+                                'type' => 'integer',
+                                'description' => "Tekshirilishi kerak bo'lgan buyurtma ID raqami (agar mijoz bitta buyurtma haqida gapirayotgan bo'lsa yoki mijozda bitta buyurtma bo'lsa, o'shani kiritish mumkin; ixtiyoriy, kiritilmasa oxirgi buyurtma tekshiriladi)",
+                            ],
+                        ],
+                        'required' => [],
+                    ],
+                ],
+            ],
+            [
+                'type' => 'function',
+                'function' => [
                     'name' => 'transfer_to_human',
-                    'description' => "Suhbatni jonli operatorga uzatish. Mijoz operator so'rasa, shikoyat qilsa yoki javob bera olmasangiz chaqiriladi.",
+                    'description' => "Suhbatni jonli operatorga uzatish. Mijoz operator so'rasa, shikoyat qilsa, keshbek bo'yicha texnik muammo/kechikish aniqlansa yoki javob bera olmasangiz chaqiriladi.",
                     'parameters' => [
                         'type' => 'object',
                         'properties' => [
                             'reason'  => ['type' => 'string', 'description' => 'Uzatish sababi'],
                             'summary' => ['type' => 'string', 'description' => 'Mijoz muammosi xulosasi'],
+                            'internal_note' => [
+                                'type' => 'string',
+                                'description' => "Operator uchun maxfiy ichki eslatma. Mijoz buni KO'RMAYDI. Bu yerda keshbek kechikishi, texnik sabablar, buyurtma ID, kutilgan summa va operator qilishi kerak bo'lgan vazifani aniq yozib qoldirasan.",
+                            ],
                         ],
                         'required' => ['reason'],
                     ],
@@ -566,7 +688,7 @@ class GuliAgentService
     protected function buildSystemPrompt(string $knowledge, string $extraNotes, string $userContext): string
     {
         return <<<PROMPT
-Sen — Guli 🌸. Kitobchi onlayn kitob do'konining do'stona va aqlli support yordamchisisan.
+Sen — Guli 🌸. Kitobchi onlayn kitob do'konining do'stona, o'ta mas'uliyatli va aqlli support yordamchisisan.
 
 SEN HAQINGDA:
 - Ismingiz Guli, Kitobchi jamoasining bir a'zosisan.
@@ -607,6 +729,20 @@ BUYURTMA VA STATUS QOIDALARI:
 - Bir nechta buyurtma bo'lsa — qaysi biri haqida ekanligini so'ra.
 - Ko'proq ma'lumot kerak bo'lsa get_order_details funksiyasini chaqir.
 
+KESHBEK VA TEXNIK TEKSHIRUVLAR (MUKAMMAL DIAGNOSTIKA):
+- Agar mijoz "Keshbek qani?", "Keshbek berilmadiku", "Buyurtmamga keshbek tushmadi", "Nega keshbek yo'q?", "Keshbekim qancha?" deb so'rasa:
+  1. DARHOL `check_order_cashback` funksiyasini chaqir! Agar mijoz buyurtma raqamini aytmagan bo'lsa ham parametr bermasdan chaqirishing mumkin (u eng so'nggi buyurtmani o'zi oladi).
+  2. Qaytgan natija asosida vaziyatni tahlil qil:
+     * Holat 'awarded' (berilgan): Keshbek qachon va qancha berilganini, mijozning joriy umumiy keshbek balansini ayting.
+     * Holat 'pending_hold' (kafolat muddati kutilmoqda): Kitobchi qoidasiga ko'ra (xavfsizlik va tovarni qaytarish muddati — 7 kun), buyurtma topshirilgandan keyin 7 kunlik hold davri o'tgach keshbek avtomatik tushishini, aniq qaysi sanada tushishini va qancha summa kutilayotganini tushuntirib bering.
+     * Holat 'not_completed': Buyurtma hali yetkazib berilmagani yoki yakunlanmagani sababli keshbek kuryer buyurtmani topshirgach hisoblanishini ayting.
+     * Holat 'cancelled': Buyurtma bekor bo'lgani sababli keshbek hisoblanmasligini bildiring.
+     * Holat 'zero_cashback': Ushbu buyurtma summasi uchun amaldagi keshbek 0% ekanligini bildiring.
+     * Holat 'technical_issue' yoki requires_operator=true (ya'ni 7 kunlik muddat o'tgan bo'lsa-yu keshbek tushmagan bo'lsa, yoki texnik nosozlik aniqlansa):
+       - Mijozga muloyimlik bilan: "Buyurtmangiz bo'yicha keshbek holatini kod darajasida tekshirdim. Tizimda keshbek hisoblanishida kechikish yuzaga kelgan ko'rinadi. Masalangizni barcha hisob-kitob tafsilotlari bilan operatorimizga uzatdim, ular tez orada ko'rib chiqib yordam berishadi 😊" deb javob ber.
+       - VA DARHOL `transfer_to_human` funksiyasini chaqir!
+       - `transfer_to_human` ning `internal_note` parametriga operator uchun MIJOZ KO'RMAYDIGAN maxfiy texnik eslatma yoz! Unda: buyurtma raqami, hisoblangan keshbek summasi, kechikish sababi va operator nima qilishi kerakligini aniq va ravshan qilib yozib qoldir.
+
 NASIYA (BO'LIB TO'LAV) BILIMI:
 Kitobchi "Nasiya" (bo'lib to'lav) xizmatini taqdim etadi. Quyidagi qoidalarni bilasan va mijozga sodda tushuntira olasan:
 - Nasiya faqat Kitobchi ilovasidan ro'yxatdan o'tgan, telefon raqami tasdiqlangan mijozlarga beriladi.
@@ -629,6 +765,7 @@ XAVFSIZLIK VA MAXFIYLIK:
 OPERATORGA UZATISH:
 - Agar mijoz "operator", "admin", "odam bilan gaplashay", "mutaxassis kerak", "boshqaruvchi" desa — DARHOL transfer_to_human chaqir.
 - Jiddiy shikoyat, brak kitob, pul qaytarish, nasiya rad etish haqida norozilik bo'lsa — transfer_to_human chaqir.
+- Keshbek yoki buyurtma bo'yicha texnik kechikish/xato aniqlansa — ichki maxfiy eslatma (internal_note) bilan transfer_to_human chaqir.
 - Savolga javob bera olmay qolsang — transfer_to_human chaqir.
 - Uzatishdan OLDIN mijozga muloyimlik bilan: "Hozir sizni mutaxassis xodimimizga ulayapman, biroz kuting 😊" de.
 

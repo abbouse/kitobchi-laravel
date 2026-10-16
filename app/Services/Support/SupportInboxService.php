@@ -486,9 +486,9 @@ class SupportInboxService
         $author = null;
         $isGuli = false;
         if ($from === 'agent' || $from === 'note') {
-            if ($from === 'agent' && empty($m->admin_id) && empty($m->operator_id)) {
+            if (empty($m->admin_id) && empty($m->operator_id)) {
                 $author = 'Guli 🌸';
-                $isGuli = true;
+                $isGuli = ($from === 'agent');
             } else {
                 $author = $m->admin_id ? $this->adminName((int) $m->admin_id) : ($m->operator_id ? $this->operatorName((int) $m->operator_id) : 'Kitobchi');
             }
