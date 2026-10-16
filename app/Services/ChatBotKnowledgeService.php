@@ -157,12 +157,12 @@ class ChatBotKnowledgeService
                     $planLines = SplitPlan::query()->where('enabled', true)
                         ->orderBy('months')
                         ->get()
-                        ->map(fn ($p) => sprintf(
-                            "%s (%d oy, oyiga %s%%)",
-                            $p->name,
-                            (int) $p->months,
-                            rtrim(rtrim(number_format((float) $p->monthly_interest_percent, 2), '0'), '.')
-                        ))->implode(', ');
+                        ->map(function ($p) {
+                            $isZero = (float) $p->monthly_interest_percent <= 0;
+                            return $isZero
+                                ? sprintf("%s (%d oy — 0%% ustamasiz)", $p->name, (int) $p->months)
+                                : sprintf("%s (%d oy)", $p->name, (int) $p->months);
+                        })->implode(', ');
                 }
                 $parts[] = "NASIYA (bo'lib to'lash): mavjud. "
                     . ($planLines ? "Tariflar: {$planLines}. " : '')

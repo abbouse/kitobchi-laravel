@@ -446,8 +446,7 @@ class GuliAgentService
         if ($debt <= 0) {
             return 'Nasiya mavjud, qarzdorlik yo\'q';
         }
-        $pct = $limit > 0 ? round($debt / $limit * 100) : 0;
-        return "Nasiya faol — {$pct}% ishlatilgan";
+        return "Nasiya faol — limitdan " . number_format($debt, 0, '.', ' ') . " so'm ishlatilgan";
     }
 
     /**
@@ -827,17 +826,15 @@ KESHBEK VA TEXNIK TEKSHIRUVLAR (MUKAMMAL DIAGNOSTIKA):
        - VA DARHOL `transfer_to_human` funksiyasini chaqir!
        - `transfer_to_human` ning `internal_note` parametriga operator uchun MIJOZ KO'RMAYDIGAN maxfiy texnik eslatma yoz! Unda: buyurtma raqami, hisoblangan keshbek summasi, kechikish sababi va operator nima qilishi kerakligini aniq va ravshan qilib yozib qoldir.
 
-NASIYA (BO'LIB TO'LAV) BILIMI:
-Kitobchi "Nasiya" (bo'lib to'lav) xizmatini taqdim etadi. Quyidagi qoidalarni bilasan va mijozga sodda tushuntira olasan:
+NASIYA (BO'LIB TO'LASH) BILIMI VA FOIZLARNI KO'RSATMASLIK QOIDASI (QAT'IY MARKETING QOIDASI):
+Kitobchi "Nasiya" (bo'lib to'lash) xizmatini taqdim etadi. Quyidagi marketing qoidalariga QAT'IY amal qilasan:
+- FOIZLARNI RAQAMLARDA ASLO AYTMA: Nasiya haqida gapirganda HECH QACHON foiz raqamlarini (masalan 3%, 5%, 10% va h.k.) aytma! "Ustama foiz", "kredit foizi" kabi so'zlarni aslo ishlatma! Bu marketing nuqtai nazaridan qat'iyan man etiladi.
+- FAQAT 0% BO'LGANDA: Agar biror to'lov rejasi tekin, ustamasiz yoki 0% bo'lsa, buni marketing ustunligi sifatida "0% ustamasiz" yoki "0%" deb ko'rsatishing mumkin.
+- Boshqa rejalar haqida: "Kitobchi ilovasida 3 oydan 12 oygacha bo'lgan qulay bo'lib to'lash muddatlari mavjud. Oylik to'lov summasi savatdagi kitoblar qiymatiga qarab checkout qismida avtomatik aniq hisoblab ko'rsatiladi 😊" deb tushuntir.
 - Nasiya faqat Kitobchi ilovasidan ro'yxatdan o'tgan, telefon raqami tasdiqlangan mijozlarga beriladi.
 - Nasiya olish uchun mijozning muayyan miqdordagi muvaffaqiyatli buyurtmalar tarixi bo'lishi kerak (yangi foydalanuvchilarga berilmaydi).
-- Nasiya limiti mijozning faolligiga, to'lovlar tarixiga va kredit reytingiga qarab belgilanadi.
-- Agar nasiya rad etilsa, sabablar quyidagicha bo'lishi mumkin:
-  1. Ro'yxatdan yangi o'tilgan (yetarli buyurtma tarixi yo'q)
-  2. Oldingi nasiya to'lovlarida kechikish bo'lgan
-  3. Telefon raqami tasdiqlanmagan
-  4. Tizimda kredit reytingi yetarli emas
-  5. Joriy aktiv nasiya qarzlari bor (eski nasiyani to'liq to'lash kerak)
+- Nasiya limiti mijozning faolligiga, to'lovlar tarixiga qarab belgilanadi.
+- Agar nasiya rad etilsa: yangi ro'yxatdan o'tilganligi, oldingi to'lovlarda kechikish bo'lganligi yoki mavjud nasiya to'liq to'lanmaganligi sabab bo'lishi mumkin.
 - Nasiya shartlari va limiti vaqti-vaqti bilan o'zgarishi mumkin, aniq miqdorni admin belgilaydi.
 - Mijoz nasiya haqida so'rasa, avval holatini tekshir va kerak bo'lsa operatorga uzat.
 
