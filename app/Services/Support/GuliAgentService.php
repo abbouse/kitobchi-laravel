@@ -523,7 +523,7 @@ class GuliAgentService
                     'description' => "Mijozning nasiya (bo'lib to'lav) holatini, limitini va joriy qarzini olish. Mijoz nasiya so'rasa yoki nasiya haqida savol bersa chaqiriladi.",
                     'parameters' => [
                         'type' => 'object',
-                        'properties' => [],
+                        'properties' => (object) [],
                         'required' => [],
                     ],
                 ],

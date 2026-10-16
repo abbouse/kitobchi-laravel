@@ -1902,9 +1902,9 @@ class SearchController extends Controller
             }
         }
 
-        $items = $books->map(fn($p) => $this->formatProduct($p, $user))
-            ->merge($stationeries->map(fn($p) => $this->formatProduct($p, $user)))
-            ->merge($personalized)
+        $items = collect($books->map(fn($p) => $this->formatProduct($p, $user))->all())
+            ->merge(collect($stationeries->map(fn($p) => $this->formatProduct($p, $user))->all()))
+            ->merge(collect($personalized))
             ->filter()
             ->unique(fn($item) => ($item['type'] ?? 'book').'_'.($item['id'] ?? '0'))
             ->values();
@@ -1912,8 +1912,8 @@ class SearchController extends Controller
         if ($items->isEmpty()) {
             $books        = $this->getPopularBooks(12);
             $stationeries = $this->getPopularStationeries(8);
-            $items        = $books->map(fn($p) => $this->formatProduct($p, $user))
-                ->merge($stationeries->map(fn($p) => $this->formatProduct($p, $user)))
+            $items        = collect($books->map(fn($p) => $this->formatProduct($p, $user))->all())
+                ->merge(collect($stationeries->map(fn($p) => $this->formatProduct($p, $user))->all()))
                 ->filter()->values();
         }
 
