@@ -302,13 +302,21 @@ class SupportInboxController extends Controller
     {
         return [
             ['title' => 'Salomlashish', 'body' => "Assalomu alaykum, {name}! Kitobchi qo'llab-quvvatlash xizmati. Sizga qanday yordam bera olaman?", 'audience' => 'all', 'category' => 'umumiy', 'shortcut' => 'salom'],
+            ['title' => 'Operator suhbatga ulandi', 'body' => "Assalomu alaykum! Men inson-operatoringizman. Suhbatni qabul qildim, hozir masalangizni to'liq o'rganib chiqib yordam beraman.", 'audience' => 'all', 'category' => 'umumiy', 'shortcut' => 'ulanish'],
             ['title' => 'Kutib turing', 'body' => "Iltimos, bir oz kutib turing — ma'lumotni tekshirib, hozir javob beraman.", 'audience' => 'all', 'category' => 'umumiy', 'shortcut' => 'kut'],
+            ['title' => "Boshqa savol yo'q bo'lsa yopish", 'body' => "Boshqa savollaringiz yoki tushunarsiz joylar qolmadimi? Agar boshqa savolingiz bo'lmasa, suhbatni yakunlayman 😊", 'audience' => 'all', 'category' => 'yakunlash', 'shortcut' => 'yopish'],
+            ['title' => 'Javob kutish (Avto-yopish)', 'body' => "Sizdan javob kutmoqdaman. Agar 2 daqiqa ichida javob bo'lmasa, navbatdagi mijozlarga xizmat ko'rsatish maqsadida suhbat avtomatik yakunlanadi.", 'audience' => 'all', 'category' => 'yakunlash', 'shortcut' => 'kutyapman'],
+            ['title' => 'Suhbat yakunlandi va xayrlashuv', 'body' => "Murojaatingiz uchun tashakkur! Agar yana savollar paydo bo'lsa, istalgan vaqtda bemalol yozishingiz mumkin. Kuningiz xayrli o'tsin! ✨", 'audience' => 'all', 'category' => 'yakunlash', 'shortcut' => 'xayr'],
             ['title' => 'Buyurtma raqami', 'body' => "Buyurtmangiz holatini aniqlash uchun iltimos buyurtma raqamingizni yuboring.", 'audience' => 'customer', 'category' => 'buyurtma', 'shortcut' => 'buyurtma'],
             ['title' => 'Yetkazish muddati', 'body' => "Toshkent shahri bo'ylab yetkazib berish 24 soat ichida, viloyatlarga 2–3 ish kuni ichida amalga oshiriladi. Kuryer yetkazishdan avval siz bilan bog'lanadi.", 'audience' => 'customer', 'category' => 'yetkazish', 'shortcut' => 'yetkazish'],
+            ['title' => 'Kuryer bilan bog\'lanish', 'body' => "Kuryer yetkazish jarayonida va manzilga yetib kelganida siz bilan telefon orqali oldindan bog'lanadi. Iltimos, telefoningiz aloqa doirasida bo'lishiga e'tibor bering.", 'audience' => 'customer', 'category' => 'yetkazish', 'shortcut' => 'kuryer'],
             ['title' => 'Flash Bepul Yetkazish', 'body' => "Bizda har kuni 15 daqiqalik Flash Bepul Yetkazish aksiyasi bo'lib o'tadi! Ilovadagi maxsus banner orqali buyurtma qilsangiz, yetkazib berish mutlaqo bepul bo'ladi.", 'audience' => 'customer', 'category' => 'aksiya', 'shortcut' => 'bepul'],
-            ['title' => 'Split (Nasiya / Bo\'lib to\'lash)', 'body' => "Kitobchi Muddatli To'lov (Split) orqali sevimli kitoblaringizni foizsiz va ortiqcha to'lovlarsiz bo'lib to'lashingiz mumkin. Buyurtma berishda to'lov usulidan 'Split'ni tanlang.", 'audience' => 'customer', 'category' => 'moliya', 'shortcut' => 'split'],
+            ['title' => 'Split (Nasiya / Bo\'lib to\'lash)', 'body' => "Kitobchi Muddatli To'lov (Split) orqali sevimli kitoblaringizni 0% ustamasiz bo'lib to'lashingiz mumkin. Buyurtma berishda to'lov usulidan 'Split'ni tanlang.", 'audience' => 'customer', 'category' => 'moliya', 'shortcut' => 'split'],
             ['title' => 'To\'lov muammosi', 'body' => "To'lov Click, Payme, Uzum bank kartasi yoki kuryerga naqd to'lash orqali amalga oshiriladi. Mablag' yechilib, buyurtma tasdiqlanmagan bo'lsa, to'lov kvitansiyasini (chek) yuboring.", 'audience' => 'customer', 'category' => 'moliya', 'shortcut' => 'tolov'],
+            ['title' => 'To\'lov chekini so\'rash', 'body' => "To'lov holatini tekshirib berishimiz uchun, iltimos, to'lov cheki (kvitansiya) rasmini yoki skrinshotini yuboring.", 'audience' => 'customer', 'category' => 'moliya', 'shortcut' => 'chek'],
             ['title' => 'Keshbek', 'body' => "Xaridingizdan hisoblangan keshbek balansingizda saqlanadi va keyingi buyurtmalaringizda to'liq chegirma sifatida ishlatilishi mumkin.", 'audience' => 'customer', 'category' => 'moliya', 'shortcut' => 'keshbek'],
+            ['title' => 'Brak kitobni almashtirish', 'body' => "Xavotir olmang! Agar kitobda sahifa yetishmasligi yoki bosma nuqson (brak) aniqlangan bo'lsa, kitob rasmini yuboring — biz uni 7 kun ichida mutlaqo bepul almashtirib beramiz.", 'audience' => 'customer', 'category' => 'kafolat', 'shortcut' => 'almashtirish'],
+            ['title' => 'Do\'kon manzili va ish vaqti', 'body' => "Kitobchi do'koni har kuni soat 09:00 dan 20:00 gacha dam olish kunlarisiz ishlaydi. Manzilimiz: Toshkent shahri.", 'audience' => 'all', 'category' => 'umumiy', 'shortcut' => 'manzil'],
             ['title' => 'Kitob topilmadi', 'body' => "Agar siz qidirgan kitob ilovada topilmasa, kitob nomi va muallifini qoldiring, hamkor nashriyotlar va do'konlardan topib, katalogga qo'shib beramiz.", 'audience' => 'customer', 'category' => 'katalog', 'shortcut' => 'kitob'],
             ['title' => 'Buyurtma holati', 'body' => "Buyurtmangiz tayyorlandi va kuryerga topshirildi. Kuryer yetkazish vaqtida siz bilan telefon orqali bog'lanadi.", 'audience' => 'customer', 'category' => 'buyurtma', 'shortcut' => 'holat'],
             ['title' => 'Buyurtmani bekor qilish', 'body' => "Buyurtmangiz bekor qilindi. Agar to'lov oldindan amalga oshirilgan bo'lsa, mablag' 1–3 ish kuni ichida bank kartangizga qaytariladi.", 'audience' => 'customer', 'category' => 'buyurtma', 'shortcut' => 'bekor'],
@@ -321,7 +329,7 @@ class SupportInboxController extends Controller
 
     private function templatesPayload(): array
     {
-        if (Schema::hasTable('support_templates') && SupportTemplate::query()->count() < 10) {
+        if (Schema::hasTable('support_templates')) {
             $now = now();
             foreach (self::defaultTemplates() as $i => $row) {
                 SupportTemplate::query()->firstOrCreate(
