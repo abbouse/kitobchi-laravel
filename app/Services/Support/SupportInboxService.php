@@ -703,6 +703,14 @@ class SupportInboxService
             throw new InvalidArgumentException('Xabar bo‘sh.');
         }
 
+        // Mijozga ketadigan ochiq xabarlar ostiga operator imzosi (qator tashlamasdan)
+        if (! $note) {
+            $operatorName = trim($me->name ?: 'Operator');
+            if (! str_contains($text, 'Ezgu tilaklar bilan')) {
+                $text .= "\nEzgu tilaklar bilan {$operatorName}";
+            }
+        }
+
         $parsed = self::parseKey($key);
 
         return $parsed['segment'] === 'shop'
