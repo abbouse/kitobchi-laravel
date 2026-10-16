@@ -72,7 +72,13 @@ class ProcessGuliFollowUp implements ShouldQueue
             return;
         }
 
-        // Follow-up xabarini yuborish
-        $guli->sendFollowUp($ticket);
+        // Follow-up xabarini yuborish (Boshqa savollaringiz yo'qmi?)
+        $followUpMsg = $guli->sendFollowUp($ticket);
+
+        // Agar mijoz 2 daqiqa ichida javob bermasa — avtomatik yopish navbatga qo'yiladi
+        if ($followUpMsg) {
+            ProcessGuliAutoClose::dispatch($ticket->id, $followUpMsg->id)
+                ->delay(now()->addMinutes(2));
+        }
     }
 }

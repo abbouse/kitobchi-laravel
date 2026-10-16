@@ -70,6 +70,18 @@ class GuliAgentService
             return $transferMsg;
         }
 
+        // Fast intent check — agar mijoz "yo'q", "rahmat", "boshqa savolim yo'q" deb yakunlayotgan bo'lsa
+        if ($this->isClosingIntent($userText)) {
+            $closingMsg = "Arzimaydi! Sizga yordam bera olganimdan mamnunman 😊 Kuningiz xayrli va maroqli o'tsin! ✨\nEzgu tilaklar bilan Guli 🌸";
+            $this->deliverReply($ticket, $closingMsg);
+            try {
+                SessionService::closeTicket((int) $ticket->id, 'guli_user_finished');
+            } catch (\Throwable) {
+                $ticket->update(['status' => SessionService::STATUS_CLOSED, 'closed_at' => now()]);
+            }
+            return $closingMsg;
+        }
+
         $user = $this->resolveCustomerUser($ticket);
         $userContext = $this->buildCustomerContext($ticket, $user);
         $generalKnowledge = $this->knowledge->buildGeneralKnowledgeOnly();
@@ -115,10 +127,10 @@ class GuliAgentService
             if ($reply) {
                 $saved = $this->deliverReply($ticket, $reply);
 
-                // Smart follow-up: 2.5 daqiqada mijoz javob bermasagina
+                // Smart follow-up: 1 daqiqadan keyin mijoz javob bermasa "boshqa savolingiz yo'qmi?" deb so'raydi
                 if ($saved) {
                     ProcessGuliFollowUp::dispatch($ticket->id, $saved->id)
-                        ->delay(now()->addSeconds(150)); // 2.5 daqiqa
+                        ->delay(now()->addSeconds(60)); // 1 daqiqa
                 }
             }
 
@@ -168,22 +180,55 @@ class GuliAgentService
     }
 
     /**
-     * Smart follow-up — mijoz javob bermasa yengil eslatma yuborish.
+     * Smart follow-up — 1 daqiqadan keyin boshqa savol yo'qligini so'rash.
      */
-    public function sendFollowUp(BotTicket $ticket): void
+    public function sendFollowUp(BotTicket $ticket): ?BotTicketMessage
+    {
+        if (! $this->shouldHandle($ticket)) {
+            return null;
+        }
+
+        $msg = "Boshqa savollaringiz yo'qmi? Yana biror narsada yordamim kerakmi? 😊\nEzgu tilaklar bilan Guli 🌸";
+        return $this->deliverReply($ticket, $msg);
+    }
+
+    /**
+     * Mijoz 2 daqiqa ichida javob bermasa — suhbatni avtomatik yopish.
+     */
+    public function autoCloseInactiveTicket(BotTicket $ticket): void
     {
         if (! $this->shouldHandle($ticket)) {
             return;
         }
 
-        $followUps = [
-            "Salom! Savolingiz hal bo'ldimi? Yana yordam kerak bo'lsa aytishingiz mumkin 😊\nEzgu tilaklar bilan Guli 🌸",
-            "Hali biror narsaga yordamim kerakmi? Bemalol yozing! 🌸\nEzgu tilaklar bilan Guli 🌸",
-            "Savolingizga javob topa oldingizmi? Yana murojaat qilishingiz mumkin 😊\nEzgu tilaklar bilan Guli 🌸",
+        $closeMsg = "Suhbat uchun rahmat! Murojaatingizni yakunladim. Yangi savollaringiz bo'lsa, bemalol qayta yozishingiz mumkin 😊\nEzgu tilaklar bilan Guli 🌸";
+        $this->deliverReply($ticket, $closeMsg);
+
+        try {
+            SessionService::closeTicket((int) $ticket->id, 'guli_auto_close_inactive');
+        } catch (\Throwable) {
+            $ticket->update(['status' => SessionService::STATUS_CLOSED, 'closed_at' => now()]);
+        }
+    }
+
+    /**
+     * Mijoz suhbatni tugatayotganini tezkor aniqlash (yo'q, rahmat, boshqa savol yo'q va h.k.)
+     */
+    protected function isClosingIntent(string $text): bool
+    {
+        $clean = trim(mb_strtolower($text));
+        $clean = preg_replace('/[.,!?;:()]+$/u', '', $clean);
+
+        $closingPhrases = [
+            'yoq', "yo'q", 'yoq rahmat', "yo'q rahmat", 'rahmat', 'katta rahmat',
+            'yoq boshqa savolim yoq', "yo'q boshqa savolim yo'q", "boshqa savolim yo'q", 'boshqa savol yoq',
+            'boshqa savol yo\'q', 'yoq boshqa savolim', "yo'q boshqa savolim", 'hal boldi', "hal bo'ldi",
+            'tushundim rahmat', 'tushunarli rahmat', 'shart emas', 'kerak emas', 'barchasi tushunarli',
+            'arzimaydi', 'boldi', "bo'ldi",
+            'нет', 'нет спасибо', 'спасибо', 'большое спасибо', 'все понятно', 'вопросов нет', 'пока',
         ];
 
-        $msg = $followUps[array_rand($followUps)];
-        $this->deliverReply($ticket, $msg);
+        return in_array($clean, $closingPhrases, true);
     }
 
     /**
@@ -851,7 +896,8 @@ OPERATORGA UZATISH:
 - Uzatishdan OLDIN mijozga muloyimlik bilan: "Hozir sizni mutaxassis xodimimizga ulayapman, biroz kuting 😊" de.
 
 SUHBATNI YOPISH:
-- Agar mijoz "Rahmat", "Tushundim", "Hal bo'ldi", "OK bo'ldi" desa — close_ticket chaqir va chiroyli xayrlash.
+- Agar mijoz "Yo'q", "Yoq", "Yo'q rahmat", "Boshqa savolim yo'q", "Yoq boshqa savol", "Rahmat", "Tushundim", "Hal bo'ldi", "OK bo'ldi", "Barchasi tushunarli" desa:
+  DARHOL close_ticket funksiyasini chaqir va suhbatni yop! Mijozga minnatdorchilik bildirib chiroyli xayrlash.
 - Yopishdan oldin: "Yana savollar bo'lsa bemalol murojaat qiling! 🌸" de.
 
 PLATFORMA BILIMLARI:
