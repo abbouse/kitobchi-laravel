@@ -316,7 +316,8 @@ class SupportInboxController extends Controller
             ['title' => 'To\'lov chekini so\'rash', 'body' => "To'lov holatini tekshirib berishimiz uchun, iltimos, to'lov cheki (kvitansiya) rasmini yoki skrinshotini yuboring.", 'audience' => 'customer', 'category' => 'moliya', 'shortcut' => 'chek'],
             ['title' => 'Keshbek', 'body' => "Xaridingizdan hisoblangan keshbek balansingizda saqlanadi va keyingi buyurtmalaringizda to'liq chegirma sifatida ishlatilishi mumkin.", 'audience' => 'customer', 'category' => 'moliya', 'shortcut' => 'keshbek'],
             ['title' => 'Brak kitobni almashtirish', 'body' => "Xavotir olmang! Agar kitobda sahifa yetishmasligi yoki bosma nuqson (brak) aniqlangan bo'lsa, kitob rasmini yuboring — biz uni 7 kun ichida mutlaqo bepul almashtirib beramiz.", 'audience' => 'customer', 'category' => 'kafolat', 'shortcut' => 'almashtirish'],
-            ['title' => 'Do\'kon manzili va ish vaqti', 'body' => "Kitobchi do'koni har kuni soat 09:00 dan 20:00 gacha dam olish kunlarisiz ishlaydi. Manzilimiz: Toshkent shahri.", 'audience' => 'all', 'category' => 'umumiy', 'shortcut' => 'manzil'],
+            ['title' => "Do'kon manzili (faqat onlayn, 24/7)", 'body' => "Kitobchi to'liq onlayn kitob do'koni bo'lib, bizda jismoniy do'kon yoki filial mavjud emas. Buyurtmalarni ilova yoki saytimiz orqali 24 soat (kun-u tun) davomida berishingiz mumkin, barcha buyurtmalar manzilingizgacha yetkazib beriladi 😊", 'audience' => 'all', 'category' => 'umumiy', 'shortcut' => 'manzil'],
+            ['title' => '24/7 Buyurtma qabul qilish', 'body' => "Kitobchi ilovasi va sayti orqali buyurtmalar 24 soat davomida to'xtovsiz qabul qilinadi. Barcha kitoblar to'g'ridan-to'g'ri manzilingizgacha yetkazib beriladi 🚚", 'audience' => 'all', 'category' => 'umumiy', 'shortcut' => 'online'],
             ['title' => 'Kitob topilmadi', 'body' => "Agar siz qidirgan kitob ilovada topilmasa, kitob nomi va muallifini qoldiring, hamkor nashriyotlar va do'konlardan topib, katalogga qo'shib beramiz.", 'audience' => 'customer', 'category' => 'katalog', 'shortcut' => 'kitob'],
             ['title' => 'Buyurtma holati', 'body' => "Buyurtmangiz tayyorlandi va kuryerga topshirildi. Kuryer yetkazish vaqtida siz bilan telefon orqali bog'lanadi.", 'audience' => 'customer', 'category' => 'buyurtma', 'shortcut' => 'holat'],
             ['title' => 'Buyurtmani bekor qilish', 'body' => "Buyurtmangiz bekor qilindi. Agar to'lov oldindan amalga oshirilgan bo'lsa, mablag' 1–3 ish kuni ichida bank kartangizga qaytariladi.", 'audience' => 'customer', 'category' => 'buyurtma', 'shortcut' => 'bekor'],
@@ -332,14 +333,11 @@ class SupportInboxController extends Controller
         if (Schema::hasTable('support_templates')) {
             $now = now();
             foreach (self::defaultTemplates() as $i => $row) {
-                SupportTemplate::query()->firstOrCreate(
+                SupportTemplate::query()->updateOrCreate(
                     ['shortcut' => $row['shortcut']],
                     array_merge($row, [
                         'sort' => $i,
                         'is_active' => true,
-                        'usage_count' => 0,
-                        'created_at' => $now,
-                        'updated_at' => $now,
                     ])
                 );
             }

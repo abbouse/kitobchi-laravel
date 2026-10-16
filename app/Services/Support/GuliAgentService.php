@@ -657,23 +657,24 @@ class GuliAgentService
     }
 
     /**
-     * Tool 6: Rasmiy kontaktlar, do'kon manzili va ish vaqtlari
+     * Tool 6: Rasmiy kontaktlar va onlayn xizmat ko'rsatish
      */
     protected function toolGetStoreContacts(): array
     {
         $settings = ProjectSetting::query()->first();
         return [
-            'store_name' => "Kitobchi — onlayn kitob do'koni",
+            'store_type' => "Kitobchi — 100% onlayn kitob do'koni",
+            'has_physical_store' => false,
+            'explanation' => "Bizda jismoniy do'kon yoki filial mavjud emas. Xizmatlar to'liq onlayn ko'rsatiladi.",
+            'order_hours' => "Buyurtmalar mobil ilova va sayt orqali 24 soat (kun-u tun, dam olish kunlarisiz) qabul qilinadi",
+            'delivery' => "Buyurtmalar butun O'zbekiston bo'ylab kuryer yoki pochta orqali to'g'ridan-to'g'ri mijoz manziliga yetkazib beriladi",
             'phone' => $settings?->kitobchi_phone ?: "+998 71 200 00 00",
             'email' => $settings?->kitobchi_email ?: "info@kitobchi.com",
-            'work_hours' => "Dushanba - Yakshanba: 09:00 dan 20:00 gacha (dam olish kunlarisiz)",
-            'address' => $settings?->kitobchi_address ?: "Toshkent shahri",
             'channels' => [
                 'telegram' => "@kitobchicom",
                 'instagram' => "@kitobchi_com",
                 'website' => "https://kitobchi.com",
             ],
-            'note' => "Ilova orqali buyurtmalarni 24/7 rejimida berish mumkin.",
         ];
     }
 
@@ -756,7 +757,7 @@ class GuliAgentService
                 'type' => 'function',
                 'function' => [
                     'name' => 'get_store_contacts',
-                    'description' => "Kitobchi do'koni manzili, ish vaqti, qo'llab-quvvatlash telefon raqami va ijtimoiy tarmoqlarini olish.",
+                    'description' => "Kitobchi to'liq onlayn do'koni haqida ma'lumot, 24 soatlik buyurtma qabul qilish va aloqa ma'lumotlarini olish. Mijoz do'kon qayerdaligi yoki ish vaqti haqida so'rasa chaqiriladi.",
                     'parameters' => [
                         'type' => 'object',
                         'properties' => (object) [],
@@ -882,6 +883,14 @@ Kitobchi "Nasiya" (bo'lib to'lash) xizmatini taqdim etadi. Quyidagi marketing qo
 - Agar nasiya rad etilsa: yangi ro'yxatdan o'tilganligi, oldingi to'lovlarda kechikish bo'lganligi yoki mavjud nasiya to'liq to'lanmaganligi sabab bo'lishi mumkin.
 - Nasiya shartlari va limiti vaqti-vaqti bilan o'zgarishi mumkin, aniq miqdorni admin belgilaydi.
 - Mijoz nasiya haqida so'rasa, avval holatini tekshir va kerak bo'lsa operatorga uzat.
+
+JISMONIY DO'KON YO'Q — 100% ONLAYN VA 24 SOAT BUYURTMA QABUL QILISH:
+- Kitobchining jismoniy do'koni, filiali yoki olib ketish (samovivoz) manzili YO'Q! Biz 100% onlayn kitob do'konimiz.
+- Buyurtmalar kun-u tun — 24 soat davomida mobil ilova yoki sayt orqali to'xtovsiz qabul qilinadi.
+- Barcha kitoblar butun O'zbekiston bo'ylab to'g'ridan-to'g'ri mijoz ko'rsatgan manzilga (eshikgacha) kuryer yoki pochta orqali yetkazib beriladi.
+- Agar mijoz "Do'koningiz qayerda?", "Manzilingiz bormi?", "Borib ko'rib olsam bo'ladimi?" deb so'rasa:
+  "Kitobchi to'liq onlayn kitob do'koni bo'lib, bizda jismoniy do'kon yoki filial mavjud emas 😊 Buyurtmalarni ilova yoki saytimiz orqali 24 soat davomida berishingiz mumkin, barcha kitoblarni to'g'ridan-to'g'ri manzilingizgacha yetkazib beramiz!" deb tushuntir.
+- Hech qachon jismoniy manzil to'qib chiqarma yoki samovivozga chaqirma!
 
 XAVFSIZLIK VA MAXFIYLIK:
 - FAQAT hozirgi mijozga tegishli buyurtmalar va ma'lumotlarni ko'ra olasan.
