@@ -10,8 +10,10 @@ use App\Models\CashbackSetting;
 use App\Models\Conversation;
 use App\Models\ProjectSetting;
 use App\Models\Sold;
-use App\Models\Split;
+use App\Models\SplitContract;
+use App\Models\SplitInstallment;
 use App\Models\SplitPlan;
+use App\Models\SplitUserProfile;
 use App\Models\User;
 use App\Services\ChatBotKnowledgeService;
 use App\Services\OpenAIService;
@@ -532,21 +534,40 @@ class GuliAgentService
     }
 
     /**
-     * Tool 3: Nasiya/kredit holati
+     * Tool 3: Nasiya/kredit holati (limitlar, ochiq shartnomalar, keyingi to'lov)
      */
     protected function toolGetCreditStatus(?User $user): array
     {
         if (! $user) {
             return [
                 'available' => false,
-                'reason' => 'Foydalanuvchi topilmadi. Iltimos, ilovada ro\'yxatdan o\'ting.',
+                'reason' => "Foydalanuvchi ma'lumoti topilmadi. Iltimos, ilovada ro'yxatdan o'ting.",
             ];
         }
 
         try {
-            $split = Split::query()
+            $profile = SplitUserProfile::query()
                 ->where('user_id', $user->id)
+                ->first();
+
+            $openContracts = SplitContract::query()
+                ->where('user_id', $user->id)
+                ->whereIn('status', [
+                    SplitContract::STATUS_PENDING,
+                    SplitContract::STATUS_ACTIVE,
+                    SplitContract::STATUS_OVERDUE,
+                ])
+                ->with('plan')
                 ->orderBy('id', 'desc')
+                ->get();
+
+            $nextInstallment = SplitInstallment::query()
+                ->where('user_id', $user->id)
+                ->whereIn('status', [
+                    SplitInstallment::STATUS_PENDING,
+                    SplitInstallment::STATUS_OVERDUE,
+                ])
+                ->orderBy('due_at', 'asc')
                 ->first();
 
             $ordersCount = Sold::query()->where('user_id', $user->id)->count();
@@ -567,40 +588,68 @@ class GuliAgentService
                 $activePlans = [];
             }
 
+            $totalLimit = (float) ($profile?->computed_limit ?? 0);
+            $availableLimit = (float) ($profile?->available_limit ?? 0);
+            $usedLimit = (float) ($profile?->active_exposure ?? 0);
+            $isEligible = (bool) ($profile?->eligible ?? false) && empty($profile?->manual_blocked_at);
+
+            $contractsList = $openContracts->map(function (SplitContract $c) {
+                return [
+                    'contract_id' => $c->id,
+                    'order_id' => $c->order_id,
+                    'status' => $c->status,
+                    'plan_name' => $c->plan?->name ?? "{$c->months} oy",
+                    'total_amount' => number_format((float) $c->total_amount, 0, '.', ' ') . " so'm",
+                    'paid_amount' => number_format((float) $c->paid_amount, 0, '.', ' ') . " so'm",
+                    'remaining_amount' => number_format((float) $c->remaining_amount, 0, '.', ' ') . " so'm",
+                ];
+            })->all();
+
+            $totalRemainingDebt = (float) $openContracts->sum('remaining_amount');
+
+            $nextPaymentData = null;
+            if ($nextInstallment) {
+                $dueAt = $nextInstallment->due_at ? Carbon::parse($nextInstallment->due_at) : null;
+                $isOverdue = $nextInstallment->status === SplitInstallment::STATUS_OVERDUE || ($dueAt && $dueAt->isPast());
+                $nextPaymentData = [
+                    'amount' => number_format((float) $nextInstallment->amount, 0, '.', ' ') . " so'm",
+                    'due_date' => $dueAt ? $dueAt->format('d.m.Y') : 'aniqlanmagan',
+                    'is_overdue' => $isOverdue,
+                    'status' => $isOverdue ? "To'lov muddati o'tgan" : "Kutilmoqda",
+                    'note' => $dueAt
+                        ? ($isOverdue
+                            ? "To'lov muddati " . abs((int) now()->diffInDays($dueAt, false)) . " kun kechikkan"
+                            : ((int) now()->diffInDays($dueAt, false)) . " kun qoldi")
+                        : null,
+                ];
+            }
+
             return [
-                'user_id'      => $user->id,
-                'orders_count' => $ordersCount,
-                'has_nasiya'   => $split !== null,
-                'nasiya_limit' => $split ? number_format((float) ($split->limit ?? 0), 0, '.', ' ') . " so'm" : null,
-                'nasiya_debt'  => $split ? number_format((float) ($split->debt ?? 0), 0, '.', ' ') . " so'm" : null,
-                'nasiya_status' => $split ? $this->humanSplitStatus($split) : null,
-                'can_use_nasiya' => $split && ($split->is_active ?? false) && ((float) ($split->limit ?? 0) > (float) ($split->debt ?? 0)),
+                'user_id' => $user->id,
+                'is_eligible' => $isEligible,
+                'has_profile' => $profile !== null,
+                'limit_info' => [
+                    'total_limit' => number_format($totalLimit, 0, '.', ' ') . " so'm",
+                    'available_limit' => number_format($availableLimit, 0, '.', ' ') . " so'm",
+                    'used_limit' => number_format($usedLimit, 0, '.', ' ') . " so'm",
+                    'can_buy_now' => $availableLimit > 0 && $isEligible,
+                ],
+                'active_contracts' => [
+                    'count' => count($contractsList),
+                    'total_remaining_debt' => number_format($totalRemainingDebt, 0, '.', ' ') . " so'm",
+                    'contracts' => $contractsList,
+                ],
+                'next_payment' => $nextPaymentData,
                 'active_plans' => $activePlans,
-                'note' => $ordersCount < 3
-                    ? 'Nasiya olish uchun kamida 3 ta muvaffaqiyatli buyurtma tarix kerak.'
-                    : null,
+                'orders_count' => $ordersCount,
+                'eligibility_reasons' => $profile?->eligibility_reasons ?? [],
+                'instruction_for_agent' => "DIQQAT: Mijoz FAQAT so'ragan narsasiga javob bering. Limit so'ralsa — faqat limit. Keyingi to'lov so'ralsa — faqat eng yaqin to'lov summasi va sanasi. Ochiq nasiya so'ralsa — faqat qoldiq qarz va shartnomalar soni. Hamma ma'lumotni aralashtirib doston yozmang!",
             ];
-        } catch (\Throwable) {
-            return ['available' => false, 'reason' => 'Nasiya ma\'lumotlari yuklanmadi.'];
-        }
-    }
+        } catch (\Throwable $e) {
+            Log::warning('toolGetCreditStatus error: ' . $e->getMessage());
 
-    protected function humanSplitStatus(mixed $split): string
-    {
-        if (! $split) {
-            return 'Nasiya mavjud emas';
+            return ['available' => false, 'reason' => "Nasiya ma'lumotlari yuklanmadi."];
         }
-        $isActive = (bool) ($split->is_active ?? false);
-        $debt = (float) ($split->debt ?? 0);
-        $limit = (float) ($split->limit ?? 0);
-
-        if (! $isActive) {
-            return 'Nasiya hozir faol emas';
-        }
-        if ($debt <= 0) {
-            return 'Nasiya mavjud, qarzdorlik yo\'q';
-        }
-        return "Nasiya faol — limitdan " . number_format($debt, 0, '.', ' ') . " so'm ishlatilgan";
     }
 
     /**
@@ -825,7 +874,7 @@ class GuliAgentService
                 'type' => 'function',
                 'function' => [
                     'name' => 'get_credit_status',
-                    'description' => "Mijozning nasiya (bo'lib to'lav) holatini, limitini va joriy qarzini olish. Mijoz nasiya so'rasa yoki nasiya haqida savol bersa chaqiriladi.",
+                    'description' => "Mijozning nasiya (bo'lib to'lash) ma'lumotlarini olish: umumiy limiti, bo'sh limiti, ishlatilgan limiti, ochiq shartnomalari, qoldiq qarzi, keyingi eng yaqin to'lov summasi va sanasi hamda faol tariflar. Mijoz nasiya limiti, ochiq nasiyasi, qarzi yoki keyingi to'lovi haqida so'raganda chaqiriladi.",
                     'parameters' => [
                         'type' => 'object',
                         'properties' => (object) [],
@@ -982,7 +1031,14 @@ KESHBEK VA TEXNIK TEKSHIRUVLAR (MUKAMMAL DIAGNOSTIKA):
        - `transfer_to_human` ning `internal_note` parametriga operator uchun MIJOZ KO'RMAYDIGAN maxfiy texnik eslatma yoz! Unda: buyurtma raqami, hisoblangan keshbek summasi, kechikish sababi va operator nima qilishi kerakligini aniq va ravshan qilib yozib qoldir.
 
 NASIYA (BO'LIB TO'LASH) BILIMI VA FOIZLARNI KO'RSATMASLIK QOIDASI (QAT'IY MARKETING QOIDASI):
-Kitobchi "Nasiya" (bo'lib to'lash) xizmatini taqdim etadi. Quyidagi marketing qoidalariga QAT'IY amal qilasan:
+Kitobchi "Nasiya" (bo'lib to'lash) xizmatini taqdim etadi. Sen mijozning nasiya limiti, ochiq nasiyalari (shartnomalari), qoldiq qarzi, keyingi to'lovi qancha va qachonligi bo'yicha to'liq ma'lumotga egasan (`get_credit_status` orqali yoki bilimlardan).
+Quyidagi qoidalarga QAT'IY amal qilasan:
+- FAQAT SO'RALGAN QISMINI AYTISH (QAT'IY QOIDA — ORTIQCHA DOSTON YOZMA!):
+  * Agar mijoz faqat LIMITI haqida so'rasa ("limitim qancha?", "nasiya olsam bo'ladimi?"): Faqat uning umumiy limiti va ishlatish mumkin bo'lgan bo'sh limitini ayting. Agar limit berilmagan bo'lsa, sababini muloyim tushuntiring. Boshqa to'lovlar yoki shartnomalarni so'ralmasa aytmang!
+  * Agar mijoz KEYINGI TO'LOVI haqida so'rasa ("keyingi to'lovim qachon?", "keyingi to'lovim qancha?", "qancha to'lashim kerak?"): Faqat keyingi eng yaqin to'lov summasi va to'lov sanasini ayting (agar muddati o'tgan bo'lsa buni ham samimiy eslatib o'ting). Barcha shartnomalarni birma-bir to'kib tashlamang! Agar to'lov kutilmayotgan bo'lsa, "Hozirda to'lov kutilmayapti" deb qisqa ayting.
+  * Agar mijoz OCHIQ NASIYALARI / QARZI haqida so'rasa ("qancha qarzim bor?", "ochiq nasiyalarim bormi?"): Faqat faol shartnomalar soni va jami qoldiq qarz summasini ixcham ayting.
+  * Agar mijoz butun nasiya holati bo'yicha to'liq hisobot so'rasa ("nasiya holatim haqida to'liq ayting"): Shundagina umumiy qisqa xulosa ber.
+  * Hech qachon mijoz so'ramagan ortiqcha narsalarni qo'shib doston yozma!
 - FOIZLARNI RAQAMLARDA ASLO AYTMA: Nasiya haqida gapirganda HECH QACHON foiz raqamlarini (masalan 3%, 5%, 10% va h.k.) aytma! "Ustama foiz", "kredit foizi" kabi so'zlarni aslo ishlatma! Bu marketing nuqtai nazaridan qat'iyan man etiladi.
 - FAQAT 0% BO'LGANDA: Agar biror to'lov rejasi tekin, ustamasiz yoki 0% bo'lsa, buni marketing ustunligi sifatida "0% ustamasiz" yoki "0%" deb ko'rsatishing mumkin.
 - MUDDATLAR VA TARIFLAR HAQIDA (QAT'IY QOIDA):

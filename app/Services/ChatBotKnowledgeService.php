@@ -317,6 +317,52 @@ class ChatBotKnowledgeService
                 }
             }
 
+            if (Schema::hasTable('split_contracts')) {
+                $openContracts = \App\Models\SplitContract::query()
+                    ->where('user_id', $user->id)
+                    ->whereIn('status', [
+                        \App\Models\SplitContract::STATUS_PENDING,
+                        \App\Models\SplitContract::STATUS_ACTIVE,
+                        \App\Models\SplitContract::STATUS_OVERDUE,
+                    ])
+                    ->get();
+
+                if ($openContracts->isNotEmpty()) {
+                    $lines[] = sprintf(
+                        "- Ochiq nasiyalari: %d ta shartnoma, jami qoldiq qarz summasi: %s so'm.",
+                        $openContracts->count(),
+                        number_format((int) $openContracts->sum('remaining_amount'), 0, '.', ' ')
+                    );
+                } else {
+                    $lines[] = "- Ochiq nasiya shartnomalari yo'q (qarzdorlik yo'q).";
+                }
+            }
+
+            if (Schema::hasTable('split_installments')) {
+                $nextInstallment = \App\Models\SplitInstallment::query()
+                    ->where('user_id', $user->id)
+                    ->whereIn('status', [
+                        \App\Models\SplitInstallment::STATUS_PENDING,
+                        \App\Models\SplitInstallment::STATUS_OVERDUE,
+                    ])
+                    ->orderBy('due_at', 'asc')
+                    ->first();
+
+                if ($nextInstallment) {
+                    $dueAt = $nextInstallment->due_at ? \Carbon\Carbon::parse($nextInstallment->due_at) : null;
+                    $isOverdue = $nextInstallment->status === \App\Models\SplitInstallment::STATUS_OVERDUE || ($dueAt && $dueAt->isPast());
+                    $dueDate = $dueAt ? $dueAt->format('d.m.Y') : 'aniqlanmagan';
+                    $lines[] = sprintf(
+                        "- Keyingi eng yaqin to'lov: %s so'm, muddati: %s%s.",
+                        number_format((int) $nextInstallment->amount, 0, '.', ' '),
+                        $dueDate,
+                        $isOverdue ? " (DIQQAT: to'lov muddati o'tgan!)" : ""
+                    );
+                } else {
+                    $lines[] = "- Keyingi to'lov kutilmayapti (hamma to'lovlar qilingan yoki faol to'lov yo'q).";
+                }
+            }
+
             // Limitni oshirish omillari — computeLimit formulasidan
             $lines[] = "LIMITNI OSHIRISH OMILLARI (mijoz so'rasa shulardan mosini tushuntir):";
             $lines[] = "- Har bir yakunlangan pullik buyurtma limitni oshiradi (eng kuchli omil).";
