@@ -183,6 +183,10 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
             Route::put('/sellers/{seller}', [AdminController::class, 'updateSeller'])->name('sellers.update');
             Route::patch('/sellers/{seller}/reject', [\App\Http\Controllers\A122\SellerController::class, 'reject'])->name('sellers.reject');
             Route::patch('/sellers/{seller}/unblock', [\App\Http\Controllers\A122\SellerController::class, 'unblock'])->name('sellers.unblock');
+            Route::post('/sellers/{seller}/block', [\App\Http\Controllers\Boshqaruv\AccountRestrictionController::class, 'blockSeller'])->name('sellers.block');
+            Route::post('/sellers/{seller}/visibility', [\App\Http\Controllers\Boshqaruv\AccountRestrictionController::class, 'sellerVisibility'])->name('sellers.visibility');
+            Route::post('/sellers/{seller}/payout-freeze', [\App\Http\Controllers\Boshqaruv\AccountRestrictionController::class, 'freezeSeller'])->name('sellers.payout-freeze');
+            Route::post('/sellers/{seller}/balance-adjust', [\App\Http\Controllers\Boshqaruv\AccountRestrictionController::class, 'adjustSeller'])->name('sellers.balance-adjust');
             Route::post('/sellers/{seller}/warn', [\App\Http\Controllers\A122\SellerController::class, 'warn'])->name('sellers.warn');
             Route::post('/sellers/{seller}/reset-password', [\App\Http\Controllers\A122\SellerController::class, 'resetPassword'])->name('sellers.reset-password');
             Route::get('/sellers/{seller}/staff', [AdminController::class, 'sellerStaffData'])->name('sellers.staff.data');
@@ -210,6 +214,9 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
             Route::put('/couriers/{courier}', [AdminController::class, 'updateCourier'])->name('couriers.update');
             Route::patch('/couriers/{courier}/reject', [\App\Http\Controllers\A122\CourierController::class, 'reject'])->name('couriers.reject');
             Route::patch('/couriers/{courier}/unblock', [\App\Http\Controllers\A122\CourierController::class, 'unblock'])->name('couriers.unblock');
+            Route::post('/couriers/{courier}/block', [\App\Http\Controllers\Boshqaruv\AccountRestrictionController::class, 'blockCourier'])->name('couriers.block');
+            Route::post('/couriers/{courier}/payout-freeze', [\App\Http\Controllers\Boshqaruv\AccountRestrictionController::class, 'freezeCourier'])->name('couriers.payout-freeze');
+            Route::post('/couriers/{courier}/balance-adjust', [\App\Http\Controllers\Boshqaruv\AccountRestrictionController::class, 'adjustCourier'])->name('couriers.balance-adjust');
             Route::post('/couriers/{courier}/warn', [\App\Http\Controllers\A122\CourierController::class, 'warn'])->name('couriers.warn');
             Route::post('/couriers/{courier}/reset-password', [\App\Http\Controllers\A122\CourierController::class, 'resetPassword'])->name('couriers.reset-password');
             Route::post('/couriers/{courier}/documents', [\App\Http\Controllers\A122\CourierController::class, 'uploadDocument'])->name('couriers.documents.store');
