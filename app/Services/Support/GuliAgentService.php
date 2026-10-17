@@ -323,6 +323,7 @@ class GuliAgentService
             }
         }
 
+        return false;
     }
 
     /**

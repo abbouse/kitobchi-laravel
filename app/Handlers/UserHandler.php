@@ -285,6 +285,57 @@ class UserHandler
         } catch (\Throwable) {}
     }
 
+    public static function handleFeedbackCallback(Nutgram $bot): void
+    {
+        $parts = explode(':', $bot->callbackQuery()?->data ?? '');
+        $ticketId = (int) ($parts[1] ?? 0);
+        $value = $parts[2] ?? ''; // 'good' or 'bad'
+        $cid = $bot->chatId();
+
+        $ticket = SessionService::getTicket($ticketId);
+        if (!$ticket || (int) $ticket->user_id !== $cid) {
+            $bot->answerCallbackQuery(text: "Xatolik!");
+            return;
+        }
+
+        if ($ticket->feedback) {
+            $bot->answerCallbackQuery(text: "Siz allaqachon baholagansiz!");
+            return;
+        }
+
+        $rating = $value === 'good' ? 5 : 1;
+
+        SessionService::updateTicket($ticketId, [
+            'rating' => $rating,
+            'status' => SessionService::STATUS_RATED,
+            'feedback' => $value,
+            'feedback_at' => now(),
+        ]);
+
+        if ($ticket->operator_id) {
+            SessionService::addRating((int) $ticket->operator_id, $rating);
+            $icon = $value === 'good' ? '👍 Yaxshi' : '👎 Yomon';
+            try {
+                $bot->sendMessage(
+                    "📊 <b>Mijoz fikri:</b> {$icon}\n🎫 Ticket #{$ticketId}\n👤 " .
+                    SessionService::formatUser($ticket->name, $ticket->username, $ticket->user_id),
+                    chat_id: (int) $ticket->operator_id,
+                    parse_mode: 'HTML'
+                );
+            } catch (\Throwable) {}
+        }
+
+        $bot->answerCallbackQuery(text: "Rahmat!");
+
+        $thankText = $value === 'good'
+            ? "✅ <b>Bahoyingiz uchun tashakkur!</b>\nSizga yordam bera olganimizdan xursandmiz 😊"
+            : "✅ <b>Fikringiz uchun tashakkur!</b>\nXizmatimiz sifatini yaxshilash ustida ishlaymiz 🙏";
+
+        try {
+            $bot->editMessageText($thankText, parse_mode: 'HTML');
+        } catch (\Throwable) {}
+    }
+
     public static function handleRatingCallback(Nutgram $bot): void
     {
         $parts    = explode(':', $bot->callbackQuery()->data);

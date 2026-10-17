@@ -95,7 +95,7 @@ class ProductImageUrls
         return ProductImageVariantGenerator::candidateVariantPaths($path, $variant);
     }
 
-    private static function isExternal(string $path): bool
+    public static function isExternal(string $path): bool
     {
         return str_starts_with($path, 'http://')
             || str_starts_with($path, 'https://')

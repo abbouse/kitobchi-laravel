@@ -166,6 +166,16 @@ class OpenAIService
                     'attempt' => $attempt,
                     'error'   => $e->getMessage(),
                 ]);
+
+                // Agar rasm yuklab olishda 404 yoki boshqa xato bo'lsa, keyingi urinishda rasmlarni olib tashlab, matnli tahlil qilishga o'tamiz
+                if (str_contains(strtolower($e->getMessage()), 'downloading file') || str_contains(strtolower($e->getMessage()), 'image')) {
+                    $messages = array_map(function ($m) {
+                        if (is_array($m['content'] ?? null)) {
+                            $m['content'] = array_values(array_filter($m['content'], fn ($item) => ($item['type'] ?? '') !== 'image_url'));
+                        }
+                        return $m;
+                    }, $messages);
+                }
             }
         }
 

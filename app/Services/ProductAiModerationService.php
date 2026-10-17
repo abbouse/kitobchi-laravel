@@ -13,6 +13,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class ProductAiModerationService
@@ -415,6 +416,13 @@ class ProductAiModerationService
     {
         return collect($images)
             ->map(function (string $image) {
+                if (! ProductImageUrls::isExternal($image)) {
+                    $clean = ProductImageUrls::normalizeStoragePath($image);
+                    if ($clean === '' || ! Storage::disk('public')->exists($clean)) {
+                        return null;
+                    }
+                }
+
                 $url = ProductImageUrls::originalUrl($image);
 
                 return is_string($url) && str_starts_with($url, '/') ? url($url) : $url;
