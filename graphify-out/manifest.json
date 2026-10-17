@@ -432,9 +432,9 @@
     "semantic_hash": "dfe9d0058501a2aae5d42777bbae4df5"
   },
   "app/Handlers/UserHandler.php": {
-    "mtime": 1791585448.5292134,
-    "seen": 1791651444.3800251,
-    "ast_hash": "a18c4ab97af2589d8337a51dc63e6a78",
+    "mtime": 1792242592.2630658,
+    "seen": 1792242681.650401,
+    "ast_hash": "772be7e46000230e5d8cc3f96b02ec4a",
     "semantic_hash": ""
   },
   "app/Helpers/MenuHelper.php": {
@@ -888,9 +888,9 @@
     "semantic_hash": "d80f98d9e8f4505adc79386a432bc801"
   },
   "app/Http/Controllers/Api/SearchController.php": {
-    "mtime": 1790707664.9701493,
-    "seen": 1790784344.256811,
-    "ast_hash": "9b064aed46e34ee677dd1187639fed6d",
+    "mtime": 1792166164.815145,
+    "seen": 1792166244.280318,
+    "ast_hash": "0ea20d44176de145c9e22bc58eb2242a",
     "semantic_hash": ""
   },
   "app/Http/Controllers/Api/Seller/BanLogController.php": {
@@ -1344,9 +1344,9 @@
     "semantic_hash": ""
   },
   "app/Jobs/SendMessagePushNotification.php": {
-    "mtime": 1790701433.28604,
-    "seen": 1790784344.256864,
-    "ast_hash": "784c6eb0ea1f0a3539834596d614ac9c",
+    "mtime": 1792170670.2637982,
+    "seen": 1792170792.121494,
+    "ast_hash": "0e04329686bfc42950a835df28acad33",
     "semantic_hash": ""
   },
   "app/Jobs/SyncProductVectorJob.php": {
@@ -2340,10 +2340,10 @@
     "semantic_hash": ""
   },
   "app/Services/ChatBotKnowledgeService.php": {
-    "mtime": 1790601470.7078893,
-    "seen": 1790601768.517463,
-    "ast_hash": "7f57df2de8ca5e605613d78035081da5",
-    "semantic_hash": "7f57df2de8ca5e605613d78035081da5"
+    "mtime": 1792241894.6301942,
+    "seen": 1792242012.57587,
+    "ast_hash": "2d07ea3d5f4fdbf4262efbfa022389ad",
+    "semantic_hash": ""
   },
   "app/Services/CollectionAiAdvisorService.php": {
     "mtime": 1790601470.6501975,
@@ -2496,9 +2496,9 @@
     "semantic_hash": "d74b7a24d9ecfaa5ff09493f2f8e12e5"
   },
   "app/Services/OpenAIService.php": {
-    "mtime": 1790601470.6448183,
-    "seen": 1790601768.517476,
-    "ast_hash": "0455c32abbac2510bc70ea3a9eae5f09",
+    "mtime": 1792242656.257567,
+    "seen": 1792242681.650639,
+    "ast_hash": "12236b7b54eebfb2cd1144390ffd564b",
     "semantic_hash": ""
   },
   "app/Services/OrderFinancialSnapshotService.php": {
@@ -2604,9 +2604,9 @@
     "semantic_hash": "d4db71f2dfe30c82cc58aa3aa2d44d3a"
   },
   "app/Services/ProductAiModerationService.php": {
-    "mtime": 1790601470.6834912,
-    "seen": 1790601768.517486,
-    "ast_hash": "e11d68b327970a464bc2d45a69823b13",
+    "mtime": 1792242645.1463137,
+    "seen": 1792242681.65065,
+    "ast_hash": "112959add8847e99ea9899bef2368f07",
     "semantic_hash": ""
   },
   "app/Services/ProductModerationPolicy.php": {
@@ -2760,9 +2760,9 @@
     "semantic_hash": "08d145991e6f93f0093d3cceb35e1bd7"
   },
   "app/Services/SessionService.php": {
-    "mtime": 1792007890.094898,
-    "seen": 1792008400.996372,
-    "ast_hash": "c99cd01450c7ec9e1b576a99c3b55fa2",
+    "mtime": 1792164085.8791595,
+    "seen": 1792166244.2805388,
+    "ast_hash": "d379f2898ab62e902ed235c6e7b1ac3d",
     "semantic_hash": ""
   },
   "app/Services/SmsService.php": {
@@ -2808,9 +2808,9 @@
     "semantic_hash": "301745eb2458d0ab06f0fcb05d51341d"
   },
   "app/Services/SupportChatBridgeService.php": {
-    "mtime": 1791585448.4918425,
-    "seen": 1791651444.380299,
-    "ast_hash": "83986b94f1b2619fae3465230a757cf1",
+    "mtime": 1792243165.7247164,
+    "seen": 1792243275.3583128,
+    "ast_hash": "f53783125ef0a96d2007393951f2c42e",
     "semantic_hash": ""
   },
   "app/Services/TelegramOidcService.php": {
@@ -2862,9 +2862,9 @@
     "semantic_hash": "6b5e3ebc2a370cd908e89c23192b3242"
   },
   "app/Support/ProductImageUrls.php": {
-    "mtime": 1790601470.6186478,
-    "seen": 1790601768.51751,
-    "ast_hash": "459a24f56bc55d4a0479305427a37549",
+    "mtime": 1792242624.2774436,
+    "seen": 1792242681.650688,
+    "ast_hash": "129506fb97331661c1ff573d424464c8",
     "semantic_hash": ""
   },
   "app/Support/ProductImageVariantGenerator.php": {
@@ -2946,10 +2946,10 @@
     "semantic_hash": "d18593472c5e35d8ab5add4240fc95f6"
   },
   "composer.json": {
-    "mtime": 1787251794.3374667,
-    "seen": 1787659299.0204139,
-    "ast_hash": "122dded9cb6e3299e8635d8e24f6f414",
-    "semantic_hash": "122dded9cb6e3299e8635d8e24f6f414"
+    "mtime": 1792242600.7688694,
+    "seen": 1792242681.650698,
+    "ast_hash": "0e3b181e62faba456b1db850e8451a94",
+    "semantic_hash": ""
   },
   "config/app.php": {
     "mtime": 1790601471.279749,
@@ -3000,8 +3000,8 @@
     "semantic_hash": "b7b09d68f8893547a7e5fbd5207fc8fa"
   },
   "config/fcm.php": {
-    "mtime": 1792007785.5079837,
-    "seen": 1792008400.996407,
+    "mtime": 1792241633.930928,
+    "seen": 1792241651.095576,
     "ast_hash": "5ba2ac32c04d161d99057e23212f34b1",
     "semantic_hash": "5ba2ac32c04d161d99057e23212f34b1"
   },
@@ -4836,9 +4836,9 @@
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/Settings.tsx": {
-    "mtime": 1792002125.8059351,
-    "seen": 1792004873.576694,
-    "ast_hash": "7ae76b24bd0350fcb0cd2fbf186523ae",
+    "mtime": 1792008638.5611265,
+    "seen": 1792166244.280787,
+    "ast_hash": "ae8f9a6744685424e88a24449abe4c17",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/Shikoyatlar.tsx": {
@@ -7590,9 +7590,9 @@
     "semantic_hash": ""
   },
   "app/Http/Controllers/Boshqaruv/SupportInboxController.php": {
-    "mtime": 1792003241.5552516,
-    "seen": 1792004873.576257,
-    "ast_hash": "7a69867b2c73903e92555928413355bf",
+    "mtime": 1792172136.8125303,
+    "seen": 1792172157.2321332,
+    "ast_hash": "54990a9480b450fbb7a2ad9b25328045",
     "semantic_hash": ""
   },
   "app/Jobs/GenerateOrderAiBuyerWishJob.php": {
@@ -7686,9 +7686,9 @@
     "semantic_hash": ""
   },
   "app/Services/Support/SupportInboxService.php": {
-    "mtime": 1792007941.8362246,
-    "seen": 1792008400.9963799,
-    "ast_hash": "937204c1c12041077cc9f1c59f58ce17",
+    "mtime": 1792170269.9214702,
+    "seen": 1792170350.585886,
+    "ast_hash": "b141ee1fe050bfbc584efe19ddb88d96",
     "semantic_hash": ""
   },
   "app/Services/UserDeviceService.php": {
@@ -7734,9 +7734,9 @@
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/SupportInbox.tsx": {
-    "mtime": 1792008373.0786111,
-    "seen": 1792008400.996608,
-    "ast_hash": "01c1ded028171fb8d30bc18f1f4b3d32",
+    "mtime": 1792164056.997608,
+    "seen": 1792166244.280791,
+    "ast_hash": "7d69f1065fa1f534bdff7bfcfba13e96",
     "semantic_hash": ""
   },
   "resources/js/boshqaruv/pages/SupportKpi.tsx": {
@@ -7878,15 +7878,33 @@
     "semantic_hash": ""
   },
   "app/Services/Support/GuliAgentService.php": {
-    "mtime": 1792007863.7866132,
-    "seen": 1792008400.996379,
-    "ast_hash": "165bfc20779180d71d368f667019c401",
+    "mtime": 1792243255.2024164,
+    "seen": 1792243275.358311,
+    "ast_hash": "060f1c73928391ef4441851fe602d849",
     "semantic_hash": ""
   },
   "database/migrations/2026_10_15_010000_add_ai_fields_to_bot_tickets_table.php": {
     "mtime": 1792007805.5280201,
     "seen": 1792008400.996535,
     "ast_hash": "e851a7708e32230a0b41828ab676bd53",
+    "semantic_hash": ""
+  },
+  "app/Jobs/ProcessGuliFollowUp.php": {
+    "mtime": 1792171563.3571336,
+    "seen": 1792171637.881441,
+    "ast_hash": "f06bc479a834d4315d49ccbfe9b620e5",
+    "semantic_hash": ""
+  },
+  "app/Jobs/ProcessGuliGreeting.php": {
+    "mtime": 1792162984.3855832,
+    "seen": 1792166244.280374,
+    "ast_hash": "fa9355b86e0b878687496164474a7ce8",
+    "semantic_hash": ""
+  },
+  "app/Jobs/ProcessGuliAutoClose.php": {
+    "mtime": 1792171544.0207107,
+    "seen": 1792171637.881439,
+    "ast_hash": "91f47d5ee9b18eedfe95aba8312964fa",
     "semantic_hash": ""
   }
 }
