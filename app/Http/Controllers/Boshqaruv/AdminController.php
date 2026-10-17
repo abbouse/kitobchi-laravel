@@ -185,7 +185,16 @@ class AdminController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('boshqaruv.dashboard'));
+        // Sessiyadagi "intended" manzil sayt (kitobchi.com/...) sahifasi bo'lishi
+        // mumkin — admin faqat boshqaruv ichidagi sahifaga qaytariladi.
+        $intended = (string) $request->session()->pull('url.intended', '');
+        $path = '/'.ltrim((string) parse_url($intended, PHP_URL_PATH), '/');
+        $sameHost = $intended !== '' && (parse_url($intended, PHP_URL_HOST) === null || parse_url($intended, PHP_URL_HOST) === $request->getHost());
+        if ($sameHost && str_starts_with($path, '/boshqaruv') && ! str_starts_with($path, '/boshqaruv/login') && ! str_contains($path, '/api/') && ! str_ends_with($path, '/data')) {
+            return redirect()->to($intended);
+        }
+
+        return redirect()->route('boshqaruv.dashboard');
     }
 
     public function logout(Request $request): \Illuminate\Http\RedirectResponse

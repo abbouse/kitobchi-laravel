@@ -20,6 +20,10 @@ return Application::configure(basePath: dirname(__DIR__))
         ['middleware' => ['api', 'auth:user,seller,courier']],
     )
     ->withMiddleware(function (Middleware $middleware) {
+        // Kirgan admin /boshqaruv/login ga kirsa — sayt bosh sahifasiga emas, panelga
+        $middleware->redirectUsersTo(fn (\Illuminate\Http\Request $request) => $request->is('boshqaruv', 'boshqaruv/*')
+            ? route('boshqaruv.dashboard')
+            : '/');
         $middleware->web(append: [
             \App\Http\Middleware\SetLandingLocale::class,
         ]);

@@ -21,9 +21,14 @@ class AuthenticatePanel
         // a122.php endi ulanmaydi), shuning uchun bu yerda faqat boshqaruv.login'ga
         // yo'naltiramiz — 'admin.login' route'i endi mavjud emas.
         if (! Auth::guard('panel')->check()) {
-            return redirect()
-                ->route('boshqaruv.login')
-                ->with('error', "Iltimos, tizimga kiring.");
+            // Ochilmoqchi bo'lgan panel sahifasi eslab qolinadi — kirgandan keyin aynan shu sahifaga qaytadi
+            if ($request->isMethod('GET') && ! $request->expectsJson()) {
+                return redirect()->guest(route('boshqaruv.login'))->with('error', "Iltimos, tizimga kiring.");
+            }
+
+            return $request->expectsJson()
+                ? response()->json(['message' => 'Sessiya tugagan. Qayta kiring.'], 401)
+                : redirect()->route('boshqaruv.login')->with('error', "Iltimos, tizimga kiring.");
         }
 
         $admin = Auth::guard('panel')->user();
