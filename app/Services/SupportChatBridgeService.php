@@ -156,6 +156,17 @@ class SupportChatBridgeService
             return;
         }
 
+        // Guli tomonidan suhbat yakunlanganda (ayniqsa mijoz "kerakmas/bo'ldi" deganida yoki minnatdorchilikda)
+        // chat ichiga ortiqcha ikkinchi sun'iy xabar tashlanmaydi, faqat suhbat holati (ConversationUpdated) yangilanadi.
+        if (str_starts_with($reason, 'guli_')) {
+            $freshConversation = $conversation->fresh();
+            $this->safeBroadcast(
+                event: new ConversationUpdated($freshConversation, (int) $conversation->user_id, 'user'),
+                context: ['ticket_id' => $ticketId, 'conversation_id' => $conversation->id]
+            );
+            return;
+        }
+
         $senderSeller = $conversation->shop;
         $closeText = "Murojaatingiz yakunlandi. Yordamimiz foydali bo'ldimi? Iltimos, quyida baholang.";
 

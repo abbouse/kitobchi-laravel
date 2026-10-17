@@ -73,12 +73,25 @@ class GuliAgentService
             return $transferMsg;
         }
 
-        // Fast intent check — agar mijoz "yo'q", "rahmat", "boshqa savolim yo'q" deb yakunlayotgan bo'lsa
-        if ($this->isClosingIntent($userText)) {
+        // Fast intent check — agar mijoz suhbatni tugatayotgan bo'lsa:
+        $closingIntent = $this->classifyClosingIntent($userText);
+        if ($closingIntent === 'declined') {
+            // Mijoz "kerakmas", "yo'q", "bo'ldi", "boshqa savol yo'q" dedi — davom ettirishni xohlamayapti va rahmat aytmagan.
+            // Shuning uchun hech qanday "Arzimaydi!" yoki ortiqcha xabar yozmasdan, shunchaki suhbat toza yopiladi.
+            try {
+                SessionService::closeTicket((int) $ticket->id, 'guli_user_declined');
+            } catch (\Throwable) {
+                $ticket->update(['status' => SessionService::STATUS_CLOSED, 'closed_at' => now()]);
+            }
+            return null;
+        }
+
+        if ($closingIntent === 'gratitude') {
+            // Mijoz "rahmat", "katta rahmat" deb minnatdorchilik bildirdi — faqat bitta lo'nda samimiy javob
             $closingMsg = "Arzimaydi! Sizga yordam bera olganimdan mamnunman 😊 Kuningiz xayrli va maroqli o'tsin! ✨\nEzgu tilaklar bilan Guli 🌸";
             $this->deliverReply($ticket, $closingMsg);
             try {
-                SessionService::closeTicket((int) $ticket->id, 'guli_user_finished');
+                SessionService::closeTicket((int) $ticket->id, 'guli_user_thanked');
             } catch (\Throwable) {
                 $ticket->update(['status' => SessionService::STATUS_CLOSED, 'closed_at' => now()]);
             }
@@ -216,17 +229,23 @@ class GuliAgentService
     }
 
     /**
-     * Mijoz suhbatni tugatayotganini (minnatdorchilik, xayrlashuv, boshqa savol yo'qligi) aniqlash.
-     * Agar mijoz shunchaki "rahmat", "katta rahmat", "tushundim", "bo'ldi" desa — darhol suhbat yopiladi.
+     * Mijoz suhbatni tugatayotganini aniqlash.
+     *
+     * @return 'declined'|'gratitude'|null
+     *   - 'declined'  => mijoz "kerakmas", "yo'q", "bo'ldi", "boshqa savolim yo'q" deb rad etyapti
+     *                    (hech qanday qo'shimcha xabar yozmasdan shunchaki suhbat yopiladi).
+     *   - 'gratitude' => mijoz "rahmat", "katta rahmat", "spasibo" deb minnatdorchilik bildirdi
+     *                    (bitta muloyim xotima bilan yopiladi).
+     *   - null        => davomiy savol yoki murojaat.
      */
-    protected function isClosingIntent(string $text): bool
+    protected function classifyClosingIntent(string $text): ?string
     {
         // Apostroflarni (bo'ldi -> boldi, yo'q -> yoq) so'zdan ajratmay tozalaymiz
         $clean = str_replace(["'", '’', 'ʻ', '`', '‘'], '', mb_strtolower(trim($text)));
 
         // 1. Agar savol belgisi bo'lsa yoki savol so'zlari qatnashsa — bu tugatish EMAS, davomiy savol
         if (str_contains($clean, '?')) {
-            return false;
+            return null;
         }
 
         $questionWords = [
@@ -238,7 +257,7 @@ class GuliAgentService
         ];
         foreach ($questionWords as $qw) {
             if (preg_match('/(?:\b|^)' . preg_quote($qw, '/') . '(?:\b|$)/u', $clean)) {
-                return false;
+                return null;
             }
         }
 
@@ -247,83 +266,87 @@ class GuliAgentService
         $stripped = trim(preg_replace('/\s+/u', ' ', $stripped));
 
         if ($stripped === '') {
-            return false;
+            return null;
         }
 
-        // To'g'ridan-to'g'ri mos keluvchi frazalar ro'yxati (apostroflar tozalangan)
-        $exactPhrases = [
+        // 1. Aniq rad etish / ortiqcha yordam kerakmas / tugatish frazalari:
+        $declinedPhrases = [
             // O'zbekcha (Lotin)
-            'yoq', 'yoq rahmat', 'yoq raxmat',
+            'kerakmas', 'keremas', 'kerak emas', 'shart emas', 'shartmas', 'keragi yoq',
+            'yoq', 'yoq rahmat', 'yoq raxmat', 'yoq kerakmas', 'yoq keremas', 'yoq shartmas',
+            'yoq boshqa savolim yoq', 'boshqa savolim yoq', 'boshqa savol yoq', 'savol yoq',
+            'yoq savol yoq', 'yoq boshqa savol yoq', 'yoq rahmat boshqa savol yoq',
+            'boldi', 'boldi rahmat', 'boldi raxmat', 'boldi tushundim', 'boldi shu',
+            'hal boldi', 'muammo hal boldi', 'tushundim', 'tushunarli', 'tushundim boldi',
+            'barchasi tushunarli', 'hammasi tushunarli', 'tushunarli boldi',
+            'shart emas rahmat', 'kerak emas rahmat', 'yoq rahmat boldi',
+            // O'zbekcha (Kirill)
+            'керакмас', 'керак эмас', 'шарт эмас', 'шартмас', 'кераги йўқ',
+            'йўқ', 'йоқ', 'йўқ раҳмат', 'йоқ рахмат', 'йўқ керакмас',
+            'бўлди', 'болди', 'бўлди раҳмат', 'болди рахмат', 'бўлди тушундим',
+            'бошқа савол йўқ', 'савол йўқ', 'ҳал бўлди', 'хал болди',
+            'тушундим', 'тушунарли', 'ҳаммаси тушунарли',
+            // Ruscha
+            'нет', 'не надо', 'нет спасибо', 'не нужно', 'хватит', 'достаточно',
+            'вопросов нет', 'нет вопросов', 'все понятно', 'всё понятно', 'понятно', 'ясно',
+            'понял', 'поняла',
+        ];
+
+        if (in_array($stripped, $declinedPhrases, true)) {
+            return 'declined';
+        }
+
+        // 2. Sof minnatdorchilik frazalari (mijoz samimiy rahmat aytgan):
+        $gratitudePhrases = [
+            // O'zbekcha (Lotin)
             'rahmat', 'raxmat', 'katta rahmat', 'kotta raxmat', 'katta raxmat', 'kotta rahmat',
             'rahmat sizga', 'raxmat sizga', 'rahmat kattakon', 'kattakon rahmat', 'ming rahmat',
-            'judayam katta rahmat', 'juda katta rahmat',
-            'yoq boshqa savolim yoq', 'boshqa savolim yoq', 'boshqa savol yoq', 'savol yoq',
-            'yoq savol yoq', 'yoq boshqa savol yoq',
-            'hal boldi', 'muammo hal boldi',
-            'tushundim', 'tushunarli', 'tushundim rahmat', 'tushunarli rahmat', 'tushundim raxmat', 'tushunarli raxmat',
-            'shart emas', 'kerak emas', 'barchasi tushunarli', 'hammasi tushunarli', 'tushunarli boldi',
-            'arzimaydi', 'boldi', 'boldi rahmat', 'boldi raxmat', 'boldi tushundim',
-            'sog boling', 'salomat boling', 'charchamang', 'xayr', 'hayr', 'mayli xayr', 'mayli rahmat', 'mayli raxmat',
-            'yaxshi qoling', 'hop rahmat', 'xop rahmat', 'xop raxmat', 'ok rahmat', 'okey rahmat', 'yaxshi rahmat',
-            'tashakkur', 'minnatdorman', 'gap yoq',
-
+            'judayam katta rahmat', 'juda katta rahmat', 'tashakkur', 'minnatdorman', 'gap yoq',
+            'sog boling', 'salomat boling', 'charchamang', 'xayr', 'hayr', 'yaxshi qoling',
             // O'zbekcha (Kirill)
             'рахмат', 'раҳмат', 'катта рахмат', 'катта раҳмат', 'рахmat сизга', 'раҳмат сизга', 'минг раҳмат',
-            'тушундим', 'тушунарли', 'тушундим рахмат', 'тушунарли раҳмат', 'тушундим раҳмат', 'ҳаммаси тушунарли',
-            'бўлди', 'болди', 'бўлди рахмат', 'болди рахмат', 'ҳал бўлди', 'хал болди',
-            'йўқ', 'йоқ', 'йўқ раҳмат', 'йоқ рахмат', 'бошқа савол йўқ', 'савол йўқ',
-            'соғ бўлинг', 'саломат бўлинг', 'чарчаманг', 'хайр', 'ташаккур',
-
+            'ташаккур', 'соғ бўлинг', 'саломат бўлинг', 'чарчаманг', 'хайр',
             // Ruscha
-            'нет', 'нет спасибо', 'спасибо', 'большое спасибо', 'спасибо большое', 'спасибо вам',
-            'огромное спасибо', 'благодарю', 'все понятно', 'всё понятно', 'понятно', 'ясно',
-            'понял', 'поняла', 'понятно спасибо', 'вопросов нет', 'нет вопросов', 'пока',
-            'до свидания', 'всего доброго', 'хорошего дня', 'спасибо за помощь',
+            'спасибо', 'большое спасибо', 'спасибо большое', 'спасибо вам', 'огромное спасибо',
+            'благодарю', 'до свидания', 'всего доброго', 'хорошего дня',
             'spasibo', 'spasibo bolshoe', 'bolshoe spasibo', 'spasibo vam',
         ];
 
-        if (in_array($stripped, $exactPhrases, true)) {
-            return true;
+        if (in_array($stripped, $gratitudePhrases, true)) {
+            return 'gratitude';
         }
 
-        // Agar so'zlar soni <= 6 bo'lsa va faqat minnatdorchilik + hurmat/kirish so'zlaridan iborat bo'lsa
+        // 3. Kalit so'zlar bo'yicha tahlil (agar 1–4 so'zdan iborat bo'lsa):
         $words = explode(' ', $stripped);
-        if (count($words) <= 6) {
-            $closingKeywords = [
-                'rahmat', 'raxmat', 'tashakkur', 'minnatdorman', 'tushundim', 'tushunarli',
-                'arzimaydi', 'boldi', 'charchamang', 'xayr', 'hayr',
-                'sog', 'salomat', 'boling', 'qoling', 'yoq',
-                'spasibo', 'blagodaryu', 'ponyatno', 'yasno', 'ponyal', 'ponyala',
-                'рахмат', 'раҳмат', 'тушундим', 'тушунарли', 'болди', 'бўлди', 'ташаккур', 'соғ', 'саломат', 'бўлинг', 'йўқ', 'йоқ',
-                'спасибо', 'благодарю', 'понятно', 'ясно', 'понял', 'поняла',
+        if (count($words) <= 4) {
+            $declinedKeywords = [
+                'kerakmas', 'keremas', 'shartmas', 'yoq', 'boldi',
+                'керакмас', 'шартмас', 'йўқ', 'йоқ', 'бўлди', 'болди',
+                'нет',
             ];
-            $fillerWords = [
-                'aka', 'uka', 'opa', 'singil', 'sizga', 'sizdan', 'ham', 'xam', 'va', 'endi',
-                'ha', 'xa', 'hop', 'xop', 'mayli', 'yaxshi', 'ok', 'okey', 'da',
-                'kotta', 'katta', 'juda', 'judayam', 'ming', 'kattakon', 'barchasi', 'hammasi',
-                'siz', 'uchun', 'albatta', 'boshqa', 'savolim', 'savol',
-                'bolshoe', 'ogromnoe', 'vam', 'za', 'pomosh',
-                'вам', 'большое', 'огромное', 'все', 'всё', 'да', 'ладно', 'хорошо', 'за', 'помощь', 'вопросов', 'нет',
-            ];
-
-            $hasClosing = false;
-            $allMeaningfulAreClosing = true;
-
             foreach ($words as $w) {
-                if (in_array($w, $closingKeywords, true)) {
-                    $hasClosing = true;
-                } elseif (! in_array($w, $fillerWords, true)) {
-                    $allMeaningfulAreClosing = false;
-                    break;
+                if (in_array($w, $declinedKeywords, true)) {
+                    return 'declined';
                 }
             }
 
-            if ($hasClosing && $allMeaningfulAreClosing) {
-                return true;
+            $gratitudeKeywords = [
+                'rahmat', 'raxmat', 'tashakkur', 'minnatdorman', 'spasibo', 'blagodaryu',
+                'рахмат', 'раҳмат', 'ташаккур', 'спасибо', 'благодарю',
+            ];
+            foreach ($words as $w) {
+                if (in_array($w, $gratitudeKeywords, true)) {
+                    return 'gratitude';
+                }
             }
         }
 
-        return false;
+        return null;
+    }
+
+    protected function isClosingIntent(string $text): bool
+    {
+        return $this->classifyClosingIntent($text) !== null;
     }
 
     /**
@@ -1074,10 +1097,11 @@ OPERATORGA UZATISH:
 - Uzatishdan OLDIN mijozga muloyimlik bilan: "Hozir sizni mutaxassis xodimimizga ulayapman, biroz kuting 😊" de.
 
 SUHBATNI YOPISH VA MINNATDORCHILIK:
-- Agar mijoz shunchaki minnatdorchilik bildirsa (masalan: "rahmat", "katta rahmat", "raxmat sizga", "tushundim", "bo'ldi", "sog' bo'ling", "spasibo"), savoli yo'qligini aytsa yoki muammo hal bo'lganini tasdiqlasa:
-  PACHAKILASHIB O'TIRMA! "Boshqa savolingiz bormi?" deb qayta-qayta so'rama!
-  DARHOL `close_ticket` funksiyasini chaqir va suhbatni bir martada chiroyli xotima bilan yakunla (masalan: "Arzimaydi! Sizga yordam bera olganimdan mamnunman 😊 Maroqli mutolaa va xayrli kun tilayman! ✨\nEzgu tilaklar bilan Guli 🌸").
-- Agar mijoz "Yo'q", "Yoq", "Boshqa savolim yo'q", "Hal bo'ldi" desa ham: DARHOL `close_ticket` chaqir va suhbatni yakunla!
+- Agar mijoz davom ettirishni xohlamasa, yordam kerak emasligini aytsa (masalan: "kerakmas", "yo'q", "bo'ldi", "boshqa savolim yo'q", "shart emas", "hal bo'ldi"):
+  PACHAKILASHIB O'TIRMA! Hech qanday "Arzimaydi" deb yozma! Chunki mijoz rahmat aytmadi, shunchaki to'xtatmoqchi. DARHOL `close_ticket` chaqir va ortiqcha xabar yozmasdan suhbatni yop!
+- Agar mijoz samimiy minnatdorchilik bildirsa (masalan: "rahmat", "katta rahmat", "raxmat sizga", "spasibo"):
+  DARHOL `close_ticket` funksiyasini chaqir va bir martada qisqa samimiy xotima bilan yakunla (masalan: "Arzimaydi! Sizga yordam bera olganimdan mamnunman 😊 Xayrli kun tilayman! ✨\nEzgu tilaklar bilan Guli 🌸").
+- "Boshqa savolingiz bormi?" deb qayta-qayta so'rab pachakilashma!
 
 PLATFORMA BILIMLARI:
 {$knowledge}
