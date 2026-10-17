@@ -35,6 +35,8 @@ class SupportInboxTest extends TestCase
         Http::fake([
             'api.telegram.org/*' => Http::response(['ok' => true, 'result' => ['message_id' => 777]]),
         ]);
+        // Operator oqimi tekshiriladi — Guli (AI) javoblari alohida GuliAgentTest'da
+        Bus::fake([\App\Jobs\ProcessGuliSupportReply::class, \App\Jobs\ProcessGuliGreeting::class]);
         $this->agent = Admin::query()->forceCreate([
             'name' => 'Dilnoza', 'email' => 'd' . uniqid() . '@t.uz', 'password' => bcrypt('x'),
             'role' => 'support', 'permissions' => ['support'], 'is_active' => 1,
@@ -66,7 +68,8 @@ class SupportInboxTest extends TestCase
             ->assertJsonPath('message.from', 'agent')
             ->assertJsonPath('message.delivered', true);
 
-        Http::assertSent(fn ($request) => str_contains($request->url(), '/sendMessage') && $request['text'] === 'Hozir tekshiraman');
+        // Operator javobi ostiga imzo qo'shiladi (bo'sh qatorsiz)
+        Http::assertSent(fn ($request) => str_contains($request->url(), '/sendMessage') && $request['text'] === "Hozir tekshiraman\nEzgu tilaklar bilan Dilnoza");
 
         $fresh = BotTicket::query()->find($ticket->id);
         $this->assertSame('active', $fresh->status);
@@ -144,6 +147,7 @@ class SupportInboxTest extends TestCase
     {
         Event::fake([SupportInboxUpdated::class, SellerSupportTicketUpdated::class]);
         Bus::fake([SendSellerSupportPush::class]);
+        $signed = "1–3 ish kunida tushadi\nEzgu tilaklar bilan Dilnoza";
 
         $seller = $this->makeSeller(['shop_name' => 'Nur kitoblar']);
         Sanctum::actingAs($seller, ['*'], 'seller');
@@ -164,13 +168,13 @@ class SupportInboxTest extends TestCase
         $this->assertSame('answered', $ticket->status);
         $this->assertSame(1, (int) $ticket->seller_unread_count);
         $this->assertNotNull($ticket->first_response_at);
-        Event::assertDispatched(SellerSupportTicketUpdated::class, fn ($e) => $e->sellerId === $seller->id && $e->message['message'] === '1–3 ish kunida tushadi');
+        Event::assertDispatched(SellerSupportTicketUpdated::class, fn ($e) => $e->sellerId === $seller->id && $e->message['message'] === $signed);
         Bus::assertDispatched(SendSellerSupportPush::class, fn ($job) => $job->ticketId === $ticket->id && $job->kind === 'reply');
 
         // Do'kon ilovasida ichki eslatma ko'rinmaydi
         Sanctum::actingAs($seller, ['*'], 'seller');
         $messages = $this->getJson('/api/v1/seller/support-tickets/' . $ticketId)->assertOk()->json('data.messages');
-        $this->assertSame(['Pulim qachon tushadi?', '1–3 ish kunida tushadi'], array_column($messages, 'message'));
+        $this->assertSame(['Pulim qachon tushadi?', $signed], array_column($messages, 'message'));
 
         $this->api()->postJson('/boshqaruv/support/inbox/api/close', ['key' => 's-' . $seller->id])->assertOk();
         Bus::assertDispatched(SendSellerSupportPush::class, fn ($job) => $job->kind === 'closed');

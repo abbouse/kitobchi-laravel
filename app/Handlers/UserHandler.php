@@ -243,7 +243,10 @@ class UserHandler
         $saved = self::saveUserMessage($message, (int) $ticket->id, $cid);
         self::saveMediaAttachment($message, (int) $ticket->id, 'user', (int) $saved->id);
 
-        if ($ticket->status === SessionService::STATUS_QUEUE) {
+        // Guli (AI) javob beradigan suhbatda "operator tez orada javob beradi"
+        // degan ortiqcha xabar yuborilmaydi — Guli o'zi javob qaytaradi
+        $guliHandles = empty($ticket->admin_id) && empty($ticket->operator_id) && (bool) ($ticket->ai_enabled ?? true);
+        if ($ticket->status === SessionService::STATUS_QUEUE && ! $guliHandles) {
             $recent = \App\Models\BotTicketMessage::query()
                 ->where('ticket_id', $ticket->id)
                 ->where('sent_by', 'user')

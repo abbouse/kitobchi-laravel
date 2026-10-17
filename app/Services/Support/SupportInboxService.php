@@ -1216,9 +1216,49 @@ class SupportInboxService
         return [
             'range' => ['from' => $from->toDateString(), 'to' => $to->toDateString()],
             'totals' => $totals,
+            'guli' => $this->guliKpi($from, $to),
             'agents' => $agents,
             'bad_feedback' => $badCustomer->concat($badShop)->sortByDesc('at')->values()->take(20)->all(),
             'days' => $days,
+        ];
+    }
+
+    /**
+     * Guli (AI) ko'rsatkichlari: nechta suhbatga javob berdi, nechtasini
+     * o'zi hal qildi, nechtasini operatorga uzatdi va mijoz baholari.
+     */
+    public function guliKpi(Carbon $from, Carbon $to): array
+    {
+        $guliTicketIds = BotTicketMessage::query()
+            ->where('sent_by', 'operator')
+            ->whereNull('admin_id')
+            ->whereNull('operator_id')
+            ->where('message_type', '!=', 'note')
+            ->whereBetween('created_at', [$from, $to])
+            ->distinct()
+            ->pluck('ticket_id');
+
+        $handled = $guliTicketIds->count();
+        $tickets = BotTicket::query()->whereIn('id', $guliTicketIds);
+        $resolved = (clone $tickets)->whereNull('admin_id')->where('close_reason', 'like', 'guli_%')->count();
+        $transferred = (clone $tickets)->where(fn ($q) => $q->whereNotNull('admin_id')->orWhere('ai_enabled', false))->count();
+        $good = (clone $tickets)->whereNull('admin_id')->where('feedback', 'good')->count();
+        $bad = (clone $tickets)->whereNull('admin_id')->where('feedback', 'bad')->count();
+        $replies = BotTicketMessage::query()
+            ->where('sent_by', 'operator')->whereNull('admin_id')->whereNull('operator_id')
+            ->where('message_type', '!=', 'note')
+            ->whereBetween('created_at', [$from, $to])
+            ->count();
+
+        return [
+            'handled' => $handled,
+            'resolved' => $resolved,
+            'transferred' => $transferred,
+            'replies' => $replies,
+            'resolution_rate' => $handled > 0 ? (int) round($resolved * 100 / $handled) : null,
+            'good' => $good,
+            'bad' => $bad,
+            'satisfaction' => ($good + $bad) > 0 ? (int) round($good * 100 / ($good + $bad)) : null,
         ];
     }
 

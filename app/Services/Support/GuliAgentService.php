@@ -64,6 +64,13 @@ class GuliAgentService
             return null;
         }
 
+        // Media (rasm, ovoz, hujjat) — Guli ko'ra olmaydi: ovozga yozma javob
+        // so'raydi, rasm/hujjatni operatorga uzatadi (ko'pincha brak yoki chek)
+        $media = $this->mediaKind($userText);
+        if ($media !== null) {
+            return $this->handleMediaMessage($ticket, $media, $userText);
+        }
+
         // Sentiment detection — jiddiy g'azab/norozilik signallari
         if ($this->detectNegativeSentiment($userText)) {
             $summary = "Mijoz noroziligini bildirdi: " . mb_substr($userText, 0, 200);
@@ -75,6 +82,11 @@ class GuliAgentService
 
         // Fast intent check — agar mijoz suhbatni tugatayotgan bo'lsa:
         $closingIntent = $this->classifyClosingIntent($userText);
+        // "Yo'q" Guli bergan aniqlashtiruvchi savolga javob bo'lsa (masalan
+        // "buyurtma raqamingiz bormi?") — bu suhbatni tugatish EMAS
+        if ($closingIntent === 'declined' && ! $this->lastGuliMessageInvitesClosing($ticket)) {
+            $closingIntent = null;
+        }
         if ($closingIntent === 'declined') {
             // Mijoz "kerakmas", "yo'q", "bo'ldi", "boshqa savol yo'q" dedi — davom ettirishni xohlamayapti va rahmat aytmagan.
             // Shuning uchun hech qanday "Arzimaydi!" yoki ortiqcha xabar yozmasdan, shunchaki suhbat toza yopiladi.
@@ -88,13 +100,11 @@ class GuliAgentService
 
         if ($closingIntent === 'gratitude') {
             // Mijoz "rahmat", "katta rahmat" deb minnatdorchilik bildirdi — faqat bitta lo'nda samimiy javob
-            $closingMsg = "Arzimaydi! Sizga yordam bera olganimdan mamnunman 😊 Kuningiz xayrli va maroqli o'tsin! ✨\nEzgu tilaklar bilan Guli 🌸";
+            $closingMsg = $this->isRussian($userText)
+                ? "Пожалуйста! Рада была помочь 😊 Хорошего вам дня! ✨\nС наилучшими пожеланиями, Гули 🌸"
+                : "Arzimaydi! Sizga yordam bera olganimdan mamnunman 😊 Kuningiz xayrli va maroqli o'tsin! ✨\nEzgu tilaklar bilan Guli 🌸";
             $this->deliverReply($ticket, $closingMsg);
-            try {
-                SessionService::closeTicket((int) $ticket->id, 'guli_user_thanked');
-            } catch (\Throwable) {
-                $ticket->update(['status' => SessionService::STATUS_CLOSED, 'closed_at' => now()]);
-            }
+            $this->closeResolved($ticket, 'guli_user_thanked');
             return $closingMsg;
         }
 
@@ -139,27 +149,153 @@ class GuliAgentService
             $this->simulateTypingDelay(mb_strlen($userText));
 
             $reply = $this->executeAiLoop($ticket, $user, $messages, $tools);
-
-            if ($reply) {
-                $saved = $this->deliverReply($ticket, $reply);
-
-                // Smart follow-up: 1 daqiqadan keyin mijoz javob bermasa "boshqa savolingiz yo'qmi?" deb so'raydi
-                // LEKIN: agar ticket yopilgan bo'lsa (masalan close_ticket chaqirilgan bo'lsa), follow-up QILINMAYDI!
-                if ($saved && $this->shouldHandle($ticket->fresh())) {
-                    ProcessGuliFollowUp::dispatch($ticket->id, $saved->id)
-                        ->delay(now()->addSeconds(60)); // 1 daqiqa
-                }
-            }
-
-            return $reply;
         } catch (\Throwable $e) {
             Log::error('[GuliAgentService] Xatolik: ' . $e->getMessage(), [
                 'ticket_id' => $ticket->id,
                 'user_text' => $userText,
                 'trace' => $e->getTraceAsString(),
             ]);
+            $reply = null;
+        }
 
-            return null;
+        // AI javob bera olmadi (xato, tarmoq, bo'sh javob) — mijoz javobsiz
+        // qolmasin: suhbat operatorga uzatiladi va mijozga aytiladi
+        if (! $reply) {
+            if (! $this->shouldHandle($ticket->fresh())) {
+                return null; // tool orqali yopilgan yoki operatorga o'tgan
+            }
+            $this->toolTransferToHuman($ticket, 'Guli javob tayyorlay olmadi (texnik)', mb_substr($userText, 0, 300));
+            $fallback = $this->isRussian($userText)
+                ? "Минутку, подключаю нашего специалиста — он скоро ответит вам 😊\nС наилучшими пожеланиями, Гули 🌸"
+                : "Bir daqiqa, savolingizni mutaxassis xodimimizga uzatdim — tez orada javob beradi 😊\nEzgu tilaklar bilan Guli 🌸";
+            $this->deliverReply($ticket, $fallback);
+
+            return $fallback;
+        }
+
+        $saved = $this->deliverReply($ticket, $reply);
+
+        // Smart follow-up: mijoz javob bermasa "boshqa savolingiz yo'qmi?" deb so'raydi.
+        // Guli o'zi savol bergan bo'lsa (masalan buyurtma raqamini so'ragan) —
+        // mijozga ko'proq vaqt beriladi va boshqacha eslatiladi.
+        // Ticket yopilgan bo'lsa (close_ticket chaqirilgan) follow-up QILINMAYDI.
+        if ($saved && $this->shouldHandle($ticket->fresh())) {
+            $asked = $this->endsWithQuestion($reply);
+            ProcessGuliFollowUp::dispatch($ticket->id, $saved->id, $asked ? 'awaiting_answer' : 'anything_else')
+                ->delay(now()->addSeconds($asked ? 300 : 60));
+        }
+
+        return $reply;
+    }
+
+    // ─── Yordamchi qoidalar ───────────────────────────────────────────────
+
+    /** Telegram/ilova media o'rinbosar matnlari ("[Rasm]", "[Ovozli xabar]"...). */
+    protected function mediaKind(string $text): ?string
+    {
+        $t = trim($text);
+        $map = [
+            '[Rasm]' => 'photo', '[Ovozli xabar]' => 'voice', '[Dumaloq video]' => 'video',
+            '[Video]' => 'video', '[Audio]' => 'voice', '[Media fayl]' => 'file',
+        ];
+        if (isset($map[$t])) {
+            return $map[$t];
+        }
+        if (str_starts_with($t, '[Hujjat]')) {
+            return 'file';
+        }
+        if (str_starts_with($t, '[Stiker')) {
+            return 'sticker';
+        }
+
+        return null;
+    }
+
+    protected function handleMediaMessage(BotTicket $ticket, string $kind, string $text): ?string
+    {
+        if ($kind === 'sticker') {
+            return null; // stikerga javob shart emas
+        }
+
+        if ($kind === 'voice') {
+            $msg = "Kechirasiz, ovozli xabarlarni tinglay olmayman 🙏 Savolingizni qisqacha yozib yuborsangiz, darhol yordam beraman 😊\nEzgu tilaklar bilan Guli 🌸";
+            $this->deliverReply($ticket, $msg);
+
+            return $msg;
+        }
+
+        $this->toolTransferToHuman(
+            $ticket,
+            $kind === 'photo' ? 'Mijoz rasm yubordi (brak, chek yoki skrinshot bo‘lishi mumkin)' : 'Mijoz fayl/video yubordi',
+            'Media: ' . $text,
+        );
+        $msg = "Rasm/faylingizni oldim, rahmat! Uni mutaxassis xodimimizga uzatdim — tez orada ko'rib chiqib javob beradi 😊\nEzgu tilaklar bilan Guli 🌸";
+        $this->deliverReply($ticket, $msg);
+
+        return $msg;
+    }
+
+    /**
+     * Guli'ning oxirgi xabari "yana savol bormi?" turidagi taklif bo'lsa
+     * yoki umuman savol bo'lmasa — mijozning "yo'q/kerakmas" javobi suhbatni
+     * yopadi. Guli aniqlashtiruvchi savol bergan bo'lsa — yopilmaydi.
+     */
+    protected function lastGuliMessageInvitesClosing(BotTicket $ticket): bool
+    {
+        $last = BotTicketMessage::query()
+            ->where('ticket_id', $ticket->id)
+            ->whereIn('sent_by', ['operator', 'admin'])
+            ->where('message_type', '<>', 'note')
+            ->orderByDesc('id')
+            ->value('message');
+        if ($last === null) {
+            return true;
+        }
+        if (! $this->endsWithQuestion((string) $last)) {
+            return true;
+        }
+        $lower = mb_strtolower((string) $last);
+        foreach (['boshqa savol', 'yana biror', 'yana savol', 'yordam kerakmi', 'yordamim kerakmi', 'boshqa yordam', 'ещё вопрос', 'еще вопрос', 'чем ещё', 'чем еще', 'другие вопросы'] as $offer) {
+            if (str_contains($lower, $offer)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    protected function endsWithQuestion(string $text): bool
+    {
+        // Imzoni olib tashlab, matn oxirgi gaplarida "?" bormi
+        $body = preg_replace('/\n?(Ezgu tilaklar bilan|С наилучшими пожеланиями).*$/us', '', trim($text));
+
+        return str_contains(mb_substr(trim((string) $body), -160), '?');
+    }
+
+    protected function isRussian(string $text): bool
+    {
+        $cyr = preg_match_all('/[а-яё]/iu', $text);
+        $uzCyr = preg_match_all('/[ўқғҳ]/iu', $text);
+
+        return $cyr > 2 && $uzCyr === 0 && preg_match('/(?<!\p{L})(спасибо|пожалуйста|заказ|где|когда|здравствуйте|привет|нет|да|книг)/iu', $text) === 1;
+    }
+
+    /** Guli hal qilgan suhbat yopiladi va mijozdan baho so'raladi (Guli KPI). */
+    protected function closeResolved(BotTicket $ticket, string $reason): void
+    {
+        try {
+            SessionService::closeTicket((int) $ticket->id, $reason);
+        } catch (\Throwable) {
+            $ticket->update(['status' => SessionService::STATUS_CLOSED, 'closed_at' => now()]);
+        }
+
+        if (in_array($ticket->source_type, ['bot', 'telegram'], true) && ! $ticket->fresh()?->feedback_requested_at) {
+            try {
+                app(TelegramSupportService::class)->sendFeedbackRequest((int) $ticket->user_id, (int) $ticket->id);
+                $ticket->forceFill(['feedback_requested_at' => now()])->saveQuietly();
+            } catch (\Throwable $e) {
+                Log::info('[GuliAgentService] baho so‘rovi yuborilmadi: ' . $e->getMessage());
+            }
         }
     }
 
@@ -199,13 +335,15 @@ class GuliAgentService
     /**
      * Smart follow-up — 1 daqiqadan keyin boshqa savol yo'qligini so'rash.
      */
-    public function sendFollowUp(BotTicket $ticket): ?BotTicketMessage
+    public function sendFollowUp(BotTicket $ticket, string $kind = 'anything_else'): ?BotTicketMessage
     {
         if (! $this->shouldHandle($ticket)) {
             return null;
         }
 
-        $msg = "Boshqa savollaringiz yo'qmi? Yana biror narsada yordamim kerakmi? 😊\nEzgu tilaklar bilan Guli 🌸";
+        $msg = $kind === 'awaiting_answer'
+            ? "Javobingizni kutyapman 😊 Qulay paytda yozib qoldiring — men shu yerdaman.\nEzgu tilaklar bilan Guli 🌸"
+            : "Boshqa savollaringiz yo'qmi? Yana biror narsada yordamim kerakmi? 😊\nEzgu tilaklar bilan Guli 🌸";
         return $this->deliverReply($ticket, $msg);
     }
 
@@ -241,107 +379,80 @@ class GuliAgentService
     protected function classifyClosingIntent(string $text): ?string
     {
         // Apostroflarni (bo'ldi -> boldi, yo'q -> yoq) so'zdan ajratmay tozalaymiz
-        $clean = str_replace(["'", '’', 'ʻ', '`', '‘'], '', mb_strtolower(trim($text)));
+        $clean = str_replace(["'", '’', 'ʻ', '`', '‘', 'ʼ'], '', mb_strtolower(trim($text)));
 
-        // 1. Agar savol belgisi bo'lsa yoki savol so'zlari qatnashsa — bu tugatish EMAS, davomiy savol
+        // 1. Savol belgisi yoki savol so'zi bo'lsa — bu tugatish EMAS
         if (str_contains($clean, '?')) {
             return null;
         }
 
         $questionWords = [
-            'qachon', 'qayerda', 'qayerga', 'qanday', 'nega', 'nimaga',
+            'qachon', 'qayerda', 'qayerga', 'qanday', 'nega', 'nimaga', 'nima', 'nimadan',
             'qancha', 'necha', 'nechta', 'qaysi', 'kim', 'bormi', 'yoqmi',
             'mumkinmi', 'boladimi', 'beriladimi', 'keladimi', 'ochiladimi', 'qiladimi',
             'когда', 'где', 'куда', 'почему', 'зачем', 'сколько', 'как', 'какой', 'будет',
-            'можно', 'есть ли',
+            'можно', 'что',
         ];
         foreach ($questionWords as $qw) {
-            if (preg_match('/(?:\b|^)' . preg_quote($qw, '/') . '(?:\b|$)/u', $clean)) {
+            // \b Kirill harflarida ishlamaydi — Unicode harf chegarasi ishlatiladi
+            if (preg_match('/(?<!\p{L})' . preg_quote($qw, '/') . '(?!\p{L})/u', $clean)) {
                 return null;
             }
         }
 
         // Tinish belgilari, raqamlar va emojilarni bo'sh joyga almashtiramiz
-        $stripped = preg_replace('/[^\p{L}\s]+/u', ' ', $clean);
-        $stripped = trim(preg_replace('/\s+/u', ' ', $stripped));
-
+        $stripped = trim((string) preg_replace('/\s+/u', ' ', (string) preg_replace('/[^\p{L}\s]+/u', ' ', $clean)));
         if ($stripped === '') {
             return null;
         }
 
-        // 1. Aniq rad etish / ortiqcha yordam kerakmas / tugatish frazalari:
-        $declinedPhrases = [
-            // O'zbekcha (Lotin)
-            'kerakmas', 'keremas', 'kerak emas', 'shart emas', 'shartmas', 'keragi yoq',
-            'yoq', 'yoq rahmat', 'yoq raxmat', 'yoq kerakmas', 'yoq keremas', 'yoq shartmas',
-            'yoq boshqa savolim yoq', 'boshqa savolim yoq', 'boshqa savol yoq', 'savol yoq',
-            'yoq savol yoq', 'yoq boshqa savol yoq', 'yoq rahmat boshqa savol yoq',
-            'boldi', 'boldi rahmat', 'boldi raxmat', 'boldi tushundim', 'boldi shu',
-            'hal boldi', 'muammo hal boldi', 'tushundim', 'tushunarli', 'tushundim boldi',
-            'barchasi tushunarli', 'hammasi tushunarli', 'tushunarli boldi',
-            'shart emas rahmat', 'kerak emas rahmat', 'yoq rahmat boldi',
-            // O'zbekcha (Kirill)
-            'керакмас', 'керак эмас', 'шарт эмас', 'шартмас', 'кераги йўқ',
-            'йўқ', 'йоқ', 'йўқ раҳмат', 'йоқ рахмат', 'йўқ керакмас',
-            'бўлди', 'болди', 'бўлди раҳмат', 'болди рахмат', 'бўлди тушундим',
-            'бошқа савол йўқ', 'савол йўқ', 'ҳал бўлди', 'хал болди',
-            'тушундим', 'тушунарли', 'ҳаммаси тушунарли',
-            // Ruscha
-            'нет', 'не надо', 'нет спасибо', 'не нужно', 'хватит', 'достаточно',
-            'вопросов нет', 'нет вопросов', 'все понятно', 'всё понятно', 'понятно', 'ясно',
-            'понял', 'поняла',
+        // Faqat "yopuvchi" so'zlardan iborat xabar tugatish hisoblanadi.
+        // Avval "kuryer kelgani yo'q", "pulim yo'q", "nima bo'ldi" kabi
+        // shikoyatlar ham "yo'q/bo'ldi" so'zi uchun jimgina yopilib ketardi.
+        $declineWords = [
+            'kerakmas', 'keremas', 'kerak', 'emas', 'shart', 'shartmas', 'keragi', 'yoq', 'yok',
+            'boshqa', 'savol', 'savolim', 'savolimiz', 'boldi', 'hal', 'muammo', 'tushundim',
+            'tushunarli', 'barchasi', 'hammasi', 'shu', 'xop', 'mayli', 'ok', 'okey', 'yaxshi',
+            'керакмас', 'керак', 'эмас', 'шарт', 'шартмас', 'кераги', 'йўқ', 'йоқ', 'бошқа',
+            'савол', 'бўлди', 'болди', 'ҳал', 'хал', 'тушундим', 'тушунарли', 'ҳаммаси', 'хоп', 'майли',
+            'нет', 'не', 'надо', 'нужно', 'хватит', 'достаточно', 'вопросов', 'все', 'всё',
+            'понятно', 'ясно', 'понял', 'поняла', 'ок', 'хорошо',
+        ];
+        $gratitudeWords = [
+            'rahmat', 'raxmat', 'katta', 'kotta', 'sizga', 'kattakon', 'ming', 'judayam', 'juda',
+            'tashakkur', 'minnatdorman', 'gap', 'sog', 'boling', 'salomat', 'charchamang', 'xayr',
+            'hayr', 'qoling', 'yaxshi', 'spasibo', 'bolshoe', 'vam', 'blagodaryu', 'zor', 'ajoyib', 'super',
+            'рахмат', 'раҳмат', 'катта', 'сизга', 'минг', 'ташаккур', 'соғ', 'бўлинг', 'саломат',
+            'чарчаманг', 'хайр', 'спасибо', 'большое', 'вам', 'огромное', 'благодарю', 'до',
+            'свидания', 'всего', 'доброго', 'хорошего', 'дня', 'супер', 'отлично',
         ];
 
-        if (in_array($stripped, $declinedPhrases, true)) {
-            return 'declined';
+        $words = explode(' ', $stripped);
+        if (count($words) > 7) {
+            return null;
         }
 
-        // 2. Sof minnatdorchilik frazalari (mijoz samimiy rahmat aytgan):
-        $gratitudePhrases = [
-            // O'zbekcha (Lotin)
-            'rahmat', 'raxmat', 'katta rahmat', 'kotta raxmat', 'katta raxmat', 'kotta rahmat',
-            'rahmat sizga', 'raxmat sizga', 'rahmat kattakon', 'kattakon rahmat', 'ming rahmat',
-            'judayam katta rahmat', 'juda katta rahmat', 'tashakkur', 'minnatdorman', 'gap yoq',
-            'sog boling', 'salomat boling', 'charchamang', 'xayr', 'hayr', 'yaxshi qoling',
-            // O'zbekcha (Kirill)
-            'рахмат', 'раҳмат', 'катта рахмат', 'катта раҳмат', 'рахmat сизга', 'раҳмат сизга', 'минг раҳмат',
-            'ташаккур', 'соғ бўлинг', 'саломат бўлинг', 'чарчаманг', 'хайр',
-            // Ruscha
-            'спасибо', 'большое спасибо', 'спасибо большое', 'спасибо вам', 'огромное спасибо',
-            'благодарю', 'до свидания', 'всего доброго', 'хорошего дня',
-            'spasibo', 'spasibo bolshoe', 'bolshoe spasibo', 'spasibo vam',
-        ];
+        $hasThanks = (bool) array_intersect($words, ['rahmat', 'raxmat', 'tashakkur', 'minnatdorman', 'spasibo', 'blagodaryu', 'рахмат', 'раҳмат', 'ташаккур', 'спасибо', 'благодарю', 'charchamang', 'чарчаманг', 'xayr', 'хайр']);
+        $allClosing = true;
+        $hasDecline = false;
+        foreach ($words as $w) {
+            $isDecline = in_array($w, $declineWords, true);
+            $isThanks = in_array($w, $gratitudeWords, true);
+            if (! $isDecline && ! $isThanks) {
+                $allClosing = false;
+                break;
+            }
+            $hasDecline = $hasDecline || in_array($w, ['kerakmas', 'keremas', 'shartmas', 'yoq', 'yok', 'boldi', 'emas', 'tushundim', 'tushunarli', 'керакмас', 'шартмас', 'йўқ', 'йоқ', 'бўлди', 'болди', 'эмас', 'тушундим', 'тушунарли', 'нет', 'хватит', 'достаточно', 'понятно', 'ясно', 'понял', 'поняла'], true);
+        }
 
-        if (in_array($stripped, $gratitudePhrases, true)) {
+        if (! $allClosing) {
+            return null;
+        }
+        if ($hasThanks) {
             return 'gratitude';
         }
 
-        // 3. Kalit so'zlar bo'yicha tahlil (agar 1–4 so'zdan iborat bo'lsa):
-        $words = explode(' ', $stripped);
-        if (count($words) <= 4) {
-            $declinedKeywords = [
-                'kerakmas', 'keremas', 'shartmas', 'yoq', 'boldi',
-                'керакмас', 'шартмас', 'йўқ', 'йоқ', 'бўлди', 'болди',
-                'нет',
-            ];
-            foreach ($words as $w) {
-                if (in_array($w, $declinedKeywords, true)) {
-                    return 'declined';
-                }
-            }
-
-            $gratitudeKeywords = [
-                'rahmat', 'raxmat', 'tashakkur', 'minnatdorman', 'spasibo', 'blagodaryu',
-                'рахмат', 'раҳмат', 'ташаккур', 'спасибо', 'благодарю',
-            ];
-            foreach ($words as $w) {
-                if (in_array($w, $gratitudeKeywords, true)) {
-                    return 'gratitude';
-                }
-            }
-        }
-
-        return null;
+        return $hasDecline ? 'declined' : null;
     }
 
     protected function isClosingIntent(string $text): bool
@@ -380,6 +491,9 @@ class GuliAgentService
      */
     protected function simulateTypingDelay(int $inputLength): void
     {
+        if (app()->runningUnitTests()) {
+            return;
+        }
         // Qisqa xabarlarga 1.5s, uzun xabarlarga 2.5s
         $delay = $inputLength < 50 ? 1500000 : 2500000; // microsecond
         usleep($delay);
@@ -390,7 +504,7 @@ class GuliAgentService
      */
     protected function executeAiLoop(BotTicket $ticket, ?User $user, array $messages, array $tools, int $maxSteps = 4): ?string
     {
-        $client = $this->openai->getClient();
+        $client = $this->aiClient();
 
         for ($step = 0; $step < $maxSteps; $step++) {
             $response = $client->chat()->create([
@@ -428,7 +542,12 @@ class GuliAgentService
                     $fnName = $call->function->name;
                     $args = json_decode($call->function->arguments ?? '{}', true) ?: [];
 
-                    $toolResult = $this->handleToolCall($ticket, $user, $fnName, $args);
+                    try {
+                        $toolResult = $this->handleToolCall($ticket, $user, $fnName, $args);
+                    } catch (\Throwable $e) {
+                        Log::warning("[GuliAgentService] tool {$fnName} xatosi: " . $e->getMessage());
+                        $toolResult = ['error' => "Ma'lumotni hozir olib bo'lmadi. Mijozga operator yordam berishini ayt va transfer_to_human chaqir."];
+                    }
 
                     $messages[] = [
                         'role' => 'tool',
@@ -441,7 +560,7 @@ class GuliAgentService
             }
 
             // Yakuniy matnli javob — Guli imzosini qo'shib qaytarish (qator tashlamasdan)
-            $content = trim((string) ($msg->content ?? ''));
+            $content = $this->cleanReply((string) ($msg->content ?? ''));
             if ($content !== '') {
                 // Agar imzo bo'lmasa — qator tashlamasdan xabar ostiga qo'shish
                 if (! str_contains($content, 'Ezgu tilaklar bilan') && ! str_contains($content, '— Guli')) {
@@ -455,6 +574,27 @@ class GuliAgentService
         return null;
     }
 
+    /** Testlarda soxta OpenAI mijozini ulash uchun: app()->instance('guli.ai_client', ClientFake). */
+    protected function aiClient(): \OpenAI\Contracts\ClientContract
+    {
+        return app()->bound('guli.ai_client') ? app('guli.ai_client') : $this->openai->getClient();
+    }
+
+    /** Markdown/BBCode chatda ko'rinmaydi — tozalanadi, ortiqcha bo'sh qatorlar yig'iladi. */
+    protected function cleanReply(string $content): string
+    {
+        $content = trim($content);
+        $content = preg_replace('/\*\*(.+?)\*\*/us', '$1', $content);
+        $content = preg_replace('/__(.+?)__/us', '$1', (string) $content);
+        $content = preg_replace('/\[(\/?)(b|i|u)\]/u', '', (string) $content);
+        $content = preg_replace('/^#{1,6}\s*/mu', '', (string) $content);
+        $content = preg_replace("/\n{3,}/u", "\n\n", (string) $content);
+        // Imzo oldidagi bo'sh qator olib tashlanadi
+        $content = preg_replace("/\n\s*\n(Ezgu tilaklar bilan|С наилучшими пожеланиями)/u", "\n$1", (string) $content);
+
+        return trim((string) $content);
+    }
+
     /**
      * Tool funksiyalarini bajarish
      */
@@ -462,6 +602,8 @@ class GuliAgentService
     {
         return match ($name) {
             'get_order_details'    => $this->toolGetOrderDetails($user, (int) ($args['order_id'] ?? 0)),
+            'get_my_orders'        => $this->toolGetMyOrders($user, (bool) ($args['only_active'] ?? false)),
+            'get_promotions'       => $this->toolGetPromotions($user),
             'search_catalog'       => $this->toolSearchCatalog((string) ($args['query'] ?? '')),
             'get_credit_status'    => $this->toolGetCreditStatus($user),
             'check_order_cashback' => $this->toolCheckOrderCashback($user, (int) ($args['order_id'] ?? 0)),
@@ -480,11 +622,13 @@ class GuliAgentService
 
     /**
      * Tool 1: Buyurtma tafsilotini olish (Faqat ayni mijozga tegishli bo'lsa!)
+     * Holat, to'lov, yetkazish kuni/oralig'i, kuryer bosqichi, qayta urinish,
+     * qaytarilgan pul va bepul yetkazish — bir joyda.
      */
     protected function toolGetOrderDetails(?User $user, int $orderId): array
     {
         if ($orderId <= 0) {
-            return ['error' => 'Buyurtma raqami kiritilmadi.'];
+            return ['error' => 'Buyurtma raqami kiritilmadi. Avval get_my_orders bilan buyurtmalar ro‘yxatini ol.'];
         }
 
         $order = Sold::query()->find($orderId);
@@ -500,29 +644,148 @@ class GuliAgentService
             ];
         }
 
-        $items = [];
+        $items = collect(is_array($order->items) ? $order->items : [])
+            ->map(fn ($item) => [
+                'name' => (string) ($item['name'] ?? $item['title'] ?? $item['product_name'] ?? 'Mahsulot'),
+                'count' => (int) ($item['count_item'] ?? $item['count'] ?? $item['quantity'] ?? 1),
+                'price' => number_format((float) ($item['price'] ?? 0), 0, '.', ' ') . " so'm",
+            ])->take(15)->values()->all();
+
+        $courierRow = \App\Models\CourierOrder::query()->where('order_id', $order->id)->latest('id')->first();
+        $tracking = $this->trackingStage($order, $courierRow);
+
+        $refunds = [];
         try {
-            $soldProducts = \App\Models\SoldProducts::query()->where('sold_id', $order->id)->get();
-            foreach ($soldProducts as $sp) {
-                $items[] = [
-                    'name' => $sp->name ?: 'Mahsulot',
-                    'count' => (int) $sp->count,
-                    'price' => (float) $sp->price,
-                ];
-            }
+            $refunds = \App\Models\OrderRefund::query()->where('order_id', $order->id)->latest('id')->take(3)->get()
+                ->map(fn ($r) => [
+                    'amount' => number_format((float) $r->total_customer_value, 0, '.', ' ') . " so'm",
+                    'status' => (string) $r->status,
+                    'date' => optional($r->processed_at ?? $r->created_at)->format('d.m.Y'),
+                ])->all();
         } catch (\Throwable) {
         }
+
+        $deliveryDate = \App\Support\DeliverySchedule::deliveryDate($order);
 
         return [
             'found' => true,
             'order_id' => $order->id,
             'status' => $this->humanOrderStatus($order),
-            'raw_status' => $order->status_code,
+            'payment' => $this->humanPaymentStatus($order),
             'amount' => number_format((float) $order->amount, 0, '.', ' ') . " so'm",
-            'delivery_address' => $order->address ?: $order->city,
-            'delivery_date' => $order->delivery_date ? Carbon::parse($order->delivery_date)->format('d.m.Y') : 'Aniqlanmoqda',
+            'delivery_price' => (int) ($order->deliveryPrice ?? 0) > 0
+                ? number_format((float) $order->deliveryPrice, 0, '.', ' ') . " so'm"
+                : 'bepul',
+            'free_delivery_hour' => (bool) ($order->flash_free_delivery ?? false),
+            'delivery_type' => (string) ($order->deliveryType ?? ''),
+            'delivery_day' => $deliveryDate?->format('d.m.Y'),
+            'delivery_window' => \App\Support\DeliverySchedule::windowLabel($order) ?: 'Aniqlanmoqda',
+            'rescheduled_times' => (int) ($order->delivery_rescheduled_count ?? 0),
+            'tracking' => $tracking,
+            'delivery_address' => data_get($order->address, '0.fullAddress') ?: (is_string($order->address) ? $order->address : null),
             'created_at' => optional($order->created_at)->format('d.m.Y H:i'),
             'items' => $items,
+            'refunds' => $refunds,
+        ];
+    }
+
+    /** Kuryer/hub bosqichi — mijozga tushunarli matn. */
+    protected function trackingStage(Sold $order, ?\App\Models\CourierOrder $row): string
+    {
+        $status = \App\Enums\OrderStatusCode::fromLegacy($order->status_code ?? $order->status);
+        if (in_array($status, [\App\Enums\OrderStatusCode::DELIVERED, \App\Enums\OrderStatusCode::CUSTOMER_RECEIVED], true)) {
+            return 'Yetkazib berilgan';
+        }
+        if ($status === \App\Enums\OrderStatusCode::CANCELLED) {
+            return 'Bekor qilingan';
+        }
+        if ($status === \App\Enums\OrderStatusCode::RETURNED) {
+            return 'Sotuvchiga qaytarilgan';
+        }
+
+        if ($row && $row->next_attempt_at && $row->next_attempt_at->isFuture()) {
+            return 'Kuryer mijozga yetib bora olmadi ('.((string) $row->last_attempt_reason ?: 'aloqa bo‘lmadi').'), keyingi urinish: '.$row->next_attempt_at->format('d.m H:i');
+        }
+        if ($row && $row->courier_id) {
+            return $row->picked_up_at ? 'Kuryer kitobni olib, mijozga yo‘lda' : 'Kuryer biriktirilgan, do‘kondan olib ketmoqda';
+        }
+
+        $fulfillment = $order->fulfillment()->first();
+        $hubStage = match ((string) $fulfillment?->status_code) {
+            'arrived_at_hub', 'qc_checked', 'packed', 'labeled' => 'Kitob omborimizda tekshirilib, qadoqlanmoqda',
+            'dispatched_to_post' => 'Pochtaga topshirilgan',
+            'assigned_last_mile', 'out_for_delivery' => 'Yetkazishga chiqarilgan',
+            default => null,
+        };
+
+        return $hubStage ?? match ($status) {
+            \App\Enums\OrderStatusCode::PACKING => 'Do‘kon tayyorlamoqda, kuryer kutilmoqda',
+            \App\Enums\OrderStatusCode::IN_DELIVERY => 'Yetkazilmoqda',
+            default => 'Do‘kon buyurtmani tasdiqlashi kutilmoqda',
+        };
+    }
+
+    /**
+     * Tool: mijozning buyurtmalari ro'yxati (raqamini bilmasa ham topadi).
+     */
+    protected function toolGetMyOrders(?User $user, bool $onlyActive = false): array
+    {
+        if (! $user) {
+            return ['found' => false, 'message' => "Mijoz hisobi topilmadi. Kitobchi ilovasidagi telefon raqami bilan yozishini yoki Telegramda kontakt yuborishini so'ra."];
+        }
+
+        $orders = Sold::query()
+            ->where('user_id', $user->id)
+            ->when($onlyActive, fn ($q) => $q->whereIn('status_code', ['pending', 'packing', 'in_delivery']))
+            ->latest('id')
+            ->take(10)
+            ->get();
+
+        return [
+            'count' => $orders->count(),
+            'orders' => $orders->map(fn (Sold $o) => [
+                'order_id' => $o->id,
+                'date' => optional($o->created_at)->format('d.m.Y'),
+                'amount' => number_format((float) $o->amount, 0, '.', ' ') . " so'm",
+                'status' => $this->humanOrderStatus($o),
+                'payment' => $this->humanPaymentStatus($o),
+                'delivery_window' => \App\Support\DeliverySchedule::windowLabel($o),
+                'items_count' => is_array($o->items) ? count($o->items) : null,
+            ])->all(),
+        ];
+    }
+
+    /**
+     * Tool: amaldagi aksiyalar — bepul yetkazish soati, bepul yetkazish chegarasi, keshbek.
+     */
+    protected function toolGetPromotions(?User $user): array
+    {
+        $flash = \App\Support\FlashDelivery::status($user);
+        $flashText = null;
+        if ($flash['enabled'] ?? false) {
+            $window = ($flash['start_time'] ?? '').'–'.($flash['end_time'] ?? '');
+            if ($flash['active'] ?? false) {
+                $flashText = ($flash['eligible'] ?? true) === false
+                    ? "Bepul yetkazish soati hozir davom etmoqda ({$window}), lekin mijoz bugungi imkoniyatdan foydalanib bo'lgan."
+                    : "Hozir BEPUL YETKAZISH SOATI ({$window})! ".(int) ceil(((int) ($flash['seconds_remaining'] ?? 0)) / 60)." daqiqa qoldi — shu vaqtda berilgan buyurtmada yetkazish avtomatik bepul (promokod shart emas).";
+            } else {
+                $flashText = "Har kuni {$window} oralig'ida bepul yetkazish soati bo'ladi — shu vaqtda berilgan bitta buyurtmaga yetkazish bepul (".(($flash['limit'] ?? 'daily') === 'once' ? 'bir martalik' : 'kuniga bir marta').").";
+            }
+        }
+
+        $freeFrom = [];
+        try {
+            $freeFrom = \App\Models\DeliveryService::query()->active()->get()
+                ->filter(fn ($s) => (int) $s->freePriceFrom > 0)
+                ->map(fn ($s) => $s->name.': '.number_format((int) $s->freePriceFrom, 0, '.', ' ')." so'mdan bepul")
+                ->values()->all();
+        } catch (\Throwable) {
+        }
+
+        return [
+            'free_delivery_hour' => $flashText ?? "Hozircha bepul yetkazish soati aksiyasi yo'q.",
+            'free_delivery_threshold' => $freeFrom,
+            'cashback_balance' => $user ? number_format((float) ($user->cashback ?? 0), 0, '.', ' ')." so'm" : null,
         ];
     }
 
@@ -531,30 +794,52 @@ class GuliAgentService
      */
     protected function toolSearchCatalog(string $query): array
     {
-        $q = trim($query);
+        $q = trim(mb_substr($query, 0, 100));
         if ($q === '') {
             return ['items' => []];
         }
+        $like = '%'.addcslashes($q, '%_\\').'%';
 
+        // Avval faqat sotuvdagi, tasdiqlangan va ko'rinadigan kitoblar
         $books = Books::query()
-            ->where(function ($w) use ($q) {
-                $w->where('name', 'LIKE', "%$q%")
-                    ->orWhere('author', 'LIKE', "%$q%");
+            ->activeForVector()
+            ->whereNull('archived_at')
+            ->where(function ($w) use ($like) {
+                $w->where('name', 'LIKE', $like)
+                    ->orWhere('author', 'LIKE', $like)
+                    ->orWhere('isbn', 'LIKE', $like);
             })
-            ->where('status', 1)
-            ->take(4)
+            ->orderByDesc('totalSales')
+            ->take(8)
             ->get();
 
-        $items = $books->map(fn (Books $b) => [
-            'id' => $b->id,
-            'title' => $b->name,
-            'author' => $b->author,
-            'price' => number_format((float) ($b->price ?? 0), 0, '.', ' ') . " so'm",
-            'in_stock' => (int) ($b->amount ?? 0) > 0,
-            'url' => "https://kitobchi.com/books/{$b->id}",
-        ])->all();
+        $items = $books->map(function (Books $b) {
+            $discountActive = (int) ($b->discountPrice ?? 0) > 0
+                && (int) $b->discountPrice < (int) $b->price
+                && (! $b->discountExpiresAt || \Carbon\Carbon::parse($b->discountExpiresAt)->isFuture());
+            $price = $discountActive ? (int) $b->discountPrice : (int) $b->price;
+            $stock = (int) $b->totalAvailableStock();
 
-        return ['found_count' => count($items), 'items' => $items];
+            return [
+                'id' => $b->id,
+                'title' => $b->name,
+                'author' => $b->author,
+                'price' => number_format($price, 0, '.', ' ') . " so'm",
+                'old_price' => $discountActive ? number_format((int) $b->price, 0, '.', ' ') . " so'm" : null,
+                'in_stock' => $stock > 0,
+                'preorder' => $b->preorder_release_date && \Carbon\Carbon::parse($b->preorder_release_date)->isFuture()
+                    ? \Carbon\Carbon::parse($b->preorder_release_date)->format('d.m.Y') : null,
+                'url' => "https://kitobchi.com/books/{$b->id}",
+            ];
+        })->sortByDesc('in_stock')->take(4)->values()->all();
+
+        return [
+            'found_count' => count($items),
+            'items' => $items,
+            'note' => count($items) === 0
+                ? "Topilmadi. Mijozdan muallif yoki nomini boshqacha yozishini so'ra, yoki ilovadagi qidiruvdan foydalanishni maslahat ber."
+                : "Sotuvda yo'q kitob uchun ilovada 'Kelganda xabar berish' tugmasini bosishni maslahat ber.",
+        ];
     }
 
     /**
@@ -799,11 +1084,7 @@ class GuliAgentService
      */
     protected function toolCloseTicket(BotTicket $ticket, string $reason): array
     {
-        try {
-            SessionService::closeTicket((int) $ticket->id, 'guli_resolved: ' . $reason);
-        } catch (\Throwable $e) {
-            $ticket->update(['status' => SessionService::STATUS_CLOSED, 'closed_at' => now()]);
-        }
+        $this->closeResolved($ticket, mb_substr('guli_resolved: ' . $reason, 0, 190));
 
         return [
             'status' => 'closed',
@@ -870,13 +1151,39 @@ class GuliAgentService
                 'type' => 'function',
                 'function' => [
                     'name' => 'get_order_details',
-                    'description' => "Mijozning buyurtma holatini, yetkazish sanasi va manzilini olish.",
+                    'description' => "Bitta buyurtmaning to'liq holati: status, to'lov, yetkazish kuni va vaqt oralig'i, kuryer qayerda (bosqich), qayta urinish, qaytarilgan pul, mahsulotlar. Buyurtma qayerda / qachon keladi / kuryer kelmadi degan savollarda chaqir.",
                     'parameters' => [
                         'type' => 'object',
                         'properties' => [
                             'order_id' => ['type' => 'integer', 'description' => 'Buyurtma ID raqami'],
                         ],
                         'required' => ['order_id'],
+                    ],
+                ],
+            ],
+            [
+                'type' => 'function',
+                'function' => [
+                    'name' => 'get_my_orders',
+                    'description' => "Mijozning oxirgi 10 ta buyurtmasi (raqam, sana, summa, holat, yetkazish oralig'i). Mijoz buyurtma raqamini bilmasa yoki 'buyurtmalarim' desa chaqir.",
+                    'parameters' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'only_active' => ['type' => 'boolean', 'description' => "Faqat hali yakunlanmagan buyurtmalar"],
+                        ],
+                        'required' => [],
+                    ],
+                ],
+            ],
+            [
+                'type' => 'function',
+                'function' => [
+                    'name' => 'get_promotions',
+                    'description' => "Amaldagi aksiyalar: bepul yetkazish soati (qachon, qancha qoldi, mijoz foydalanganmi), bepul yetkazish chegarasi va keshbek balansi. 'Bepul yetkazish bormi?', 'aksiya', 'chegirma' savollarida chaqir.",
+                    'parameters' => [
+                        'type' => 'object',
+                        'properties' => (object) [],
+                        'required' => [],
                     ],
                 ],
             ],
@@ -1036,9 +1343,19 @@ BUYURTMA VA STATUS QOIDALARI:
   * "Buyurtmangiz paketlanmoqda, tez orada kuryerga topshiriladi."
   * "Buyurtmangiz yetkazib berilgan, qo'lingizga teggan! ✨"
   * "Afsuski, bu buyurtma bekor qilingan."
-- Agar mijozda 1 ta buyurtma bo'lsa — darhol shu haqida gapir, raqamini so'rama.
-- Bir nechta buyurtma bo'lsa — qaysi biri haqida ekanligini so'ra.
-- Ko'proq ma'lumot kerak bo'lsa get_order_details funksiyasini chaqir.
+- Agar mijozda 1 ta faol buyurtma bo'lsa — darhol shu haqida gapir, raqamini so'rama.
+- Bir nechta buyurtma bo'lsa va qaysi biri ekanligi noaniq bo'lsa — get_my_orders (only_active=true) bilan ro'yxatni olib, eng mosini taxmin qil yoki qisqa so'ra.
+- "Buyurtmam qayerda?", "Qachon keladi?", "Kuryer kelmadi", "Kechikdi" — DARHOL get_order_details chaqir va javobda: hozirgi bosqich (tracking), yetkazish kuni va vaqt oralig'i (delivery_window), kerak bo'lsa keyingi urinish vaqtini ayt.
+- Yetkazish kuni o'tib ketgan bo'lsa (rescheduled_times > 0) — kechirim so'ra, yangi kunni ayt va mijoz norozi bo'lsa transfer_to_human chaqir.
+- Mijoz buyurtmani bekor qilmoqchi, manzilni yoki kunni o'zgartirmoqchi bo'lsa — sen buni qila olmaysan: transfer_to_human chaqir (internal_note'ga buyurtma raqami va nima so'ralganini yoz).
+- To'lov holatini payment maydonidan ayt (naqd — yetkazilganda to'lanadi; karta — band qilingan va h.k.).
+
+AKSIYALAR VA BEPUL YETKAZISH SOATI:
+- "Bepul yetkazish bormi?", "aksiya", "chegirma", "yetkazish narxi" savollarida get_promotions chaqir.
+- Bepul yetkazish soati — kunning belgilangan vaqtida berilgan bitta buyurtmaga yetkazish avtomatik bepul bo'ladi, promokod kerak emas. Hozir davom etayotgan bo'lsa qancha vaqt qolganini ayt va ilovadan buyurtma berishga undab qo'y.
+
+KATALOG:
+- Kitob so'ralsa search_catalog chaqir; narx (chegirma bo'lsa eski narx bilan), sotuvda bor-yo'qligi va havolani ber. Sotuvda yo'q bo'lsa "Kelganda xabar berish" tugmasini maslahat ber. Ro'yxatda yo'q kitobni to'qib chiqarma.
 
 KESHBEK VA TEXNIK TEKSHIRUVLAR (MUKAMMAL DIAGNOSTIKA):
 - Agar mijoz "Keshbek qani?", "Keshbek berilmadiku", "Buyurtmamga keshbek tushmadi", "Nega keshbek yo'q?", "Keshbekim qancha?" deb so'rasa:
@@ -1097,6 +1414,7 @@ OPERATORGA UZATISH:
 - Uzatishdan OLDIN mijozga muloyimlik bilan: "Hozir sizni mutaxassis xodimimizga ulayapman, biroz kuting 😊" de.
 
 SUHBATNI YOPISH VA MINNATDORCHILIK:
+- MUHIM: agar sen mijozga aniqlashtiruvchi savol bergan bo'lsang (masalan "buyurtma raqamingiz bormi?") va u "yo'q" desa — bu suhbatni tugatish EMAS, muammoni boshqa yo'l bilan hal qilishda davom et (masalan get_my_orders).
 - Agar mijoz davom ettirishni xohlamasa, yordam kerak emasligini aytsa (masalan: "kerakmas", "yo'q", "bo'ldi", "boshqa savolim yo'q", "shart emas", "hal bo'ldi"):
   PACHAKILASHIB O'TIRMA! Hech qanday "Arzimaydi" deb yozma! Chunki mijoz rahmat aytmadi, shunchaki to'xtatmoqchi. DARHOL `close_ticket` chaqir va ortiqcha xabar yozmasdan suhbatni yop!
 - Agar mijoz samimiy minnatdorchilik bildirsa (masalan: "rahmat", "katta rahmat", "raxmat sizga", "spasibo"):
@@ -1144,13 +1462,14 @@ PROMPT;
                     $status = $this->humanOrderStatus($o);
                     $sum = number_format((float) $o->amount, 0, '.', ' ');
                     $date = optional($o->created_at)->format('d.m.Y');
-                    $parts[] = "  * Buyurtma #{$o->id}: {$sum} so'm, holati: {$status}, sana: {$date}";
+                    $window = \App\Support\DeliverySchedule::windowLabel($o);
+                    $parts[] = "  * Buyurtma #{$o->id}: {$sum} so'm, holati: {$status}, sana: {$date}" . ($window ? ", yetkazish: {$window}" : '');
                 }
             } else {
                 $parts[] = "- Hozircha buyurtmalar tarixi yo'q.";
             }
         } else {
-            $parts[] = "- Foydalanuvchi tizimda ro'yxatdan o'tmagan yoki telefon raqami orqali topilmadi.";
+            $parts[] = "- Foydalanuvchi Kitobchi hisobi bilan bog'lanmagan. Buyurtma/nasiya/keshbek so'rasa: Telegramda 'Kontakt yuborish' orqali telefon raqamini yuborishini yoki ilovadagi chatdan yozishini so'ra.";
         }
 
         return implode("\n", $parts);
@@ -1168,7 +1487,9 @@ PROMPT;
             }
         }
 
-        if ($ticket->source_type === 'telegram' && $ticket->user_id) {
+        // Telegram murojaatlari source_type='bot' bilan yaratiladi (avval faqat
+        // 'telegram' tekshirilib, Telegram mijozlari umuman tanilmas edi)
+        if (in_array($ticket->source_type, ['bot', 'telegram'], true) && $ticket->user_id) {
             return User::query()->where('telegram_id', $ticket->user_id)->first();
         }
 
@@ -1236,16 +1557,33 @@ PROMPT;
 
     protected function humanOrderStatus(Sold $order): string
     {
-        return match ($order->status_code) {
-            'pending' => "To'lov kutilmoqda",
-            'confirmed' => 'Qabul qilindi va tayyorlanmoqda',
-            'packing' => "Qadoqlanmoqda",
-            'courier_assigned' => 'Kuryer tayinlandi',
-            'delivering' => "Kuryer yetkazmoqda (yo'lda)",
-            'delivered', 'customer_received' => 'Yetkazib berilgan',
-            'cancelled' => 'Bekor qilingan',
-            'returned' => 'Qaytarilgan',
-            default => $order->status_code ?: 'Jarayonda',
+        $status = \App\Enums\OrderStatusCode::fromLegacy($order->status_code ?? $order->status);
+        $payment = \App\Enums\PaymentStatusCode::fromLegacy($order->payment_status_code ?? $order->paymentStatus);
+
+        if ($payment === \App\Enums\PaymentStatusCode::CARD_PENDING
+            && in_array($status, [\App\Enums\OrderStatusCode::PENDING, \App\Enums\OrderStatusCode::PACKING], true)) {
+            return "To'lov kutilmoqda";
+        }
+
+        return match ($status) {
+            \App\Enums\OrderStatusCode::PENDING => "Qabul qilindi, do'kon tasdiqlashi kutilmoqda",
+            \App\Enums\OrderStatusCode::PACKING => 'Tayyorlanmoqda (qadoqlanmoqda)',
+            \App\Enums\OrderStatusCode::IN_DELIVERY => "Yetkazilmoqda (yo'lda)",
+            \App\Enums\OrderStatusCode::DELIVERED, \App\Enums\OrderStatusCode::CUSTOMER_RECEIVED => 'Yetkazib berilgan',
+            \App\Enums\OrderStatusCode::CANCELLED => 'Bekor qilingan',
+            \App\Enums\OrderStatusCode::RETURNED => 'Qaytarilgan',
+        };
+    }
+
+    protected function humanPaymentStatus(Sold $order): string
+    {
+        return match (\App\Enums\PaymentStatusCode::fromLegacy($order->payment_status_code ?? $order->paymentStatus)) {
+            \App\Enums\PaymentStatusCode::PAID => "To'langan",
+            \App\Enums\PaymentStatusCode::HELD => "Karta orqali to'langan (summa band qilingan, yetkazilganda yechiladi)",
+            \App\Enums\PaymentStatusCode::CASH_PENDING => "Naqd — yetkazilganda to'lanadi",
+            \App\Enums\PaymentStatusCode::CARD_PENDING => "To'lov hali amalga oshirilmagan",
+            \App\Enums\PaymentStatusCode::CANCELLED => 'Bekor qilingan',
+            default => 'Aniqlanmoqda',
         };
     }
 }

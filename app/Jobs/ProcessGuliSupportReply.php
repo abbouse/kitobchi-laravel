@@ -28,6 +28,7 @@ class ProcessGuliSupportReply implements ShouldQueue
     public function __construct(
         public int $ticketId,
         public string $userText,
+        public ?int $messageId = null,
     ) {
     }
 
@@ -42,6 +43,20 @@ class ProcessGuliSupportReply implements ShouldQueue
         if (! $guli->shouldHandle($ticket)) {
             Log::info("[ProcessGuliSupportReply] Ticket #{$ticket->id} inson operatoriga o'tgan yoki yopilgan, Guli aralashmaydi.");
             return;
+        }
+
+        // Mijoz ketma-ket bir nechta xabar yozsa — faqat oxirgisiga bitta
+        // javob beriladi (tarixda hammasi bor). Avval har xabarga alohida
+        // javob ketib, Guli bir xil gapni 2–3 marta yozardi.
+        if ($this->messageId !== null) {
+            $newer = \App\Models\BotTicketMessage::query()
+                ->where('ticket_id', $ticket->id)
+                ->where('sent_by', 'user')
+                ->where('id', '>', $this->messageId)
+                ->exists();
+            if ($newer) {
+                return;
+            }
         }
 
         $guli->handleIncomingMessage($ticket, $this->userText);

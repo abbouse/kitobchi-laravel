@@ -26,6 +26,7 @@ class ProcessGuliFollowUp implements ShouldQueue
     public function __construct(
         public int    $ticketId,
         public int    $lastMessageId, // Guli bergan oxirgi javob ID'si
+        public string $kind = 'anything_else', // 'awaiting_answer' — Guli savol bergan
     ) {
     }
 
@@ -73,12 +74,12 @@ class ProcessGuliFollowUp implements ShouldQueue
         }
 
         // Follow-up xabarini yuborish (Boshqa savollaringiz yo'qmi?)
-        $followUpMsg = $guli->sendFollowUp($ticket);
+        $followUpMsg = $guli->sendFollowUp($ticket, $this->kind);
 
         // Agar mijoz 2 daqiqa ichida javob bermasa — avtomatik yopish navbatga qo'yiladi
         if ($followUpMsg) {
             ProcessGuliAutoClose::dispatch($ticket->id, $followUpMsg->id)
-                ->delay(now()->addMinutes(2));
+                ->delay(now()->addMinutes($this->kind === 'awaiting_answer' ? 10 : 2));
         }
     }
 }

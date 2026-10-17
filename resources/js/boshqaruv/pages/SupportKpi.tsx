@@ -29,6 +29,7 @@ type Kpi = {
     new: number; new_customer: number; new_shop: number; closed: number; open_now: number; unassigned_now: number;
     avg_first_response_s: number | null; good: number; bad: number; satisfaction: number | null;
   };
+  guli?: { handled: number; resolved: number; transferred: number; replies: number; resolution_rate: number | null; good: number; bad: number; satisfaction: number | null };
   agents: Agent[];
   bad_feedback: Array<{ key: string; segment: 'customer' | 'shop'; ticket_id: number; name: string; agent: string | null; at: string | null; title: string }>;
   days: Array<{ date: string; new: number; closed: number }>;
@@ -192,6 +193,23 @@ export default function SupportKpi() {
         </div>
 
         <div className="col-xl-4">
+          {kpi.guli ? (
+            <div className="card mb-3">
+              <div className="card-header d-flex align-items-center justify-content-between">
+                <h5 className="mb-0"><i className="ti ti-sparkles text-primary me-1"></i>Guli AI</h5>
+                <span className="badge text-light-primary">{kpi.guli.replies} javob</span>
+              </div>
+              <div className="card-body">
+                <div className="row g-2">
+                  <div className="col-6"><MiniStat label="Suhbatlar" value={kpi.guli.handled} icon="ti ti-messages" tone="primary" /></div>
+                  <div className="col-6"><MiniStat label="O‘zi hal qildi" value={kpi.guli.resolution_rate === null ? '—' : `${kpi.guli.resolution_rate}%`} icon="ti ti-circle-check" tone="success" meta={`${kpi.guli.resolved} ta`} help="Operatorsiz yopilgan suhbatlar ulushi" /></div>
+                  <div className="col-6"><MiniStat label="Operatorga uzatdi" value={kpi.guli.transferred} icon="ti ti-arrows-exchange" tone="warning" /></div>
+                  <div className="col-6"><MiniStat label="Mamnunlik" value={kpi.guli.satisfaction === null ? '—' : `${kpi.guli.satisfaction}%`} icon="ti ti-mood-happy" tone={satTone(kpi.guli.satisfaction) === 'secondary' ? 'success' : satTone(kpi.guli.satisfaction)} meta={`${kpi.guli.good} · ${kpi.guli.bad}`} /></div>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
           <div className="card mb-3">
             <div className="card-header d-flex align-items-center justify-content-between">
               <h5 className="mb-0">Yomon baholar</h5>

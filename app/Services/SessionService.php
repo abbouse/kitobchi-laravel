@@ -340,7 +340,7 @@ class SessionService
             try {
                 $ticket = BotTicket::query()->find($ticketId);
                 if ($ticket && empty($ticket->admin_id) && empty($ticket->operator_id) && ! in_array($ticket->status, ['closed', 'rated'], true) && ($ticket->ai_enabled ?? true)) {
-                    \App\Jobs\ProcessGuliSupportReply::dispatch($ticketId, trim($message))->delay(now()->addSeconds(1));
+                    \App\Jobs\ProcessGuliSupportReply::dispatch($ticketId, trim($message), (int) $saved->id)->delay(now()->addSeconds(2));
                 }
             } catch (\Throwable $e) {
                 Log::warning('[SessionService] Guli AI dispatch xatosi: ' . $e->getMessage());

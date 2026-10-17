@@ -28,6 +28,10 @@ class BotTicket extends Model
         'feedback',
         'feedback_at',
         'feedback_requested_at',
+        // Guli (AI): avval fillable'da yo'q edi — operatorga uzatilganda
+        // ai_enabled=false jimgina yozilmay, Guli javob berishda davom etardi
+        'ai_enabled',
+        'ai_summary',
     ];
 
     protected $casts = [
@@ -39,6 +43,7 @@ class BotTicket extends Model
         'admin_unread_count' => 'integer',
         'rating' => 'integer',
         'source_conversation_id' => 'integer',
+        'ai_enabled' => 'boolean',
     ];
     
     public function operator()
