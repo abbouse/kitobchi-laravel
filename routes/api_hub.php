@@ -11,7 +11,7 @@ Route::post('login', [HubAuthController::class, 'login'])->middleware('throttle:
 // Ochiq: ish o'rniga ariza qoldirish (login talab qilinmaydi).
 Route::post('applications', [HubApplicationController::class, 'store'])->middleware('throttle:registration-light');
 
-Route::middleware('auth:hub')->group(function () {
+Route::middleware(['auth:hub', \App\Http\Middleware\EnsureHubStaffActive::class])->group(function () {
     Route::post('logout', [HubAuthController::class, 'logout']);
     Route::get('me', [HubAuthController::class, 'me']);
 

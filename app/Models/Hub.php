@@ -27,6 +27,19 @@ class Hub extends Model
         'meta',
     ];
 
+    protected static function booted(): void
+    {
+        // Hub yopilsa — barcha xodimlari ilovadan chiqariladi
+        static::updated(function (Hub $hub) {
+            if ($hub->wasChanged('is_active') && ! $hub->is_active) {
+                \Laravel\Sanctum\PersonalAccessToken::query()
+                    ->where('tokenable_type', (new HubStaff)->getMorphClass())
+                    ->whereIn('tokenable_id', $hub->staff()->pluck('id'))
+                    ->delete();
+            }
+        });
+    }
+
     protected $casts = [
         'is_active' => 'boolean',
         'is_primary' => 'boolean',

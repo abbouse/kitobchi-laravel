@@ -70,6 +70,9 @@ class Seller extends Authenticatable
     protected $hidden = ['password'];
 
     protected $casts = [
+        'blocked_at' => 'datetime',
+        'blocked_until' => 'datetime',
+        'payouts_frozen_at' => 'datetime',
         'isVerified' => 'boolean',
         'isSupport' => 'boolean',
         'isPremiumShop' => 'boolean',
@@ -107,6 +110,41 @@ class Seller extends Authenticatable
                 $seller->qr_rotated_at = now();
             }
         });
+
+        // Bloklansa / faolsizlantirilsa — barcha sessiyalar darhol yopiladi.
+        // Do'kon bloklansa uning xodimlari (filial hisoblari) ham chiqariladi.
+        // Avval token qolib, bloklangan do'kon ilovadan ishlashda (hatto pul
+        // yechishda) davom etardi.
+        static::updated(function (Seller $seller) {
+            $statusOff = $seller->wasChanged('status') && $seller->status !== 'approved';
+            $staffOff = $seller->wasChanged('staff_status') && $seller->parent_id && $seller->staff_status !== 'active';
+            if (! $statusOff && ! $staffOff) {
+                return;
+            }
+            $ids = [$seller->id];
+            if ($statusOff && ! $seller->parent_id) {
+                $ids = array_merge($ids, self::query()->where('parent_id', $seller->id)->pluck('id')->all());
+            }
+            \Laravel\Sanctum\PersonalAccessToken::query()
+                ->where('tokenable_type', $seller->getMorphClass())
+                ->whereIn('tokenable_id', $ids)
+                ->delete();
+        });
+    }
+
+    /** Do'kon egasi (xodim bo'lsa — uning do'koni). */
+    public function storeAccount(): self
+    {
+        if ($this->parent_id) {
+            return self::query()->find($this->parent_id) ?? $this;
+        }
+
+        return $this;
+    }
+
+    public function payoutsFrozen(): bool
+    {
+        return $this->storeAccount()->payouts_frozen_at !== null;
     }
 
     /**

@@ -172,6 +172,8 @@ class AdminController extends Controller
             ['email' => $creds['email'], 'password' => $creds['password'], 'is_active' => true],
             $request->boolean('remember')
         )) {
+            $this->logPanelLogin($request, null, $creds['email'], false);
+
             return back()
                 ->withInput($request->only('email'))
                 ->with('error', "Email yoki parol noto'g'ri, yoki akkaunt bloklangan.");
@@ -184,6 +186,7 @@ class AdminController extends Controller
         ]);
 
         $request->session()->regenerate();
+        $this->logPanelLogin($request, $admin, $creds['email'], true);
 
         // Sessiyadagi "intended" manzil sayt (kitobchi.com/...) sahifasi bo'lishi
         // mumkin — admin faqat boshqaruv ichidagi sahifaga qaytariladi.
@@ -195,6 +198,30 @@ class AdminController extends Controller
         }
 
         return redirect()->route('boshqaruv.dashboard');
+    }
+
+    /** Kirish urinishlari audit jurnaliga yoziladi (muvaffaqiyatsizlari ham — parol tanlash hujumini ko'rish uchun). */
+    private function logPanelLogin(Request $request, ?Admin $admin, string $email, bool $ok): void
+    {
+        try {
+            if (! Schema::hasTable('admin_audit_logs')) {
+                return;
+            }
+            AdminAuditLog::query()->create([
+                'admin_id' => $admin?->id,
+                'admin_name' => $admin?->name ?? mb_substr($email, 0, 120),
+                'method' => 'POST',
+                'route_name' => $ok ? 'boshqaruv.login.success' : 'boshqaruv.login.failed',
+                'path' => '/boshqaruv/login',
+                'action' => $ok ? 'Panelga kirdi' : 'Panelga kirish urinishi muvaffaqiyatsiz',
+                'request_data' => ['email' => mb_substr($email, 0, 120)],
+                'ip_address' => $request->ip(),
+                'user_agent' => mb_substr((string) $request->userAgent(), 0, 255),
+                'status_code' => $ok ? 302 : 401,
+            ]);
+        } catch (\Throwable $e) {
+            report($e);
+        }
     }
 
     public function logout(Request $request): \Illuminate\Http\RedirectResponse
@@ -3606,9 +3633,8 @@ class AdminController extends Controller
             'district' => ['nullable', 'string', 'max:100'],
             'activity_types' => ['nullable', 'array'],
             'activity_types.*' => ['string', Rule::in(['Kitob', 'Kanstovar', 'book', 'books', 'stationery', 'stationary', 'kitob', 'kanselyariya', 'Книги', 'Канцелярия'])],
-            'status' => ['required', Rule::in(['pending', 'approved', 'rejected', 'blocked'])],
+            'status' => ['required', Rule::in(['pending', 'approved', 'rejected', 'blocked', 'banned'])],
             'business_role' => ['nullable', 'string', Rule::in(['seller', 'author'])],
-            'balance' => ['nullable', 'numeric', 'min:0'],
             'commission_mode' => ['nullable', Rule::in(['global', 'individual'])],
             'commission_percent' => ['nullable', 'integer', 'min:1', 'max:100'],
             'commission_promotion_action' => ['nullable', Rule::in(['keep', 'grant', 'revoke'])],
@@ -3645,6 +3671,17 @@ class AdminController extends Controller
             'password' => ['nullable', 'string', 'min:6', 'max:255'],
             'photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png', 'max:2048'],
         ]);
+
+        // Balans faqat "Balansni tuzatish" (sabab + daftar) orqali o'zgaradi.
+        // Avval forma eski balansni qayta yozib, oradagi pul yechish/tushumlarni
+        // o'chirib yuborardi (pul "paydo bo'lardi"). Bloklash ham faqat
+        // sabab va muddat bilan "Cheklash" amali orqali.
+        if (in_array($data['status'], ['blocked', 'banned'], true) && ! in_array($seller->status, ['blocked', 'banned'], true)) {
+            return back()->withErrors(['status' => 'Bloklash uchun "Cheklash" tugmasidan foydalaning (sabab va muddat bilan).']);
+        }
+        if (! in_array($data['status'], ['blocked', 'banned'], true) && in_array($seller->status, ['blocked', 'banned'], true)) {
+            return back()->withErrors(['status' => 'Blokdan chiqarish uchun "Blokdan chiqarish" amalidan foydalaning.']);
+        }
 
         $premiumAction = (string) ($data['premium_action'] ?? 'keep');
         $premiumPlan = $data['premium_plan'] ?? null;
@@ -3775,7 +3812,6 @@ class AdminController extends Controller
             'phone_number' => ['required', 'string', Rule::unique('couriers', 'phone_number')->ignore($courier->id)],
             'region' => ['required', 'string', 'max:50'],
             'status' => ['required', Rule::in(['approved', 'pending', 'rejected', 'blocked'])],
-            'balance' => ['nullable', 'numeric', 'min:0'],
             'transport_type' => ['nullable', Rule::in(['foot', 'bicycle', 'motorcycle', 'car'])],
             'vehicle_brand' => ['nullable', 'string', 'max:50'],
             'vehicle_model' => ['nullable', 'string', 'max:50'],
@@ -3808,6 +3844,13 @@ class AdminController extends Controller
             }
             $data['photo'] = $request->file('photo')->store('courier_photos', 'public');
         }
+        if ($data['status'] === 'blocked' && $courier->status !== 'blocked') {
+            return back()->withErrors(['status' => 'Bloklash uchun "Cheklash" tugmasidan foydalaning (sabab va muddat bilan).']);
+        }
+        if ($data['status'] !== 'blocked' && $courier->status === 'blocked') {
+            return back()->withErrors(['status' => 'Blokdan chiqarish uchun "Blokdan chiqarish" amalidan foydalaning.']);
+        }
+
         $oldVerification = $courier->verification_status;
         $newVerification = $data['verification_status'] ?? $oldVerification;
         if ($oldVerification !== $newVerification) {
@@ -3880,6 +3923,9 @@ class AdminController extends Controller
 
         if ($courierTransaction->status !== 'pending') {
             return back()->with('error', 'Faqat kutilayotgan arizani tasdiqlash mumkin.');
+        }
+        if (Couriers::query()->whereKey($courierTransaction->courier_id)->whereNotNull('payouts_frozen_at')->exists()) {
+            return back()->with('error', 'Bu kuryer uchun to‘lovlar muzlatilgan — avval muzlatishni oching.');
         }
 
         DB::transaction(function () use ($courierTransaction) {
@@ -7249,6 +7295,13 @@ PROMPT;
             ])->values()->all(),
             'transactions' => $transactions->map(fn (SellerTransaction $transaction) => $this->mapSellerTransactionRow($transaction))->values()->all(),
             'banLogs' => $banLogs->map(fn (SellerBanLog $log) => $this->mapSellerBanLogRow($log))->values()->all(),
+            'restriction' => $this->restrictionPayload($seller, [
+                'block' => route('boshqaruv.sellers.block', $seller),
+                'unblock' => route('boshqaruv.sellers.unblock', $seller),
+                'freeze' => route('boshqaruv.sellers.payout-freeze', $seller),
+                'adjust' => route('boshqaruv.sellers.balance-adjust', $seller),
+                'visibility' => route('boshqaruv.sellers.visibility', $seller),
+            ]),
             'actions' => [
                 'detailUrl' => route('boshqaruv.sellers.detail', $seller),
                 // Do'konning barcha kitoblari (moderatsiyadagilari ham) bitta ro'yxatda
@@ -7997,6 +8050,12 @@ PROMPT;
                 'date' => $this->dateTime($document->created_at),
                 'deleteUrl' => route('boshqaruv.couriers.documents.destroy', [$courier, $document]),
             ])->values()->all(),
+            'restriction' => $this->restrictionPayload($courier, [
+                'block' => route('boshqaruv.couriers.block', $courier),
+                'unblock' => route('boshqaruv.couriers.unblock', $courier),
+                'freeze' => route('boshqaruv.couriers.payout-freeze', $courier),
+                'adjust' => route('boshqaruv.couriers.balance-adjust', $courier),
+            ]),
             'actions' => [
                 'approveUrl' => route('boshqaruv.couriers.approve', $courier),
                 'rejectUrl' => route('boshqaruv.couriers.reject', $courier),
@@ -8006,6 +8065,29 @@ PROMPT;
                 'updateUrl' => route('boshqaruv.couriers.update', $courier),
                 'uploadDocumentUrl' => route('boshqaruv.couriers.documents.store', $courier),
             ],
+        ];
+    }
+
+    /** Cheklash paneli uchun umumiy ma'lumot (do'kon yoki kuryer). */
+    private function restrictionPayload(Seller|Couriers $account, array $urls): array
+    {
+        $admin = Auth::guard('panel')->user();
+        $blocked = in_array((string) $account->status, ['blocked', 'banned'], true);
+
+        return [
+            'blocked' => $blocked,
+            'blockedAt' => $this->dateTime($account->blocked_at ?? null),
+            'blockedUntil' => $this->dateTime($account->blocked_until ?? null),
+            'reason' => $account->block_reason ?? null,
+            'blockedBy' => ($account->blocked_by_admin_id ?? null) ? Admin::query()->whereKey($account->blocked_by_admin_id)->value('name') : null,
+            'frozen' => ($account->payouts_frozen_at ?? null) !== null,
+            'frozenAt' => $this->dateTime($account->payouts_frozen_at ?? null),
+            'freezeReason' => $account->payout_freeze_reason ?? null,
+            'balance' => (int) ($account->balance ?? 0),
+            'hidden' => $account instanceof Seller ? (bool) $account->is_hidden : null,
+            'canFinance' => $admin && ($admin->isSuperAdmin() || $admin->hasPermission('finance')),
+            'durations' => \App\Services\Trust\AccountRestrictionService::DURATIONS,
+            'urls' => $urls,
         ];
     }
 

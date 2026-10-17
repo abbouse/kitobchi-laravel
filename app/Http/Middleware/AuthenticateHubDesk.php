@@ -17,7 +17,7 @@ class AuthenticateHubDesk
 
         /** @var \App\Models\HubStaff $staff */
         $staff = Auth::guard('hub_web')->user();
-        if (! $staff->is_active) {
+        if (! $staff->is_active || ($staff->hub && ! $staff->hub->is_active)) {
             Auth::guard('hub_web')->logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();

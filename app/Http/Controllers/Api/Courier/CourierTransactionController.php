@@ -28,6 +28,13 @@ class CourierTransactionController extends Controller
         try {
             $transaction = DB::transaction(function () use ($courier) {
                 $lockedCourier = \App\Models\Couriers::query()->lockForUpdate()->find($courier->id);
+                if ($lockedCourier && $lockedCourier->payouts_frozen_at !== null) {
+                    return response()->json([
+                        'success' => false,
+                        'error_code' => 'payouts_frozen',
+                        'message' => 'Pul yechish vaqtincha to‘xtatilgan.'.($lockedCourier->payout_freeze_reason ? ' Sabab: '.$lockedCourier->payout_freeze_reason : ''),
+                    ], 423);
+                }
                 $withdrawable = $lockedCourier
                     ? $this->courierCashOnDeliveryCapacityService->withdrawableBalance($lockedCourier)
                     : 0;

@@ -321,6 +321,9 @@ class CourierController extends Controller
 
     public function approve(Couriers $courier)
     {
+        if ($courier->status === 'blocked') {
+            return back()->with('error', 'Bloklangan kuryer "Blokdan chiqarish" orqali ochiladi.');
+        }
         $courier->update(['status' => 'approved']);
         return back()->with('success', 'Kuryer tasdiqlandi.');
     }
@@ -355,7 +358,13 @@ class CourierController extends Controller
             ]);
 
             if (CourierBanLog::hasReachedBlockThreshold($courier->id)) {
-                $courier->update(['status' => 'blocked']);
+                $courier->forceFill([
+                    'status' => 'blocked',
+                    'blocked_at' => now(),
+                    'blocked_until' => null,
+                    'block_reason' => '3 ta ogohlantirish — avtomatik blok',
+                    'blocked_by_admin_id' => \Illuminate\Support\Facades\Auth::guard('panel')->id(),
+                ])->save();
             }
         });
 
@@ -377,19 +386,10 @@ class CourierController extends Controller
             'message' => 'nullable|string|max:2000',
         ]);
 
-        DB::transaction(function () use ($request, $courier) {
-            $courier->update(['status' => 'approved']);
-
-            CourierBanLog::create([
-                'courier_id' => $courier->id,
-                'title'      => 'Blokdan chiqarildi',
-                'message'    => $request->filled('message')
-                    ? $request->string('message')->toString()
-                    : 'Admin tomonidan blokdan chiqarildi. Ogohlantirish hisobi qayta boshlandi.',
-                'type'       => CourierBanLog::TYPE_UNBAN,
-                'is_read'    => false,
-            ]);
-        });
+        app(\App\Services\Trust\AccountRestrictionService::class)->unblockCourier(
+            $courier,
+            $request->filled('message') ? $request->string('message')->toString() : null,
+        );
 
         return back()->with('success', 'Kuryer blokdan chiqarildi.');
     }

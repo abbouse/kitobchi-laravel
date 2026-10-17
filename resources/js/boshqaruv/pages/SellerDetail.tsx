@@ -1,4 +1,5 @@
 import { toneOf, toneBadge } from '../utils/tone';
+import RestrictionPanel, { type Restriction } from '../components/RestrictionPanel';
 import { Fragment, FormEvent, useEffect, useState } from 'react';
 import { Link, router, usePage } from '@inertiajs/react';
 import PaginationControls from '../components/PaginationControls';
@@ -116,12 +117,12 @@ export default function SellerDetail() {
             stats={[{ label: 'Karma', value: `${Math.round(seller.karma || 0)}%` }, { label: 'Mahsulot', value: String(seller.products || 0) }, { label: 'Buyurtma', value: String(seller.orders || 0) }]}
             actions={<><Link href={seller.actions?.editUrl || '#'} className="btn btn-sm btn-primary"><i className="ti ti-edit me-1"></i>Tahrirlash</Link>
               <Link href={seller.actions?.booksUrl || '#'} className="btn btn-sm btn-light-primary"><i className="ti ti-book me-1"></i>Kitoblari</Link>
-              {seller.status !== 'approved' ? <button type="button" className="btn btn-sm btn-outline-success" onClick={() => runPatch(seller.actions?.approveUrl, 'Seller tasdiqlansinmi?')}><i className="ti ti-circle-check me-1"></i>Tasdiqlash</button> : null}
+              {seller.status !== 'approved' && seller.status !== 'blocked' && seller.status !== 'banned' ? <button type="button" className="btn btn-sm btn-outline-success" onClick={() => runPatch(seller.actions?.approveUrl, 'Seller tasdiqlansinmi?')}><i className="ti ti-circle-check me-1"></i>Tasdiqlash</button> : null}
               {seller.status !== 'rejected' ? <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => runPatch(seller.actions?.rejectUrl, 'Seller bekor qilinsinmi?')}><i className="ti ti-circle-x me-1"></i>Bekor qilish</button> : null}
-              {seller.status === 'blocked' ? <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => runPatch(seller.actions?.unblockUrl, 'Seller blokdan chiqarilsinmi?', { message: 'Admin tomonidan blokdan chiqarildi.' })}><i className="ti ti-lock-open me-1"></i>Blokdan chiqarish</button> : null}
               <button type="button" className="btn btn-sm btn-outline-warning" onClick={warnSeller}><i className="ti ti-alert-triangle me-1"></i>Ogohlantirish</button>
               <button type="button" className="btn btn-sm btn-light-secondary" onClick={resetPassword}><i className="ti ti-key me-1"></i>Parol reset</button></>}
           />
+          <RestrictionPanel restriction={seller.restriction as Restriction | undefined} subject="seller" />
           <div className="card">
             <div className="card-body">
               <ul className="profile-app-tabs mb-0 p-0 list-unstyled">

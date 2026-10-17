@@ -326,7 +326,7 @@ class UserController extends Controller
             'blocked_until' => $blockedUntil,
             'blocked_at' => now(),
             'block_reason' => trim($data['block_reason']),
-            'blocked_by_admin_id' => auth()->id(),
+            'blocked_by_admin_id' => \Illuminate\Support\Facades\Auth::guard('panel')->id(),
         ])->save();
 
         $user->tokens()->delete();

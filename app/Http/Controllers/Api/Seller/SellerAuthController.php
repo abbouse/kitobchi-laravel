@@ -222,12 +222,26 @@ class SellerAuthController extends Controller
         $cleaned_phone = preg_replace('/[\s\(\)-]/', '', $request->phone_number);
         $seller = Seller::where('phone_number', $cleaned_phone)->first();
 
-        if ($seller && $seller->status === 'blocked') {
-            return response()->json(['message' => 'Profilingiz admin tomonidan bloklangan. Qo‘llab-quvvatlash bilan bog‘laning.'], 200);
+        // Xodim bo'lsa — do'konining holati ham tekshiriladi (avval bloklangan
+        // do'konning xodimlari bemalol kirib ishlayverardi)
+        $loginStore = $seller?->storeAccount();
+        if ($loginStore && in_array($loginStore->status, ['blocked', 'banned'], true)) {
+            return response()->json([
+                'message' => 'Profilingiz admin tomonidan cheklangan.'
+                    .($loginStore->block_reason ? ' Sabab: '.$loginStore->block_reason.'.' : '')
+                    .($loginStore->blocked_until ? ' Muddat: '.$loginStore->blocked_until->format('d.m.Y H:i').'.' : '')
+                    .' Qo‘llab-quvvatlash bilan bog‘laning.',
+                'error_code' => 'seller_blocked',
+                'blocked_until' => $loginStore->blocked_until?->toIso8601String(),
+            ], 200);
         }
 
         if ($seller && $seller->parent_id && $seller->staff_status !== 'active') {
-            return response()->json(['message' => 'Xodim akkaunti vaqtincha faolsizlantirilgan'], 200);
+            return response()->json(['message' => 'Xodim akkaunti vaqtincha faolsizlantirilgan', 'error_code' => 'seller_staff_inactive'], 200);
+        }
+
+        if ($seller && $seller->parent_id && $loginStore && $loginStore->status !== 'approved') {
+            return response()->json(['message' => 'Do‘kon profili faol emas', 'error_code' => 'seller_inactive'], 200);
         }
 
         if (! $seller || $seller->status != 'approved' || ! Hash::check($request->password, $seller->password)) {

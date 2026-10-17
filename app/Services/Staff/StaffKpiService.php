@@ -110,7 +110,7 @@ class StaffKpiService
             ->whereIn('admin_id', $adminIds)
             ->whereBetween('created_at', [$from, $to])
             ->where('method', '!=', 'GET')
-            ->where(fn ($q) => $q->whereNull('route_name')->orWhere('route_name', '!=', 'boshqaruv.logout'))
+            ->where(fn ($q) => $q->whereNull('route_name')->orWhereNotIn('route_name', ['boshqaruv.logout', 'boshqaruv.login.success', 'boshqaruv.login.failed']))
             ->selectRaw('admin_id, route_name, DATE(created_at) AS d, COUNT(*) AS n, SUM(CASE WHEN status_code >= 400 THEN 1 ELSE 0 END) AS failed')
             ->groupBy('admin_id', 'route_name', DB::raw('DATE(created_at)'))
             ->get();
@@ -197,7 +197,7 @@ class StaffKpiService
         return AdminAuditLog::query()
             ->where('admin_id', $adminId)
             ->where('method', '!=', 'GET')
-            ->where(fn ($q) => $q->whereNull('route_name')->orWhere('route_name', '!=', 'boshqaruv.logout'))
+            ->where(fn ($q) => $q->whereNull('route_name')->orWhereNotIn('route_name', ['boshqaruv.logout', 'boshqaruv.login.success', 'boshqaruv.login.failed']))
             ->latest('id')
             ->limit($limit)
             ->get(['id', 'route_name', 'method', 'target_id', 'status_code', 'created_at'])

@@ -6,6 +6,7 @@ import Modal from '../components/AppModal';
 import PaginationControls from '../components/PaginationControls';
 import { StatWidget } from '../components/Axelit';
 import { ProfileCard, AboutList } from '../components/Profile';
+import RestrictionPanel, { type Restriction } from '../components/RestrictionPanel';
 import FormAction, { ActionRow } from '../components/FormAction';
 
 const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n || 0);
@@ -15,6 +16,7 @@ type AnyRow = Record<string, string | number | boolean | null | undefined | Reco
 
 interface Courier {
   id: number;
+  restriction?: Restriction;
   name: string;
   firstName?: string;
   lastName?: string;
@@ -301,7 +303,7 @@ export default function Couriers() {
                             <i className="ti ti-eye"></i>
                           </button>
 
-                          {courier.status !== 'approved' && (
+                          {courier.status !== 'approved' && courier.status !== 'blocked' && (
                             <button
                               className="btn btn-light-success icon-btn w-30 h-30 b-r-22"
                               onClick={() => patch(courier.actions?.approveUrl, {}, 'Kuryer tasdiqlansinmi?')}
@@ -412,6 +414,7 @@ function CourierModal({
                   { label: 'Balans', value: `${fmt(courier.balance || 0)} so'm` },
                 ]}
               />
+              <RestrictionPanel restriction={courier.restriction} subject="courier" />
               <AboutList
                 title="Profil"
                 rows={[

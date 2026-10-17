@@ -30,6 +30,16 @@ class HubStaff extends Authenticatable
         'remember_token',
     ];
 
+    protected static function booted(): void
+    {
+        // Xodim o'chirilsa (yoki hubi almashtirilsa) — ilovadagi sessiyasi darhol yopiladi
+        static::updated(function (HubStaff $staff) {
+            if (($staff->wasChanged('is_active') && ! $staff->is_active) || $staff->wasChanged('hub_id') || $staff->wasChanged('password')) {
+                $staff->tokens()->delete();
+            }
+        });
+    }
+
     protected $casts = [
         'is_active' => 'boolean',
         'permissions' => 'array',

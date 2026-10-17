@@ -91,6 +91,7 @@ class TransactionController extends Controller
             return back()->with('error', "Faqat kutilayotgan tranzaksiyani tasdiqlash mumkin.");
         }
 
+        try {
         DB::transaction(function () use ($transaction) {
             $lockedTransaction = SellerTransaction::query()->lockForUpdate()->find($transaction->id);
             if (!$lockedTransaction || $lockedTransaction->status !== 'pending') {
@@ -98,6 +99,9 @@ class TransactionController extends Controller
             }
 
             $seller = Seller::query()->lockForUpdate()->find($lockedTransaction->seller_id);
+            if ($seller && $seller->payouts_frozen_at !== null) {
+                throw new \RuntimeException('Bu do‘kon uchun to‘lovlar muzlatilgan — avval muzlatishni oching.');
+            }
             $lockedTransaction->update(['status' => 'approved']);
 
             if ($seller) {
@@ -105,6 +109,9 @@ class TransactionController extends Controller
                 $seller->save();
             }
         });
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
 
         return back()->with('success', "To'lov tasdiqlandi.");
     }

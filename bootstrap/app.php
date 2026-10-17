@@ -74,6 +74,10 @@ return Application::configure(basePath: dirname(__DIR__))
             ->dailyAt('00:10')->timezone($tz)->withoutOverlapping();
 
         // Asosiy buyurtma yopilgan-u kuryer qatori/topshirig'i ochiq qolganlarni moslash (xavfsizlik to'ri)
+        // Vaqtinchalik cheklovlar muddati tugaganda avtomatik ochiladi
+        $schedule->command('accounts:expire-blocks')
+            ->everyTenMinutes()->timezone($tz)->withoutOverlapping();
+
         $schedule->command('orders:reconcile-courier')
             ->hourlyAt(17)->timezone($tz)->withoutOverlapping();
 

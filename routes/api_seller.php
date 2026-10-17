@@ -26,7 +26,7 @@ Route::post('contact', [SellerAuthController::class, 'register'])->middleware('t
 Route::post('forgot', [SellerAuthController::class, 'forgot'])->middleware('throttle:password-recovery');
 
 // Avtorizatsiyadan o'tgan sotuvchilar
-Route::middleware('auth:seller')->group(function () {
+Route::middleware(['auth:seller', \App\Http\Middleware\EnsureSellerActive::class])->group(function () {
     Route::get('session/config', [SellerController::class, 'sessionConfig']);
     // Manzilni aniqlash — Yandex kaliti serverda (kalitlar navbat bilan)
     Route::get('geocode/reverse', [\App\Http\Controllers\Api\GeocodeController::class, 'reverse'])->middleware('throttle:60,1');

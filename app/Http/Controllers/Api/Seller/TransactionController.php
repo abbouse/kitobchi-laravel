@@ -187,6 +187,14 @@ class TransactionController extends Controller
                 ], 404);
             }
 
+            if ($storeSeller->payouts_frozen_at !== null || $storeSeller->status !== 'approved') {
+                return response()->json([
+                    'success' => false,
+                    'error_code' => 'payouts_frozen',
+                    'message' => 'Pul yechish vaqtincha to‘xtatilgan.'.($storeSeller->payout_freeze_reason ? ' Sabab: '.$storeSeller->payout_freeze_reason : '').' Qo‘llab-quvvatlash bilan bog‘laning.',
+                ], 423);
+            }
+
             $summary = $this->payouts->summary($storeSeller);
             $withdrawable = (int) $summary['withdrawable'];
             $minimum = (int) $summary['min_withdrawal'];

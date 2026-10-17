@@ -97,7 +97,7 @@ export default function SellerEdit() {
                     <option value="blocked">Bloklangan</option>
                   </select>
                 </div>
-                <FormInput name="balance" label="Balans" type="number" defaultValue={seller.balance} />
+                <div className="col-md-6"><label className="form-label">Balans</label><div className="form-control bg-light-secondary">{new Intl.NumberFormat('uz-UZ').format(Number(seller.balance || 0))} so‘m <span className="f-s-12 text-secondary">— o‘zgartirish: do‘kon sahifasidagi «Balansni tuzatish»</span></div></div>
                 <FormInput name="password" label="Yangi parol" type="password" hint="Bo'sh qoldirilsa o'zgarmaydi" />
                 <FormInput name="photo" label="Profil rasmi" type="file" />
               </div>

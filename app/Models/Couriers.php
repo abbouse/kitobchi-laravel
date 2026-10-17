@@ -22,8 +22,22 @@ class Couriers extends Authenticatable
         if ($this->status !== 'approved') {
             return false;
         }
+        if ($this->seller_id && $this->store_courier_hidden_at !== null) {
+            return false;
+        }
+        // Do'kon kuryeri: do'kon bloklansa uning kuryeri ham ishlay olmaydi
+        if ($this->seller_id) {
+            $storeStatus = \App\Models\Seller::query()->whereKey($this->seller_id)->value('status');
 
-        return ! ($this->seller_id && $this->store_courier_hidden_at !== null);
+            return $storeStatus === null || $storeStatus === 'approved';
+        }
+
+        return true;
+    }
+
+    public function payoutsFrozen(): bool
+    {
+        return $this->payouts_frozen_at !== null;
     }
 
     protected static function booted(): void
@@ -87,6 +101,9 @@ class Couriers extends Authenticatable
     protected $hidden = ['password', 'remember_token'];
 
     protected $casts = [
+        'blocked_at' => 'datetime',
+        'blocked_until' => 'datetime',
+        'payouts_frozen_at' => 'datetime',
         'balance' => 'integer',
         'cod_reserved_amount' => 'integer',
         'password_reset_limit' => 'integer',

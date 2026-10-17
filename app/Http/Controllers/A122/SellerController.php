@@ -516,6 +516,9 @@ class SellerController extends Controller
 
     public function approve(Seller $seller)
     {
+        if (in_array($seller->status, ['blocked', 'banned'], true)) {
+            return back()->with('error', 'Bloklangan do‘kon "Blokdan chiqarish" orqali ochiladi.');
+        }
         $seller->update(['status' => 'approved']);
         return back()->with('success', 'Sotuvchi tasdiqlandi.');
     }
@@ -569,7 +572,13 @@ class SellerController extends Controller
             ]);
 
             if (SellerBanLog::hasReachedBlockThreshold($storeSeller->id)) {
-                $storeSeller->update(['status' => 'blocked']);
+                $storeSeller->forceFill([
+                    'status' => 'blocked',
+                    'blocked_at' => now(),
+                    'blocked_until' => null,
+                    'block_reason' => '3 ta ogohlantirish — avtomatik blok',
+                    'blocked_by_admin_id' => \Illuminate\Support\Facades\Auth::guard('panel')->id(),
+                ])->save();
             }
         });
 
@@ -588,20 +597,10 @@ class SellerController extends Controller
         ]);
 
         $storeSeller = $this->resolveStoreSeller($seller);
-
-        DB::transaction(function () use ($request, $storeSeller) {
-            $storeSeller->update(['status' => 'approved']);
-
-            SellerBanLog::create([
-                'seller_id' => $storeSeller->id,
-                'title' => 'Blokdan chiqarildi',
-                'message' => $request->filled('message')
-                    ? $request->string('message')->toString()
-                    : 'Admin tomonidan blokdan chiqarildi. Ogohlantirish hisobi qayta boshlandi.',
-                'type' => SellerBanLog::TYPE_UNBAN,
-                'is_read' => false,
-            ]);
-        });
+        app(\App\Services\Trust\AccountRestrictionService::class)->unblockSeller(
+            $storeSeller,
+            $request->filled('message') ? $request->string('message')->toString() : null,
+        );
 
         return back()->with('success', 'Sotuvchi blokdan chiqarildi.');
     }
