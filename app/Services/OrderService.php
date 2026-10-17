@@ -579,6 +579,10 @@ class OrderService
                 'status' => CourierOrderStatusCode::CANCELLED->legacy(),
                 'status_code' => CourierOrderStatusCode::CANCELLED->value,
             ]);
+            // Kuryer topshiriqlari ham yopiladi va naqd (COD) bandligi
+            // bo'shaydi — avval mijoz/to'lov bekor qilganda topshiriq ochiq
+            // qolib, kuryer "band" va COD summasi muzlab qolardi
+            app(\App\Services\CourierTaskOrchestratorService::class)->cancelOpenTasks($order);
 
             // ── Mahsulot stoki qaytarish ──────────────────────────────────
             foreach ($order->items ?? [] as $item) {

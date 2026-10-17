@@ -77,7 +77,9 @@ class CourierAssignmentService
             $courierOrder = CourierOrder::query()
                 ->where('order_id', $sold->id)
                 ->whereNull('courier_id')
-                ->whereIn('status_code', [CourierOrderStatusCode::PENDING->value, CourierOrderStatusCode::PAYMENT_PENDING->value])
+                // Kuryersiz "yo'lda" qator ham (admin holatni qo'lda o'zgartirgan) —
+                // keyin kuryer biriktirish mumkin bo'lsin
+                ->whereIn('status_code', [CourierOrderStatusCode::PENDING->value, CourierOrderStatusCode::PAYMENT_PENDING->value, CourierOrderStatusCode::IN_DELIVERY->value])
                 ->lockForUpdate()
                 ->latest('id')
                 ->first();

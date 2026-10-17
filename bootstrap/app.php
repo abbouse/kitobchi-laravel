@@ -73,6 +73,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('orders:roll-overdue-deliveries')
             ->dailyAt('00:10')->timezone($tz)->withoutOverlapping();
 
+        // Asosiy buyurtma yopilgan-u kuryer qatori/topshirig'i ochiq qolganlarni moslash (xavfsizlik to'ri)
+        $schedule->command('orders:reconcile-courier')
+            ->hourlyAt(17)->timezone($tz)->withoutOverlapping();
+
         $schedule->command('cashback:release-pending')
             ->everyTenMinutes()->timezone($tz)->withoutOverlapping();
 

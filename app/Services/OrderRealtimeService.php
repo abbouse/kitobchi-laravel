@@ -67,7 +67,7 @@ class OrderRealtimeService
         ]);
     }
 
-    public function broadcastCourierOrderUpdated(CourierOrder $courierOrder, string $type): void
+    public function broadcastCourierOrderUpdated(CourierOrder $courierOrder, string $type, bool $refreshFeed = false): void
     {
         $courierOrder->loadMissing(['order', 'items']);
 
@@ -80,7 +80,9 @@ class OrderRealtimeService
             // o'chirilishi uchun signal yuboriladi. Aks holda boshqa
             // kuryerlar polling kutib turadi (30s).
             $channels[] = 'courier.feed';
-        } elseif ($courierOrder->status === 'pending') {
+        } elseif ($courierOrder->status === 'pending' || $refreshFeed) {
+            // refreshFeed: egasiz qator ro'yxatdan chiqdi (admin yoki hub
+            // holatni o'zgartirdi) — kuryerlar feed'i darhol yangilansin
             $channels[] = 'courier.feed';
         }
 

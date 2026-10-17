@@ -47,6 +47,7 @@ class PostalResendService
                     'status_code' => CourierOrderStatusCode::RETURNED->value,
                     'updated_at' => now(),
                 ]);
+            app(CourierTaskOrchestratorService::class)->cancelOpenTasks($lockedOrder);
         });
     }
 

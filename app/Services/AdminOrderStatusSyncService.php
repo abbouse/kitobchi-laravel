@@ -115,22 +115,14 @@ class AdminOrderStatusSyncService
             $sellerStatus = $this->mapMainToSeller($statusCode->value, $order->payment_status_code);
             $this->updateActiveSellerOrders($order, $sellerStatus);
 
-            if ($statusCode === OrderStatusCode::RETURNED) {
-                app(CourierTaskOrchestratorService::class)->cancelOpenTasks($order);
-            }
-
-            $courierStatus = $this->resolveCourierStatusForMainOrder($order, $statusCode->value);
-            $this->activeCourierOrdersQuery($order->id, $courierStatus)->update([
-                'status' => $courierStatus->legacy(),
-                'status_code' => $courierStatus->value,
-                'updated_at' => now(),
-            ]);
+            $touchedCourierOrders = $this->syncCourierSideFromMain($order, $statusCode);
 
             $this->syncCompletedOrderSideEffects($order, $previousCompletedPaid, 'main_status_update');
 
             $courierOrderId = (int) $order->id;
             DB::afterCommit(fn () => $this->orderStatusPushService->sendForTransition($order->fresh(), $previousStatus, $statusCode->legacy()));
             DB::afterCommit(fn () => app(CourierBroadcaster::class)->notifyPendingForOrder($courierOrderId));
+            DB::afterCommit(fn () => $this->broadcastCourierRows($touchedCourierOrders));
         });
     }
 
@@ -719,24 +711,199 @@ class AdminOrderStatusSyncService
             $order->refresh();
         }
 
+        $previousCompletedPaid = $order->isCompletedAndPaid();
         $order->status = $targetOrderStatus->legacy();
         $order->status_code = $targetOrderStatus->value;
+        // Hub "yetkazildi" desa ham asosiy buyurtma to'langan hisoblanadi —
+        // xuddi admin yoki kuryer "yetkazildi" degandagidek
+        if ($targetOrderStatus === OrderStatusCode::DELIVERED
+            && $order->payment_status_code !== PaymentStatusCode::PAID->value) {
+            $order->paymentStatus = PaymentStatusCode::PAID->legacy();
+            $order->payment_status_code = PaymentStatusCode::PAID->value;
+        }
         $this->syncCompletionState($order);
         $order->save();
 
         if ($target === FulfillmentStatusCode::OUT_FOR_DELIVERY) {
-            CourierOrder::query()
+            $touched = CourierOrder::query()
                 ->where('order_id', $order->id)
-                ->whereNotIn('status_code', [
-                    CourierOrderStatusCode::CUSTOMER_RECEIVED->value,
-                    CourierOrderStatusCode::CANCELLED->value,
-                    CourierOrderStatusCode::RETURNED->value,
-                ])
-                ->update([
+                ->where(fn ($query) => $query->whereNotIn('status_code', self::TERMINAL_COURIER_CODES)->orWhereNull('status_code'))
+                ->pluck('id')->all();
+            CourierOrder::query()->whereIn('id', $touched)->update([
+                'status' => CourierOrderStatusCode::IN_DELIVERY->legacy(),
+                'status_code' => CourierOrderStatusCode::IN_DELIVERY->value,
+                'updated_at' => now(),
+            ]);
+            DB::afterCommit(fn () => $this->broadcastCourierRows($touched));
+        }
+
+        // Yakuniy holatlar: kuryer qatorlari, topshiriqlar va do'kon
+        // buyurtmalari ham yopiladi (avval hub "yetkazildi" desa kuryer
+        // buyurtmasi "kutilmoqda"da qolib ketardi)
+        if (in_array($targetOrderStatus, [OrderStatusCode::DELIVERED, OrderStatusCode::RETURNED], true)) {
+            $this->updateActiveSellerOrders($order, SellerOrderStatusCode::HANDED_TO_COURIER);
+            $touched = $this->syncCourierSideFromMain($order, $targetOrderStatus);
+            $this->syncCompletedOrderSideEffects($order, $previousCompletedPaid, 'fulfillment_status_update');
+            DB::afterCommit(fn () => $this->broadcastCourierRows($touched));
+        }
+    }
+
+    /** Yakunlangan kuryer qatori kodlari. */
+    private const TERMINAL_COURIER_CODES = [
+        'delivered', 'customer_received', 'cancelled', 'returned',
+    ];
+
+    /**
+     * Asosiy buyurtma holatini kuryer tomoniga (courier_orders va
+     * courier_tasks) yoyadi. Qaytaradi: o'zgargan courier_orders id'lari.
+     *
+     * Qoidalar:
+     *  - Yakuniy holat (yetkazildi / mijoz oldi / qaytdi) — buyurtmaning
+     *    BARCHA ochiq kuryer qatorlari (egasi bor-yo'qligidan qat'i nazar)
+     *    yopiladi. Avval egasiz qator "kutilmoqda"da qolib, kuryer
+     *    buyurtmalari ro'yxati va "qotib qolganlar" soni o'sib borardi.
+     *  - Yetkazildi: kuryerning yetkazish topshirig'i yakunlanadi (naqd
+     *    hisob-kitob o'tadi), qolgan ochiq topshiriqlar bekor qilinib COD
+     *    bandligi bo'shaydi.
+     *  - Kuryersiz "yo'lda" (to'g'ridan-to'g'ri yetkazish): buyurtma endi
+     *    umumiy ro'yxatda kutmaydi — qator "yo'lda" bo'ladi, kerak bo'lsa
+     *    boshqaruvdan kuryer biriktiriladi.
+     *
+     * @return array<int, int>
+     */
+    private function syncCourierSideFromMain(Sold $order, OrderStatusCode $statusCode): array
+    {
+        $terminal = in_array($statusCode, [
+            OrderStatusCode::DELIVERED,
+            OrderStatusCode::CUSTOMER_RECEIVED,
+            OrderStatusCode::RETURNED,
+        ], true);
+        $courierStatus = $this->resolveCourierStatusForMainOrder($order, $statusCode->value);
+
+        if ($terminal) {
+            $courierStatus = match ($statusCode) {
+                OrderStatusCode::DELIVERED => CourierOrderStatusCode::DELIVERED,
+                OrderStatusCode::CUSTOMER_RECEIVED => CourierOrderStatusCode::CUSTOMER_RECEIVED,
+                default => CourierOrderStatusCode::RETURNED,
+            };
+            $rows = $this->activeCourierOrdersQuery($order->id)->get(['id', 'courier_id']);
+        } else {
+            $rows = $this->activeCourierOrdersQuery($order->id, $courierStatus)->get(['id', 'courier_id']);
+        }
+
+        $touched = $rows->pluck('id')->map(fn ($id) => (int) $id)->all();
+        if ($touched !== []) {
+            CourierOrder::query()->whereIn('id', $touched)->update([
+                'status' => $courierStatus->legacy(),
+                'status_code' => $courierStatus->value,
+                'updated_at' => now(),
+            ]);
+        }
+
+        // Kuryersiz to'g'ridan-to'g'ri yetkazish "yo'lda" — umumiy ro'yxatdan chiqadi
+        if ($statusCode === OrderStatusCode::IN_DELIVERY && $this->isDirectWithoutCourier($order)) {
+            $unowned = CourierOrder::query()
+                ->where('order_id', $order->id)
+                ->whereNull('courier_id')
+                ->whereIn('status_code', [CourierOrderStatusCode::PENDING->value, CourierOrderStatusCode::PAYMENT_PENDING->value])
+                ->pluck('id')->map(fn ($id) => (int) $id)->all();
+            if ($unowned !== []) {
+                CourierOrder::query()->whereIn('id', $unowned)->update([
                     'status' => CourierOrderStatusCode::IN_DELIVERY->legacy(),
                     'status_code' => CourierOrderStatusCode::IN_DELIVERY->value,
                     'updated_at' => now(),
                 ]);
+                $touched = array_values(array_unique(array_merge($touched, $unowned)));
+            }
+        }
+
+        if ($terminal) {
+            $orchestrator = app(CourierTaskOrchestratorService::class);
+            if ($statusCode !== OrderStatusCode::RETURNED) {
+                $courierIds = CourierTask::query()
+                    ->where('order_id', $order->id)
+                    ->whereNotNull('courier_id')
+                    ->whereNotIn('status_code', [
+                        CourierTaskStatusCode::COMPLETED->value,
+                        CourierTaskStatusCode::CANCELLED->value,
+                        CourierTaskStatusCode::FAILED->value,
+                    ])
+                    ->distinct()
+                    ->pluck('courier_id');
+                foreach ($courierIds as $courierId) {
+                    $orchestrator->markDeliveredToCustomer($order, (int) $courierId);
+                }
+            }
+            $orchestrator->cancelOpenTasks($order);
+        }
+
+        return $touched;
+    }
+
+    /**
+     * Eski (sinxron bo'lmay qolgan) buyurtmani tuzatadi: asosiy buyurtma
+     * yakunlangan bo'lsa-yu kuryer qatori/topshirig'i ochiq qolgan bo'lsa,
+     * kuryer tomoni asosiy holatga keltiriladi. Qaytaradi: tuzatilgan
+     * courier_orders id'lari.
+     *
+     * @return array<int, int>
+     */
+    public function reconcileCourierSide(Sold $order): array
+    {
+        return DB::transaction(function () use ($order) {
+            $order = Sold::query()->lockForUpdate()->findOrFail($order->id);
+            $status = OrderStatusCode::fromLegacy($order->status_code ?? $order->status);
+
+            if ($status === OrderStatusCode::CANCELLED) {
+                $touched = $this->activeCourierOrdersQuery($order->id)->pluck('id')->map(fn ($id) => (int) $id)->all();
+                if ($touched !== []) {
+                    CourierOrder::query()->whereIn('id', $touched)->update([
+                        'status' => CourierOrderStatusCode::CANCELLED->legacy(),
+                        'status_code' => CourierOrderStatusCode::CANCELLED->value,
+                        'updated_at' => now(),
+                    ]);
+                }
+                app(CourierTaskOrchestratorService::class)->cancelOpenTasks($order);
+            } elseif (in_array($status, [OrderStatusCode::DELIVERED, OrderStatusCode::CUSTOMER_RECEIVED, OrderStatusCode::RETURNED, OrderStatusCode::IN_DELIVERY], true)) {
+                $touched = $this->syncCourierSideFromMain($order, $status);
+            } else {
+                return [];
+            }
+
+            DB::afterCommit(fn () => $this->broadcastCourierRows($touched));
+
+            return $touched;
+        });
+    }
+
+    private function isDirectWithoutCourier(Sold $order): bool
+    {
+        $mode = OrderFulfillment::query()->where('order_id', $order->id)->value('fulfillment_mode');
+        if ($mode !== null && $mode !== FulfillmentMode::DIRECT_COURIER->value) {
+            return false;
+        }
+
+        return (int) ($order->courier_id ?? 0) === 0
+            && ! CourierOrder::query()->where('order_id', $order->id)->whereNotNull('courier_id')->exists();
+    }
+
+    /**
+     * Kuryer ilovalari (shaxsiy kanal + umumiy feed) va do'konlarga
+     * holat o'zgarganini darhol bildiradi — 30 soniyalik polling kutilmaydi.
+     *
+     * @param  array<int, int>  $courierOrderIds
+     */
+    public function broadcastCourierRows(array $courierOrderIds): void
+    {
+        if ($courierOrderIds === []) {
+            return;
+        }
+        try {
+            $realtime = app(OrderRealtimeService::class);
+            CourierOrder::query()->whereIn('id', $courierOrderIds)->get()
+                ->each(fn (CourierOrder $row) => $realtime->broadcastCourierOrderUpdated($row, 'courier_order.status_synced', refreshFeed: true));
+        } catch (\Throwable $e) {
+            report($e);
         }
     }
 
