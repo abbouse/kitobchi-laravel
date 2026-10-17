@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { PageCrumbs } from '../Layout';
+import { EmptyState } from '../components/Axelit';
 import { router, usePage } from '@inertiajs/react';
 import { Button, Form } from 'react-bootstrap';
 import Modal from '../components/AppModal';
@@ -93,7 +94,7 @@ export function Reels() {
         <button className="btn btn-primary" onClick={() => { setEditing(null); setShowForm(true); }}><i className="ti ti-plus me-1"></i>Reel qo'shish</button>
       </div>
       <div className="row">
-        {reels.map(reel => (
+        {reels.length === 0 ? <div className="col-12"><div className="card"><div className="card-body"><EmptyState text="Hozircha reel yo‘q. Birinchisini qo‘shing." /></div></div></div> : null}{reels.map(reel => (
           <div className="col-xl-4 col-md-6" key={reel.id}>
             <div className="card">
               <div className="card-body">
@@ -449,7 +450,7 @@ export function MarketNews() {
                 <Form.Label>
                   Rasm <BannerImageHint />
                 </Form.Label>
-                <Form.Control type="file" accept="image/*" onChange={(event) => setImageFile(event.target.files?.[0] || null)} />
+                <Form.Control type="file" accept="image/*" onChange={(event) => setImageFile((event.target as HTMLInputElement).files?.[0] || null)} />
                 <div className="form-text">
                   Tavsiya: <b>1440 × 320 px</b> (4.5:1) — aynan shu nisbat qirqilmasdan joylashadi. Boshqa nisbatda muhim matn/logoni chetlardan <b>chap-o'ng ≥120 px, yuqori-past ≥30 px</b> ichkarida qoldiring. Fonni to'liq to'ldiring.
                   {editing?.image ? ' Yangi rasm tanlanmasa, hozirgisi saqlanadi.' : ''}

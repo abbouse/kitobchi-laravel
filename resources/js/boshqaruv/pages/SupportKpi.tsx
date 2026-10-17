@@ -88,7 +88,7 @@ export default function SupportKpi() {
             <h4 className="main-title">Support KPI</h4>
             <PageCrumbs />
           </div>
-          <div className="d-flex flex-wrap align-items-center gap-2">
+          <div className="d-flex flex-wrap align-items-center gap-2 kc-page-tools">
             <div className="nav kc-segment">
               {RANGES.map((r) => (
                 <div className="nav-item" key={r.key}>
@@ -96,7 +96,7 @@ export default function SupportKpi() {
                 </div>
               ))}
             </div>
-            <div className="d-flex align-items-center gap-1">
+            <div className="d-flex align-items-center gap-1 kc-date-filter">
               <input type="date" className="form-control form-control-sm" value={from} max={to} onChange={(e) => setFrom(e.target.value)} />
               <span className="text-secondary">—</span>
               <input type="date" className="form-control form-control-sm" value={to} min={from} onChange={(e) => setTo(e.target.value)} />

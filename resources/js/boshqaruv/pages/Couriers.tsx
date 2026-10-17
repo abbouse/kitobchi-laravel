@@ -399,7 +399,7 @@ function CourierModal({
           <div className="row g-3">
             <div className="col-lg-4 col-xxl-3">
               <ProfileCard
-                avatar={courier.photo}
+                image={courier.photo}
                 name={courier.name}
                 subtitle={courier.phone || 'Telefon yo‘q'}
                 badges={

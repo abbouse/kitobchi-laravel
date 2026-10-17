@@ -48,11 +48,13 @@
 .iconoir-wallet::before{mask-image:url('data:image/svg+xml;charset=utf-8,<svg width="24" height="24" stroke-width="1.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="5" width="20" height="14" rx="2" stroke="currentColor"/><path d="M16 12H18M2 9H22" stroke="currentColor" stroke-linecap="round"/></svg>');-webkit-mask-image:url('data:image/svg+xml;charset=utf-8,<svg width="24" height="24" stroke-width="1.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="5" width="20" height="14" rx="2" stroke="currentColor"/><path d="M16 12H18M2 9H22" stroke="currentColor" stroke-linecap="round"/></svg>');}
 .iconoir-xmark::before{mask-image:url('data:image/svg+xml;charset=utf-8,<svg width="24" height="24" stroke-width="1.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6.75827 17.2426L12.0009 12M17.2435 6.75736L12.0009 12M12.0009 12L6.75827 6.75736M12.0009 12L17.2435 17.2426" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg>');-webkit-mask-image:url('data:image/svg+xml;charset=utf-8,<svg width="24" height="24" stroke-width="1.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6.75827 17.2426L12.0009 12M17.2435 6.75736L12.0009 12M12.0009 12L6.75827 6.75736M12.0009 12L17.2435 17.2426" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg>');}
 
-/* tabler-icons 2.4.0 — 210 glif */
+/* tabler-icons 3.31.0 — 251 glif (scripts/tabler_subset.py) */
 @font-face{font-family:"tabler-icons";font-style:normal;font-weight:400;font-display:block;src:url("./fonts/tabler-icons.woff2") format("woff2")}
 .ti{font-family:"tabler-icons"!important;speak:none;font-style:normal;font-weight:normal;font-variant:normal;text-transform:none;line-height:1;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+.ti-activity:before{content:"\ed23"}
 .ti-address-book:before{content:"\f021"}
 .ti-adjustments:before{content:"\ea03"}
+.ti-alert-circle:before{content:"\ea05"}
 .ti-alert-octagon:before{content:"\ecc6"}
 .ti-alert-triangle:before{content:"\ea06"}
 .ti-archive:before{content:"\ea0b"}
@@ -60,22 +62,27 @@
 .ti-arrow-back-up:before{content:"\eb77"}
 .ti-arrow-down:before{content:"\ea16"}
 .ti-arrow-down-right:before{content:"\ea15"}
+.ti-arrow-forward-up:before{content:"\eb78"}
 .ti-arrow-left:before{content:"\ea19"}
 .ti-arrow-right:before{content:"\ea1f"}
 .ti-arrow-up:before{content:"\ea25"}
 .ti-arrow-up-right:before{content:"\ea24"}
 .ti-arrows-exchange:before{content:"\f1f4"}
+.ti-arrows-horizontal:before{content:"\eb59"}
 .ti-arrows-left-right:before{content:"\edb0"}
 .ti-arrows-move:before{content:"\f22f"}
 .ti-at:before{content:"\ea2b"}
 .ti-ban:before{content:"\ea2e"}
+.ti-barcode:before{content:"\ebc6"}
 .ti-bell:before{content:"\ea35"}
 .ti-bell-filled:before{content:"\f669"}
 .ti-bike:before{content:"\ea36"}
 .ti-bolt:before{content:"\ea38"}
 .ti-book:before{content:"\ea39"}
+.ti-book-2:before{content:"\efc5"}
 .ti-bookmark:before{content:"\ea3a"}
 .ti-bookmarks:before{content:"\ed08"}
+.ti-books:before{content:"\eff2"}
 .ti-box:before{content:"\ea45"}
 .ti-brand-android:before{content:"\ec16"}
 .ti-brand-apple:before{content:"\ec17"}
@@ -91,10 +98,13 @@
 .ti-calendar:before{content:"\ea53"}
 .ti-calendar-event:before{content:"\ea52"}
 .ti-calendar-plus:before{content:"\ebba"}
+.ti-calendar-repeat:before{content:"\fad2"}
 .ti-calendar-stats:before{content:"\ee20"}
 .ti-calendar-time:before{content:"\ee21"}
 .ti-cash:before{content:"\ea55"}
+.ti-category:before{content:"\f1f6"}
 .ti-chart-bar:before{content:"\ea59"}
+.ti-chart-histogram:before{content:"\f65c"}
 .ti-chart-line:before{content:"\ea5c"}
 .ti-check:before{content:"\ea5e"}
 .ti-checks:before{content:"\ebaa"}
@@ -113,17 +123,22 @@
 .ti-clipboard-check:before{content:"\ea6c"}
 .ti-clipboard-data:before{content:"\f563"}
 .ti-clock:before{content:"\ea70"}
+.ti-clock-bolt:before{content:"\f844"}
 .ti-clock-hour-4:before{content:"\f319"}
 .ti-cloud-download:before{content:"\ea71"}
+.ti-cloud-search:before{content:"\f859"}
 .ti-code:before{content:"\ea77"}
+.ti-coin:before{content:"\eb82"}
 .ti-coins:before{content:"\f65d"}
 .ti-copy:before{content:"\ea7a"}
 .ti-credit-card:before{content:"\ea84"}
 .ti-crown:before{content:"\ed12"}
 .ti-database:before{content:"\ea88"}
+.ti-device-floppy:before{content:"\eb62"}
 .ti-device-mobile:before{content:"\ea8a"}
 .ti-diamond:before{content:"\eb65"}
 .ti-directions:before{content:"\ea8e"}
+.ti-discount-2:before{content:"\ee7c"}
 .ti-discount-check:before{content:"\f1f8"}
 .ti-discount-check-filled:before{content:"\f746"}
 .ti-dots-circle-horizontal:before{content:"\ea91"}
@@ -136,6 +151,7 @@
 .ti-eye-off:before{content:"\ecf0"}
 .ti-file-certificate:before{content:"\ed4d"}
 .ti-file-code:before{content:"\ebd0"}
+.ti-file-description:before{content:"\f028"}
 .ti-file-download:before{content:"\ea9d"}
 .ti-file-spreadsheet:before{content:"\f03e"}
 .ti-file-text:before{content:"\eaa2"}
@@ -145,6 +161,7 @@
 .ti-fingerprint:before{content:"\ebd1"}
 .ti-flag:before{content:"\eaa6"}
 .ti-flag-filled:before{content:"\f67a"}
+.ti-flame:before{content:"\ec2c"}
 .ti-folder:before{content:"\eaad"}
 .ti-gauge:before{content:"\eab1"}
 .ti-gift:before{content:"\eb68"}
@@ -164,12 +181,16 @@
 .ti-info-circle:before{content:"\eac5"}
 .ti-key:before{content:"\eac7"}
 .ti-language:before{content:"\ebbe"}
+.ti-layout:before{content:"\eadb"}
 .ti-layout-dashboard:before{content:"\f02c"}
 .ti-layout-grid:before{content:"\edba"}
 .ti-layout-list:before{content:"\ec14"}
+.ti-layout-sidebar-right:before{content:"\ead9"}
 .ti-link:before{content:"\eade"}
+.ti-link-off:before{content:"\f402"}
 .ti-list:before{content:"\eb6b"}
 .ti-list-check:before{content:"\eb6a"}
+.ti-list-details:before{content:"\ef40"}
 .ti-lock:before{content:"\eae2"}
 .ti-lock-access:before{content:"\eeaa"}
 .ti-lock-open:before{content:"\eae1"}
@@ -183,15 +204,22 @@
 .ti-map-pin-filled:before{content:"\f680"}
 .ti-maximize:before{content:"\eaea"}
 .ti-message:before{content:"\eaef"}
-.ti-message-circle-2-filled:before{content:"\f682"}
+.ti-message-check:before{content:"\f96f"}
+.ti-message-circle-2-filled:before{content:"\fecf"}
 .ti-message-dots:before{content:"\eaee"}
+.ti-message-plus:before{content:"\ec9a"}
 .ti-message-report:before{content:"\ec9b"}
+.ti-messages:before{content:"\eb6c"}
 .ti-minimize:before{content:"\eaf1"}
 .ti-minus:before{content:"\eaf2"}
+.ti-mood-happy:before{content:"\eaf4"}
+.ti-mood-smile:before{content:"\eaf7"}
 .ti-moon:before{content:"\eaf8"}
 .ti-moon-stars:before{content:"\ece7"}
 .ti-movie:before{content:"\eafa"}
+.ti-music:before{content:"\eafc"}
 .ti-news:before{content:"\eafd"}
+.ti-notes:before{content:"\eb6e"}
 .ti-octagon-off:before{content:"\eeb8"}
 .ti-package:before{content:"\eaff"}
 .ti-paperclip:before{content:"\eb02"}
@@ -201,6 +229,8 @@
 .ti-phone:before{content:"\eb09"}
 .ti-phone-off:before{content:"\ecf5"}
 .ti-photo:before{content:"\eb0a"}
+.ti-photo-down:before{content:"\f35f"}
+.ti-pin:before{content:"\ec9c"}
 .ti-player-pause:before{content:"\ed45"}
 .ti-player-pause-filled:before{content:"\f690"}
 .ti-player-play:before{content:"\ed46"}
@@ -214,8 +244,11 @@
 .ti-qrcode:before{content:"\eb11"}
 .ti-receipt:before{content:"\edfd"}
 .ti-receipt-refund:before{content:"\edfc"}
+.ti-refresh:before{content:"\eb13"}
 .ti-repeat:before{content:"\eb72"}
+.ti-report-analytics:before{content:"\eecb"}
 .ti-robot:before{content:"\f00b"}
+.ti-rocket:before{content:"\ec45"}
 .ti-rotate:before{content:"\eb16"}
 .ti-rotate-clockwise:before{content:"\eb15"}
 .ti-route:before{content:"\eb17"}
@@ -228,7 +261,7 @@
 .ti-shield-x:before{content:"\eb23"}
 .ti-shopping-bag:before{content:"\f5f8"}
 .ti-shopping-cart:before{content:"\eb25"}
-.ti-shopping-cart-x:before{content:"\eede"}
+.ti-shopping-cart-x:before{content:"\fb6b"}
 .ti-sparkles:before{content:"\f6d7"}
 .ti-speakerphone:before{content:"\ed61"}
 .ti-stack:before{content:"\eb2d"}
@@ -241,23 +274,33 @@
 .ti-tags:before{content:"\ef86"}
 .ti-target:before{content:"\eb35"}
 .ti-target-arrow:before{content:"\f51a"}
+.ti-terminal:before{content:"\ebdc"}
+.ti-thumb-down:before{content:"\eb3b"}
+.ti-thumb-up:before{content:"\eb3c"}
 .ti-ticket:before{content:"\eb3d"}
 .ti-toggle-left:before{content:"\eb3e"}
 .ti-toggle-right:before{content:"\eb3f"}
 .ti-trash:before{content:"\eb41"}
 .ti-trending-down:before{content:"\eb42"}
 .ti-trending-up:before{content:"\eb43"}
+.ti-trophy:before{content:"\eb45"}
 .ti-truck:before{content:"\ebc4"}
 .ti-truck-delivery:before{content:"\ec4b"}
 .ti-truck-return:before{content:"\ec4c"}
 .ti-upload:before{content:"\eb47"}
 .ti-user:before{content:"\eb4d"}
+.ti-user-check:before{content:"\eb49"}
 .ti-user-circle:before{content:"\ef68"}
 .ti-user-minus:before{content:"\eb4a"}
 .ti-user-plus:before{content:"\eb4b"}
 .ti-users:before{content:"\ebf2"}
+.ti-users-group:before{content:"\fa21"}
+.ti-video:before{content:"\ed22"}
+.ti-volume:before{content:"\eb51"}
+.ti-volume-off:before{content:"\f1c3"}
 .ti-wallet:before{content:"\eb75"}
 .ti-wand:before{content:"\ebcb"}
+.ti-world-download:before{content:"\ef8a"}
 .ti-x:before{content:"\eb55"}
 
 /* phosphor bold — 5 glif */

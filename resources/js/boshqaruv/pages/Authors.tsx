@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { PageCrumbs } from '../Layout';
+import { EmptyState } from '../components/Axelit';
 import type { FormEvent } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Button } from 'react-bootstrap';
@@ -87,7 +88,7 @@ export default function Authors() {
       </div>
 
       <div className="row">
-        {pagination.paginated.map((author, i) => (
+        {pagination.paginated.length === 0 ? <div className="col-12"><div className="card"><div className="card-body"><EmptyState text="Muallif topilmadi." /></div></div></div> : null}{pagination.paginated.map((author, i) => (
           <div className="col-xl-4 col-md-6" key={author.id}>
             <div className="card h-100">
               <div className="card-body d-flex flex-column justify-content-between">

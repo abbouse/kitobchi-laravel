@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { PageCrumbs } from '../Layout';
+import { EmptyState } from '../components/Axelit';
 import type { FormEvent } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Button } from 'react-bootstrap';
@@ -27,7 +28,7 @@ export default function Blogerlar() {
   return (
     <div>
       <div className="d-flex align-items-end justify-content-between flex-wrap gap-3 mx-1 mb-3"><div><h4 className="main-title mb-0">Hamkor blogerlar</h4><PageCrumbs /><p className="mb-0 text-secondary">Blogerlar, social linklar va jo'natma nazorati</p></div><button className="btn btn-primary" onClick={() => setEditing({})}><i className="ti ti-plus me-1"></i>Bloger qo'shish</button></div>
-      <div className="row">{bloggers.map((blogger) => <div className="col-xl-4 col-md-6" key={blogger.id}><div className="card h-100">
+      <div className="row">{bloggers.length === 0 ? <div className="col-12"><div className="card"><div className="card-body"><EmptyState text="Hozircha bloger qo‘shilmagan." /></div></div></div> : null}{bloggers.map((blogger) => <div className="col-xl-4 col-md-6" key={blogger.id}><div className="card h-100">
   <div className="card-body"><div className="d-flex align-items-start gap-3 mb-3"><PAvatar name={blogger.name} size="lg" /><div className="min-w-0" style={{ flex: 1 }}><div className="f-w-600 text-truncate">{blogger.name}</div><small className="text-muted">{(blogger.platforms || []).join(', ') || blogger.phone || 'Bloger'} · {blogger.shipments || 0} shipment</small></div><span className={`badge ${blogger.status === 'Faol' ? 'text-light-success' : 'text-light-secondary'}`}>{blogger.status}</span></div><div className="f-s-13 text-muted mb-3">{blogger.address || blogger.activeUntil || '—'}</div><div className="d-flex gap-2"><button className="btn btn-sm btn-light-secondary flex-fill" onClick={() => open(blogger)}><i className="ti ti-eye"></i></button><button className="btn btn-sm btn-light-secondary flex-fill" onClick={() => setEditing(blogger)}><i className="ti ti-pencil"></i></button><button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" onClick={() => destroy(blogger)}><i className="ti ti-trash"></i></button></div></div>
   </div></div>)}</div>
       <BloggerDetail blogger={selected} detail={detail} onHide={() => { setSelected(null); setDetail(null); }} onEdit={() => detail && setEditing(detail)} onShipment={(item) => setShipment(item || {})} />

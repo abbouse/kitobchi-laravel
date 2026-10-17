@@ -5,7 +5,7 @@ import { router, usePage } from '@inertiajs/react';
 import { Button } from 'react-bootstrap';
 import Modal from '../components/AppModal';
 
-import { StatWidget } from '../components/Axelit';
+import { StatWidget, EmptyState } from '../components/Axelit';
 
 const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n || 0);
 
@@ -72,7 +72,7 @@ export default function Reklamalar() {
       </div>
 
       <div className="row">
-        {ads.map((ad) => (
+        {ads.length === 0 ? <div className="col-12"><div className="card"><div className="card-body"><EmptyState text="Hozircha reklama yo‘q. Birinchisini qo‘shing." /></div></div></div> : null}{ads.map((ad) => (
           <div className="col-xl-4 col-md-6" key={ad.id}>
             <div className="card h-100">
               <div className="card-body d-flex flex-column">

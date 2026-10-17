@@ -293,3 +293,32 @@ header.header-main .header-left .lh-sm { line-height: 1.2; }
 .kc-queue-primary, .kc-queue-info { border-color: rgba(var(--primary), .25); }
 .kc-queue-calm { opacity: .7; }
 .kc-surface { background: rgba(var(--white), 1); }
+
+/* ── UI audit: ko'rsatkich nomlari kesilmasin (2 qatorgacha) ── */
+.kc-stat-label {
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; overflow-wrap: anywhere; line-height: 1.25; min-width: 0;
+}
+
+/* ── Bo'sh jadval: faqat sarlavha ko'rinib qolmasin ── */
+.table-responsive:has(> table > tbody:empty)::after,
+.table-responsive:has(> table:only-child > thead:only-child)::after {
+  content: "Hozircha ma\2019lumot yo\2019q";
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 36px 16px 28px; color: rgba(var(--secondary), 1); font-size: 14px;
+  border-top: 1px dashed rgba(var(--secondary), .25);
+}
+.table-responsive:has(> table > tbody:empty) > table { margin-bottom: 0; }
+
+/* ── Mobil: sahifa sarlavhasi yonidagi boshqaruvlar o'raladi ── */
+@media (max-width: 575.98px) {
+  .kc-page-tools { width: 100%; flex-wrap: wrap; }
+  .kc-page-tools > * { flex: 1 1 auto; }
+  .kc-page-tools > .kc-segment { flex: 1 1 100%; flex-wrap: nowrap; overflow-x: auto; max-width: 100%; scrollbar-width: none; }
+  .kc-page-tools > .kc-segment .nav-link { white-space: nowrap; }
+  .kc-page-tools > .btn, .kc-page-tools > .btn-group { flex: 0 0 auto; }
+  .kc-page-tools > .kc-date-filter { flex: 1 1 100%; }
+  .kc-date-filter { flex-wrap: wrap; }
+  .kc-date-filter > input { flex: 1 1 0; width: 0; min-width: 0; }
+  .kc-date-filter > .btn { flex: 1 1 100%; }
+}

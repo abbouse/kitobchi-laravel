@@ -68,7 +68,7 @@ const nav = [
     { to: '/boshqaruv/book-club', match: '/boshqaruv/book-club', label: 'Book Club', icon: 'ti-bookmark', perm: 'book-club' },
   ]},
   { group: 'Mijozlarga xizmat', section: 'Jamoa va tizim', icon: 'ti-headset', ax: 'iconoir-headset-help', items: [
-    { to: '/boshqaruv/support/inbox', match: '/boshqaruv/support/inbox', label: 'Support inbox', icon: 'ti-messages', ax: 'iconoir-chat-bubble', badge: 'LIVE', perm: 'support' },
+    { to: '/boshqaruv/support/inbox', match: '/boshqaruv/support/inbox', label: 'Support inbox', icon: 'ti-messages', badge: 'LIVE', perm: 'support' },
     { to: '/boshqaruv/support/kpi', match: '/boshqaruv/support/kpi', label: 'Support KPI', icon: 'ti-chart-histogram', perm: 'support' },
     { to: '/boshqaruv/shikoyatlar', match: '/boshqaruv/shikoyatlar', label: 'Shikoyatlar', icon: 'ti-alert-triangle', perm: 'support' },
     { to: '/boshqaruv/push', match: '/boshqaruv/push', label: 'Push bildirishnomalar', icon: 'ti-bell', perm: 'push' },
@@ -539,12 +539,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   >
                     <i className="iconoir-view-grid"></i>
                   </span>
-                  {currentNav ? (
-                    <div className="d-none d-md-flex flex-column lh-sm min-w-0">
-                      <span className="f-s-11 text-secondary text-truncate">{currentNav.group}</span>
-                      <span className="f-w-600 text-dark text-truncate">{currentNav.label}</span>
-                    </div>
-                  ) : null}
                 </div>
 
                 <div className="col-6 col-sm-8 d-flex align-items-center justify-content-end header-right p-0">
@@ -573,7 +567,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                         title="Navbatdagi ishlar"
                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); setProfileOpen(false); setSearchOpen(false); setBellOpen((v) => !v); }}
                       >
-                        <i className="iconoir-bell"></i>
+                        <i className="ti ti-bell" style={{ fontSize: 20 }}></i>
                         {queue && queue.total > 0 ? (
                           <span className="position-absolute translate-middle badge rounded-pill bg-danger" style={{ top: 6, left: '78%', fontSize: 10 }}>{queue.total > 99 ? '99+' : queue.total}</span>
                         ) : null}

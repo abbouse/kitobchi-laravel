@@ -54,7 +54,7 @@ export function StatWidget({ label, value, index = 0, variant, sub, trend, trend
     <div className="card-body">
       <div>
         <h5 className={`text-${tone}-dark f-w-600 d-flex align-items-center gap-1`}>
-          <span className="txt-ellipsis-1" title={typeof label === 'string' ? label : undefined}>{label}</span>{helpEl}
+          <span className="kc-stat-label" title={typeof label === 'string' ? label : undefined}>{label}</span>{helpEl}
         </h5>
       </div>
       <div className="mt-3">
@@ -71,8 +71,8 @@ export function StatWidget({ label, value, index = 0, variant, sub, trend, trend
     <div className="card-body">
       <i className="ph-bold ph-circle circle-bg-img"></i>
       <div>
-        <p className={`f-s-18 f-w-600 txt-ellipsis-1 d-flex align-items-center gap-1 ${v === 'store' ? 'text-success' : 'text-dark'}`}>
-          <span className="txt-ellipsis-1" title={typeof label === 'string' ? label : undefined}>{label}</span>{helpEl}
+        <p className={`f-s-18 f-w-600 d-flex align-items-center gap-1 ${v === 'store' ? 'text-success' : 'text-dark'}`}>
+          <span className="kc-stat-label" title={typeof label === 'string' ? label : undefined}>{label}</span>{helpEl}
         </p>
         <h2 className={`${v === 'store' ? 'text-success-dark' : 'text-secondary-dark'} mb-0`}>{value}</h2>
         {subEl}
@@ -106,7 +106,7 @@ export function MiniStat({ label, value, icon, meta, help, tone = 'primary', val
       {icon ? <span className={`h-40 w-40 d-flex-center b-r-10 f-s-20 flex-shrink-0 text-light-${tone}`}><i className={icon}></i></span> : null}
       <div className="min-w-0 flex-grow-1">
         <p className="mb-0 text-secondary f-s-13 f-w-500 d-flex align-items-center gap-1">
-          <span className="txt-ellipsis-1">{label}</span>{help ? <InfoHint text={help} /> : null}
+          <span className="kc-stat-label" title={typeof label === 'string' ? label : undefined}>{label}</span>{help ? <InfoHint text={help} /> : null}
         </p>
         <h6 className={`mb-0 f-w-600 f-s-16 text-break ${valueTone ? `text-${valueTone}${valueTone === 'warning' ? '-dark' : ''}` : 'text-dark'}`}>{value}</h6>
         {meta ? <p className="mb-0 text-muted f-s-12 txt-ellipsis-1">{meta}</p> : null}

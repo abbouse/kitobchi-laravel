@@ -136,54 +136,26 @@ export default function CourierOrders() {
   const problemCount = (courierOrderCounts['cancelled'] || 0) + (courierOrderCounts['returned'] || 0);
 
   return (
-    <div className="container-fluid py-3">
-      <PageCrumbs
-        title="Kuryer buyurtmalari (Logistika va yetkazmalar)"
-        crumbs={[
-          { label: 'Boshqaruv', href: '/boshqaruv' },
-          { label: 'Kuryerlar floti', href: '/boshqaruv/couriers' },
-          { label: 'Kuryer buyurtmalari' },
-        ]}
-      />
+    <div>
+      <div className="d-flex flex-wrap align-items-end justify-content-between gap-3 mx-1 mb-3">
+        <div>
+          <h4 className="main-title mb-0">Kuryer buyurtmalari</h4>
+          <PageCrumbs />
+          <p className="mb-0 text-secondary">Logistika topshiriqlari, kuryerlar va yetkazish holati</p>
+        </div>
+      </div>
 
-      {/* Axelit Top KPI Stat Widgets */}
-      <div className="row g-3 mb-4">
-        <div className="col-12 col-sm-6 col-xl-3">
-          <StatWidget
-            title="Jami topshiriqlar"
-            value={fmt(courierOrderCounts['all'] || courierOrderPagination.total)}
-            badge="Hammasi"
-            tone="primary"
-            icon="ti ti-truck-delivery"
-          />
-        </div>
-        <div className="col-12 col-sm-6 col-xl-3">
-          <StatWidget
-            title="Faol jarayonda"
-            value={fmt(inDeliveryCount)}
-            badge="Yo'lda / Kutilmoqda"
-            tone="warning"
-            icon="ti ti-route"
-          />
-        </div>
-        <div className="col-12 col-sm-6 col-xl-3">
-          <StatWidget
-            title="Topshirildi"
-            value={fmt(deliveredCount)}
-            badge="Muvaffaqiyatli"
-            tone="success"
-            icon="ti ti-circle-check"
-          />
-        </div>
-        <div className="col-12 col-sm-6 col-xl-3">
-          <StatWidget
-            title="Bekor / Qaytarilgan"
-            value={fmt(problemCount)}
-            badge="Muammoli"
-            tone="danger"
-            icon="ti ti-alert-triangle"
-          />
-        </div>
+      <div className="row">
+        {[
+          { label: 'Jami topshiriqlar', value: courierOrderCounts['all'] || courierOrderPagination.total, sub: 'Hammasi' },
+          { label: 'Faol jarayonda', value: inDeliveryCount, sub: 'Yo‘lda / kutilmoqda' },
+          { label: 'Topshirildi', value: deliveredCount, sub: 'Muvaffaqiyatli' },
+          { label: 'Bekor / qaytarilgan', value: problemCount, sub: 'Muammoli' },
+        ].map((item, i) => (
+          <div className="col-sm-6 col-xl-3" key={item.label}>
+            <StatWidget index={i} label={item.label} value={fmt(item.value)} sub={item.sub} />
+          </div>
+        ))}
       </div>
 
       {/* Main Order List Card */}
@@ -527,11 +499,11 @@ function OrderModal({
                       <div className="row g-2 mb-2">
                         <div className="col-sm-6">
                           <small className="text-muted d-block">Qabul qiluvchi</small>
-                          <span className="f-w-600">{order.address?.fullName || '—'}</span>
+                          <span className="f-w-600">{String(order.address?.fullName || '—')}</span>
                         </div>
                         <div className="col-sm-6">
                           <small className="text-muted d-block">Bog'lanish telefoni</small>
-                          <span className="f-w-600">{order.address?.phone || '—'}</span>
+                          <span className="f-w-600">{String(order.address?.phone || '—')}</span>
                         </div>
                         <div className="col-12">
                           <small className="text-muted d-block">To'liq manzil</small>

@@ -91,7 +91,6 @@ interface DashboardPayload {
       lifetimeMonths: number | null; ltv: number | null; ltvCacRatio: number | null;
     }>;
   };
-  exportUrl?: string;
   alerts: Array<{ level: string; icon: string; title: string; text: string; url?: string }>;
 }
 
@@ -511,7 +510,7 @@ export default function Dashboard() {
           </p>
         </div>
         {base ? (
-          <div className="d-flex gap-2 align-items-center flex-wrap justify-content-end">
+          <div className="d-flex gap-2 align-items-center flex-wrap justify-content-end kc-page-tools">
             <div className="nav kc-segment" role="tablist" aria-label="Dashboard davri">
               {([
                 ['today', 'Bugun'],
