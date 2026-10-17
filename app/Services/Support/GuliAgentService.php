@@ -11,6 +11,7 @@ use App\Models\Conversation;
 use App\Models\ProjectSetting;
 use App\Models\Sold;
 use App\Models\Split;
+use App\Models\SplitPlan;
 use App\Models\User;
 use App\Services\ChatBotKnowledgeService;
 use App\Services\OpenAIService;
@@ -459,6 +460,22 @@ class GuliAgentService
 
             $ordersCount = Sold::query()->where('user_id', $user->id)->count();
 
+            $activePlans = [];
+            try {
+                $activePlans = SplitPlan::query()
+                    ->where('enabled', true)
+                    ->orderBy('months')
+                    ->get()
+                    ->map(fn ($p) => [
+                        'name' => $p->name,
+                        'months' => (int) $p->months,
+                        'period' => $p->frequencyLabel(),
+                        'is_zero_percent' => (float) $p->monthly_interest_percent <= 0,
+                    ])->all();
+            } catch (\Throwable) {
+                $activePlans = [];
+            }
+
             return [
                 'user_id'      => $user->id,
                 'orders_count' => $ordersCount,
@@ -467,6 +484,7 @@ class GuliAgentService
                 'nasiya_debt'  => $split ? number_format((float) ($split->debt ?? 0), 0, '.', ' ') . " so'm" : null,
                 'nasiya_status' => $split ? $this->humanSplitStatus($split) : null,
                 'can_use_nasiya' => $split && ($split->is_active ?? false) && ((float) ($split->limit ?? 0) > (float) ($split->debt ?? 0)),
+                'active_plans' => $activePlans,
                 'note' => $ordersCount < 3
                     ? 'Nasiya olish uchun kamida 3 ta muvaffaqiyatli buyurtma tarix kerak.'
                     : null,
@@ -876,7 +894,10 @@ NASIYA (BO'LIB TO'LASH) BILIMI VA FOIZLARNI KO'RSATMASLIK QOIDASI (QAT'IY MARKET
 Kitobchi "Nasiya" (bo'lib to'lash) xizmatini taqdim etadi. Quyidagi marketing qoidalariga QAT'IY amal qilasan:
 - FOIZLARNI RAQAMLARDA ASLO AYTMA: Nasiya haqida gapirganda HECH QACHON foiz raqamlarini (masalan 3%, 5%, 10% va h.k.) aytma! "Ustama foiz", "kredit foizi" kabi so'zlarni aslo ishlatma! Bu marketing nuqtai nazaridan qat'iyan man etiladi.
 - FAQAT 0% BO'LGANDA: Agar biror to'lov rejasi tekin, ustamasiz yoki 0% bo'lsa, buni marketing ustunligi sifatida "0% ustamasiz" yoki "0%" deb ko'rsatishing mumkin.
-- Boshqa rejalar haqida: "Kitobchi ilovasida 3 oydan 12 oygacha bo'lgan qulay bo'lib to'lash muddatlari mavjud. Oylik to'lov summasi savatdagi kitoblar qiymatiga qarab checkout qismida avtomatik aniq hisoblab ko'rsatiladi 😊" deb tushuntir.
+- MUDDATLAR VA TARIFLAR HAQIDA (QAT'IY QOIDA):
+  * HECH QACHON o'zingdan 12 oy yoki boshqa asossiz muddatlarni to'qib chiqarma! Kitoblar uchun 12 oylik uzoq muddatlar berilmaydi.
+  * Tizimdagi amaldagi faol tariflar (masalan: 2 oy, 3 oy, 4 oy yoki qaysi biri yoqilgan bo'lsa) PLATFORMA BILIMLARI yoki `get_credit_status` funksiyasidagi `active_plans` ro'yxatida aniq beriladi. Faqat o'sha yerda ko'rsatilgan faol muddatlarni ayt.
+  * Agar aniq tariflar belgilanmagan bo'lsa yoki umumiy so'ralsa: "Kitobchi ilovasida qulay muddatlarga bo'lib to'lash (Split) xizmati mavjud. Amaldagi faol tariflar va oylik to'lov summasi savatdagi kitoblar qiymati hamda buyurtmani rasmiylashtirish (checkout) qismida aniq hisoblab ko'rsatiladi 😊" deb tushuntir.
 - Nasiya faqat Kitobchi ilovasidan ro'yxatdan o'tgan, telefon raqami tasdiqlangan mijozlarga beriladi.
 - Nasiya olish uchun mijozning muayyan miqdordagi muvaffaqiyatli buyurtmalar tarixi bo'lishi kerak (yangi foydalanuvchilarga berilmaydi).
 - Nasiya limiti mijozning faolligiga, to'lovlar tarixiga qarab belgilanadi.
