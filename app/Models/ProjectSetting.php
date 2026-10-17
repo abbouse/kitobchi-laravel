@@ -47,6 +47,7 @@ class ProjectSetting extends Model
         'flash_delivery_start_time',
         'flash_delivery_duration',
         'flash_delivery_promo_code',
+        'flash_delivery_limit',
     ];
 
     protected $casts = [

@@ -368,9 +368,16 @@ export default function Settings() {
                 />
               </div>
               <div className="col-md-4">
+                <label className="form-label">Har bir mijozga</label>
+                <select name="flash_delivery_limit" className="form-select" defaultValue={value(project, 'flash_delivery_limit', 'daily')}>
+                  <option value="daily">Har kuni bir marta</option>
+                  <option value="once">Faqat bir marta (umrida)</option>
+                </select>
+              </div>
+              <div className="col-md-4">
                 <TextInput
                   name="flash_delivery_promo_code"
-                  label="Promokod kodi"
+                  label="Promokod (ixtiyoriy, sayt uchun)"
                   type="text"
                   placeholder="BEPULYETKAZISH"
                   defaultValue={value(project, 'flash_delivery_promo_code', '')}
@@ -378,10 +385,9 @@ export default function Settings() {
               </div>
               <div className="col-12 f-s-13 text-muted">
                 <i className="ti ti-info-circle me-1" />
-                Belgilangan vaqtda har kuni {value(project, 'flash_delivery_duration', '15')} daqiqa davomida yetkazish bepul bo'ladi.
-                Foydalanuvchi bu promokodni checkout'da kiritsa yetkazish narxi <strong>0</strong> bo'ladi.
-                <br />
-                <span className="text-warning"><i className="ti ti-alert-triangle me-1" />Promokod avval "Promokodlar" bo'limida <code>type=free_delivery</code> bilan yaratilgan bo'lishi kerak.</span>
+                Har kuni belgilangan vaqtda {value(project, 'flash_delivery_duration', '15')} daqiqa davomida ilovada yetkazish <strong>avtomatik bepul</strong> bo'ladi —
+                mijoz promokod kiritmaydi. Ilova bosh sahifasida pastda orqaga sanovchi banner chiqadi.
+                Promokod faqat aksiya vaqtida ishlaydi (boshqa vaqtda kiritilsa rad etiladi).
               </div>
               <div className="col-12"><hr className="my-2" /></div>
               <div className="col-12">

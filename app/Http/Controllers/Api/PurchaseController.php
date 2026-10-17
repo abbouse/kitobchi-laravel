@@ -271,6 +271,17 @@ class PurchaseController extends Controller
     private function validatePromocode(string $rawCode, int $userId, float $total, array $lines = []): array
     {
         $code = strtoupper(trim($rawCode));
+
+        // Bepul yetkazish soati promokodi faqat aksiya vaqtida ishlaydi
+        $flashSetting = \App\Support\FlashDelivery::setting();
+        $flashCode = strtoupper(trim((string) ($flashSetting?->flash_delivery_promo_code ?? '')));
+        if ($flashCode !== '' && $code === $flashCode && ! \App\Support\FlashDelivery::isActive(\App\Support\FlashDelivery::GRACE_SECONDS)) {
+            $window = \App\Support\FlashDelivery::status();
+            return ['error' => ($window['enabled'] ?? false)
+                ? "Bu promokod faqat bepul yetkazish soatida ({$window['start_time']}–{$window['end_time']}) amal qiladi."
+                : 'Promokod faol emas!'];
+        }
+
         $promo = DB::table('promocodes')->where('code', $code)->first();
 
         if (! $promo) {
@@ -498,6 +509,10 @@ class PurchaseController extends Controller
                     'expires_at' => $cert->expires_at?->format('d.m.Y'),
                 ]),
             'delivery_services' => $services,
+            // Bepul yetkazish soati: aktiv va mijoz hali foydalanmagan bo'lsa yetkazish narxi 0 bo'ladi
+            'flash_delivery' => array_merge(\App\Support\FlashDelivery::status($user), [
+                'applies' => \App\Support\FlashDelivery::appliesTo($user),
+            ]),
             'split' => $preorderShipsAt
                 ? ['available' => false]
                 : $this->splitAvailabilityPayload($user, (int) $totalSum, $cartItems),
@@ -1533,6 +1548,13 @@ class PurchaseController extends Controller
                 $deliveryPrice = $collectionDeliveryOverride;
             }
 
+            // Bepul yetkazish soati: aksiya vaqtida mijozning (bugungi) birinchi buyurtmasida yetkazish bepul
+            $flashDeliverySaved = 0;
+            if ($deliveryPrice > 0 && \App\Support\FlashDelivery::appliesTo($user)) {
+                $flashDeliverySaved = (int) $deliveryPrice;
+                $deliveryPrice = 0;
+            }
+
             // ── Cashback ──────────────────────────────────────────
             $amountBeforeCashback = $totalSum + $deliveryPrice;
             $useCashback = $request->boolean('withCashback');
@@ -1755,6 +1777,10 @@ class PurchaseController extends Controller
                 'gift' => $giftId !== null ? (int) $giftId : null,
                 'buyerWish' => Str::limit(trim(strip_tags($request->input('buyerWish', ''))), 300),
                 'promocode' => $appliedPromo,
+                ...(\Illuminate\Support\Facades\Schema::hasColumn('solds', 'flash_free_delivery') ? [
+                    'flash_free_delivery' => $flashDeliverySaved > 0,
+                    'flash_delivery_saved' => $flashDeliverySaved,
+                ] : []),
                 'discountAmount' => (int) ($discountAmount + ($supportsCollectionDiscountAmount ? 0 : $collectionDiscountAmount)),
                 'withCashback' => (bool) ($useCashback && $cashbackUsed > 0),
                 'cashbackAmount' => (int) $cashbackUsed,

@@ -211,6 +211,7 @@ class SettingsController extends Controller
             'flash_delivery_start_time' => 'nullable|date_format:H:i',
             'flash_delivery_duration'   => 'nullable|integer|min:1|max:120',
             'flash_delivery_promo_code' => 'nullable|string|max:50',
+            'flash_delivery_limit'      => 'nullable|in:daily,once',
         ]);
 
         $settings = $this->projectSettings();
@@ -225,6 +226,9 @@ class SettingsController extends Controller
                 'flash_delivery_duration'   => $request->filled('flash_delivery_duration')
                     ? (int) $request->input('flash_delivery_duration')
                     : ($settings->flash_delivery_duration ?? 15),
+                ...(\Illuminate\Support\Facades\Schema::hasColumn('project_settings', 'flash_delivery_limit') ? [
+                    'flash_delivery_limit' => $request->input('flash_delivery_limit', $settings->flash_delivery_limit ?? 'daily'),
+                ] : []),
                 'flash_delivery_promo_code' => $request->filled('flash_delivery_promo_code')
                     ? strtoupper(trim($request->input('flash_delivery_promo_code')))
                     : ($settings->flash_delivery_promo_code ?? null),
