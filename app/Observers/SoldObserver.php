@@ -225,7 +225,10 @@ class SoldObserver
             }
 
             // ── 6. Cashback ───────────────────────────────────────────────────
-            if ($order->withCashback && $order->cashbackAmount > 0) {
+            // OrderService::cancelOrder allaqachon qaytargan bo'lsa — ikkinchi marta qaytarilmaydi
+            $cashbackRefunded = \Illuminate\Support\Facades\Schema::hasTable('cashback_histories')
+                && DB::table('cashback_histories')->where('sold_id', $order->id)->where('action', 'refund')->exists();
+            if ($order->withCashback && $order->cashbackAmount > 0 && ! $cashbackRefunded) {
                 $user = User::find($order->user_id);
                 if ($user) {
                     $user->increment('cashback', (int) $order->cashbackAmount);

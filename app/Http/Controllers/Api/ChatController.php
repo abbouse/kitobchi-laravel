@@ -674,7 +674,7 @@ class ChatController extends Controller
             return response()->json(['status' => 'error'], 401);
         }
 
-        $message = Message::where('id', $messageId)->where('sender_id', $user->id)->first();
+        $message = Message::where('id', $messageId)->where('sender_id', $user->id)->where('sender_type', User::class)->first();
         if (!$message) {
             return response()->json(['status' => 'error', 'message' => 'Xabar topilmadi'], 404);
         }
@@ -698,7 +698,7 @@ class ChatController extends Controller
             return response()->json(['status' => 'error'], 401);
         }
 
-        $message = Message::where('id', $messageId)->where('sender_id', $user->id)->first();
+        $message = Message::where('id', $messageId)->where('sender_id', $user->id)->where('sender_type', User::class)->first();
         if (!$message) {
             return response()->json(['status' => 'error', 'message' => 'Xabar topilmadi'], 404);
         }

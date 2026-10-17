@@ -125,7 +125,7 @@ Route::prefix('vacancies')->group(function () {
 });
 
 // --- Faqat Token bilan kiriladigan qismlar ---
-Route::middleware('auth:user')->group(function () {
+Route::middleware(['auth:user', \App\Http\Middleware\EnsureUserActive::class])->group(function () {
     Route::post('shared-cart/create', [SharedCartController::class, 'create']);
     Route::post('shared-cart/{slug}/add-to-cart', [SharedCartController::class, 'addToCart']);
     Route::get('shared-cart/my', [SharedCartController::class, 'myLinks']);
@@ -237,10 +237,12 @@ Route::middleware('auth:user')->group(function () {
 
     // Savatcha
     Route::prefix('cart')->group(function () {
-        Route::get('check_book/{book_id}', [UserController::class, 'book_in_cart']);
-        Route::post('delete', [UserController::class, 'cart_delete']);
-        Route::post('plus', [UserController::class, 'cart_plus']);
-        Route::get('{id}/minus', [UserController::class, 'cart_minus']);
+        // Eski ilova versiyalari uchun: avval mavjud bo'lmagan UserController
+        // metodlariga ulangan edi (har chaqiruvda 500) — endi CartController'ga
+        Route::get('check_book/{book_id}', [CartController::class, 'check']);
+        Route::post('delete', [CartController::class, 'batchDelete']);
+        Route::post('plus', [CartController::class, 'plus']);
+        Route::get('{id}/minus', [CartController::class, 'minus']);
     });
     Route::prefix('cart_user')->group(function () {
         Route::get('check/{product_id}', [CartController::class, 'check']);

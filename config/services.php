@@ -179,4 +179,9 @@ return [
         'probe' => env('FFPROBE_BINARY', '/usr/bin/ffprobe'),
     ],
 
+    // Telegram webhook maxfiy tokeni (setWebhook secret_token). Bo'sh bo'lsa tekshiruv o'chiq.
+    'telegram' => [
+        'webhook_secret' => env('TELEGRAM_WEBHOOK_SECRET', ''),
+    ],
+
 ];

@@ -498,7 +498,8 @@ class UserController extends Controller
     public function delete_location(Request $request, Locations $location)
     {
         $user = Auth::guard('user')->user();
-        if ($user && $location->id != $user->mainAddressID) {
+        // XAVFSIZLIK: faqat o'z manzilini o'chira oladi (avval istalgan mijozning manzili o'chirilardi)
+        if ($user && (int) $location->user_id === (int) $user->id && $location->id != $user->mainAddressID) {
             $location->isDeleted = true;
             $location->update();
             return response()->json(['status' => 'success', 'message' => "Muvaffaqiyatli bajarildi."], 201);
@@ -569,7 +570,18 @@ class UserController extends Controller
         if (!$user) {
             return response()->json(['status' => 'error', 'message' => "Bunday foydalanuvchi mavjud emas!"], 201);
         }
-        $user->mainAddressID = $id;
+        // XAVFSIZLIK: faqat o'z manzilini tanlay oladi. Avval istalgan
+        // locations.id berilib, boshqa mijozning manzili checkout'da ko'rinardi
+        // (yoki mavjud bo'lmagan id 500 xato berardi).
+        $location = DB::table('locations')
+            ->where('id', (int) $id)
+            ->where('user_id', $user->id)
+            ->where(fn ($q) => $q->whereNull('isDeleted')->orWhere('isDeleted', 0))
+            ->first(['id']);
+        if (! $location) {
+            return response()->json(['status' => 'error', 'message' => 'Manzil topilmadi.'], 404);
+        }
+        $user->mainAddressID = (int) $location->id;
         $user->save();
         return response()->json(['status' => 'success', 'message' => "Location set ID:" . $id], 201);
     }

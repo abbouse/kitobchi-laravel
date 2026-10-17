@@ -304,7 +304,7 @@ public function getConversations(Request $request) {
         $seller = Auth::guard('seller')->user();
         if (!$seller) return response()->json(['status' => 'error'], 401);
 
-        $message = Message::where('id', $messageId)->where('sender_id', $seller->id)->first();
+        $message = Message::where('id', $messageId)->where('sender_id', $seller->id)->where('sender_type', \App\Models\Seller::class)->first();
         if (!$message) {
             return response()->json(['status' => 'error', 'message' => 'Xabar topilmadi'], 404);
         }
@@ -323,7 +323,7 @@ public function getConversations(Request $request) {
         $seller = Auth::guard('seller')->user();
         if (!$seller) return response()->json(['status' => 'error'], 401);
 
-        $message = Message::where('id', $messageId)->where('sender_id', $seller->id)->first();
+        $message = Message::where('id', $messageId)->where('sender_id', $seller->id)->where('sender_type', \App\Models\Seller::class)->first();
         if (!$message) {
             return response()->json(['status' => 'error', 'message' => 'Xabar topilmadi'], 404);
         }

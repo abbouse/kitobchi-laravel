@@ -186,13 +186,20 @@ class UserHandler
         $ticket = SessionService::getUserActiveTicket($cid);
 
         // Kontakt (telefon raqam) yuborilgan bo'lsa
-        if ($message->contact) {
+        // XAVFSIZLIK: faqat O'ZINING kontaktini yuborgan foydalanuvchi bog'lanadi.
+        // Avval istalgan odamning kontakt kartasini (yoki shunchaki telefon
+        // raqamini) yuborib, o'sha mijoz hisobini o'z Telegramiga bog'lash va
+        // Guli orqali uning buyurtmalari/nasiyasini ko'rish mumkin edi.
+        if ($message->contact && (int) ($message->contact->user_id ?? 0) === (int) $cid) {
             $phone = $message->contact->phone_number;
             try {
                 $cleanPhone = preg_replace('/[^\d]/', '', $phone);
-                $matchedUser = \App\Models\User::where('telegram_id', $cid)
-                    ->orWhere('phone_number', 'LIKE', "%$cleanPhone%")
-                    ->first();
+                $matchedUser = strlen($cleanPhone) >= 9
+                    ? \App\Models\User::where('phone_number', $cleanPhone)
+                        ->orWhere('phone_number', '+'.$cleanPhone)
+                        ->orWhere('phone_number', 'LIKE', '%'.substr($cleanPhone, -9))
+                        ->first()
+                    : null;
                 if ($matchedUser && empty($matchedUser->telegram_id)) {
                     $matchedUser->update(['telegram_id' => $cid]);
                 }
