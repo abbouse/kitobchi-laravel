@@ -67,6 +67,15 @@ class AuthController extends Controller
                 $telegramOidcService->clientId($settings),
             );
 
+            // Foydalanuvchi raqamini ulashishga ruxsat bermagan bo'lsa
+            if (trim((string) ($claims['phone_number'] ?? '')) === '') {
+                return response()->json([
+                    'status'     => 'error',
+                    'error_code' => 'tg_err_phone_missing',
+                    'message'    => "Telegram telefon raqamingizni ulashmadi. Qaytadan urinib, raqamni ulashishga ruxsat bering yoki SMS orqali kiring.",
+                ], 422);
+            }
+
             // ── O'zbekiston (+998) raqamlari uchun cheklov ─────────────
             // Faqat 12 raqamli, 998 bilan boshlanadigan UZ raqamlar qabul qilinadi.
             if (!$this->isUzbekistanTelegramPhone($claims)) {
@@ -93,7 +102,11 @@ class AuthController extends Controller
 
             return $this->successUserResponse($user->fresh(['location']), $plainTextToken);
         } catch (\Throwable $e) {
-            Log::warning('Telegram auth failed', ['error' => $e->getMessage()]);
+            Log::warning('Telegram auth failed', [
+                'error' => $e->getMessage(),
+                'exception' => get_class($e),
+                'platform' => $request->input('platform'),
+            ]);
 
             return response()->json([
                 'status'  => 'error',

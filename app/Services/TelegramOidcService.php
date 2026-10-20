@@ -100,8 +100,22 @@ class TelegramOidcService
             throw new RuntimeException('Telegram client_id sozlanmagan.');
         }
 
-        $keys = JWK::parseKeySet($this->jwks());
-        $decoded = (array) JWT::decode($idToken, $keys);
+        // Server va Telegram soatlari orasidagi kichik farq (iat/nbf) tokenni
+        // rad etmasligi uchun muhlat.
+        JWT::$leeway = 120;
+
+        try {
+            $decoded = (array) JWT::decode($idToken, JWK::parseKeySet($this->jwks()));
+        } catch (\UnexpectedValueException $e) {
+            // Telegram kalitlarni almashtirgan bo'lsa (yangi `kid`), keshdagi
+            // JWKS eskirgan bo'ladi — bir marta yangilab qayta tekshiramiz.
+            if (! str_contains(strtolower($e->getMessage()), 'kid')) {
+                throw $e;
+            }
+            Cache::forget(self::JWKS_CACHE_KEY);
+            Cache::forget(self::CONFIG_CACHE_KEY);
+            $decoded = (array) JWT::decode($idToken, JWK::parseKeySet($this->jwks()));
+        }
 
         if (($decoded['iss'] ?? null) !== self::ISSUER) {
             throw new RuntimeException('Telegram issuer noto‘g‘ri.');
@@ -116,7 +130,7 @@ class TelegramOidcService
             throw new RuntimeException('Telegram audience noto‘g‘ri.');
         }
 
-        if (isset($decoded['exp']) && (int) $decoded['exp'] < now()->timestamp) {
+        if (isset($decoded['exp']) && (int) $decoded['exp'] < now()->timestamp - 120) {
             throw new RuntimeException('Telegram token muddati tugagan.');
         }
 
