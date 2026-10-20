@@ -32,9 +32,9 @@
           </div>
         </div>
 
-        <div class="flex flex-col lg:flex-row gap-5 lg:items-start">
+        <div class="flex flex-col lg:flex-row gap-5 lg:items-start w-full">
           <!-- Main Form Content -->
-          <form class="flex-1 min-w-0 space-y-4" @submit.prevent="submitOrder">
+          <form class="checkout-form-col w-full space-y-4" @submit.prevent="submitOrder">
 
             <!-- Section 1: Buyurtmani oluvchi (Recipient) -->
             <div class="p-5 sm:p-6 rounded-3xl bg-white border border-neutral-200/80 shadow-2xs w-full">
@@ -118,10 +118,17 @@
 
               <!-- No saved address: directly show address picker -->
               <template v-else>
-                <UzAddressPicker ref="addressPickerRef" @update="onAddrUpdate" />
-                <div v-if="addressSummary.fullAddress" class="mt-3 p-3.5 rounded-2xl bg-neutral-50 border border-neutral-200/80 text-sm text-neutral-700 flex items-center gap-2">
-                  <svg class="w-4 h-4 text-primary shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg>
-                  <span>{{ addressSummary.fullAddress }}</span>
+                <div class="pt-1">
+                  <UzAddressPicker ref="addressPickerRef" @update="onAddrUpdate" />
+                </div>
+                <div v-if="addressSummary.fullAddress" class="mt-4 p-4 rounded-2xl bg-[#F4F8FD] border border-primary/20 text-sm text-neutral-800 flex items-start gap-3">
+                  <div class="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 mt-0.5">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg>
+                  </div>
+                  <div class="min-w-0 flex-1">
+                    <p class="text-xs font-bold text-primary uppercase tracking-wide m-0 mb-0.5">Tanlangan manzil xulosasi</p>
+                    <p class="text-sm font-semibold text-neutral-900 m-0 leading-snug break-words">{{ addressSummary.fullAddress }}</p>
+                  </div>
                 </div>
               </template>
             </div>
@@ -229,7 +236,7 @@
           </form>
 
           <!-- Right Side: Sticky Order Summary (VK style card) -->
-          <div class="w-full lg:w-[380px] xl:w-[420px] shrink-0 h-fit lg:sticky lg:top-24">
+          <div class="checkout-summary-col shrink-0 h-fit lg:sticky lg:top-24">
             <div class="p-5 sm:p-6 rounded-3xl bg-white border border-neutral-200/80 shadow-2xs space-y-4">
               <h3 class="text-lg font-bold text-neutral-900 m-0 pb-3 border-b border-neutral-100">Buyurtmangiz</h3>
 
@@ -345,7 +352,7 @@
         class="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
         @click.self="isAddAddressModalOpen = false"
       >
-        <div class="modal-sm-600 relative bg-white rounded-3xl overflow-hidden p-6 sm:p-8 w-full overflow-y-auto">
+        <div class="modal-sm-600 max-h-85vh overflow-y-auto relative bg-white rounded-3xl p-6 sm:p-8 w-full shadow-2xl">
           <button @click="isAddAddressModalOpen = false" type="button" class="absolute top-4 right-4 sm:top-6 sm:right-6 w-10 h-10 rounded-full bg-[#F6F6F9] hover:bg-neutral-200 transition-colors flex items-center justify-center border-none cursor-pointer">
             <svg class="w-5 h-5 text-neutral-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
           </button>

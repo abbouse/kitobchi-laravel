@@ -86,6 +86,6 @@ const route = useRoute()
 
 const isHiddenPage = computed(() => {
   const p = route.path
-  return p.startsWith('/books/') || p.startsWith('/stationery/') || p === '/profile/edit' || p.startsWith('/profile/address')
+  return p.startsWith('/books/') || p.startsWith('/stationery/') || p === '/profile/edit' || p.startsWith('/profile/address') || p === '/checkout'
 })
 </script>

@@ -489,11 +489,22 @@ button.bg-\[\#08cb00\]:active {
   }
 }
 
-/* Checkout — o'ng tomondagi buyurtma xulosasi ustuni, faqat lg+ da
-   sobit 400px kenglik oladi */
+/* Checkout sahifasi — 2 ustunli joylashuv va kengliklar (JIT arbitary w-[Npx]
+   o'rniga qat'iy CSS qoidalari) */
+.checkout-summary-col {
+  width: 100%;
+}
 @media (min-width: 1024px) {
   .checkout-summary-col {
-    width: 400px;
+    width: 380px !important;
+    max-width: 380px !important;
+    min-width: 380px !important;
+    flex: 0 0 380px !important;
+  }
+  .checkout-form-col {
+    flex: 1 1 0% !important;
+    min-width: 0 !important;
+    width: calc(100% - 404px) !important;
   }
 }
 

@@ -1,36 +1,36 @@
 <template>
   <div class="space-y-4">
-    <div class="grid grid-cols-2 gap-3 md:gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
       <!-- Viloyat -->
-      <div class="text-sm max-md:col-span-2">
-        <label class="block text-sm font-medium text-neutral-700 mb-1.5">Viloyat</label>
+      <div>
+        <label class="block font-medium text-neutral-700 text-sm mb-1.5">Viloyat</label>
         <div class="relative">
           <select
             v-model.number="regionId"
-            class="w-full appearance-none focus:outline-none text-neutral-900 text-base md:text-sm rounded-2xl p-4 bg-[#F1F2F7] border border-transparent focus:border-primary/20 transition-all cursor-pointer"
+            class="w-full appearance-none text-neutral-900 focus:outline-none text-sm sm:text-base rounded-2xl h-12 px-4 pr-10 bg-[#F5F6F8] hover:bg-[#EFF1F4] focus:bg-white border border-transparent focus:border-primary focus:ring-2 focus:ring-primary/15 transition-all cursor-pointer"
           >
             <option :value="null" disabled>Viloyatni tanlang</option>
             <option v-for="r in regions" :key="r.id" :value="r.id">{{ r.name }}</option>
           </select>
-          <span class="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none text-neutral-400">
+          <span class="absolute inset-y-0 right-0 flex items-center pr-3.5 pointer-events-none text-neutral-400">
             <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
           </span>
         </div>
       </div>
 
       <!-- Tuman -->
-      <div class="text-sm max-md:col-span-2">
-        <label class="block text-sm font-medium text-neutral-700 mb-1.5">Tuman / shahar</label>
+      <div>
+        <label class="block font-medium text-neutral-700 text-sm mb-1.5">Tuman / shahar</label>
         <div class="relative">
           <select
             v-model.number="districtId"
             :disabled="!regionId"
-            class="w-full appearance-none focus:outline-none text-neutral-900 text-base md:text-sm rounded-2xl p-4 bg-[#F1F2F7] border border-transparent focus:border-primary/20 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+            class="w-full appearance-none text-neutral-900 focus:outline-none text-sm sm:text-base rounded-2xl h-12 px-4 pr-10 bg-[#F5F6F8] hover:bg-[#EFF1F4] focus:bg-white border border-transparent focus:border-primary focus:ring-2 focus:ring-primary/15 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <option :value="null" disabled>{{ regionId ? 'Tumanni tanlang' : 'Avval viloyatni tanlang' }}</option>
             <option v-for="d in districtOptions" :key="d.id" :value="d.id">{{ d.name }}</option>
           </select>
-          <span class="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none text-neutral-400">
+          <span class="absolute inset-y-0 right-0 flex items-center pr-3.5 pointer-events-none text-neutral-400">
             <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
           </span>
         </div>
@@ -38,14 +38,14 @@
     </div>
 
     <!-- Mahalla / Qishloq -->
-    <div class="text-sm">
-      <div class="flex items-center justify-between mb-1.5">
-        <label class="block text-sm font-medium text-neutral-700">Mahalla / qishloq</label>
+    <div>
+      <div class="flex items-center justify-between gap-2 mb-1.5">
+        <label class="block font-medium text-neutral-700 text-sm m-0">Mahalla / qishloq</label>
         <button
           v-if="villageOptions.length > 0"
           type="button"
           @click="useFreeVillageText = !useFreeVillageText"
-          class="text-xs font-medium text-primary bg-transparent border-none cursor-pointer p-0"
+          class="text-xs font-semibold text-primary hover:underline bg-transparent border-none cursor-pointer p-0"
         >
           {{ useFreeVillageText ? "Ro'yxatdan tanlash" : "Ro'yxatda yo'q, o'zim kiritaman" }}
         </button>
@@ -55,12 +55,12 @@
         <select
           v-model.number="villageId"
           :disabled="!districtId"
-          class="w-full appearance-none focus:outline-none text-neutral-900 text-base md:text-sm rounded-2xl p-4 bg-[#F1F2F7] border border-transparent focus:border-primary/20 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+          class="w-full appearance-none text-neutral-900 focus:outline-none text-sm sm:text-base rounded-2xl h-12 px-4 pr-10 bg-[#F5F6F8] hover:bg-[#EFF1F4] focus:bg-white border border-transparent focus:border-primary focus:ring-2 focus:ring-primary/15 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <option :value="null" disabled>{{ districtId ? 'Mahalla/qishloqni tanlang' : 'Avval tumanni tanlang' }}</option>
           <option v-for="v in villageOptions" :key="v.id" :value="v.id">{{ v.name }}</option>
         </select>
-        <span class="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none text-neutral-400">
+        <span class="absolute inset-y-0 right-0 flex items-center pr-3.5 pointer-events-none text-neutral-400">
           <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
         </span>
       </div>
@@ -70,18 +70,18 @@
         type="text"
         :disabled="!districtId"
         placeholder="Masalan: Do'stlik MFY"
-        class="w-full appearance-none text-base md:text-sm text-neutral-900 focus:outline-none rounded-2xl p-4 bg-[#F1F2F7] border border-transparent focus:border-primary/20 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+        class="w-full appearance-none placeholder:text-neutral-400 text-neutral-900 focus:outline-none text-sm sm:text-base rounded-2xl h-12 px-4 bg-[#F5F6F8] hover:bg-[#EFF1F4] focus:bg-white border border-transparent focus:border-primary focus:ring-2 focus:ring-primary/15 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
       >
     </div>
 
     <!-- Ko'cha, uy, xonadon -->
-    <div class="text-sm">
-      <label class="block text-sm font-medium text-neutral-700 mb-1.5">Ko'cha, uy, xonadon raqami</label>
+    <div>
+      <label class="block font-medium text-neutral-700 text-sm mb-1.5">Ko'cha, uy, xonadon raqami</label>
       <input
         v-model="street"
         type="text"
         placeholder="Masalan: Navoiy ko'chasi, 12-uy, 5-xonadon"
-        class="w-full appearance-none text-base md:text-sm text-neutral-900 focus:outline-none rounded-2xl p-4 bg-[#F1F2F7] border border-transparent focus:border-primary/20 transition-all"
+        class="w-full appearance-none placeholder:text-neutral-400 text-neutral-900 focus:outline-none text-sm sm:text-base rounded-2xl h-12 px-4 bg-[#F5F6F8] hover:bg-[#EFF1F4] focus:bg-white border border-transparent focus:border-primary focus:ring-2 focus:ring-primary/15 transition-all"
       >
     </div>
   </div>
