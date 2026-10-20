@@ -135,6 +135,9 @@
       </div>
     </section>
 
+    <!-- ====== SECTION 3: KITOBXONLAR KLUBI (Desktop & Mobile) ====== -->
+    <HomeBookClubSection :posts="clubPosts" />
+
     <!-- ====== KATEGORIYA QATORLARI — FAQAT DESKTOPDA (5 tadan mahsulot) ====== -->
     <section
       v-for="cat in categoryRows"
@@ -214,7 +217,7 @@ const config = useRuntimeConfig()
 // Parallel SSR Data Fetching for maximum performance and instant speed
 const { data: pageData } = await useAsyncData('homepage-data', async () => {
   try {
-    const [home, cat, catRows, mobileFirst] = await Promise.all([
+    const [home, cat, catRows, mobileFirst, clubRes] = await Promise.all([
       $fetch<any>(`${config.public.apiBase}/v1/kitobchi/home`, {
         query: { limit: 10 }
       }).catch(() => null),
@@ -233,17 +236,22 @@ const { data: pageData } = await useAsyncData('homepage-data', async () => {
       // kitoblarni (kategoriyalarga bo'lmasdan) ommabop tartibda beradi.
       $fetch<any>(`${config.public.apiBase}/v1/kitobchi/search/`, {
         query: { type: 'book', sort: 'popular', page: 1 }
+      }).catch(() => null),
+      // Kitobxonlar Klubi — eng yaxshi, qiziqarli taqriz va postlar
+      $fetch<any>(`${config.public.apiBase}/v1/kitobchi/book_club`, {
+        query: { per_page: 8 }
       }).catch(() => null)
     ])
-    return { home, cat, catRows, mobileFirst }
+    return { home, cat, catRows, mobileFirst, clubRes }
   } catch (e) {
-    return { home: null, cat: null, catRows: null, mobileFirst: null }
+    return { home: null, cat: null, catRows: null, mobileFirst: null, clubRes: null }
   }
 })
 
 const homeRes = computed(() => pageData.value?.home)
 const catRes = computed(() => pageData.value?.cat)
 const categoryRows = computed(() => pageData.value?.catRows?.data || [])
+const clubPosts = computed(() => pageData.value?.clubRes?.data || [])
 
 // ====== Mobil "Barcha mahsulotlar" cheksiz-scroll holati ======
 // computed emas, `ref` — chunki sahifalab (loadMoreMobile orqali)

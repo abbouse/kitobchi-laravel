@@ -10,6 +10,7 @@
             <li><NuxtLink to="/contacts" class="text-sm text-neutral-300 hover:text-white transition-colors no-underline">Aloqa</NuxtLink></li>
             <li><NuxtLink to="/vacancies" class="text-sm text-neutral-300 hover:text-white transition-colors no-underline">Karyera</NuxtLink></li>
             <li><NuxtLink to="/kolleksiya" class="text-sm text-neutral-300 hover:text-white transition-colors no-underline">Kolleksiyalar</NuxtLink></li>
+            <li><NuxtLink to="/club" class="text-sm text-neutral-300 hover:text-white transition-colors no-underline">Kitobxonlar klubi</NuxtLink></li>
           </ul>
         </div>
 

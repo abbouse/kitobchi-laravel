@@ -35,6 +35,12 @@
         <changefreq>monthly</changefreq>
         <priority>0.5</priority>
     </url>
+    <url>
+        <loc>{{ url('/club') }}</loc>
+        <lastmod>{{ date('Y-m-d') }}</lastmod>
+        <changefreq>daily</changefreq>
+        <priority>0.85</priority>
+    </url>
 
     <!-- Huquqiy sahifalar -->
     @foreach($policies as $p)

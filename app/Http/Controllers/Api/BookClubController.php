@@ -600,6 +600,32 @@ class BookClubController extends Controller
         }
     }
 
+    /**
+     * Bitta postni to'liq ko'rish (Web / Mobile uchun)
+     */
+    public function show($id)
+    {
+        try {
+            $user = Auth::guard('user')->user();
+            $post = BookClub::with($this->postWith())
+                ->where('is_deleted', false)
+                ->tap(fn ($query) => $this->applyWarningVisibility($query, $user))
+                ->findOrFail($id);
+
+            $formatted = $this->attachMetaToPosts(collect([$post]), $user);
+
+            return response()->json([
+                'status' => 'success',
+                'data'   => $formatted->first(),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Post topilmadi yoki o‘chirilgan',
+            ], 404);
+        }
+    }
+
     public function postsByTheme(Request $request, string $slug)
     {
         try {

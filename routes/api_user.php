@@ -89,6 +89,7 @@ Route::get('product_comments/{productId}/{type}', [BookClubController::class, 'g
 Route::get('book_club', [BookClubController::class, 'index']);
 Route::get('book_club/themes', [BookClubThemeController::class, 'index']);
 Route::get('book_club/themes/{slug}/posts', [BookClubController::class, 'postsByTheme']);
+Route::get('book_club/posts/{id}', [BookClubController::class, 'show']);
 Route::get('book_club/comments/{post_id}', [BookClubCommentController::class, 'index']);
 Route::get('book_club/comments/{post_id}/replies', [BookClubCommentController::class, 'replies']);
 Route::get('book_club/get-profile', [BookClubController::class, 'get_profile']);
