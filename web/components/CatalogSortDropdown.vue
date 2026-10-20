@@ -24,10 +24,10 @@
       type="button"
       @click="toggleOpen"
       :class="[
-        'px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all border cursor-pointer inline-flex items-center gap-1.5 shrink-0 select-none',
+        'px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer inline-flex items-center gap-1.5 shrink-0 select-none border-none',
         modelValue !== 'popular'
-          ? 'bg-primary text-white border-primary shadow-xs'
-          : 'bg-white text-neutral-700 hover:bg-neutral-50 border-neutral-200/80 hover:border-neutral-300 shadow-2xs'
+          ? 'bg-primary text-white shadow-xs'
+          : 'bg-white text-neutral-700 hover:bg-neutral-50 shadow-2xs'
       ]"
     >
       {{ activeLabel }}

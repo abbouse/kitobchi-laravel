@@ -53,13 +53,13 @@
             <input
               v-model="localMin"
               type="number" min="0" inputmode="numeric" placeholder="Min"
-              class="w-24 rounded-xl bg-[#F5F6F8] hover:bg-[#EFF1F4] focus:bg-white border border-neutral-200/80 focus:border-primary focus:ring-2 focus:ring-primary/15 px-3 py-2 text-sm font-medium text-neutral-900 outline-none transition-all"
+              class="w-24 rounded-xl bg-[#F5F6F8] hover:bg-[#EFF1F4] focus:bg-white focus:ring-2 focus:ring-primary/20 px-3 py-2 text-sm font-medium text-neutral-900 outline-none transition-all border-none"
             />
             <span class="text-neutral-300">–</span>
             <input
               v-model="localMax"
               type="number" min="0" inputmode="numeric" placeholder="Max"
-              class="w-24 rounded-xl bg-[#F5F6F8] hover:bg-[#EFF1F4] focus:bg-white border border-neutral-200/80 focus:border-primary focus:ring-2 focus:ring-primary/15 px-3 py-2 text-sm font-medium text-neutral-900 outline-none transition-all"
+              class="w-24 rounded-xl bg-[#F5F6F8] hover:bg-[#EFF1F4] focus:bg-white focus:ring-2 focus:ring-primary/20 px-3 py-2 text-sm font-medium text-neutral-900 outline-none transition-all border-none"
             />
           </div>
           <button
@@ -131,10 +131,10 @@ watch(() => [props.minValue, props.maxValue], () => {
 })
 
 const pillClasses = computed(() => [
-  'px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all border cursor-pointer inline-flex items-center gap-1.5 shrink-0 select-none',
+  'px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer inline-flex items-center gap-1.5 shrink-0 select-none border-none',
   props.active
-    ? 'bg-primary text-white border-primary shadow-xs'
-    : 'bg-white text-neutral-700 hover:bg-neutral-50 border-neutral-200/80 hover:border-neutral-300 shadow-2xs'
+    ? 'bg-primary text-white shadow-xs'
+    : 'bg-white text-neutral-700 hover:bg-neutral-50 shadow-2xs'
 ])
 
 function applyRange() {

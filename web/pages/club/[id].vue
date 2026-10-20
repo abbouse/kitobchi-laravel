@@ -219,17 +219,33 @@
                 </h2>
               </div>
 
-              <!-- Sort Dropdown button -->
-              <div class="relative">
-                <select
-                  v-model="currentSort"
-                  @change="handleSortChange"
-                  class="text-xs font-semibold text-primary bg-transparent border-none cursor-pointer focus:outline-hidden py-1 pr-1"
+              <!-- Sort Dropdown button (Cart style 3-dots like dropdown) -->
+              <div class="relative shrink-0" data-comment-sort-menu>
+                <button
+                  type="button"
+                  @click="isSortMenuOpen = !isSortMenuOpen"
+                  class="inline-flex items-center gap-1.5 text-xs font-semibold text-neutral-700 hover:text-neutral-900 bg-neutral-100 hover:bg-neutral-200/80 px-3 py-1.5 rounded-xl border-none cursor-pointer transition-colors shadow-2xs"
                 >
-                  <option value="interesting">Avval eng qiziq javoblar ko‘rinadi ⌵</option>
-                  <option value="newest">Avval yangi javoblar ko‘rinadi ⌵</option>
-                  <option value="oldest">Avval eski javoblar ko‘rinadi ⌵</option>
-                </select>
+                  <span>{{ sortOptions.find(o => o.value === currentSort)?.label || 'Saralash' }}</span>
+                  <svg class="w-3.5 h-3.5 transition-transform text-neutral-500" :class="{ 'rotate-180': isSortMenuOpen }" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg>
+                </button>
+
+                <div
+                  v-if="isSortMenuOpen"
+                  class="absolute right-0 top-full mt-1.5 z-30 w-56 rounded-2xl bg-white shadow-xl border border-neutral-100 py-1.5"
+                >
+                  <button
+                    v-for="opt in sortOptions"
+                    :key="opt.value"
+                    type="button"
+                    @click="selectSort(opt.value)"
+                    class="w-full text-left px-3.5 py-2.5 text-xs font-medium transition-colors border-none bg-transparent cursor-pointer flex items-center justify-between hover:bg-neutral-50"
+                    :class="currentSort === opt.value ? 'text-primary font-bold' : 'text-neutral-700'"
+                  >
+                    <span>{{ opt.label }}</span>
+                    <svg v-if="currentSort === opt.value" class="w-4 h-4 text-primary shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/></svg>
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -989,6 +1005,33 @@ const totalCommentsCount = computed(() => {
 
 // Sort handling
 const currentSort = ref('interesting')
+const isSortMenuOpen = ref(false)
+const sortOptions = [
+  { value: 'interesting', label: 'Avval eng qiziq javoblar' },
+  { value: 'newest', label: 'Avval yangi javoblar' },
+  { value: 'oldest', label: 'Avval eski javoblar' }
+]
+
+function selectSort(val: string) {
+  if (currentSort.value !== val) {
+    currentSort.value = val
+    handleSortChange()
+  }
+  isSortMenuOpen.value = false
+}
+
+function handleSortDocClick(e: MouseEvent) {
+  if (isSortMenuOpen.value && !(e.target as HTMLElement).closest('[data-comment-sort-menu]')) {
+    isSortMenuOpen.value = false
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('click', handleSortDocClick)
+})
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleSortDocClick)
+})
 
 async function handleSortChange() {
   try {

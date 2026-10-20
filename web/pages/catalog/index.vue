@@ -37,7 +37,7 @@
         </div>
 
         <!-- Search Bar -->
-        <div class="relative rounded-2xl bg-[#F5F6F8] border border-neutral-200/80 px-3.5 py-2 flex items-center gap-2 focus-within:bg-white focus-within:border-primary/50 focus-within:shadow-xs transition-colors">
+        <div class="relative rounded-2xl bg-[#F5F6F8] px-3.5 py-2 flex items-center gap-2 focus-within:bg-white focus-within:shadow-xs transition-colors">
           <svg class="w-4 h-4 text-neutral-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/></svg>
           <input
             v-model="searchInput"
@@ -64,7 +64,7 @@
         <button
           type="button"
           @click="$router.back()"
-          class="rounded-full w-8 h-8 flex items-center justify-center transition-colors text-neutral-700 bg-white border border-neutral-200/80 hover:bg-neutral-50 shadow-2xs cursor-pointer"
+          class="rounded-full w-8 h-8 flex items-center justify-center transition-colors text-neutral-700 bg-white hover:bg-neutral-50 shadow-2xs border-none cursor-pointer"
           title="Orqaga"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
@@ -101,7 +101,7 @@
         </div>
 
         <!-- Type Switcher Segmented Bar (Gradient brand active style) -->
-        <div class="inline-flex p-1 bg-white border border-neutral-200/80 rounded-2xl shadow-2xs">
+        <div class="inline-flex p-1 bg-white rounded-2xl shadow-2xs border-none">
           <button
             type="button"
             @click="setType('book')"
@@ -135,10 +135,10 @@
           type="button"
           @click="clearCategory"
           :class="[
-            'px-4 py-2 rounded-2xl text-xs sm:text-sm font-semibold transition-all border shrink-0 cursor-pointer',
+            'px-4 py-2 rounded-2xl text-xs sm:text-sm font-semibold transition-all shrink-0 cursor-pointer border-none',
             !activeCategory
-              ? 'bg-brand-gradient text-white border-transparent shadow-xs'
-              : 'bg-white text-neutral-700 border-neutral-200/80 hover:bg-neutral-50 shadow-2xs'
+              ? 'bg-brand-gradient text-white shadow-xs'
+              : 'bg-white text-neutral-700 hover:bg-neutral-50 shadow-2xs'
           ]"
         >
           Barchasi
@@ -149,10 +149,10 @@
           type="button"
           @click="selectCategory(String(cat.id))"
           :class="[
-            'px-4 py-2 rounded-2xl text-xs sm:text-sm font-semibold transition-all border shrink-0 cursor-pointer',
+            'px-4 py-2 rounded-2xl text-xs sm:text-sm font-semibold transition-all shrink-0 cursor-pointer border-none',
             activeCategory && String(activeCategory.id) === String(cat.id)
-              ? 'bg-brand-gradient text-white border-transparent shadow-xs'
-              : 'bg-white text-neutral-700 border-neutral-200/80 hover:bg-neutral-50 shadow-2xs'
+              ? 'bg-brand-gradient text-white shadow-xs'
+              : 'bg-white text-neutral-700 hover:bg-neutral-50 shadow-2xs'
           ]"
         >
           {{ cat.name_uz || cat.name }}
@@ -161,7 +161,7 @@
 
       <!-- ====== FILTERS & SORTING ROW ====== -->
       <div
-        class="z-30 p-2 sm:p-2.5 bg-white/95 backdrop-blur-md rounded-2xl border border-neutral-200/80 shadow-2xs flex items-center gap-2 mb-6 overflow-x-auto no-scrollbar"
+        class="z-30 p-2 sm:p-2.5 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xs flex items-center gap-2 mb-6 overflow-x-auto no-scrollbar border-none"
         :style="{ position: isMobileSticky ? 'sticky' : 'static', top: headerHeight + 'px' }"
       >
         <!-- Saralash Dropdown -->
@@ -240,10 +240,10 @@
           type="button"
           @click="openCombinedFilter"
           :class="[
-            'px-3.5 py-2 rounded-2xl text-xs sm:text-sm font-semibold transition-all border shrink-0 cursor-pointer inline-flex items-center gap-1.5',
+            'px-3.5 py-2 rounded-2xl text-xs sm:text-sm font-semibold transition-all shrink-0 cursor-pointer inline-flex items-center gap-1.5 border-none',
             hasActiveFilters
-              ? 'bg-primary text-white border-primary shadow-xs'
-              : 'bg-white text-neutral-700 border-neutral-200/80 hover:bg-neutral-50 shadow-2xs'
+              ? 'bg-primary text-white shadow-xs'
+              : 'bg-white text-neutral-700 hover:bg-neutral-50 shadow-2xs'
           ]"
         >
           <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75"/></svg>
@@ -277,7 +277,7 @@
       </div>
 
       <!-- ====== EMPTY STATE ====== -->
-      <div v-else-if="!pending" class="bg-white rounded-3xl border border-neutral-200/80 p-8 sm:p-12 shadow-2xs text-center max-w-md mx-auto my-12">
+      <div v-else-if="!pending" class="bg-white rounded-3xl p-8 sm:p-12 shadow-2xs text-center max-w-md mx-auto my-12 border-none">
         <div class="w-16 h-16 rounded-2xl bg-neutral-100 text-neutral-400 mx-auto flex items-center justify-center mb-4">
           <svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/></svg>
         </div>
@@ -304,7 +304,7 @@
           type="button"
           :disabled="isLoadingMore"
           @click="loadMore"
-          class="px-6 py-3 rounded-2xl bg-white border border-neutral-200/80 hover:bg-neutral-50 text-neutral-800 font-semibold text-sm shadow-2xs hover:shadow-xs transition-all border-none cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2"
+          class="px-6 py-3 rounded-2xl bg-white hover:bg-neutral-50 text-neutral-800 font-semibold text-sm shadow-2xs hover:shadow-xs transition-all border-none cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2"
         >
           <svg v-if="isLoadingMore" class="animate-spin w-4 h-4 text-primary" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
           <span>{{ isLoadingMore ? 'Yuklanmoqda...' : 'Yana ko‘rsatish' }}</span>

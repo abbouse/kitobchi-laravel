@@ -18,7 +18,7 @@
             type="button"
             @click="scrollPrev"
             aria-label="Oldingi"
-            class="w-8 h-8 rounded-full bg-white hover:bg-neutral-100 border border-neutral-200/80 text-neutral-700 hover:text-neutral-950 flex items-center justify-center transition-colors cursor-pointer shadow-2xs"
+            class="w-8 h-8 rounded-full bg-white hover:bg-neutral-100 text-neutral-700 hover:text-neutral-950 flex items-center justify-center transition-colors cursor-pointer shadow-2xs border-none"
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
@@ -28,7 +28,7 @@
             type="button"
             @click="scrollNext"
             aria-label="Keyingi"
-            class="w-8 h-8 rounded-full bg-white hover:bg-neutral-100 border border-neutral-200/80 text-neutral-700 hover:text-neutral-950 flex items-center justify-center transition-colors cursor-pointer shadow-2xs"
+            class="w-8 h-8 rounded-full bg-white hover:bg-neutral-100 text-neutral-700 hover:text-neutral-950 flex items-center justify-center transition-colors cursor-pointer shadow-2xs border-none"
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
@@ -45,7 +45,7 @@
         <article
           v-for="post in posts"
           :key="post.id"
-          class="shrink-0 w-[280px] sm:w-[320px] md:w-[340px] h-[200px] sm:h-[210px] snap-start bg-white rounded-3xl p-5 border border-neutral-200/70 hover:border-primary/30 transition-all duration-200 shadow-2xs flex flex-col justify-between"
+          class="shrink-0 w-[280px] sm:w-[320px] md:w-[340px] h-[200px] sm:h-[210px] snap-start bg-white rounded-3xl p-5 shadow-2xs border-none flex flex-col justify-between first:ml-4 sm:first:ml-0"
         >
           <!-- Author Header -->
           <div class="flex items-center justify-between gap-2.5">

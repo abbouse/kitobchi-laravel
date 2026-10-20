@@ -1,7 +1,7 @@
 <template>
-  <main class="max-md:grow h-full md:min-h-dvh pb-20 lg:pb-10">
+  <main class="max-md:grow h-full md:min-h-dvh pb-10">
     <!-- Mobile Header (hidden on md) -->
-    <div class="md:hidden py-3 rounded-b-2xl mb-3 bg-white sticky top-0 z-40 transition-all duration-300 shadow-2xs border-b border-neutral-200/70">
+    <div class="md:hidden py-3 rounded-b-2xl mb-3 bg-white sticky top-0 z-40 transition-all duration-300 shadow-2xs">
       <div class="px-4 w-full max-w-(--ui-container) mx-auto">
         <div class="flex items-center justify-between">
           <button @click="$router.back()" type="button" aria-label="Orqaga" class="w-10 h-10 rounded-full flex items-center justify-center p-0 cursor-pointer border-none bg-neutral-100 hover:bg-neutral-200 text-neutral-700 transition-colors">
@@ -37,7 +37,7 @@
           <form class="checkout-form-col w-full space-y-4" @submit.prevent="submitOrder">
 
             <!-- Section 1: Buyurtmani oluvchi (Recipient) -->
-            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-neutral-200/80 shadow-2xs w-full">
+            <div class="p-5 sm:p-6 rounded-3xl bg-white shadow-2xs w-full">
               <div class="flex items-center gap-3 mb-5">
                 <div class="w-8 h-8 rounded-full bg-primary/10 text-primary font-bold text-sm flex items-center justify-center shrink-0">1</div>
                 <h2 class="text-lg sm:text-xl font-bold text-neutral-900 m-0">Buyurtmani oluvchi</h2>
@@ -57,17 +57,18 @@
                   <label for="phone" class="block font-medium text-neutral-700 text-sm mb-1.5">Telefon raqam</label>
                   <input
                     v-model="form.phone"
+                    @input="onPhoneInput"
                     type="tel"
                     id="phone"
                     placeholder="+998"
-                    class="w-full appearance-none placeholder:text-neutral-400 text-neutral-900 focus:outline-none text-sm sm:text-base rounded-2xl h-12 px-4 bg-[#F5F6F8] hover:bg-[#EFF1F4] focus:bg-white border border-transparent focus:border-primary focus:ring-2 focus:ring-primary/15 transition-all"
+                    class="w-full appearance-none placeholder:text-neutral-400 text-neutral-900 focus:outline-none text-sm sm:text-base rounded-2xl h-12 px-4 bg-[#F5F6F8] hover:bg-[#EFF1F4] focus:bg-white border border-transparent focus:border-primary focus:ring-2 focus:ring-primary/15 transition-all font-mono"
                   >
                 </div>
               </div>
             </div>
 
             <!-- Section 2: Yetkazib berish manzili (Delivery Address) -->
-            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-neutral-200/80 shadow-2xs w-full">
+            <div class="p-5 sm:p-6 rounded-3xl bg-white shadow-2xs w-full">
               <div class="flex items-center justify-between gap-3 mb-5">
                 <div class="flex items-center gap-3">
                   <div class="w-8 h-8 rounded-full bg-primary/10 text-primary font-bold text-sm flex items-center justify-center shrink-0">2</div>
@@ -97,7 +98,7 @@
                   type="button"
                   @click="selectedAddressId = loc.id"
                   class="text-left rounded-2xl p-4 border-2 transition-all cursor-pointer relative"
-                  :class="selectedAddressId === loc.id ? 'border-primary bg-[#F4F8FD]' : 'border-neutral-200/80 bg-neutral-50/50 hover:bg-white hover:border-neutral-300'"
+                  :class="selectedAddressId === loc.id ? 'border-primary bg-[#F4F8FD]' : 'border-transparent bg-neutral-50/80 hover:bg-neutral-100/70'"
                 >
                   <div class="flex items-start gap-3">
                     <div class="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" :class="selectedAddressId === loc.id ? 'bg-primary text-white' : 'bg-neutral-100 text-neutral-500'">
@@ -121,20 +122,11 @@
                 <div class="pt-1">
                   <UzAddressPicker ref="addressPickerRef" @update="onAddrUpdate" />
                 </div>
-                <div v-if="addressSummary.fullAddress" class="mt-4 p-4 rounded-2xl bg-[#F4F8FD] border border-primary/20 text-sm text-neutral-800 flex items-start gap-3">
-                  <div class="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 mt-0.5">
-                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg>
-                  </div>
-                  <div class="min-w-0 flex-1">
-                    <p class="text-xs font-bold text-primary uppercase tracking-wide m-0 mb-0.5">Tanlangan manzil xulosasi</p>
-                    <p class="text-sm font-semibold text-neutral-900 m-0 leading-snug break-words">{{ addressSummary.fullAddress }}</p>
-                  </div>
-                </div>
               </template>
             </div>
 
             <!-- Section 3: Yetkazib berish usuli (Delivery Method) -->
-            <div v-if="deliveryServices.length > 0" class="p-5 sm:p-6 rounded-3xl bg-white border border-neutral-200/80 shadow-2xs w-full">
+            <div v-if="deliveryServices.length > 0" class="p-5 sm:p-6 rounded-3xl bg-white shadow-2xs w-full">
               <div class="flex items-center gap-3 mb-5">
                 <div class="w-8 h-8 rounded-full bg-primary/10 text-primary font-bold text-sm flex items-center justify-center shrink-0">3</div>
                 <h2 class="text-lg sm:text-xl font-bold text-neutral-900 m-0">Yetkazib berish usuli</h2>
@@ -146,7 +138,7 @@
                   type="button"
                   @click="selectedDeliveryServiceId = svc.id"
                   class="w-full flex items-center justify-between p-4 rounded-2xl border-2 transition-all cursor-pointer text-left"
-                  :class="selectedDeliveryServiceId === svc.id ? 'border-primary bg-[#F4F8FD]' : 'border-neutral-200/80 bg-neutral-50/50 hover:bg-white hover:border-neutral-300'"
+                  :class="selectedDeliveryServiceId === svc.id ? 'border-primary bg-[#F4F8FD]' : 'border-transparent bg-neutral-50/80 hover:bg-neutral-100/70'"
                 >
                   <div class="flex items-center gap-3.5 min-w-0">
                     <div class="rounded-full w-5 h-5 border-2 flex items-center justify-center shrink-0 transition-all" :class="selectedDeliveryServiceId === svc.id ? 'border-primary bg-primary' : 'border-neutral-300 bg-white'">
@@ -165,7 +157,7 @@
             </div>
 
             <!-- Section 4: To'lov turi (Payment Method) -->
-            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-neutral-200/80 shadow-2xs w-full">
+            <div class="p-5 sm:p-6 rounded-3xl bg-white shadow-2xs w-full">
               <div class="flex items-center gap-3 mb-5">
                 <div class="w-8 h-8 rounded-full bg-primary/10 text-primary font-bold text-sm flex items-center justify-center shrink-0">4</div>
                 <h2 class="text-lg sm:text-xl font-bold text-neutral-900 m-0">To'lov turi</h2>
@@ -175,7 +167,7 @@
                   v-for="method in paymentMethods"
                   :key="method.id"
                   class="flex items-center justify-between p-4 rounded-2xl border-2 transition-all cursor-pointer"
-                  :class="form.paymentMethod === method.id ? 'border-primary bg-[#F4F8FD]' : 'border-neutral-200/80 bg-neutral-50/50 hover:bg-white hover:border-neutral-300'"
+                  :class="form.paymentMethod === method.id ? 'border-primary bg-[#F4F8FD]' : 'border-transparent bg-neutral-50/80 hover:bg-neutral-100/70'"
                 >
                   <input type="radio" :value="method.id" v-model="form.paymentMethod" class="sr-only">
                   <div class="flex items-center gap-3.5">
@@ -194,50 +186,116 @@
                 </label>
               </div>
 
-              <!-- Saved cards when 'card' is selected -->
-              <div v-if="form.paymentMethod === 'card'" class="mt-4 space-y-2.5">
-                <div v-if="cardsLoading" class="space-y-2">
-                  <div v-for="n in 2" :key="n" class="h-16 rounded-2xl bg-neutral-100 animate-pulse"></div>
+              <!-- Card Payment Section -->
+              <div v-if="form.paymentMethod === 'card'" class="mt-4">
+                <!-- AUTHENTICATED: Saved cards list + Add card button -->
+                <div v-if="authStore.isAuthenticated" class="space-y-2.5">
+                  <div v-if="cardsLoading" class="space-y-2">
+                    <div v-for="n in 2" :key="n" class="h-16 rounded-2xl bg-neutral-100 animate-pulse"></div>
+                  </div>
+                  <template v-else>
+                    <button
+                      v-for="c in cards"
+                      :key="c.id"
+                      type="button"
+                      @click="selectedCardId = c.id"
+                      class="w-full flex items-center justify-between p-3.5 rounded-2xl border-2 transition-all cursor-pointer text-left"
+                      :class="selectedCardId === c.id ? 'border-primary bg-[#F4F8FD]' : 'border-transparent bg-neutral-50/80 hover:bg-neutral-100/70'"
+                    >
+                      <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center shrink-0 text-primary">
+                          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+                        </div>
+                        <div class="min-w-0">
+                          <p class="text-sm font-semibold m-0 text-neutral-900 font-mono">{{ c.masked_number || c.card_number }}</p>
+                          <p class="text-xs text-neutral-500 m-0">{{ c.card_name || c.vendor || 'Bank kartasi' }}</p>
+                        </div>
+                      </div>
+                      <div class="rounded-full w-5 h-5 border-2 flex items-center justify-center shrink-0 transition-all" :class="selectedCardId === c.id ? 'border-primary bg-primary' : 'border-neutral-300 bg-white'">
+                        <div v-if="selectedCardId === c.id" class="w-2 h-2 bg-white rounded-full"></div>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      @click="openCardModal"
+                      class="w-full flex items-center justify-center gap-2.5 p-3.5 rounded-2xl border border-dashed border-neutral-300 hover:border-primary/60 transition-all cursor-pointer bg-neutral-50/50 text-primary font-semibold text-sm hover:bg-primary/5"
+                    >
+                      <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+                      <span>Yangi karta qo'shish</span>
+                    </button>
+                  </template>
                 </div>
-                <template v-else>
-                  <button
-                    v-for="c in cards"
-                    :key="c.id"
-                    type="button"
-                    @click="selectedCardId = c.id"
-                    class="w-full flex items-center justify-between p-3.5 rounded-2xl border-2 transition-all cursor-pointer text-left"
-                    :class="selectedCardId === c.id ? 'border-primary bg-[#F4F8FD]' : 'border-neutral-200/80 bg-neutral-50/50 hover:bg-white hover:border-neutral-300'"
-                  >
-                    <div class="flex items-center gap-3 min-w-0">
-                      <div class="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center shrink-0 text-primary">
+
+                <!-- GUEST / NON-AUTH: Direct inline card inputs (one-time payment) -->
+                <div v-else class="p-4 sm:p-5 rounded-2xl bg-neutral-50/80 space-y-3.5">
+                  <div class="flex items-center justify-between gap-2">
+                    <span class="text-xs font-bold uppercase tracking-wide text-neutral-600">Karta ma'lumotlari</span>
+                    <span class="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full flex items-center gap-1 shrink-0">
+                      <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                      Birmartalik to'lov (saqlanmaydi)
+                    </span>
+                  </div>
+
+                  <div>
+                    <label class="block font-medium text-neutral-700 text-xs sm:text-sm mb-1.5">Karta raqami</label>
+                    <div class="relative">
+                      <input
+                        v-model="guestCard.number"
+                        @input="onGuestCardNumberInput"
+                        type="text"
+                        inputmode="numeric"
+                        autocomplete="cc-number"
+                        maxlength="19"
+                        placeholder="8600 0000 0000 0000"
+                        class="w-full appearance-none placeholder:text-neutral-400 text-neutral-900 font-mono tracking-wider focus:outline-none text-sm sm:text-base rounded-2xl h-12 px-4 pl-11 bg-white focus:bg-white border border-transparent focus:border-primary focus:ring-2 focus:ring-primary/15 transition-all shadow-2xs"
+                      >
+                      <div class="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none">
                         <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
                       </div>
-                      <div class="min-w-0">
-                        <p class="text-sm font-semibold m-0 text-neutral-900 font-mono">{{ c.masked_number || c.card_number }}</p>
-                        <p class="text-xs text-neutral-500 m-0">{{ c.card_name || c.vendor || 'Bank kartasi' }}</p>
-                      </div>
                     </div>
-                    <div class="rounded-full w-5 h-5 border-2 flex items-center justify-center shrink-0 transition-all" :class="selectedCardId === c.id ? 'border-primary bg-primary' : 'border-neutral-300 bg-white'">
-                      <div v-if="selectedCardId === c.id" class="w-2 h-2 bg-white rounded-full"></div>
-                    </div>
-                  </button>
+                  </div>
 
-                  <button
-                    type="button"
-                    @click="openCardModal"
-                    class="w-full flex items-center justify-center gap-2.5 p-3.5 rounded-2xl border-2 border-dashed border-neutral-300 hover:border-primary/60 transition-all cursor-pointer bg-white text-primary font-semibold text-sm hover:bg-primary/5"
-                  >
-                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
-                    <span>Yangi karta qo'shish</span>
-                  </button>
-                </template>
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label class="block font-medium text-neutral-700 text-xs sm:text-sm mb-1.5">Amal qilish oyi (MM)</label>
+                      <input
+                        v-model="guestCard.expireMonth"
+                        @input="onGuestMonthInput"
+                        type="text"
+                        inputmode="numeric"
+                        autocomplete="cc-exp-month"
+                        maxlength="2"
+                        placeholder="01"
+                        class="w-full appearance-none placeholder:text-neutral-400 text-neutral-900 font-mono text-center focus:outline-none text-sm sm:text-base rounded-2xl h-12 px-4 bg-white focus:bg-white border border-transparent focus:border-primary focus:ring-2 focus:ring-primary/15 transition-all shadow-2xs"
+                      >
+                    </div>
+                    <div>
+                      <label class="block font-medium text-neutral-700 text-xs sm:text-sm mb-1.5">Yili (YY)</label>
+                      <input
+                        v-model="guestCard.expireYear"
+                        @input="onGuestYearInput"
+                        type="text"
+                        inputmode="numeric"
+                        autocomplete="cc-exp-year"
+                        maxlength="2"
+                        placeholder="28"
+                        class="w-full appearance-none placeholder:text-neutral-400 text-neutral-900 font-mono text-center focus:outline-none text-sm sm:text-base rounded-2xl h-12 px-4 bg-white focus:bg-white border border-transparent focus:border-primary focus:ring-2 focus:ring-primary/15 transition-all shadow-2xs"
+                      >
+                    </div>
+                  </div>
+
+                  <p class="text-xs text-neutral-500 m-0 pt-1 leading-relaxed">
+                    Kartangiz Paylov tizimida saqlanmaydi va hisobingizga bog'lanmaydi. Mablag' faqat ushbu buyurtma uchun bir martalik yechib olinadi.
+                  </p>
+                </div>
               </div>
             </div>
           </form>
 
           <!-- Right Side: Sticky Order Summary (VK style card) -->
           <div class="checkout-summary-col shrink-0 h-fit lg:sticky lg:top-24">
-            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-neutral-200/80 shadow-2xs space-y-4">
+            <div class="p-5 sm:p-6 rounded-3xl bg-white shadow-2xs space-y-4">
               <h3 class="text-lg font-bold text-neutral-900 m-0 pb-3 border-b border-neutral-100">Buyurtmangiz</h3>
 
               <div class="space-y-3 text-sm">
@@ -257,7 +315,7 @@
                 </div>
               </div>
 
-              <div class="pt-4 border-t border-neutral-200/80 flex justify-between items-baseline">
+              <div class="pt-4 border-t border-neutral-100 flex justify-between items-baseline">
                 <span class="text-base font-bold text-neutral-900">Jami to'lov</span>
                 <span class="text-2xl font-extrabold text-primary">{{ formatPrice(cartStore.totalAmount - cartStore.totalDiscount + deliveryPrice) }} so'm</span>
               </div>
@@ -267,7 +325,7 @@
                 {{ orderError }}
               </div>
 
-              <!-- Desktop submit button -->
+              <!-- Submit button -->
               <button
                 @click="submitOrder"
                 type="button"
@@ -297,31 +355,6 @@
 
         </div>
       </div>
-    </div>
-
-    <!-- Sticky Mobile Bottom Bar -->
-    <div
-      v-if="!isSuccessOpen && !isCardModalOpen && !isAddAddressModalOpen"
-      class="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-neutral-200/80 px-4 py-3 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] flex items-center justify-between gap-3"
-    >
-      <div class="min-w-0">
-        <p class="text-xs text-neutral-500 m-0">Jami to'lov:</p>
-        <p class="text-lg font-extrabold text-primary m-0 leading-tight">
-          {{ formatPrice(cartStore.totalAmount - cartStore.totalDiscount + deliveryPrice) }} so'm
-        </p>
-      </div>
-      <button
-        @click="submitOrder"
-        type="button"
-        :disabled="submitting"
-        class="h-12 px-5 rounded-2xl bg-brand-gradient text-white font-bold text-sm shadow-md hover:brightness-105 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 border-none cursor-pointer disabled:opacity-60 shrink-0"
-      >
-        <span v-if="submitting">Yuborilmoqda...</span>
-        <template v-else>
-          <span>To'lovga o'tish</span>
-          <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
-        </template>
-      </button>
     </div>
 
     <!-- Success Modal -->
@@ -433,6 +466,53 @@
           </form>
         </div>
       </div>
+
+      <!-- Auth Phone OTP Modali (Mehmon foydalanuvchilar uchun) -->
+      <div
+        v-if="isAuthOtpModalOpen"
+        class="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
+        @click.self="isAuthOtpModalOpen = false"
+      >
+        <div class="relative bg-white rounded-3xl overflow-hidden p-6 sm:p-8 w-full max-w-md shadow-2xl">
+          <button @click="isAuthOtpModalOpen = false" type="button" class="absolute top-4 right-4 sm:top-6 sm:right-6 w-10 h-10 rounded-full bg-[#F6F6F9] hover:bg-neutral-200 transition-colors flex items-center justify-center border-none cursor-pointer">
+            <svg class="w-5 h-5 text-neutral-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+          <div class="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mx-auto mb-4">
+            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3"/></svg>
+          </div>
+          <h3 class="text-xl font-bold text-center m-0 mb-2 text-neutral-900">
+            Raqamni tasdiqlang
+          </h3>
+          <p class="text-sm text-neutral-500 text-center m-0 mb-6">
+            {{ form.phone }} raqamiga yuborilgan 6 xonali SMS kodni kiriting
+          </p>
+
+          <div v-if="authOtpError" class="mb-4 p-3 bg-red-50 text-red-600 rounded-xl text-sm font-medium text-center">
+            {{ authOtpError }}
+          </div>
+
+          <form @submit.prevent="submitAuthOtp" class="space-y-4">
+            <div>
+              <label class="block font-medium text-neutral-800 text-sm mb-1 text-center">SMS kod</label>
+              <input
+                v-model="authOtpCode"
+                type="text"
+                inputmode="numeric"
+                maxlength="6"
+                placeholder="000000"
+                class="w-full appearance-none placeholder:text-neutral-400 text-neutral-900 focus:outline-none text-center tracking-[0.5em] text-xl font-bold rounded-2xl h-12 p-3 bg-[#F6F6F9] border border-transparent focus:border-primary/20 transition-all"
+              >
+            </div>
+            <button
+              type="submit"
+              :disabled="authOtpVerifying || authOtpCode.length !== 6"
+              class="w-full font-bold items-center transition-all gap-1.5 text-white bg-brand-gradient hover:brightness-105 h-12 flex justify-center rounded-2xl text-base px-6 mt-2 border-none cursor-pointer disabled:opacity-60 shadow-md"
+            >
+              {{ authOtpVerifying ? "Tekshirilmoqda..." : "Tasdiqlash va davom etish" }}
+            </button>
+          </form>
+        </div>
+      </div>
     </Teleport>
   </main>
 </template>
@@ -469,6 +549,82 @@ const form = reactive({
   phone: authStore.user?.phone_number || '',
   paymentMethod: 'card'
 })
+
+function onPhoneInput(e: Event) {
+  const target = e.target as HTMLInputElement
+  let digits = target.value.replace(/\D/g, '')
+  if (digits.startsWith('998')) {
+    digits = digits.slice(3)
+  }
+  digits = digits.slice(0, 9)
+
+  if (digits.length === 0) {
+    form.phone = ''
+    return
+  }
+
+  let formatted = '+998'
+  if (digits.length > 0) formatted += ' (' + digits.slice(0, 2)
+  if (digits.length >= 2) formatted += ') ' + digits.slice(2, 5)
+  if (digits.length >= 5) formatted += ' ' + digits.slice(5, 7)
+  if (digits.length >= 7) formatted += ' ' + digits.slice(7, 9)
+  form.phone = formatted
+}
+
+const guestCard = reactive({
+  number: '',
+  expireMonth: '',
+  expireYear: '',
+})
+
+function onGuestCardNumberInput(e: Event) {
+  const target = e.target as HTMLInputElement
+  const digits = target.value.replace(/\D/g, '').slice(0, 16)
+  guestCard.number = digits.replace(/(\d{4})(?=\d)/g, '$1 ')
+}
+
+function onGuestMonthInput(e: Event) {
+  const target = e.target as HTMLInputElement
+  guestCard.expireMonth = target.value.replace(/\D/g, '').slice(0, 2)
+}
+
+function onGuestYearInput(e: Event) {
+  const target = e.target as HTMLInputElement
+  guestCard.expireYear = target.value.replace(/\D/g, '').slice(0, 2)
+}
+
+const pendingOrderId = ref<number | null>(null)
+const isAuthOtpModalOpen = ref(false)
+const authOtpCode = ref('')
+const authOtpVerifying = ref(false)
+const authOtpError = ref('')
+
+async function submitAuthOtp() {
+  const code = authOtpCode.value.replace(/\D/g, '')
+  if (code.length !== 6) {
+    authOtpError.value = "6 xonali kodni kiriting"
+    return
+  }
+  let rawPhone = form.phone.replace(/\D/g, '')
+  if (!rawPhone.startsWith('998') && rawPhone.length === 9) {
+    rawPhone = '998' + rawPhone
+  }
+
+  authOtpVerifying.value = true
+  authOtpError.value = ''
+  try {
+    await authStore.verifyOtp(rawPhone, code)
+    if (form.fullName && authStore.user && !authStore.user.name) {
+      await authStore.updateProfile({ name: form.fullName }).catch(() => {})
+    }
+    isAuthOtpModalOpen.value = false
+    await executeOrderSubmission()
+  } catch (e: any) {
+    authOtpError.value = e?.data?.message || "Tasdiqlash kodi noto'g'ri kiritildi"
+  } finally {
+    authOtpVerifying.value = false
+  }
+}
 
 // MUHIM: manzil endi GPS/geolocation yoki qo'lda kiritilgan Viloyat/Tuman
 // emas, balki components/UzAddressPicker.vue orqali (Viloyat → Tuman →
@@ -801,6 +957,11 @@ async function submitCardOtp() {
     }
     form.paymentMethod = 'card'
     closeCardModal()
+
+    if (pendingOrderId.value) {
+      isSuccessOpen.value = true
+      pendingOrderId.value = null
+    }
   } catch (e: any) {
     cardError.value = e?.data?.message || 'Kodni tasdiqlashda xatolik yuz berdi'
   } finally {
@@ -827,12 +988,58 @@ async function submitOrder() {
     orderError.value = "Iltimos barcha maydonlarni to'ldiring"
     return
   }
-  if (form.paymentMethod === 'card' && !selectedCardId.value) {
-    orderError.value = "Iltimos, karta tanlang yoki yangi karta qo'shing"
+
+  if (form.paymentMethod === 'card') {
+    if (authStore.isAuthenticated) {
+      if (!selectedCardId.value) {
+        orderError.value = "Iltimos, karta tanlang yoki yangi karta qo'shing"
+        return
+      }
+    } else {
+      const digits = guestCard.number.replace(/\D/g, '')
+      const mm = guestCard.expireMonth.padStart(2, '0')
+      const yy = guestCard.expireYear.padStart(2, '0')
+      if (digits.length !== 16) {
+        orderError.value = "Karta raqami 16 ta raqamdan iborat bo'lishi kerak"
+        return
+      }
+      if (mm.length !== 2 || yy.length !== 2 || Number(mm) < 1 || Number(mm) > 12) {
+        orderError.value = "Amal qilish muddatini to'g'ri kiriting"
+        return
+      }
+    }
+  }
+
+  if (!authStore.isAuthenticated) {
+    submitting.value = true
+    try {
+      let rawPhone = form.phone.replace(/\D/g, '')
+      if (!rawPhone.startsWith('998') && rawPhone.length === 9) {
+        rawPhone = '998' + rawPhone
+      }
+      if (rawPhone.length < 9) {
+        orderError.value = "Telefon raqamini to'liq kiriting"
+        submitting.value = false
+        return
+      }
+      await authStore.sendOtp(rawPhone)
+      authOtpCode.value = ''
+      authOtpError.value = ''
+      isAuthOtpModalOpen.value = true
+    } catch (e: any) {
+      orderError.value = e?.data?.message || "SMS kod yuborishda xatolik yuz berdi"
+    } finally {
+      submitting.value = false
+    }
     return
   }
 
+  await executeOrderSubmission()
+}
+
+async function executeOrderSubmission() {
   submitting.value = true
+  orderError.value = ''
   try {
     const addressOk = await ensureMainAddress()
     if (!addressOk) {
@@ -856,9 +1063,6 @@ async function submitOrder() {
 
     const orderRes: any = await $fetch(`${config.public.apiBase}/v1/kitobchi/purchase/make`, {
       method: 'POST',
-      // "X-Client-Platform: web" — boshqaruv (admin) panelida buyurtma
-      // veb-saytdan yoki ilovadan tushganini ajratish uchun (backend:
-      // PurchaseController::resolveOrderSource()).
       headers: { ...authHeaders.value, 'X-Client-Platform': 'web' },
       body: {
         paymentStatus: form.paymentMethod === 'cash' ? 0 : 1,
@@ -868,15 +1072,48 @@ async function submitOrder() {
     })
 
     const orderId = orderRes?.order_id
-    if (form.paymentMethod === 'card' && orderId) {
-      await $fetch(`${config.public.apiBase}/v1/kitobchi/purchase/details/${orderId}/pay-with-card`, {
-        method: 'POST',
-        headers: authHeaders.value,
-        body: { card_id: selectedCardId.value },
-      })
+    if (!orderId) {
+      throw new Error("Buyurtma yaratilmadi")
     }
 
-    isSuccessOpen.value = true
+    if (form.paymentMethod === 'card') {
+      if (selectedCardId.value) {
+        await $fetch(`${config.public.apiBase}/v1/kitobchi/purchase/details/${orderId}/pay-with-card`, {
+          method: 'POST',
+          headers: authHeaders.value,
+          body: { card_id: selectedCardId.value },
+        })
+        isSuccessOpen.value = true
+      } else {
+        // Guest user: one-time charge without binding to paylov (remember_card: false)
+        const digits = guestCard.number.replace(/\D/g, '')
+        const mm = guestCard.expireMonth.padStart(2, '0')
+        const yy = guestCard.expireYear.padStart(2, '0')
+
+        pendingOrderId.value = orderId
+        const cardRes: any = await $fetch(`${config.public.apiBase}/v1/kitobchi/cards`, {
+          method: 'POST',
+          headers: authHeaders.value,
+          body: {
+            number: digits,
+            expire: `${mm}${yy}`,
+            remember_card: false,
+            order_id: orderId,
+          },
+        })
+
+        pendingCard.value = {
+          token: cardRes?.data?.verification_id || cardRes?.data?.token,
+          otpPhone: cardRes?.data?.otp_sent_phone || '',
+        }
+        cardStep.value = 'otp'
+        cardOtpCode.value = ''
+        cardError.value = ''
+        isCardModalOpen.value = true
+      }
+    } else {
+      isSuccessOpen.value = true
+    }
   } catch (e: any) {
     orderError.value = e?.data?.message || 'Buyurtma yaratishda xatolik yuz berdi'
   } finally {
