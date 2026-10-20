@@ -1,165 +1,175 @@
 <template>
-  <div class="py-4 md:py-6 min-h-dvh bg-[#f0f2f5] grow">
-    <!-- ====== MOBILE STICKY TOP BAR (PiyolaMarket 1:1) ====== -->
-    <div ref="headerRef" class="md:hidden sticky top-0 z-40 mb-3">
-      <div class="py-3 rounded-b-2xl bg-white shadow-sm transition-all duration-300">
-        <div class="px-4 space-y-2">
-          <div class="grid grid-cols-5 items-center gap-2">
-            <div class="col-span-1">
-              <button
-                type="button"
-                @click="$router.back()"
-                aria-label="Orqaga"
-                class="relative overflow-hidden transition-shadow duration-300 rounded-full! px-5 py-[14px] hover:shadow-sm hover:shadow-black/10 glass-card-bg h-11 w-11 flex-center p-0! cursor-pointer border-none text-primary"
-              >
-                <div class="absolute inset-0 pointer-events-none glass-border rounded-full!"></div>
-                <svg class="w-5 h-5 relative z-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
-              </button>
-            </div>
-            <div class="col-span-3">
-              <!-- TUZATILDI: piyolada bu sarlavha text-xl (20px) / sm:text-2xl
-                   (24px) — category/[slug].vue bilan bir xil qilindi (jonli
-                   tekshirilib tasdiqlandi). -->
-              <h1 class="text-xl sm:text-2xl text-primary font-semibold text-center m-0 truncate">
-                {{ pageTitle }}
-              </h1>
-            </div>
-            <div class="col-span-1 flex justify-end">
-              <!-- Piyolada kategoriya ichiga kirilganda header'dagi o'ng
-                   tugma "Kataloglar" (barcha kategoriyalarni ko'rish) EMAS,
-                   balki "Filtr" (sozlamalar/slider ikonkasi) ga almashadi —
-                   bosilganda Narx oralig'i + Kategoriyalar birlashtirilgan
-                   bottom sheet ochiladi (jonli tekshirilib tasdiqlandi).
-                   Kategoriya tanlanmagan holatda esa avvalgidek "Kataloglar"
-                   drawer'i ochiladi. -->
-              <button
-                v-if="activeCategory"
-                type="button"
-                @click="openCombinedFilter"
-                aria-label="Filtr"
-                class="font-medium inline-flex items-center text-base gap-2 text-primary p-2 rounded-full bg-secondary-100 hover:bg-primary/10 transition-colors border-none cursor-pointer"
-              >
-                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75"/></svg>
-              </button>
-              <button
-                v-else
-                type="button"
-                @click="isCatalogOpen = true"
-                aria-label="Kataloglar"
-                class="font-medium inline-flex items-center text-base gap-2 text-primary p-2 rounded-full bg-secondary-100 hover:bg-primary/10 transition-colors border-none cursor-pointer"
-              >
-                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9m-9 6h9m-9 6h9M3.75 6.75h.007v.008H3.75V6.75Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 12.75h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 18.75h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" /></svg>
-              </button>
-            </div>
+  <div class="py-3 md:py-6 min-h-dvh grow">
+    <!-- ====== MOBILE STICKY TOP BAR (VK / Kitobchi Style) ====== -->
+    <div ref="headerRef" class="md:hidden sticky top-0 z-40 mb-3 bg-white/95 backdrop-blur-md border-b border-neutral-200/80 shadow-2xs transition-all duration-300">
+      <div class="px-4 py-2.5 space-y-2">
+        <div class="grid grid-cols-5 items-center gap-2">
+          <div class="col-span-1">
+            <button
+              type="button"
+              @click="$router.back()"
+              aria-label="Orqaga"
+              class="w-10 h-10 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-700 flex items-center justify-center transition-colors border-none cursor-pointer"
+            >
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
+            </button>
           </div>
+          <div class="col-span-3">
+            <h1 class="text-base sm:text-lg text-primary font-bold text-center m-0 truncate">
+              {{ pageTitle }}
+            </h1>
+          </div>
+          <div class="col-span-1 flex justify-end">
+            <button
+              type="button"
+              @click="openCombinedFilter"
+              aria-label="Filtr"
+              class="relative w-10 h-10 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-700 flex items-center justify-center transition-colors border-none cursor-pointer"
+            >
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75"/></svg>
+              <!-- Active filter badge dot -->
+              <span
+                v-if="hasActiveFilters"
+                class="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-primary ring-2 ring-white"
+              ></span>
+            </button>
+          </div>
+        </div>
 
-          <div>
-            <div class="relative overflow-hidden transition-shadow duration-300 rounded-[20px] px-4 py-2.5 h-11 text-gray bg-secondary-300! flex items-center gap-2.5">
-              <i class="icon-search text-lg text-gray-500"></i>
-              <input
-                v-model="searchInput"
-                type="text"
-                placeholder="Kitobchi’da izlash"
-                @keyup.enter="updateSearch"
-                class="flex-1 bg-transparent border-none outline-none text-sm text-neutral-900 m-0 p-0 h-full w-full"
-              />
-            </div>
-          </div>
+        <!-- Search Bar -->
+        <div class="relative rounded-2xl bg-[#F5F6F8] border border-neutral-200/80 px-3.5 py-2 flex items-center gap-2 focus-within:bg-white focus-within:border-primary/50 focus-within:shadow-xs transition-colors">
+          <svg class="w-4 h-4 text-neutral-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/></svg>
+          <input
+            v-model="searchInput"
+            type="text"
+            placeholder="Kitobchi’da izlash"
+            @keyup.enter="updateSearch"
+            class="flex-1 bg-transparent border-none outline-none text-sm text-neutral-900 placeholder:text-neutral-400 m-0 p-0 h-full w-full"
+          />
+          <button
+            v-if="searchInput"
+            type="button"
+            @click="searchInput = ''; updateSearch()"
+            class="p-0.5 rounded-full text-neutral-400 hover:text-neutral-600 border-none bg-transparent cursor-pointer"
+          >
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
         </div>
       </div>
     </div>
 
     <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
-      <!-- Breadcrumb (Desktop) -->
-      <div class="flex items-center gap-2 pt-4 pb-2 max-md:hidden">
-        <NuxtLink to="/" class="rounded-full w-9 h-9 flex items-center justify-center transition-colors text-primary bg-secondary-200 hover:bg-secondary-400" title="Asosiy">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
-        </NuxtLink>
-        <nav class="flex items-center gap-2 text-sm text-[#8F8FA1]">
-          <NuxtLink to="/" class="hover:text-neutral-600 transition-colors">Asosiy</NuxtLink>
-          <span class="text-gray-300">/</span>
-          <span class="text-neutral-900 font-semibold">Katalog</span>
+      <!-- ====== BREADCRUMB (Desktop) ====== -->
+      <div class="flex items-center gap-2 pt-2 pb-3 max-md:hidden">
+        <button
+          type="button"
+          @click="$router.back()"
+          class="rounded-full w-8 h-8 flex items-center justify-center transition-colors text-neutral-700 bg-white border border-neutral-200/80 hover:bg-neutral-50 shadow-2xs cursor-pointer"
+          title="Orqaga"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <nav class="flex items-center gap-2 text-sm text-neutral-500">
+          <NuxtLink to="/" class="hover:text-neutral-800 transition-colors">Asosiy</NuxtLink>
+          <span class="text-neutral-300">/</span>
+          <NuxtLink
+            :to="activeCategory ? { path: '/catalog', query: { type: activeType } } : undefined"
+            :class="[
+              activeCategory ? 'hover:text-neutral-800 transition-colors' : 'text-neutral-900 font-semibold'
+            ]"
+          >
+            Katalog
+          </NuxtLink>
+          <template v-if="activeCategory">
+            <span class="text-neutral-300">/</span>
+            <span class="text-neutral-900 font-semibold truncate">
+              {{ activeCategory.name_uz || activeCategory.name }}
+            </span>
+          </template>
         </nav>
       </div>
 
-      <!-- Header Row — MUHIM: piyolada sarlavha va "N ta mahsulot" bitta
-           qatorda, yonma-yon (chapga to'plangan holda) turadi; ilgari bu
-           yerda `justify-between` bo'lib, son sarlavhadan uzoq, o'ng
-           chetga surilib ketardi. -->
-      <div class="flex items-end flex-wrap gap-3 pt-2 pb-4">
-        <h1 class="text-2xl sm:text-3xl text-neutral-900 font-bold m-0 max-md:hidden">
-          {{ pageTitle }}
-        </h1>
-        <span class="text-sm text-neutral-400 font-medium">
-          {{ totalCount }} ta mahsulot
-        </span>
+      <!-- ====== HEADER ROW & SEGMENTED BAR ====== -->
+      <div class="flex items-center justify-between flex-wrap gap-3 pt-1 pb-4">
+        <div class="flex items-baseline flex-wrap gap-2.5">
+          <h1 class="text-2xl sm:text-3xl text-neutral-900 font-bold m-0 max-md:hidden">
+            {{ pageTitle }}
+          </h1>
+          <span class="text-xs sm:text-sm font-semibold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary">
+            {{ totalCount }} ta mahsulot
+          </span>
+        </div>
+
+        <!-- Type Switcher Segmented Bar (Gradient brand active style) -->
+        <div class="inline-flex p-1 bg-white border border-neutral-200/80 rounded-2xl shadow-2xs">
+          <button
+            type="button"
+            @click="setType('book')"
+            :class="[
+              'px-4 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition-all border-none cursor-pointer',
+              activeType === 'book'
+                ? 'bg-brand-gradient text-white shadow-xs'
+                : 'text-neutral-600 hover:text-neutral-900 bg-transparent'
+            ]"
+          >
+            Kitoblar
+          </button>
+          <button
+            type="button"
+            @click="setType('stationery')"
+            :class="[
+              'px-4 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition-all border-none cursor-pointer',
+              activeType === 'stationery'
+                ? 'bg-brand-gradient text-white shadow-xs'
+                : 'text-neutral-600 hover:text-neutral-900 bg-transparent'
+            ]"
+          >
+            Kanselyariya
+          </button>
+        </div>
       </div>
 
-      <!-- Filters & Sorting Pills — MUHIM: piyolada bu qator ham header
-           (sarlavha+qidiruv) bilan BIRGA yopishqoq bo'lib qoladi (jonli
-           scroll-tekshiruv bilan tasdiqlandi, `category/[slug].vue`dagi
-           bilan bir xil naqsh/sabab — batafsil izoh o'sha faylda). `md:static`
-           kabi Tailwind klassi ISHLATILMAYDI (loyihaning statik CSS
-           bundle'ida kompilyatsiya qilinmagan), shu sabab `position` va
-           `top` JS orqali `:style`ga yoziladi. -->
-      <div
-        class="z-30 bg-white flex items-center gap-2 pb-6 overflow-x-auto no-scrollbar"
-        :style="{ position: isMobileSticky ? 'sticky' : 'static', top: headerHeight + 'px' }"
-      >
-        <!-- Faol kategoriya chip'i — piyolada kategoriya ichiga kirilganda
-             sahifa konteksti (nom) doim ko'rinib turadi; kitobchida bunday
-             ko'rinish yo'q edi, foydalanuvchi qaysi kategoriyada ekanini
-             va uni qanday tozalashni bilmasdi. -->
+      <!-- ====== HORIZONTAL CATEGORIES PILLS (VK Fast Browsing) ====== -->
+      <div v-if="categoriesList.length" class="flex items-center gap-2 pb-3 overflow-x-auto no-scrollbar">
         <button
-          v-if="activeCategory"
           type="button"
           @click="clearCategory"
-          class="px-4 py-2 rounded-2xl text-sm font-semibold transition-all border-none cursor-pointer inline-flex items-center gap-1.5 shrink-0 bg-primary text-white"
-        >
-          {{ activeCategory.name_uz || activeCategory.name }}
-          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-        </button>
-
-        <div v-if="activeCategory" class="w-px h-6 bg-secondary-200 mx-1 shrink-0"></div>
-
-        <!-- Type Pill -->
-        <button
-          type="button"
-          @click="setType('book')"
           :class="[
-            'px-4 py-2 rounded-2xl text-sm font-semibold transition-all border-none cursor-pointer',
-            activeType === 'book' ? 'bg-primary text-white' : 'bg-secondary-300 text-primary hover:bg-primary/10'
+            'px-4 py-2 rounded-2xl text-xs sm:text-sm font-semibold transition-all border shrink-0 cursor-pointer',
+            !activeCategory
+              ? 'bg-brand-gradient text-white border-transparent shadow-xs'
+              : 'bg-white text-neutral-700 border-neutral-200/80 hover:bg-neutral-50 shadow-2xs'
           ]"
         >
-          Kitoblar
+          Barchasi
         </button>
         <button
+          v-for="cat in categoriesList"
+          :key="cat.id"
           type="button"
-          @click="setType('stationery')"
+          @click="selectCategory(String(cat.id))"
           :class="[
-            'px-4 py-2 rounded-2xl text-sm font-semibold transition-all border-none cursor-pointer',
-            activeType === 'stationery' ? 'bg-primary text-white' : 'bg-secondary-300 text-primary hover:bg-primary/10'
+            'px-4 py-2 rounded-2xl text-xs sm:text-sm font-semibold transition-all border shrink-0 cursor-pointer',
+            activeCategory && String(activeCategory.id) === String(cat.id)
+              ? 'bg-brand-gradient text-white border-transparent shadow-xs'
+              : 'bg-white text-neutral-700 border-neutral-200/80 hover:bg-neutral-50 shadow-2xs'
           ]"
         >
-          Kanselyariya
+          {{ cat.name_uz || cat.name }}
         </button>
+      </div>
 
-        <div class="w-px h-6 bg-secondary-200 mx-1 shrink-0"></div>
-
-        <!-- Saralash — piyoladagi kabi bitta dropdown (Ommabop / Narx:
-             pastdan yuqoriga / Narx: yuqoridan pastga / Yangi), avvalgi
-             ikkita alohida "Ommabop"/"Yangi" pill o'rniga. -->
+      <!-- ====== FILTERS & SORTING ROW ====== -->
+      <div
+        class="z-30 p-2 sm:p-2.5 bg-white/95 backdrop-blur-md rounded-2xl border border-neutral-200/80 shadow-2xs flex items-center gap-2 mb-6 overflow-x-auto no-scrollbar"
+        :style="{ position: isMobileSticky ? 'sticky' : 'static', top: headerHeight + 'px' }"
+      >
+        <!-- Saralash Dropdown -->
         <CatalogSortDropdown :model-value="activeSort" @update:model-value="setSort" />
 
-        <div class="w-px h-6 bg-secondary-200 mx-1 shrink-0"></div>
+        <div class="w-px h-6 bg-neutral-200 mx-1 shrink-0"></div>
 
-        <!-- Piyoladagi "Narx ⌄"/"Brendlar ⌄" naqshiga 1-1: har bir facet
-             o'ZINING kichik, mustaqil pill+popover'iga ega — bitta katta
-             panelga TIQIB QO'YISH o'rniga (jonli piyolamarket.uz'da
-             tasdiqlangan naqsh: CatalogFilterPill.vue). Pastdagi "Filtr"
-             tugmasi esa piyoladagi kabi HAMMASINI birlashtirgan qo'shimcha
-             (ixtiyoriy) yon panelni ochadi — bu ikkisi bir-birini
-             takrorlaydi, xuddi piyolada ham shunday (jonli tasdiqlandi). -->
+        <!-- Narx Pill -->
         <CatalogFilterPill
           label="Narx"
           mode="range"
@@ -172,6 +182,7 @@
           @apply-range="applyPriceRange"
         />
 
+        <!-- Kitobga xos parametrlar -->
         <CatalogFilterPill
           v-if="activeType === 'book' && publisherOptions.length"
           label="Nashriyot"
@@ -224,26 +235,37 @@
           @update:model-value="updateCoverTypes"
         />
 
-        <!-- Desktopda piyola "Filtr" tugmasini alohida chip sifatida
-             qator ichida ko'rsatadi (mobile'da esa header'dagi slider
-             ikonkasi orqali, yuqoridagi kabi) — faqat kategoriya
-             tanlanganda ko'rinadi (jonli tekshirilib tasdiqlandi). MUHIM:
-             piyolada bu tugma pastdagi alohida pill'lar tanlangan bo'lsa
-             ham DOIM neytral ko'rinishda qoladi (jonli tasdiqlandi) —
-             shu sabab statik klass, hech qanday "active" holatga
-             bog'lanmagan. -->
+        <!-- Filtrlar tugmasi (drawer ochadi) -->
         <button
-          v-if="activeCategory"
           type="button"
           @click="openCombinedFilter"
-          class="max-md:hidden px-4 py-2 rounded-2xl text-sm font-semibold transition-all border-none cursor-pointer inline-flex items-center gap-1.5 shrink-0 bg-secondary-300 text-primary hover:bg-primary/10"
+          :class="[
+            'px-3.5 py-2 rounded-2xl text-xs sm:text-sm font-semibold transition-all border shrink-0 cursor-pointer inline-flex items-center gap-1.5',
+            hasActiveFilters
+              ? 'bg-primary text-white border-primary shadow-xs'
+              : 'bg-white text-neutral-700 border-neutral-200/80 hover:bg-neutral-50 shadow-2xs'
+          ]"
         >
-          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75"/></svg>
-          Filtr
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75"/></svg>
+          Filtrlar
+          <span v-if="activeFiltersCount > 0" class="w-5 h-5 rounded-full bg-white text-primary text-xs flex items-center justify-center font-bold">
+            {{ activeFiltersCount }}
+          </span>
+        </button>
+
+        <!-- Filtrlarni tozalash -->
+        <button
+          v-if="hasActiveFilters"
+          type="button"
+          @click="resetAllFilters"
+          class="px-3 py-2 text-xs sm:text-sm font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-2xl transition-colors inline-flex items-center gap-1 shrink-0 border-none cursor-pointer"
+        >
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+          Tozalash
         </button>
       </div>
 
-      <!-- Products Grid -->
+      <!-- ====== PRODUCTS GRID ====== -->
       <div v-if="products.length > 0" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-3 lg:gap-5 mb-10">
         <ProductCard
           v-for="(product, idx) in products"
@@ -254,40 +276,50 @@
         />
       </div>
 
-      <!-- Empty State -->
-      <div v-else-if="!pending" class="text-center py-20">
-        <div class="w-20 h-20 rounded-full bg-secondary-100 text-neutral-400 mx-auto flex items-center justify-center mb-4">
-          <i class="icon-search text-3xl"></i>
+      <!-- ====== EMPTY STATE ====== -->
+      <div v-else-if="!pending" class="bg-white rounded-3xl border border-neutral-200/80 p-8 sm:p-12 shadow-2xs text-center max-w-md mx-auto my-12">
+        <div class="w-16 h-16 rounded-2xl bg-neutral-100 text-neutral-400 mx-auto flex items-center justify-center mb-4">
+          <svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/></svg>
         </div>
-        <h3 class="text-lg font-bold text-neutral-800 mb-1">Hech narsa topilmadi</h3>
-        <p class="text-sm text-neutral-500">Qidiruv so‘zini o‘zgartirib ko‘ring yoki filtrlarni tozalang</p>
+        <h3 class="text-lg font-bold text-neutral-900 mb-1.5">Hech narsa topilmadi</h3>
+        <p class="text-sm text-neutral-500 mb-5">Tanlangan filtrlar bo‘yicha mahsulot topilmadi. Qidiruv so‘zini o‘zgartiring yoki filtrlarni tozalang.</p>
+        <button
+          v-if="hasActiveFilters"
+          type="button"
+          @click="resetAllFilters"
+          class="px-5 py-2.5 rounded-2xl bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-sm font-semibold transition-colors border-none cursor-pointer"
+        >
+          Filtrlarni tozalash
+        </button>
       </div>
 
-      <!-- Loading skeleton (birinchi yuklanish) -->
+      <!-- ====== LOADING SKELETON ====== -->
       <div v-else class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 md:gap-4 lg:gap-5 mb-10">
         <ProductCardSkeleton v-for="n in 10" :key="'catalog-skeleton-' + n" />
       </div>
 
-      <!-- Yana ko'rsatish -->
+      <!-- ====== YANA KO'RSATISH (LOAD MORE) ====== -->
       <div v-if="hasMore" class="flex justify-center mb-10">
         <button
           type="button"
           :disabled="isLoadingMore"
           @click="loadMore"
-          class="px-6 py-3 rounded-2xl bg-secondary-200 text-primary font-semibold text-sm hover:bg-secondary-400 transition-colors border-none cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed"
+          class="px-6 py-3 rounded-2xl bg-white border border-neutral-200/80 hover:bg-neutral-50 text-neutral-800 font-semibold text-sm shadow-2xs hover:shadow-xs transition-all border-none cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2"
         >
-          {{ isLoadingMore ? 'Yuklanmoqda...' : 'Yana ko‘rsatish' }}
+          <svg v-if="isLoadingMore" class="animate-spin w-4 h-4 text-primary" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
+          <span>{{ isLoadingMore ? 'Yuklanmoqda...' : 'Yana ko‘rsatish' }}</span>
         </button>
       </div>
     </div>
 
+    <!-- Drawers -->
     <CatalogDrawer :is-open="isCatalogOpen" @close="isCatalogOpen = false" />
 
     <CatalogFilterDrawer
       :is-open="isFilterOpen"
       :min-price="route.query.min_price as string"
       :max-price="route.query.max_price as string"
-      :categories="categoriesData?.data?.[activeType] || []"
+      :categories="categoriesList"
       :active-category-id="route.query.category as string"
       :publishers="activeType === 'book' ? (bookFilterOptions?.publishers || []) : []"
       :sellers="activeType === 'book' ? (bookFilterOptions?.sellers || []) : []"
@@ -310,24 +342,18 @@ const config = useRuntimeConfig()
 
 const isCatalogOpen = ref(false)
 const isFilterOpen = ref(false)
-// MUHIM: piyolada "Narx" endi alohida kichik popover (CatalogFilterPill,
-// pastda), yon panel EMAS — shu sabab bu yerdagi "Filtr" endi doim
-// Kategoriyalar+hammasi birlashtirilgan yagona rejimda ochiladi (avvalgi
-// 'price'/'combined' ikki xil rejim keragi qolmadi).
+
 function openCombinedFilter() {
   isFilterOpen.value = true
 }
+
 const activeType = ref<'book' | 'stationery'>((route.query.type as any) || 'book')
 const activeSort = ref<string>((route.query.sort as string) || 'popular')
 const searchInput = ref<string>((route.query.search as string) || '')
 
-// Mobileda filtr/saralash pill qatorini header (sarlavha+qidiruv) ostiga
-// "yopishtirish" uchun — `category/[slug].vue`dagi bilan bir xil mantiq
-// (u yerdagi izohda batafsil tushuntirilgan: header balandligini JS orqali
-// o'lchash, `matchMedia` bilan mobil/desktop holatini aniqlash — `md:static`
-// Tailwind klassi loyihaning statik CSS bundle'ida yo'q).
+// Sticky header calculation on mobile
 const headerRef = ref<HTMLElement | null>(null)
-const headerHeight = ref(150)
+const headerHeight = ref(120)
 const isMobileSticky = ref(false)
 
 function measureHeader() {
@@ -350,29 +376,23 @@ onBeforeUnmount(() => {
   window.removeEventListener('resize', handleHeaderResize)
 })
 
-// Kategoriya nomlari — CatalogDrawer.vue bilan bir xil kalit ('catalog-drawer-
-// categories'), shuning uchun Nuxt payload keshi orqali ikkalasi bitta so'rovni
-// ulashadi (qayta-qayta fetch qilinmaydi). MUHIM: bu yerga kirilganda (ya'ni
-// biror kategoriya bosilganda) piyolada sahifa sarlavhasi va breadcrumb HAQIQIY
-// kategoriya nomini ko'rsatadi ("Erkaklar original" kabi) — ilgari kitobchida
-// `category` query parametri sarlavhada umuman aks etmas, foydalanuvchi qaysi
-// kategoriyada ekanini bilolmas edi.
+// Categories
 const { data: categoriesData } = await useFetch<any>(`${config.public.apiBase}/v1/kitobchi/search/categories`, {
   key: 'catalog-drawer-categories',
   lazy: true
 })
 
+const categoriesList = computed(() => {
+  return categoriesData.value?.data?.[activeType.value] || []
+})
+
 const activeCategory = computed(() => {
   const catId = route.query.category
   if (!catId) return null
-  const list = categoriesData.value?.data?.[activeType.value] || []
-  return list.find((c: any) => String(c.id) === String(catId)) || null
+  return categoriesList.value.find((c: any) => String(c.id) === String(catId)) || null
 })
 
-// Kitobga xos filtr variantlari (Nashriyot/Do'kon/Yozuv turi/Muqova turi) —
-// category/[slug].vue'dagi bilan bir xil mantiq (SearchController::
-// bookFilterOptions). category tanlanmagan bo'lsa — BARCHA kitoblar
-// bo'yicha mavjud variantlar qaytariladi.
+// Book filter options
 const { data: bookFilterOptionsData } = await useFetch<any>(`${config.public.apiBase}/v1/kitobchi/search/book-filter-options`, {
   query: computed(() => ({ category_id: activeType.value === 'book' ? (route.query.category || undefined) : undefined })),
   lazy: true,
@@ -391,9 +411,6 @@ const selectedSellerIds = computed(() => parseCsvQuery(route.query.seller_ids))
 const selectedLangTypes = computed(() => parseCsvQuery(route.query.lang_types))
 const selectedCoverTypes = computed(() => parseCsvQuery(route.query.cover_types))
 
-// Piyoladagi alohida "Narx ⌄"/"Brendlar ⌄" pill+popover naqshi uchun —
-// bir vaqtda faqat BITTA popover ochiq turadi (CatalogFilterPill.vue),
-// category/[slug].vue'dagi bilan bir xil mantiq.
 const activePopover = ref<string | null>(null)
 function togglePopover(key: string) {
   activePopover.value = activePopover.value === key ? null : key
@@ -414,8 +431,6 @@ const coverTypeOptions = computed(() =>
   (bookFilterOptions.value?.cover_types || []).map((ct: string) => ({ value: ct, label: coverTypeLabel(ct) }))
 )
 
-// Checkbox facet'lar DARHOL qo'llanadi (piyolada "Brendlar" jonli
-// tekshirilib tasdiqlandi), Narx esa "Qo'llash" tugmasi orqali.
 function applyPriceRange(payload: { min: string | undefined; max: string | undefined }) {
   router.push({ query: { ...route.query, min_price: payload.min, max_price: payload.max } })
 }
@@ -441,10 +456,15 @@ const pageTitle = computed(() => {
   return 'Kitoblar katalogi'
 })
 
-// Sarlavha o'zgarganda (qidiruv, kategoriya, tur) header balandligi ham
-// o'zgarishi mumkin (matn boshqa qatorga o'tib ketishi/wrap) — shu sabab
-// qayta o'lchaymiz.
 watch(pageTitle, () => nextTick(measureHeader))
+
+function selectCategory(catId: string) {
+  if (String(route.query.category) === String(catId)) {
+    clearCategory()
+  } else {
+    router.push({ query: { ...route.query, category: catId } })
+  }
+}
 
 function clearCategory() {
   const query = { ...route.query }
@@ -452,23 +472,44 @@ function clearCategory() {
   router.push({ query })
 }
 
-// MUHIM: `/v1/kitobchi/products/search` degan endpoint HAQIQATDA MAVJUD
-// EMAS edi — u aslida `products/{col}` route'iga tushib, {col}='search'
-// (int)ga o'girilganda 0 (LIMIT 0) bo'lib, doim BO'SH natija qaytargan
-// (shuning uchun kategoriyaga kirilganda mahsulotlar umuman ko'rinmasdi).
-// To'g'ri, real qidiruv/katalog endpointi — SearchController::search():
-// GET /v1/kitobchi/search/  (params: q, category_id, type, sort, page,
-// min_price, max_price...). Backend browse-rejimini (matn/teg/kategoriyasiz,
-// faqat sort bilan) qo'llab-quvvatlashi uchun ham moslashtirildi.
+// Active filters count and check
+const hasActiveFilters = computed(() => {
+  return !!(
+    route.query.min_price ||
+    route.query.max_price ||
+    selectedPublisherIds.value.length ||
+    selectedSellerIds.value.length ||
+    selectedLangTypes.value.length ||
+    selectedCoverTypes.value.length
+  )
+})
+
+const activeFiltersCount = computed(() => {
+  let count = 0
+  if (route.query.min_price || route.query.max_price) count++
+  if (selectedPublisherIds.value.length) count += selectedPublisherIds.value.length
+  if (selectedSellerIds.value.length) count += selectedSellerIds.value.length
+  if (selectedLangTypes.value.length) count += selectedLangTypes.value.length
+  if (selectedCoverTypes.value.length) count += selectedCoverTypes.value.length
+  return count
+})
+
+function resetAllFilters() {
+  const query: Record<string, any> = {
+    type: activeType.value
+  }
+  if (route.query.category) query.category = route.query.category
+  if (route.query.search) query.search = route.query.search
+  router.push({ query })
+}
+
+// Products fetching & pagination
 const currentPage = ref(1)
 const allProducts = ref<any[]>([])
 const totalCount = ref(0)
 const hasMore = ref(false)
 const isLoadingMore = ref(false)
 
-// Bu sahifadagi "new" qiymati (tugma/URL uchun, boshqa sahifalar ham shu
-// bilan link beradi: /catalog?sort=new) backendning "newest" enumiga mos
-// kelmaydi — shu yerda tarjima qilinadi, boshqa hech narsa o'zgarmaydi.
 function toApiSort(sort: string) {
   return sort === 'new' ? 'newest' : sort
 }
@@ -520,7 +561,10 @@ async function loadMore() {
 
 function setType(type: 'book' | 'stationery') {
   activeType.value = type
-  router.push({ query: { ...route.query, type } })
+  const query = { ...route.query, type }
+  // Agar kategoriya boshqa turga tegishli bo'lsa tozalash
+  delete query.category
+  router.push({ query })
 }
 
 function setSort(sort: string) {
@@ -550,9 +594,6 @@ function applyFilter(payload: {
     lang_types: payload.langTypes?.join(',') || undefined,
     cover_types: payload.coverTypes?.join(',') || undefined
   }
-  // Drawer endi doim Kategoriyalar bilan birga ochiladi (Narx alohida
-  // kichik popoverga ko'chirilgani sabab bu yerda faqat "combined" rejim
-  // qoldi), shuning uchun categoryId har doim shu yerda qo'llanadi.
   if (payload.categoryId) {
     query.category = payload.categoryId
   } else {
@@ -561,17 +602,6 @@ function applyFilter(payload: {
   router.push({ query })
 }
 
-// TUZATILDI: bu yerda faqat title+description bor edi, canonical umuman
-// yo'q edi — natijada `nuxt.config.ts`dagi UMUMIY (bosh sahifaga qattiq
-// yozilgan) canonical meros bo'lib qolardi, ya'ni Google'ga "bu sahifaning
-// asl nusxasi aslida bosh sahifa" degan noto'g'ri signal ketardi (bu
-// katalog — saytning eng muhim, ko'p mahsulotli sahifasi — reytingga
-// chiqishiga xalaqit berishi mumkin edi). Endi aniq belgilandi: `sort`/
-// `search`/`min_price`/`publisher_ids` kabi filtr parametrlari OLIB
-// TASHLANADI (ular yuzlab "deyarli bir xil" URL variantlari yaratadi —
-// bularning barchasi bitta toza `type`ga bog'langan URL'ga ko'rsatiladi,
-// Google'ning e'tibori tarqalib ketmasligi uchun), faqat `type` (kitob/
-// kanselyariya haqiqatan boshqa-boshqa kontent) saqlanadi.
 const catalogCanonicalUrl = computed(() => {
   const base = `${config.public.siteUrl}/catalog`
   return activeType.value === 'stationery' ? `${base}?type=stationery` : base
@@ -589,10 +619,6 @@ useHead({
   link: [
     { rel: 'canonical', href: () => catalogCanonicalUrl.value },
   ],
-  // TUZATILDI: katalog (saytdagi eng katta mahsulotlar ro'yxati) uchun
-  // hech qanday JSON-LD yo'q edi. `ItemList` sxemasi qo'shildi — Google'ga
-  // bu sahifa nima haqida ekanini (mahsulotlar ro'yxati) va joriy 20-40 ta
-  // mahsulotning nomi/havolasini aniq ko'rsatadi.
   script: [
     {
       type: 'application/ld+json',

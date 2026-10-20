@@ -35,7 +35,7 @@
           <div class="flex items-center gap-3">
             <div class="flex-1">
               <label class="block text-xs font-semibold text-neutral-500 mb-1.5">Quyidagidan</label>
-              <div class="flex items-center rounded-2xl bg-secondary-100 px-4 py-3 border border-neutral-100 focus-within:border-gray">
+              <div class="flex items-center rounded-2xl bg-[#F5F6F8] px-4 py-3 border border-neutral-200/80 focus-within:border-primary/50 focus-within:bg-white focus-within:shadow-xs transition-colors">
                 <input
                   v-model="localMin"
                   type="number"
@@ -49,7 +49,7 @@
             </div>
             <div class="flex-1">
               <label class="block text-xs font-semibold text-neutral-500 mb-1.5">Shungacha</label>
-              <div class="flex items-center rounded-2xl bg-secondary-100 px-4 py-3 border border-neutral-100 focus-within:border-gray">
+              <div class="flex items-center rounded-2xl bg-[#F5F6F8] px-4 py-3 border border-neutral-200/80 focus-within:border-primary/50 focus-within:bg-white focus-within:shadow-xs transition-colors">
                 <input
                   v-model="localMax"
                   type="number"
@@ -189,19 +189,19 @@
         </button>
       </div>
 
-      <div class="catalog-filter-footer sticky bottom-0 bg-white px-5 pb-5 pt-1">
+      <div class="catalog-filter-footer sticky bottom-0 bg-white px-5 pb-5 pt-2 border-t border-neutral-100 flex gap-3">
         <button
           v-if="hasAnyLocalFilter"
           type="button"
           @click="handleClear"
-          class="catalog-filter-clear-desktop hidden py-3.5 rounded-2xl bg-secondary-200 text-primary font-semibold text-base hover:bg-secondary-400 transition-colors border-none cursor-pointer"
+          class="catalog-filter-clear-desktop hidden py-3.5 px-4 rounded-2xl bg-neutral-100 text-neutral-800 font-semibold text-sm hover:bg-neutral-200 transition-colors border-none cursor-pointer"
         >
           Filtrni tozalash
         </button>
         <button
           type="button"
           @click="handleApply"
-          class="catalog-filter-apply-btn w-full py-3.5 rounded-2xl bg-primary text-white font-semibold text-base hover:bg-primary/90 transition-colors border-none cursor-pointer"
+          class="catalog-filter-apply-btn w-full py-3.5 rounded-2xl bg-brand-gradient text-white font-semibold text-base shadow-xs hover:opacity-95 transition-all border-none cursor-pointer"
         >
           Ko‘rsatish
         </button>

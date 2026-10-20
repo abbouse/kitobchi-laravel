@@ -24,8 +24,10 @@
       type="button"
       @click="toggleOpen"
       :class="[
-        'px-4 py-2 rounded-2xl text-sm font-semibold transition-all border-none cursor-pointer inline-flex items-center gap-1.5 shrink-0',
-        modelValue !== 'popular' ? 'bg-primary text-white' : 'bg-secondary-300 text-primary hover:bg-primary/10'
+        'px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all border cursor-pointer inline-flex items-center gap-1.5 shrink-0 select-none',
+        modelValue !== 'popular'
+          ? 'bg-primary text-white border-primary shadow-xs'
+          : 'bg-white text-neutral-700 hover:bg-neutral-50 border-neutral-200/80 hover:border-neutral-300 shadow-2xs'
       ]"
     >
       {{ activeLabel }}
@@ -36,7 +38,7 @@
       <div
         v-if="isOpen"
         ref="menuRef"
-        class="fixed w-60 rounded-2xl bg-white shadow-2xl border border-neutral-100 py-2"
+        class="fixed w-60 rounded-2xl bg-white shadow-2xl border border-neutral-200/80 py-2 z-50"
         :style="menuStyle"
       >
         <button

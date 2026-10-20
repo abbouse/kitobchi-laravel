@@ -45,7 +45,7 @@
       <div
         v-if="isOpen"
         ref="popoverRef"
-        class="fixed bg-white rounded-2xl border border-neutral-100 shadow-2xl p-4"
+        class="fixed bg-white rounded-2xl border border-neutral-200/80 shadow-2xl p-4 z-50"
         :style="popoverStyle"
       >
         <template v-if="mode === 'range'">
@@ -53,19 +53,19 @@
             <input
               v-model="localMin"
               type="number" min="0" inputmode="numeric" placeholder="Min"
-              class="w-24 rounded-xl bg-secondary-100 border border-neutral-100 px-3 py-2 text-sm font-medium text-neutral-900 outline-none"
+              class="w-24 rounded-xl bg-[#F5F6F8] hover:bg-[#EFF1F4] focus:bg-white border border-neutral-200/80 focus:border-primary focus:ring-2 focus:ring-primary/15 px-3 py-2 text-sm font-medium text-neutral-900 outline-none transition-all"
             />
             <span class="text-neutral-300">–</span>
             <input
               v-model="localMax"
               type="number" min="0" inputmode="numeric" placeholder="Max"
-              class="w-24 rounded-xl bg-secondary-100 border border-neutral-100 px-3 py-2 text-sm font-medium text-neutral-900 outline-none"
+              class="w-24 rounded-xl bg-[#F5F6F8] hover:bg-[#EFF1F4] focus:bg-white border border-neutral-200/80 focus:border-primary focus:ring-2 focus:ring-primary/15 px-3 py-2 text-sm font-medium text-neutral-900 outline-none transition-all"
             />
           </div>
           <button
             type="button"
             @click="applyRange"
-            class="mt-3 w-full py-2.5 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-primary/90 transition-colors border-none cursor-pointer"
+            class="mt-3 w-full py-2.5 rounded-xl bg-brand-gradient text-white font-bold text-sm hover:brightness-105 active:scale-[0.99] transition-all border-none cursor-pointer shadow-xs"
           >
             Qo‘llash
           </button>
@@ -76,16 +76,16 @@
             <label
               v-for="opt in options || []"
               :key="opt.value"
-              class="flex items-center gap-3 text-sm py-2 px-1 rounded-lg hover:bg-neutral-50 transition-colors cursor-pointer"
+              class="flex items-center gap-3 text-sm py-2 px-2 rounded-xl hover:bg-neutral-50 transition-colors cursor-pointer select-none"
             >
               <input
                 type="checkbox"
                 :value="opt.value"
                 :checked="(modelValue || []).includes(opt.value)"
                 @change="toggleOption(opt.value)"
-                class="w-4 h-4 rounded border-neutral-300 text-primary shrink-0"
+                class="w-4 h-4 rounded border-neutral-300 text-primary accent-primary shrink-0 cursor-pointer"
               />
-              <span class="text-neutral-800">{{ opt.label }}</span>
+              <span class="text-neutral-800 text-sm font-medium">{{ opt.label }}</span>
             </label>
           </div>
         </template>
@@ -131,8 +131,10 @@ watch(() => [props.minValue, props.maxValue], () => {
 })
 
 const pillClasses = computed(() => [
-  'px-4 py-2 rounded-2xl text-sm font-semibold transition-all border-none cursor-pointer inline-flex items-center gap-1.5 shrink-0',
-  props.active ? 'bg-primary text-white' : 'bg-secondary-300 text-primary hover:bg-primary/10'
+  'px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all border cursor-pointer inline-flex items-center gap-1.5 shrink-0 select-none',
+  props.active
+    ? 'bg-primary text-white border-primary shadow-xs'
+    : 'bg-white text-neutral-700 hover:bg-neutral-50 border-neutral-200/80 hover:border-neutral-300 shadow-2xs'
 ])
 
 function applyRange() {
