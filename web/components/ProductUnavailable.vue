@@ -4,7 +4,9 @@
          matn, pastida sababni bildiruvchi kod (masalan KB-B20). Jadval:
          app/Support/ProductUnavailability.php -->
     <div class="w-full max-w-md bg-white rounded-3xl shadow-sm p-8 text-center">
-      <div class="mx-auto mb-5 w-20 h-20 rounded-full bg-secondary-50 flex items-center justify-center text-4xl">📚</div>
+      <div class="mx-auto mb-5 w-20 h-20 rounded-full bg-secondary-50 flex items-center justify-center">
+        <AppEmoji name="books" :size="44" />
+      </div>
       <h1 class="text-xl font-bold text-neutral-900 mb-2">{{ tr.title }}</h1>
       <p class="text-sm text-neutral-500 leading-relaxed mb-6">{{ tr.lead }}</p>
       <div class="flex flex-col sm:flex-row gap-2 justify-center">

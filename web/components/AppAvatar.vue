@@ -28,9 +28,9 @@
     <!-- Optional Role / Badge Emoji -->
     <span
       v-if="badge"
-      class="absolute -bottom-1 -right-1 text-xs bg-white rounded-full px-0.5 shadow-2xs leading-none border border-neutral-100"
+      class="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5 shadow-2xs leading-none border border-neutral-100 flex items-center justify-center"
     >
-      {{ badge }}
+      <AppEmoji :char="badge" :size="12" />
     </span>
   </div>
 </template>

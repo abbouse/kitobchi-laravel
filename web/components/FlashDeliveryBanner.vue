@@ -19,7 +19,7 @@
         <!-- Chap: ikon + matn -->
         <div class="flash-left">
           <div class="flash-icon-wrap">
-            <span class="flash-icon">🚀</span>
+            <AppEmoji name="rocket" :size="28" class="flash-icon" />
             <span v-if="isActive" class="flash-pulse-ring" />
           </div>
           <div class="flash-text">

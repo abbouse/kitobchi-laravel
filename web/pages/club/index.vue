@@ -42,7 +42,7 @@
             ]"
           >
             <span>#{{ t.name }}</span>
-            <span v-if="t.firework" class="text-xs">🔥</span>
+            <AppEmoji v-if="t.firework" name="fire" :size="13" class="ml-1" />
           </button>
         </div>
       </div>
@@ -367,7 +367,7 @@
           <!-- Trending Topics / Ommabop mavzular -->
           <div v-if="themes.length > 0" class="bg-white rounded-3xl p-5 sm:p-6 border border-neutral-200/70 shadow-2xs">
             <h3 class="font-bold text-sm sm:text-base text-neutral-900 mb-3 m-0 flex items-center gap-2">
-              <span>🔥</span>
+              <AppEmoji name="fire" :size="16" />
               <span>Muhokamadagi mavzular</span>
             </h3>
             <div class="flex flex-wrap gap-1.5">
