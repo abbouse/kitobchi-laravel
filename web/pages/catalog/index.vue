@@ -159,15 +159,13 @@
         </button>
       </div>
 
-      <!-- ====== FILTERS & SORTING ROW ====== -->
+      <!-- ====== FILTERS & SORTING ROW (mustaqil oq chiplar qatori) ====== -->
       <div
-        class="z-30 p-2 sm:p-2.5 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xs flex items-center gap-2 mb-6 overflow-x-auto no-scrollbar border-none"
+        class="z-30 py-1 flex items-center gap-2 mb-6 overflow-x-auto no-scrollbar"
         :style="{ position: isMobileSticky ? 'sticky' : 'static', top: headerHeight + 'px' }"
       >
         <!-- Saralash Dropdown -->
         <CatalogSortDropdown :model-value="activeSort" @update:model-value="setSort" />
-
-        <div class="w-px h-6 bg-neutral-200 mx-1 shrink-0"></div>
 
         <!-- Narx Pill -->
         <CatalogFilterPill
@@ -240,14 +238,14 @@
           type="button"
           @click="openCombinedFilter"
           :class="[
-            'px-3.5 py-2 rounded-2xl text-xs sm:text-sm font-semibold transition-all shrink-0 cursor-pointer inline-flex items-center gap-1.5 border-none',
+            'px-4 py-2 rounded-2xl text-xs sm:text-sm font-semibold transition-all shrink-0 cursor-pointer inline-flex items-center gap-1.5 border-none',
             hasActiveFilters
               ? 'bg-primary text-white shadow-xs'
               : 'bg-white text-neutral-700 hover:bg-neutral-50 shadow-2xs'
           ]"
         >
           <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75"/></svg>
-          Filtrlar
+          <span>Filtrlar</span>
           <span v-if="activeFiltersCount > 0" class="w-5 h-5 rounded-full bg-white text-primary text-xs flex items-center justify-center font-bold">
             {{ activeFiltersCount }}
           </span>
@@ -258,10 +256,10 @@
           v-if="hasActiveFilters"
           type="button"
           @click="resetAllFilters"
-          class="px-3 py-2 text-xs sm:text-sm font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-2xl transition-colors inline-flex items-center gap-1 shrink-0 border-none cursor-pointer"
+          class="px-3.5 py-2 text-xs sm:text-sm font-semibold text-rose-600 hover:text-rose-700 bg-white hover:bg-rose-50 rounded-2xl shadow-2xs transition-colors inline-flex items-center gap-1 shrink-0 border-none cursor-pointer"
         >
           <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-          Tozalash
+          <span>Tozalash</span>
         </button>
       </div>
 
