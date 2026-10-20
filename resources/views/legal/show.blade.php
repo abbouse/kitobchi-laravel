@@ -59,48 +59,39 @@
 @endpush
 
 @section('content')
-    <section class="section">
-        <div class="page-padding">
-            <div class="container">
-                <div class="section-header cc-legal">
-                    <h1 class="section-heading">{{ $policy->localizedTitle() }}</h1>
-                    <p class="subheading">{{ __('legal.show.updated') }} {{ $policy->updated_at->format('d.m.Y') }}</p>
-                </div>
+    <nav class="kl-crumbs" aria-label="Breadcrumb">
+        <a href="{{ url('/') }}">{{ __('legal.show.breadcrumb_home') }}</a>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+        <a href="{{ route('legal.index') }}">{{ __('legal.show.breadcrumb_legal') }}</a>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+        <span>{{ $policy->localizedTitle() }}</span>
+    </nav>
 
-                <div class="legal-rt w-richtext">
-                    {!! $policy->localizedContent() !!}
-                </div>
+    <article class="kl-card">
+        <h1 class="kl-title">{{ $policy->localizedTitle() }}</h1>
+        <p class="kl-updated">{{ __('legal.show.updated') }} {{ $policy->updated_at->format('d.m.Y') }}</p>
 
-                <div class="kc-legal-actions">
-                    <a href="{{ route('legal.index') }}" class="cta w-inline-block">
-                        <div class="cta-bg u-rainbow u-blur-perf cc-dark"></div>
-                        <div class="cta-inner cc-dark">
-                            <div><strong>{{ __('legal.show.all_docs') }}</strong></div>
-                        </div>
-                    </a>
-                    <a href="#" class="cta w-inline-block" onclick="window.print(); return false;">
-                        <div class="cta-bg u-rainbow u-blur-perf"></div>
-                        <div class="cta-inner">
-                            <div><strong>{{ __('legal.show.print') }}</strong></div>
-                        </div>
-                    </a>
-                </div>
-
-                @php $otherPolicies = $policies->where('id', '!=', $policy->id)->take(4); @endphp
-                @if($otherPolicies->isNotEmpty())
-                    <div class="section-header cc-legal kc-legal-more-head">
-                        <h2 class="heading-m">{{ __('legal.show.other_heading') }}</h2>
-                    </div>
-                    <div class="kc-legal-index-list">
-                        @foreach($otherPolicies as $other)
-                            <a href="{{ route('legal.policy', $other->slug) }}" class="kc-legal-index-row w-inline-block">
-                                <span class="kc-legal-index-title">{{ $other->localizedTitle() }}</span>
-                                <span class="kc-legal-index-meta">{{ $other->updated_at->format('d.m.Y') }}</span>
-                            </a>
-                        @endforeach
-                    </div>
-                @endif
-            </div>
+        <div class="kl-prose">
+            {!! $policy->localizedContent() !!}
         </div>
-    </section>
+
+        <div class="kl-actions">
+            <a href="{{ route('legal.index') }}" class="kl-btn kl-btn--primary">{{ __('legal.show.all_docs') }}</a>
+            <a href="#" class="kl-btn" onclick="window.print(); return false;">{{ __('legal.show.print') }}</a>
+        </div>
+    </article>
+
+    @php $otherPolicies = $policies->where('id', '!=', $policy->id)->take(4); @endphp
+    @if($otherPolicies->isNotEmpty())
+        <h2 class="kl-more-title">{{ __('legal.show.other_heading') }}</h2>
+        <div class="kl-list">
+            @foreach($otherPolicies as $other)
+                <a href="{{ route('legal.policy', $other->slug) }}" class="kl-row">
+                    <span class="kl-row__title">{{ $other->localizedTitle() }}</span>
+                    <span class="kl-row__meta">{{ $other->updated_at->format('d.m.Y') }}</span>
+                    <svg class="kl-row__chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+                </a>
+            @endforeach
+        </div>
+    @endif
 @endsection
