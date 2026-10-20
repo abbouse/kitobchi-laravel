@@ -190,11 +190,12 @@ return Application::configure(basePath: dirname(__DIR__))
         // ── Book Club AI baholash — HAR KUNI (izohlar keshbek bilan
         // rag'batlantirilgani uchun haftalik kechikish nomaqbul; faqat
         // yangi/o'zgargan kontent baholanadi, xarajat minimal) ─────────
-        $schedule->command('openai:score-book-club-content')
-            ->dailyAt('03:15')
-            ->timezone($tz)
-            ->withoutOverlapping()
-            ->runInBackground();
+        // Book Club AI tekshiruvi o'chirilgan (postlar AI bilan baholanmaydi va jazolanmaydi).
+        // $schedule->command('openai:score-book-club-content')
+        //             ->dailyAt('03:15')
+        //             ->timezone($tz)
+        //             ->withoutOverlapping()
+        //             ->runInBackground();
 
         // ── Mahsulot UGC ratinglari — haftasiga 1 marta qayta yig'iladi ──
         $schedule->command('products:refresh-ugc-ratings')
@@ -238,11 +239,12 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Faqat yangi/o'zgargan kontent batch tekshiriladi; limitlar server va
         // OpenAI yukini nazoratda ushlab turadi.
-        $schedule->command('openai:moderate-book-club-comments --post-limit=150 --comment-limit=300')
-            ->everyFiveMinutes()
-            ->timezone($tz)
-            ->withoutOverlapping()
-            ->runInBackground();
+        // Book Club AI tekshiruvi o'chirilgan (postlar AI bilan baholanmaydi va jazolanmaydi).
+        // $schedule->command('openai:moderate-book-club-comments --post-limit=150 --comment-limit=300')
+        //             ->everyFiveMinutes()
+        //             ->timezone($tz)
+        //             ->withoutOverlapping()
+        //             ->runInBackground();
 
         // ── Seller reputatsiyasi — har tong qayta hisoblanadi ─────────
         $schedule->command('sellers:recalculate-reputation')

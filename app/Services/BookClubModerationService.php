@@ -19,8 +19,10 @@ class BookClubModerationService
 
     public function activeWarningCountForUser(int $userId): int
     {
+        // Faqat moderator qo'ygan ogohlantirishlar hisoblanadi
         return BookClubWarning::active()
             ->where('user_id', $userId)
+            ->whereNotNull('admin_id')
             ->count();
     }
 
@@ -63,7 +65,31 @@ class BookClubModerationService
         ];
     }
 
+    /**
+     * AI baholash endi foydalanuvchiga ogohlantirish BERMAYDI va push
+     * yubormaydi (Book Club postlari AI tomonidan jazolanmaydi). Avval AI
+     * qo'ygan faol ogohlantirish qolgan bo'lsa — u o'chiriladi. Faqat
+     * moderator (admin_id bor) qo'ygan ogohlantirishlar amal qiladi.
+     */
     public function syncAiWarningForPost(BookClub $post, float $score, ?string $note = null): void
+    {
+        if ((int) $post->user_id <= 0) {
+            return;
+        }
+
+        $deactivated = BookClubWarning::query()
+            ->where('post_id', $post->id)
+            ->whereNull('admin_id')
+            ->where('is_active', true)
+            ->update(['is_active' => false]);
+
+        if ($deactivated > 0 && ($user = User::query()->find((int) $post->user_id))) {
+            $this->userReputationService->recalculateUser($user);
+        }
+    }
+
+    /** @deprecated AI ogohlantirish mantig'i (o'chirilgan, tarix uchun saqlangan). */
+    private function legacyAiWarning(BookClub $post, float $score, ?string $note = null): void
     {
         if ((int) $post->user_id <= 0 || (bool) $post->is_deleted) {
             return;

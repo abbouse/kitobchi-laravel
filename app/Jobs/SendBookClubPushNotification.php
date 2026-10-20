@@ -86,6 +86,10 @@ class SendBookClubPushNotification implements ShouldQueue
      */
     private function shouldSuppressForLowAiScore(int $postId): bool
     {
+        // Book Club postlari AI tomonidan tekshirilmaydi — push hech qachon
+        // AI bahosi sababli to'xtatilmaydi.
+        return false;
+
         $post = BookClub::query()->find($postId);
         if (!$post || $post->is_deleted) {
             return false;
