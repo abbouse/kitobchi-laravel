@@ -1,20 +1,22 @@
 <template>
-  <PolicyPage ref="pageRef" :slug="slug" :title="slug" />
+  <PolicyPage :slug="slug" :title="slug" />
 </template>
 
 <script setup lang="ts">
 const route = useRoute()
 const slug = computed(() => route.params.slug as string)
 
-const pageRef = ref()
+const { policy } = usePolicy(slug)
 
-// TUZATILDI: bu yerda canonical umuman ko'rsatilmagan edi — natijada
-// nuxt.config.ts'dagi UMUMIY (bosh sahifaga qattiq yozilgan) canonical
-// meros bo'lib qolardi (Google'ga "bu sahifaning asl nusxasi aslida bosh
-// sahifa" degan noto'g'ri signal). Endi sahifaning o'z URL'i aniq
-// ko'rsatildi.
 useSeoMeta({
-  title: () => `${pageRef.value?.policy?.title || 'Hujjat'} — Kitobchi`
+  title: () => `${policy.value?.title || 'Huquqiy hujjat'} — Kitobchi`,
+  description: () => policy.value?.title
+    ? `${policy.value.title} — Kitobchi platformasining rasmiy huquqiy hujjati va shartlari.`
+    : 'Kitobchi platformasining rasmiy huquqiy hujjatlari va qoidalari.',
+  ogTitle: () => `${policy.value?.title || 'Huquqiy hujjat'} — Kitobchi`,
+  ogDescription: () => policy.value?.title
+    ? `${policy.value.title} — Kitobchi platformasining rasmiy huquqiy hujjati va shartlari.`
+    : 'Kitobchi platformasining rasmiy huquqiy hujjatlari va qoidalari.',
 })
 
 useHead({

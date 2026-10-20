@@ -126,7 +126,18 @@ html, body {
 .kb-prose a{color:#0F172A;text-decoration:underline;text-underline-offset:3px}
 .kb-prose strong,.kb-prose b{font-weight:600;color:#0F172A}
 .kb-prose img{max-width:100%;border-radius:.75rem;margin:1rem 0}
+.kb-prose blockquote{border-left:4px solid #CBD5E1;padding-left:1rem;color:#64748B;font-style:italic;margin:1.5rem 0}
+.kb-prose table{width:100%;border-collapse:collapse;margin:1.5rem 0;font-size:0.875rem}
+.kb-prose th,.kb-prose td{border:1px solid #E2E8F0;padding:0.75rem 1rem;text-align:left}
+.kb-prose th{background-color:#F8FAFC;font-weight:600;color:#0F172A}
+.kb-prose tr:nth-child(even) td{background-color:#F8FAFC}
 .kb-prose>*:last-child{margin-bottom:0}
+
+@media print {
+  .layout-sticky-header, footer, nav[aria-label="Breadcrumb"], .print\:hidden { display: none !important; }
+  body { background: #fff !important; }
+  .kb-prose { color: #000 !important; font-size: 12pt !important; }
+}
 
 /* ===================================================================
  * 7) product-gallery-frame — Mahsulot galereyasi ramkasi
