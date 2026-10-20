@@ -22,7 +22,7 @@
             :class="[
               'shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer border flex items-center gap-1',
               !activeThemeSlug
-                ? 'bg-neutral-900 text-white border-neutral-900 shadow-2xs'
+                ? 'bg-brand-gradient text-white border-transparent shadow-xs'
                 : 'bg-white text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50 border-neutral-200/80'
             ]"
           >
@@ -37,7 +37,7 @@
             :class="[
               'shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer border flex items-center gap-1',
               activeThemeSlug === (t.slug || String(t.id))
-                ? 'bg-primary text-white border-primary shadow-2xs'
+                ? 'bg-brand-gradient text-white border-transparent shadow-xs'
                 : 'bg-white text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50 border-neutral-200/80'
             ]"
           >

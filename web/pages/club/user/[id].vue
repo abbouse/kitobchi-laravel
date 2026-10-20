@@ -96,8 +96,8 @@
               </div>
             </div>
 
-            <!-- Action Buttons: Follow + Share (No Message Button) -->
-            <div class="flex items-center gap-2.5 pt-3 border-t border-neutral-100">
+            <!-- Action Buttons: Follow (Full width, No Share Button) -->
+            <div class="pt-3 border-t border-neutral-100">
               <!-- Follow / Unfollow button -->
               <button
                 v-if="!profileUser.is_me"
@@ -105,7 +105,7 @@
                 @click="toggleFollow"
                 :disabled="isFollowLoading"
                 :class="[
-                  'flex-1 py-2.5 px-5 rounded-2xl font-bold text-xs sm:text-sm transition-all cursor-pointer flex items-center justify-center gap-2 border shadow-2xs',
+                  'w-full py-2.5 px-5 rounded-2xl font-bold text-xs sm:text-sm transition-all cursor-pointer flex items-center justify-center gap-2 border shadow-2xs',
                   isFollowing
                     ? 'bg-neutral-100 hover:bg-neutral-200/80 text-neutral-700 border-neutral-200'
                     : 'bg-primary hover:bg-primary-hover text-white border-primary'
@@ -129,38 +129,25 @@
               <!-- Current user's own profile badge -->
               <div
                 v-else
-                class="flex-1 py-2.5 px-4 rounded-2xl bg-neutral-100 text-neutral-700 font-bold text-xs sm:text-sm text-center border border-neutral-200"
+                class="w-full py-2.5 px-4 rounded-2xl bg-neutral-100 text-neutral-700 font-bold text-xs sm:text-sm text-center border border-neutral-200"
               >
                 Mening profilim
               </div>
-
-              <!-- Share Profile Button -->
-              <button
-                type="button"
-                @click="shareProfile"
-                class="w-11 h-11 rounded-2xl bg-neutral-100 hover:bg-neutral-200/80 text-neutral-700 flex items-center justify-center transition-colors border border-neutral-200/80 cursor-pointer shadow-2xs shrink-0"
-                :title="copied ? 'Nusxa olindi!' : 'Profilni ulashish'"
-              >
-                <span v-if="copied" class="text-xs text-emerald-600 font-bold">✓</span>
-                <svg v-else class="w-4 h-4 transform rotate-45 -mr-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
-                </svg>
-              </button>
             </div>
           </div>
         </aside>
 
         <!-- RIGHT / MAIN COLUMN: FEED OF POSTS & REPOSTS (8 cols) -->
         <main class="lg:col-span-8 space-y-4">
-          <!-- TABS (Matching Screenshot: Postlar 1, Repostlar 0) -->
-          <div class="bg-white p-1.5 rounded-2xl flex items-center gap-1 border border-neutral-200/70 shadow-2xs">
+          <!-- TABS (Segment bar with brand gradient active tab) -->
+          <div class="bg-white p-1.5 rounded-2xl flex items-center gap-1.5 border border-neutral-200/70 shadow-2xs">
             <button
               type="button"
               @click="activeTab = 'posts'"
               :class="[
                 'flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all border-none cursor-pointer text-center',
                 activeTab === 'posts'
-                  ? 'bg-neutral-900 text-white shadow-2xs'
+                  ? 'bg-brand-gradient text-white shadow-xs'
                   : 'bg-transparent text-neutral-500 hover:text-neutral-900'
               ]"
             >
@@ -172,7 +159,7 @@
               :class="[
                 'flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all border-none cursor-pointer text-center',
                 activeTab === 'reposts'
-                  ? 'bg-neutral-900 text-white shadow-2xs'
+                  ? 'bg-brand-gradient text-white shadow-xs'
                   : 'bg-transparent text-neutral-500 hover:text-neutral-900'
               ]"
             >

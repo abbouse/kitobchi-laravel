@@ -66,7 +66,7 @@
           :class="[
             'px-4 py-2 rounded-xl font-medium transition-all cursor-pointer whitespace-nowrap',
             activeTab === tab.id
-              ? 'bg-neutral-900 text-white shadow-xs'
+              ? 'bg-brand-gradient text-white shadow-xs'
               : 'bg-white text-neutral-600 border border-neutral-200/70 hover:bg-neutral-50 hover:text-neutral-900'
           ]"
         >

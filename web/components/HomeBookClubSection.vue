@@ -161,12 +161,12 @@
           </div>
         </article>
 
-        <!-- CTA Card to write / join club: Exact same size -->
+        <!-- CTA Card to write / join club: Exact same size with brand gradient -->
         <article
-          class="shrink-0 w-[280px] sm:w-[320px] md:w-[340px] h-[200px] sm:h-[210px] snap-start bg-gradient-to-br from-[#0b0342] to-[#25157e] text-white rounded-3xl p-5 shadow-2xs flex flex-col justify-between"
+          class="shrink-0 w-[280px] sm:w-[320px] md:w-[340px] h-[200px] sm:h-[210px] snap-start bg-brand-gradient text-white rounded-3xl p-5 shadow-xs flex flex-col justify-between"
         >
           <div>
-            <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/10 text-white text-[11px] font-semibold mb-2">
+            <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/20 text-white text-[11px] font-semibold mb-2 backdrop-blur-xs">
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
               </svg>
@@ -175,14 +175,14 @@
             <h3 class="font-extrabold text-sm sm:text-base text-white m-0 leading-snug">
               Siz ham fikringizni ulashing!
             </h3>
-            <p class="text-xs text-neutral-300 line-clamp-2 mt-1.5 mb-0">
+            <p class="text-xs text-white/90 line-clamp-2 mt-1.5 mb-0">
               O‘qigan kitoblaringiz haqida yozing va minglab kitobxonlar davrasiga qo‘shiling.
             </p>
           </div>
 
           <NuxtLink
             to="/club"
-            class="w-full py-2 px-4 rounded-full bg-white text-[#0b0342] font-bold text-xs text-center block no-underline hover:bg-neutral-100 transition-colors shadow-2xs"
+            class="w-full py-2.5 px-4 rounded-full bg-white text-primary font-bold text-xs text-center block no-underline hover:bg-neutral-50 transition-colors shadow-2xs"
           >
             Fikr yozish
           </NuxtLink>
