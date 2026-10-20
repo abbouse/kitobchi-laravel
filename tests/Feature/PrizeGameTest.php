@@ -131,6 +131,19 @@ class PrizeGameTest extends TestCase
             ->assertOk()->assertJsonPath('discount', 45000);
     }
 
+    public function test_board_has_eight_cells_and_spin_stops_on_won_prize(): void
+    {
+        $p = $this->prize(['coins_amount' => 5]);
+        $board = $this->getJson('/api/v1/kitobchi/game/state')->assertOk()->json('data.board');
+        $this->assertCount(8, $board);
+        $this->assertContains($p->id, $board);
+        $this->assertContains(null, $board);
+
+        $data = $this->postJson('/api/v1/kitobchi/game/spin')->assertOk()->json('data');
+        $this->assertSame('coins', $data['result']['result']);
+        $this->assertSame($p->id, $data['board'][$data['cell']]);
+    }
+
     public function test_tasks_claim_once_per_day(): void
     {
         $this->getJson('/api/v1/kitobchi/game/state')->assertJsonPath('data.tasks.0.status', 'todo');

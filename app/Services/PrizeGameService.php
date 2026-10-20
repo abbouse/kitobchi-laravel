@@ -287,12 +287,9 @@ class PrizeGameService
                 return ['ok' => false, 'error' => 'Tangalar yetarli emas', 'coins' => $wallet->coins, 'need' => $cost];
             }
 
-            $orders = $this->deliveredOrders($user->id);
-            $spins = GameSpin::where('user_id', $user->id)->count();
-            $candidates = $this->livePrizes()
-                ->filter(fn (GamePrize $p) => $p->chance > 0 && $this->eligible($p, $user->id, $orders, $spins))
-                ->values();
+            $candidates = $this->candidates($user->id);
 
+            $board = $this->boardFor($user->id, $candidates);
             $prize = $this->roll($candidates);
 
             $spin = GameSpin::create([
@@ -306,14 +303,57 @@ class PrizeGameService
             $payload = $prize ? $this->award($prize, $user, $spin) : ['result' => 'nothing'];
             $spin->forceFill(['result' => $payload['result'], 'payload' => $payload])->save();
 
+            $placed = PrizeBoard::place($board, $prize?->id, $prize?->type,
+                $candidates->pluck('type', 'id')->all(), $user->id.'|'.$spin->id);
+
             return [
                 'ok' => true,
                 'spin_id' => $spin->id,
                 'prize_id' => $prize?->id,
+                'board' => $placed['board'],
+                'cell' => $placed['cell'],
                 'result' => $payload,
                 'coins' => GameWallet::where('user_id', $user->id)->value('coins'),
             ];
         });
+    }
+
+    /** Hozir yutish mumkin bo'lgan sovg'alar (foizi bor va shartlari bajarilgan). */
+    public function candidates(int $userId)
+    {
+        $orders = $this->deliveredOrders($userId);
+        $spins = GameSpin::where('user_id', $userId)->count();
+
+        return $this->livePrizes()
+            ->filter(fn (GamePrize $p) => $p->chance > 0 && $this->eligible($p, $userId, $orders, $spins))
+            ->values();
+    }
+
+    /**
+     * "Omadli maydon"ning 8 katagi (sovg'a ID si yoki null — "Keyingi safar").
+     * Kun davomida o'zgarmaydi; kvotadan ortiq kitoblar kunma-kun almashadi.
+     */
+    public function boardFor(int $userId, $candidates): array
+    {
+        $books = $candidates->where('type', 'fragments');
+        $progress = [];
+        if ($books->isNotEmpty()) {
+            $have = GameFragment::where('user_id', $userId)->whereIn('prize_id', $books->pluck('id'))
+                ->selectRaw('prize_id, count(*) as n')->groupBy('prize_id')->pluck('n', 'prize_id');
+            foreach ($books as $b) {
+                $n = (int) ($have[$b->id] ?? 0);
+                if ($n > 0) {
+                    $progress[$b->id] = $n / max(2, (int) $b->fragments_total);
+                }
+            }
+        }
+
+        return PrizeBoard::build(
+            $candidates->map(fn (GamePrize $p) => ['id' => $p->id, 'type' => $p->type])->all(),
+            $progress,
+            $userId.'|'.today()->toDateString(),
+            intdiv(today()->getTimestamp(), 86400),
+        );
     }
 
     /** Foizlar bo'yicha tanlash; qolgan ehtimol — "omad keyingi safar". */
@@ -489,6 +529,7 @@ class PrizeGameService
             ],
             'order_coins' => $this->setting('order_coins'),
             'prizes' => $this->livePrizes()->map(fn ($p) => $this->prizePayload($p, $user->id))->values()->all(),
+            'board' => $this->boardFor($user->id, $this->candidates($user->id)),
             'tasks' => $this->tasks($user->id),
             'winners' => $this->winners(),
             'rewards_count' => GameReward::where('user_id', $user->id)->whereNull('used_at')
