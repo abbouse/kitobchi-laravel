@@ -62,6 +62,20 @@ class PrizeGameService
 
     // ── Hamyon ─────────────────────────────────────────────────
 
+    /**
+     * Bosh sahifadagi kapsula uchun balans: hamyon yaratmaydi va tanga yozmaydi.
+     * O'yin o'chirilgan bo'lsa — null (kapsula ko'rinmaydi).
+     */
+    public function peekCoins(int $userId): ?int
+    {
+        if ($this->setting('enabled') !== 1) {
+            return null;
+        }
+        $coins = GameWallet::where('user_id', $userId)->value('coins');
+
+        return $coins === null ? $this->setting('welcome_coins') : (int) $coins;
+    }
+
     public function wallet(int $userId): GameWallet
     {
         $wallet = GameWallet::where('user_id', $userId)->first();

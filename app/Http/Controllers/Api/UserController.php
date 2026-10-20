@@ -1080,6 +1080,7 @@ class UserController extends Controller
                 'cards'                    => (int) $cards,
                 'gift_certs_count'         => (int) $giftCertsCount,
                 'gift_certs_total'         => (int) $giftCertsTotal,
+                'game_coins'               => $user ? app(\App\Services\PrizeGameService::class)->peekCoins((int) $user->id) : null,
                 'mystery_box'              => $mysteryBoxData,
                 'isVerified'               => $user ? (bool) $user->isVerified : false,
                 'isSupport'                => $user ? (bool) $user->isSupport  : false,

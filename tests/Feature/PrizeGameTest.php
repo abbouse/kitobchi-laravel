@@ -144,6 +144,16 @@ class PrizeGameTest extends TestCase
         $this->assertSame($p->id, $data['board'][$data['cell']]);
     }
 
+    public function test_counts_show_game_coins_without_creating_wallet(): void
+    {
+        $this->getJson('/api/v1/kitobchi/counts')->assertOk()->assertJsonPath('data.game_coins', 20);
+        $this->assertSame(0, GameWallet::where('user_id', $this->user->id)->count());
+
+        $this->getJson('/api/v1/kitobchi/game/state')->assertOk();
+        $this->postJson('/api/v1/kitobchi/game/daily')->assertOk();
+        $this->getJson('/api/v1/kitobchi/counts')->assertOk()->assertJsonPath('data.game_coins', 25);
+    }
+
     public function test_tasks_claim_once_per_day(): void
     {
         $this->getJson('/api/v1/kitobchi/game/state')->assertJsonPath('data.tasks.0.status', 'todo');
