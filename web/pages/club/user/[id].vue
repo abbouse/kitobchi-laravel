@@ -29,26 +29,38 @@
       </nav>
 
       <!-- Loading State -->
-      <div v-if="pending && !profileUser" class="space-y-4 max-w-3xl mx-auto">
-        <div class="bg-white rounded-3xl p-6 sm:p-8 border border-neutral-200/70 shadow-xs animate-pulse flex items-start justify-between gap-4">
-          <div class="space-y-3 flex-1">
-            <div class="h-6 bg-neutral-200 rounded w-1/3"></div>
-            <div class="h-4 bg-neutral-100 rounded w-1/4"></div>
-            <div class="h-10 bg-neutral-100 rounded-2xl w-2/3 mt-4"></div>
-          </div>
-          <div class="w-20 h-20 rounded-full bg-neutral-200 shrink-0"></div>
+      <div v-if="pending && !profileUser" class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+        <div class="lg:col-span-4 bg-white rounded-3xl p-6 sm:p-7 border border-neutral-200/70 shadow-xs animate-pulse flex flex-col items-center">
+          <div class="w-24 h-24 rounded-full bg-neutral-200 mb-3"></div>
+          <div class="h-6 bg-neutral-200 rounded w-1/2 mb-2"></div>
+          <div class="h-4 bg-neutral-100 rounded w-1/3 mb-4"></div>
+          <div class="h-10 bg-neutral-100 rounded-2xl w-full"></div>
+        </div>
+        <div class="lg:col-span-8 space-y-4 animate-pulse">
+          <div class="h-12 bg-white rounded-2xl border border-neutral-200/70"></div>
+          <div class="h-40 bg-white rounded-3xl border border-neutral-200/70"></div>
         </div>
       </div>
 
-      <!-- Main Profile Layout -->
-      <div v-else-if="profileUser" class="max-w-3xl mx-auto space-y-6">
-        <!-- USER PROFILE HERO CARD (Matching App Screenshot) -->
-        <div class="bg-white rounded-3xl p-6 sm:p-8 border border-neutral-200/70 shadow-xs">
-          <!-- Top Row: Name & Bio bubble on left, Big Avatar on right -->
-          <div class="flex items-start justify-between gap-4 sm:gap-6 mb-4">
-            <div class="min-w-0 flex-1">
+      <!-- Main Profile Layout (2-Column on Desktop: Sidebar + Posts Feed) -->
+      <div v-else-if="profileUser" class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+        <!-- LEFT COLUMN: USER PROFILE CARD (Sticky Sidebar on Desktop, 4 cols) -->
+        <aside class="lg:col-span-4 lg:sticky lg:top-24 space-y-4">
+          <div class="bg-white rounded-3xl p-6 sm:p-7 border border-neutral-200/70 shadow-xs">
+            <!-- User Avatar, Name & Bio -->
+            <div class="flex flex-col items-center text-center">
+              <div class="relative mb-3">
+                <AppAvatar
+                  :src="profileUser.avatar"
+                  :name="userName"
+                  :user-id="profileUser.id"
+                  size="w-24 h-24 sm:w-28 sm:h-28 text-3xl sm:text-4xl"
+                  :badge="profileUser.role_emoji"
+                />
+              </div>
+
               <!-- Name & Verified Check -->
-              <div class="flex items-center gap-2 flex-wrap mb-1">
+              <div class="flex items-center justify-center gap-1.5 flex-wrap mb-1">
                 <h1 class="text-xl sm:text-2xl font-extrabold text-neutral-900 tracking-tight m-0">
                   {{ userName }}
                 </h1>
@@ -64,7 +76,7 @@
               </div>
 
               <!-- Role subtitle -->
-              <div class="flex items-center gap-1.5 text-xs sm:text-sm text-neutral-500 mb-3">
+              <div class="flex items-center justify-center gap-1.5 text-xs sm:text-sm text-neutral-500 mb-3">
                 <svg class="w-4 h-4 text-neutral-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
                 </svg>
@@ -72,149 +84,143 @@
               </div>
 
               <!-- Bio Speech Bubble (Matching purple/pink pill in screenshot) -->
-              <div v-if="profileUser.bio" class="relative inline-block my-1 max-w-md">
-                <div class="px-4 py-2 rounded-2xl rounded-tr-none bg-[#f3e6f7] text-[#4a154b] text-xs sm:text-sm font-medium leading-relaxed shadow-2xs">
-                  {{ profileUser.bio }}
+              <div v-if="profileUser.bio" class="relative inline-block my-1 max-w-full">
+                <div class="px-4 py-2 rounded-2xl bg-[#f3e6f7] text-[#4a154b] text-xs sm:text-sm font-medium leading-relaxed shadow-2xs text-center">
+                  “{{ profileUser.bio }}”
                 </div>
+              </div>
+
+              <!-- Followers count -->
+              <div class="text-xs sm:text-sm text-neutral-500 mt-3 mb-4 font-medium">
+                Obunachilar: <span class="font-bold text-neutral-800">{{ followersCount }}</span>
               </div>
             </div>
 
-            <!-- Large User Avatar (With Telegram Gradient fallback) -->
-            <AppAvatar
-              :src="profileUser.avatar"
-              :name="userName"
-              :user-id="profileUser.id"
-              size="w-20 h-20 sm:w-24 sm:h-24 text-2xl sm:text-3xl"
-              :badge="profileUser.role_emoji"
-            />
-          </div>
+            <!-- Action Buttons: Follow + Share (No Message Button) -->
+            <div class="flex items-center gap-2.5 pt-3 border-t border-neutral-100">
+              <!-- Follow / Unfollow button -->
+              <button
+                v-if="!profileUser.is_me"
+                type="button"
+                @click="toggleFollow"
+                :disabled="isFollowLoading"
+                :class="[
+                  'flex-1 py-2.5 px-5 rounded-2xl font-bold text-xs sm:text-sm transition-all cursor-pointer flex items-center justify-center gap-2 border shadow-2xs',
+                  isFollowing
+                    ? 'bg-neutral-100 hover:bg-neutral-200/80 text-neutral-700 border-neutral-200'
+                    : 'bg-primary hover:bg-primary-hover text-white border-primary'
+                ]"
+              >
+                <svg v-if="isFollowLoading" class="animate-spin w-4 h-4 text-current" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                </svg>
+                <template v-else>
+                  <svg v-if="!isFollowing" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM3 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 9.374 21c-2.331 0-4.512-.645-6.374-1.766Z" />
+                  </svg>
+                  <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+                  </svg>
+                  <span>{{ isFollowing ? 'Obunani bekor qilish' : 'Obuna bo‘lish' }}</span>
+                </template>
+              </button>
 
-          <!-- Followers count -->
-          <div class="text-xs sm:text-sm text-neutral-500 mb-4 font-medium">
-            Obunachilar: <span class="font-bold text-neutral-800">{{ followersCount }}</span>
-          </div>
+              <!-- Current user's own profile badge -->
+              <div
+                v-else
+                class="flex-1 py-2.5 px-4 rounded-2xl bg-neutral-100 text-neutral-700 font-bold text-xs sm:text-sm text-center border border-neutral-200"
+              >
+                Mening profilim
+              </div>
 
-          <!-- Action Buttons: Follow + Share -->
-          <div class="flex items-center gap-3">
-            <!-- Follow / Unfollow button -->
+              <!-- Share Profile Button -->
+              <button
+                type="button"
+                @click="shareProfile"
+                class="w-11 h-11 rounded-2xl bg-neutral-100 hover:bg-neutral-200/80 text-neutral-700 flex items-center justify-center transition-colors border border-neutral-200/80 cursor-pointer shadow-2xs shrink-0"
+                :title="copied ? 'Nusxa olindi!' : 'Profilni ulashish'"
+              >
+                <span v-if="copied" class="text-xs text-emerald-600 font-bold">✓</span>
+                <svg v-else class="w-4 h-4 transform rotate-45 -mr-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </aside>
+
+        <!-- RIGHT / MAIN COLUMN: FEED OF POSTS & REPOSTS (8 cols) -->
+        <main class="lg:col-span-8 space-y-4">
+          <!-- TABS (Matching Screenshot: Postlar 1, Repostlar 0) -->
+          <div class="bg-white p-1.5 rounded-2xl flex items-center gap-1 border border-neutral-200/70 shadow-2xs">
             <button
-              v-if="!profileUser.is_me"
               type="button"
-              @click="toggleFollow"
-              :disabled="isFollowLoading"
+              @click="activeTab = 'posts'"
               :class="[
-                'flex-1 py-2.5 px-5 rounded-2xl font-bold text-xs sm:text-sm transition-all cursor-pointer flex items-center justify-center gap-2 border shadow-2xs',
-                isFollowing
-                  ? 'bg-neutral-100 hover:bg-neutral-200/80 text-neutral-700 border-neutral-200'
-                  : 'bg-primary hover:bg-primary-hover text-white border-primary'
+                'flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all border-none cursor-pointer text-center',
+                activeTab === 'posts'
+                  ? 'bg-neutral-900 text-white shadow-2xs'
+                  : 'bg-transparent text-neutral-500 hover:text-neutral-900'
               ]"
             >
-              <svg v-if="isFollowLoading" class="animate-spin w-4 h-4 text-current" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
-              </svg>
-              <template v-else>
-                <svg v-if="!isFollowing" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM3 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 9.374 21c-2.331 0-4.512-.645-6.374-1.766Z" />
-                </svg>
-                <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
-                </svg>
-                <span>{{ isFollowing ? 'Obunani bekor qilish' : 'Obuna bo‘lish' }}</span>
-              </template>
+              Postlar {{ posts.length }}
             </button>
-
-            <!-- Current user's own profile badge -->
-            <div
-              v-else
-              class="flex-1 py-2.5 px-4 rounded-2xl bg-neutral-100 text-neutral-700 font-bold text-xs sm:text-sm text-center border border-neutral-200"
-            >
-              Mening profilim
-            </div>
-
-            <!-- Share Profile Button -->
             <button
               type="button"
-              @click="shareProfile"
-              class="w-11 h-11 rounded-2xl bg-neutral-100 hover:bg-neutral-200/80 text-neutral-700 flex items-center justify-center transition-colors border border-neutral-200/80 cursor-pointer shadow-2xs shrink-0"
-              :title="copied ? 'Nusxa olindi!' : 'Profilni ulashish'"
+              @click="activeTab = 'reposts'"
+              :class="[
+                'flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all border-none cursor-pointer text-center',
+                activeTab === 'reposts'
+                  ? 'bg-neutral-900 text-white shadow-2xs'
+                  : 'bg-transparent text-neutral-500 hover:text-neutral-900'
+              ]"
             >
-              <span v-if="copied" class="text-xs text-emerald-600 font-bold">✓</span>
-              <svg v-else class="w-4 h-4 transform rotate-45 -mr-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
-              </svg>
+              Repostlar {{ reposts.length }}
             </button>
           </div>
-        </div>
 
-        <!-- TABS (Matching Screenshot: Postlar 1, Repostlar 0) -->
-        <div class="bg-neutral-100/80 p-1 rounded-2xl flex items-center gap-1 border border-neutral-200/60">
-          <button
-            type="button"
-            @click="activeTab = 'posts'"
-            :class="[
-              'flex-1 py-2 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all border-none cursor-pointer text-center',
-              activeTab === 'posts'
-                ? 'bg-white text-neutral-900 shadow-2xs'
-                : 'bg-transparent text-neutral-500 hover:text-neutral-900'
-            ]"
-          >
-            Postlar {{ posts.length }}
-          </button>
-          <button
-            type="button"
-            @click="activeTab = 'reposts'"
-            :class="[
-              'flex-1 py-2 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all border-none cursor-pointer text-center',
-              activeTab === 'reposts'
-                ? 'bg-white text-neutral-900 shadow-2xs'
-                : 'bg-transparent text-neutral-500 hover:text-neutral-900'
-            ]"
-          >
-            Repostlar {{ reposts.length }}
-          </button>
-        </div>
+          <!-- TAB CONTENT: POSTS / REPOSTS FEED -->
+          <div class="space-y-4">
+            <!-- Posts Tab -->
+            <template v-if="activeTab === 'posts'">
+              <div v-if="posts.length > 0" class="space-y-4">
+                <BookClubCard
+                  v-for="post in posts"
+                  :key="post.id"
+                  :post="post"
+                />
+              </div>
+              <div
+                v-else
+                class="bg-white rounded-3xl p-10 text-center border border-neutral-200/70 shadow-2xs"
+              >
+                <p class="text-xs sm:text-sm text-neutral-400 m-0">
+                  Ushbu kitobxonda hozircha chop etilgan postlar yo‘q.
+                </p>
+              </div>
+            </template>
 
-        <!-- TAB CONTENT: POSTS / REPOSTS FEED -->
-        <div class="space-y-4">
-          <!-- Posts Tab -->
-          <template v-if="activeTab === 'posts'">
-            <div v-if="posts.length > 0" class="space-y-4">
-              <BookClubCard
-                v-for="post in posts"
-                :key="post.id"
-                :post="post"
-              />
-            </div>
-            <div
-              v-else
-              class="bg-white rounded-3xl p-10 text-center border border-neutral-200/70"
-            >
-              <p class="text-xs sm:text-sm text-neutral-400 m-0">
-                Ushbu kitobxonda hozircha chop etilgan postlar yo‘q.
-              </p>
-            </div>
-          </template>
-
-          <!-- Reposts Tab -->
-          <template v-else>
-            <div v-if="reposts.length > 0" class="space-y-4">
-              <BookClubCard
-                v-for="post in reposts"
-                :key="post.id"
-                :post="post"
-              />
-            </div>
-            <div
-              v-else
-              class="bg-white rounded-3xl p-10 text-center border border-neutral-200/70"
-            >
-              <p class="text-xs sm:text-sm text-neutral-400 m-0">
-                Ushbu kitobxonda hozircha repostlar yo‘q.
-              </p>
-            </div>
-          </template>
-        </div>
+            <!-- Reposts Tab -->
+            <template v-else>
+              <div v-if="reposts.length > 0" class="space-y-4">
+                <BookClubCard
+                  v-for="post in reposts"
+                  :key="post.id"
+                  :post="post"
+                />
+              </div>
+              <div
+                v-else
+                class="bg-white rounded-3xl p-10 text-center border border-neutral-200/70 shadow-2xs"
+              >
+                <p class="text-xs sm:text-sm text-neutral-400 m-0">
+                  Ushbu kitobxonda hozircha repostlar yo‘q.
+                </p>
+              </div>
+            </template>
+          </div>
+        </main>
       </div>
 
       <!-- User Not Found State -->
