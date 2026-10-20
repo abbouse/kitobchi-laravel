@@ -119,40 +119,38 @@
             </div>
 
             <!-- Attached Product Showcase -->
-            <div
+            <NuxtLink
               v-if="linkedProduct"
-              class="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-blue-50/70 to-indigo-50/50 border border-primary/20 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+              :to="`/books/${linkedProduct.id}`"
+              class="p-3 sm:p-4 rounded-2xl bg-neutral-50/80 hover:bg-neutral-100/90 border border-neutral-200/80 transition-all mb-6 flex items-center justify-between gap-4 no-underline group/link"
             >
               <div class="flex items-center gap-3.5 min-w-0">
-                <NuxtLink :to="`/books/${linkedProduct.id}`" class="shrink-0 w-14 h-20 rounded-xl overflow-hidden bg-white border border-neutral-200 block shadow-2xs">
+                <div class="shrink-0 w-11 h-15 rounded-lg overflow-hidden bg-white border border-neutral-200/80 shadow-2xs">
                   <img
                     :src="resolveProductImage(linkedProduct)"
                     :alt="linkedProduct.name || linkedProduct.title"
-                    class="w-full h-full object-cover"
+                    class="w-full h-full object-cover group-hover/link:scale-105 transition-transform duration-300"
                     loading="lazy"
                   />
-                </NuxtLink>
+                </div>
                 <div class="min-w-0">
-                  <span class="text-[10px] uppercase font-bold text-primary tracking-wider block">Muhokamadagi kitob</span>
-                  <NuxtLink
-                    :to="`/books/${linkedProduct.id}`"
-                    class="font-bold text-sm sm:text-base text-neutral-900 hover:text-primary transition-colors block truncate"
-                  >
+                  <span class="text-[10px] uppercase font-bold text-neutral-400 tracking-wider block">Mavzu kitobi</span>
+                  <div class="font-bold text-xs sm:text-sm text-neutral-900 group-hover/link:text-primary transition-colors truncate">
                     {{ linkedProduct.name || linkedProduct.title }}
-                  </NuxtLink>
-                  <div v-if="linkedProduct.price" class="text-sm font-extrabold text-primary mt-1">
+                  </div>
+                  <div v-if="linkedProduct.price" class="text-xs sm:text-sm font-extrabold text-primary mt-0.5">
                     {{ formatPrice(linkedProduct.price) }} so‘m
                   </div>
                 </div>
               </div>
 
-              <NuxtLink
-                :to="`/books/${linkedProduct.id}`"
-                class="shrink-0 w-full sm:w-auto px-4 py-2.5 rounded-full bg-primary hover:bg-primary-hover text-white font-bold text-xs sm:text-sm text-center transition-colors shadow-2xs no-underline"
-              >
-                Kitobni ko‘rish
-              </NuxtLink>
-            </div>
+              <div class="shrink-0 inline-flex items-center gap-1 px-3.5 py-1.5 rounded-full bg-primary hover:bg-primary-hover text-white font-bold text-xs transition-colors shadow-2xs">
+                <span>Kitobni ko‘rish</span>
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                </svg>
+              </div>
+            </NuxtLink>
 
             <!-- Post Actions -->
             <div class="flex items-center justify-between pt-4 border-t border-neutral-100 text-sm">
@@ -205,48 +203,49 @@
           </article>
 
           <!-- ====== COMMENTS THREAD ====== -->
-          <section class="bg-white rounded-3xl p-6 sm:p-8 border border-neutral-200/70 shadow-xs">
-            <h2 class="text-lg font-bold text-neutral-900 mb-6 flex items-center gap-2">
+          <section class="bg-white rounded-3xl p-5 sm:p-7 border border-neutral-200/70 shadow-xs">
+            <h2 class="text-base sm:text-lg font-bold text-neutral-900 mb-5 flex items-center gap-2">
               <span>Fikrlar va izohlar</span>
-              <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-600">
+              <span v-if="comments.length > 0" class="text-xs font-semibold px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-600">
                 {{ comments.length }}
               </span>
             </h2>
 
-            <!-- Comment Input Box -->
-            <div class="mb-8">
-              <div v-if="authStore.isAuthenticated" class="space-y-3">
+            <!-- Comment Input Bar -->
+            <div class="mb-6">
+              <!-- Authenticated: Clean textarea input -->
+              <div v-if="authStore.isAuthenticated" class="space-y-2.5">
                 <textarea
                   v-model="newCommentText"
-                  rows="3"
+                  rows="2"
                   placeholder="O‘z fikringizni bildiring..."
-                  class="w-full rounded-2xl border border-neutral-300 p-3.5 text-sm focus:outline-hidden focus:border-primary resize-none"
+                  class="w-full rounded-2xl border border-neutral-300 p-3 text-sm focus:outline-hidden focus:border-primary resize-none bg-neutral-50/50 focus:bg-white transition-colors"
                 ></textarea>
                 <div class="flex justify-end">
                   <button
                     type="button"
                     @click="submitComment"
                     :disabled="isSubmittingComment || !newCommentText.trim()"
-                    class="px-5 py-2.5 rounded-full bg-primary hover:bg-primary-hover text-white text-xs sm:text-sm font-bold disabled:opacity-50 transition-colors border-none cursor-pointer"
+                    class="px-5 py-2 rounded-full bg-primary hover:bg-primary-hover text-white text-xs font-bold disabled:opacity-50 transition-colors border-none cursor-pointer"
                   >
-                    {{ isSubmittingComment ? 'Yuborilmoqda...' : 'Fikr bildirish' }}
+                    {{ isSubmittingComment ? 'Yuborilmoqda...' : 'Yuborish' }}
                   </button>
                 </div>
               </div>
 
-              <!-- Unauthenticated Prompt -->
+              <!-- Unauthenticated: Sleek single interactive bar (No ugly nested capsule) -->
               <div
                 v-else
-                class="p-4 rounded-2xl bg-neutral-50 border border-neutral-200/70 text-center space-y-2"
+                @click="authStore.openAuthModal()"
+                class="flex items-center gap-3 p-3 rounded-2xl border border-neutral-200/80 hover:border-primary/40 bg-neutral-50/60 hover:bg-neutral-50 cursor-pointer transition-colors"
               >
-                <p class="text-sm text-neutral-600 m-0">Muhokamada qatnashish uchun shaxsiy profilingizga kiring.</p>
-                <button
-                  type="button"
-                  @click="authStore.openAuthModal()"
-                  class="px-5 py-2 rounded-full bg-primary text-white text-xs font-bold border-none cursor-pointer hover:bg-primary-hover transition-colors"
-                >
-                  Kirish / Ro‘yxatdan o‘tish
-                </button>
+                <div class="w-8 h-8 rounded-full bg-neutral-200/70 text-neutral-500 font-bold text-xs flex items-center justify-center shrink-0">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+                  </svg>
+                </div>
+                <span class="text-xs sm:text-sm text-neutral-500 flex-1">Fikr bildirish uchun tizimga kiring...</span>
+                <span class="text-xs font-bold text-primary px-3 py-1 rounded-full bg-primary/10">Kirish</span>
               </div>
             </div>
 
@@ -300,10 +299,10 @@
               </div>
             </div>
 
-            <!-- Empty Comments -->
-            <div v-else class="text-center py-8 text-neutral-400 text-sm">
-              Hali hech kim fikr bildirmadi. Birinchi bo‘lib yozing!
-            </div>
+            <!-- Empty Comments: simple subtle message (no box, no nested capsule) -->
+            <p v-else class="text-center py-6 text-neutral-400 text-xs m-0">
+              Hozircha izohlar yo‘q. Birinchi bo‘lib fikr qoldiring!
+            </p>
           </section>
         </main>
 

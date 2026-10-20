@@ -118,45 +118,37 @@
       </div>
 
       <!-- Attached Product Capsule (Kitob bog'lamasi) -->
-      <div
+      <NuxtLink
         v-if="linkedProduct"
-        class="mb-4 p-3 rounded-2xl bg-neutral-50 hover:bg-neutral-100/80 border border-neutral-200/60 transition-colors flex items-center gap-3"
+        :to="`/books/${linkedProduct.id}`"
+        class="mb-4 p-2.5 sm:p-3 rounded-2xl bg-neutral-50/80 hover:bg-neutral-100/90 border border-neutral-200/70 transition-all flex items-center justify-between gap-3 no-underline group/prod"
       >
-        <!-- Book Thumbnail -->
-        <NuxtLink :to="`/books/${linkedProduct.id}`" class="shrink-0 w-12 h-16 rounded-lg overflow-hidden bg-white border border-neutral-200/60 block">
-          <img
-            :src="resolveProductImage(linkedProduct)"
-            :alt="linkedProduct.name || linkedProduct.title"
-            class="w-full h-full object-cover"
-            loading="lazy"
-          />
-        </NuxtLink>
-
-        <!-- Book Details -->
-        <div class="min-w-0 flex-1">
-          <span class="text-[10px] uppercase font-bold text-neutral-400 tracking-wider block">Mavzu kitobi</span>
-          <NuxtLink
-            :to="`/books/${linkedProduct.id}`"
-            class="font-bold text-xs sm:text-sm text-neutral-900 hover:text-primary transition-colors truncate block leading-snug"
-          >
-            {{ linkedProduct.name || linkedProduct.title }}
-          </NuxtLink>
-          <div v-if="linkedProduct.price" class="text-xs font-semibold text-primary mt-0.5">
-            {{ formatPrice(linkedProduct.price) }} so‘m
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="shrink-0 w-10 h-14 rounded-lg overflow-hidden bg-white border border-neutral-200/80 shadow-2xs">
+            <img
+              :src="resolveProductImage(linkedProduct)"
+              :alt="linkedProduct.name || linkedProduct.title"
+              class="w-full h-full object-cover group-hover/prod:scale-105 transition-transform duration-300"
+              loading="lazy"
+            />
+          </div>
+          <div class="min-w-0">
+            <div class="text-[10px] uppercase font-bold text-neutral-400 tracking-wider">Mavzu kitobi</div>
+            <div class="font-bold text-xs sm:text-sm text-neutral-900 group-hover/prod:text-primary transition-colors truncate">
+              {{ linkedProduct.name || linkedProduct.title }}
+            </div>
+            <div v-if="linkedProduct.price" class="text-xs font-bold text-primary mt-0.5">
+              {{ formatPrice(linkedProduct.price) }} so‘m
+            </div>
           </div>
         </div>
 
-        <!-- View Book Arrow -->
-        <NuxtLink
-          :to="`/books/${linkedProduct.id}`"
-          class="shrink-0 p-2 text-neutral-400 hover:text-primary transition-colors"
-          title="Kitob sahifasiga o‘tish"
-        >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <div class="shrink-0 w-7 h-7 rounded-full bg-white border border-neutral-200/70 flex items-center justify-center text-neutral-400 group-hover/prod:text-primary group-hover/prod:border-primary/40 transition-colors">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
           </svg>
-        </NuxtLink>
-      </div>
+        </div>
+      </NuxtLink>
     </div>
 
     <!-- Actions & Stats Footer -->
