@@ -1,37 +1,26 @@
 <template>
-  <div class="py-6 md:py-8">
+  <div class="py-4 sm:py-6 md:py-8">
     <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
-      <!-- Clean Page Header (No huge hero banner) -->
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+      <!-- Mobile Only Page Header (Hidden on Desktop) -->
+      <div class="lg:hidden flex items-center justify-between gap-4 mb-4">
         <div>
-          <h1 class="text-2xl sm:text-3xl font-extrabold text-neutral-900 tracking-tight m-0">
+          <h1 class="text-xl sm:text-2xl font-extrabold text-neutral-900 tracking-tight m-0">
             Kitobxonlar Klubi
           </h1>
-          <p class="text-xs sm:text-sm text-neutral-500 mt-1 m-0">
-            O‘qigan kitoblaringiz haqida samimiy taassurotlar, taqrizlar va muhokamalar
+          <p class="text-xs text-neutral-500 mt-0.5 m-0">
+            Samimiy taassurotlar va kitob muhokamalari
           </p>
         </div>
-
-        <button
-          type="button"
-          @click="handleCreatePost"
-          class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary hover:bg-primary-hover text-white font-bold text-xs sm:text-sm transition-all cursor-pointer border-none shadow-2xs shrink-0 self-start sm:self-auto"
-        >
-          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-          </svg>
-          <span>Fikr bildirish</span>
-        </button>
       </div>
 
-      <!-- Sleek Responsive Themes / Category Pills -->
-      <div class="mb-6">
+      <!-- Mobile Only Themes / Category Pills (Hidden on Desktop) -->
+      <div class="lg:hidden mb-4">
         <div class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
           <button
             type="button"
             @click="selectTheme(null)"
             :class="[
-              'shrink-0 px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition-all cursor-pointer border',
+              'shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer border',
               !activeThemeSlug
                 ? 'bg-neutral-900 text-white border-neutral-900 shadow-2xs'
                 : 'bg-white text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50 border-neutral-200/80'
@@ -46,7 +35,7 @@
             type="button"
             @click="selectTheme(t)"
             :class="[
-              'shrink-0 px-3.5 py-2 rounded-full text-xs sm:text-sm font-semibold transition-all cursor-pointer border flex items-center gap-1.5',
+              'shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer border flex items-center gap-1.5',
               activeThemeSlug === (t.slug || String(t.id))
                 ? 'bg-neutral-900 text-white border-neutral-900 shadow-2xs'
                 : 'bg-white text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50 border-neutral-200/80'
@@ -58,10 +47,101 @@
         </div>
       </div>
 
-      <!-- MAIN CONTENT: 2 COLUMNS (Feed + Useful Sidebar) -->
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
+      <!-- MAIN CONTENT: 2 COLUMNS (Feed + Right Sidebar with Post Composer) -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
         <!-- LEFT: FEED (8 cols) -->
         <main class="lg:col-span-8 space-y-4">
+          <!-- MOBILE COMPOSER BAR (Matching Mobile App Screenshot) -->
+          <div
+            class="lg:hidden bg-white rounded-3xl p-3 border border-neutral-200/80 shadow-2xs transition-shadow"
+            @click="!authStore.isAuthenticated && authStore.openAuthModal()"
+          >
+            <div class="flex items-center gap-2.5">
+              <!-- Current User Avatar on Left -->
+              <div class="shrink-0">
+                <img
+                  v-if="currentUserAvatar"
+                  :src="currentUserAvatar"
+                  :alt="currentUserDisplayName"
+                  class="w-9 h-9 rounded-full object-cover border border-neutral-100 bg-neutral-100"
+                />
+                <div
+                  v-else
+                  class="w-9 h-9 rounded-full bg-primary/10 text-primary font-bold text-xs flex items-center justify-center"
+                >
+                  {{ currentUserInitials }}
+                </div>
+              </div>
+
+              <!-- Pill Input container (Grows up to 4 lines) -->
+              <div class="flex-1 min-w-0 bg-neutral-100/90 rounded-full py-1.5 px-3 flex items-center gap-2 transition-all focus-within:ring-2 focus-within:ring-primary/20 focus-within:bg-white border border-transparent focus-within:border-primary/30">
+                <textarea
+                  v-model="composerText"
+                  ref="mobileTextareaRef"
+                  @input="handleAutoResize"
+                  :disabled="!authStore.isAuthenticated"
+                  rows="1"
+                  placeholder="Bu asarni o'qishga arziydimi?"
+                  class="w-full bg-transparent border-none text-xs sm:text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-hidden resize-none py-1 leading-normal max-h-24 overflow-y-auto"
+                ></textarea>
+
+                <!-- Photo button (Inside pill, matching app screenshot) -->
+                <label
+                  class="shrink-0 p-1 text-primary hover:text-primary-hover cursor-pointer transition-colors"
+                  title="Rasm biriktirish"
+                  @click.stop="!authStore.isAuthenticated && authStore.openAuthModal()"
+                >
+                  <input
+                    v-if="authStore.isAuthenticated"
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    class="hidden"
+                    @change="handleImageSelect"
+                  />
+                  <svg class="w-5 h-5 text-neutral-400 hover:text-primary transition-colors" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+                  </svg>
+                </label>
+              </div>
+
+              <!-- Send Button (Active / Visible when text or image exists) -->
+              <button
+                type="button"
+                @click.stop="submitPost"
+                :disabled="isSubmitting || (!composerText.trim() && selectedImages.length === 0)"
+                class="shrink-0 w-9 h-9 rounded-full bg-primary hover:bg-primary-hover text-white flex items-center justify-center transition-all disabled:opacity-40 disabled:hover:bg-primary border-none cursor-pointer shadow-2xs"
+                title="Yuborish"
+              >
+                <svg v-if="isSubmitting" class="animate-spin w-4 h-4 text-white" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                </svg>
+                <svg v-else class="w-4 h-4 transform rotate-45 -mr-0.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
+                </svg>
+              </button>
+            </div>
+
+            <!-- Attached image thumbnail row for mobile -->
+            <div v-if="imagePreviews.length > 0" class="flex items-center gap-2 mt-2 pt-2 border-t border-neutral-100 overflow-x-auto no-scrollbar">
+              <div
+                v-for="(img, idx) in imagePreviews"
+                :key="idx"
+                class="relative w-14 h-14 rounded-xl overflow-hidden shrink-0 border border-neutral-200"
+              >
+                <img :src="img" class="w-full h-full object-cover" />
+                <button
+                  type="button"
+                  @click.stop="removeImage(idx)"
+                  class="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-neutral-900/80 text-white flex items-center justify-center text-[10px] border-none cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          </div>
+
           <!-- Active filter banner if selected -->
           <div v-if="activeThemeName" class="flex items-center justify-between px-1 mb-2">
             <div class="flex items-center gap-2 text-xs sm:text-sm text-neutral-600">
@@ -112,13 +192,6 @@
             <p class="text-xs text-neutral-500 max-w-sm mx-auto mb-4">
               Birinchi bo‘lib o‘z taassurotingizni qoldiring!
             </p>
-            <button
-              type="button"
-              @click="handleCreatePost"
-              class="px-4 py-2 rounded-full bg-primary text-white font-bold text-xs cursor-pointer border-none hover:bg-primary-hover transition-colors"
-            >
-              Fikr bildirish
-            </button>
           </div>
 
           <!-- Posts Feed -->
@@ -152,8 +225,106 @@
           </div>
         </main>
 
-        <!-- RIGHT: SIDEBAR (4 cols) -->
+        <!-- RIGHT: SIDEBAR (4 cols) with NEW POST COMPOSER FOR DESKTOP -->
         <aside class="lg:col-span-4 space-y-5">
+          <!-- DESKTOP POST COMPOSER CARD -->
+          <div
+            class="hidden lg:block bg-white rounded-3xl p-5 border border-neutral-200/70 shadow-2xs relative transition-all"
+            :class="{ 'cursor-pointer hover:border-primary/40': !authStore.isAuthenticated }"
+            @click="!authStore.isAuthenticated && authStore.openAuthModal()"
+          >
+            <!-- Author Header -->
+            <div class="flex items-center gap-3 mb-3">
+              <div class="relative shrink-0">
+                <img
+                  v-if="currentUserAvatar"
+                  :src="currentUserAvatar"
+                  :alt="currentUserDisplayName"
+                  class="w-10 h-10 rounded-full object-cover border border-neutral-100 bg-neutral-100"
+                />
+                <div
+                  v-else
+                  class="w-10 h-10 rounded-full bg-primary/10 text-primary font-bold text-sm flex items-center justify-center"
+                >
+                  {{ currentUserInitials }}
+                </div>
+              </div>
+
+              <div class="min-w-0 flex-1">
+                <div class="font-bold text-sm text-neutral-900 truncate">
+                  {{ authStore.user ? currentUserDisplayName : 'Yangi post yozish' }}
+                </div>
+                <div class="text-[11px] text-neutral-400">
+                  {{ authStore.user ? 'Kitobxonlar bilan samimiy fikr ulashing' : 'Fikr bildirish uchun tizimga kiring' }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Post Textarea -->
+            <div class="mb-3">
+              <textarea
+                v-model="composerText"
+                :disabled="!authStore.isAuthenticated"
+                rows="3"
+                placeholder="Qaysi kitobni o‘qiyapsiz? Fikrlaringiz va tavsiyalaringizni yozing..."
+                class="w-full rounded-2xl border border-neutral-200/90 p-3 text-sm focus:outline-hidden focus:border-primary resize-none bg-neutral-50/50 focus:bg-white transition-colors"
+              ></textarea>
+            </div>
+
+            <!-- Image Previews Grid -->
+            <div v-if="imagePreviews.length > 0" class="flex flex-wrap gap-2 mb-3">
+              <div
+                v-for="(img, idx) in imagePreviews"
+                :key="idx"
+                class="relative w-16 h-16 rounded-xl overflow-hidden border border-neutral-200 group"
+              >
+                <img :src="img" class="w-full h-full object-cover" />
+                <button
+                  type="button"
+                  @click.stop="removeImage(idx)"
+                  class="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/70 text-white flex items-center justify-center text-xs hover:bg-black border-none cursor-pointer"
+                  title="O‘chirish"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            <!-- Composer Actions Toolbar -->
+            <div class="flex items-center justify-between pt-2 border-t border-neutral-100">
+              <label
+                class="inline-flex items-center gap-1.5 text-xs text-neutral-600 hover:text-primary cursor-pointer px-2.5 py-1.5 rounded-xl hover:bg-neutral-50 transition-colors font-medium"
+                @click.stop="!authStore.isAuthenticated && authStore.openAuthModal()"
+              >
+                <input
+                  v-if="authStore.isAuthenticated"
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  class="hidden"
+                  @change="handleImageSelect"
+                />
+                <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+                </svg>
+                <span>Rasm biriktirish</span>
+              </label>
+
+              <button
+                type="button"
+                @click.stop="submitPost"
+                :disabled="isSubmitting || (!composerText.trim() && selectedImages.length === 0)"
+                class="px-5 py-2 rounded-full bg-primary hover:bg-primary-hover text-white text-xs font-bold disabled:opacity-40 transition-colors border-none cursor-pointer shadow-2xs inline-flex items-center gap-1.5"
+              >
+                <svg v-if="isSubmitting" class="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                </svg>
+                <span>E'lon qilish</span>
+              </button>
+            </div>
+          </div>
+
           <!-- Active Members / Faol kitobxonlar Card -->
           <div v-if="activeMembers.length > 0" class="bg-white rounded-3xl p-5 sm:p-6 border border-neutral-200/70 shadow-2xs">
             <div class="flex items-center justify-between mb-4">
@@ -268,59 +439,6 @@
         </aside>
       </div>
     </div>
-
-    <!-- Create Post Modal -->
-    <div
-      v-if="showCreateModal"
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-900/50 backdrop-blur-xs"
-      @click.self="showCreateModal = false"
-    >
-      <div class="bg-white rounded-3xl p-6 sm:p-7 max-w-lg w-full shadow-2xl">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-base sm:text-lg font-bold text-neutral-900 m-0">Kitob klubida fikr qoldirish</h3>
-          <button
-            type="button"
-            @click="showCreateModal = false"
-            class="p-1 rounded-full text-neutral-400 hover:text-neutral-700 bg-transparent border-none cursor-pointer text-sm"
-          >
-            ✕
-          </button>
-        </div>
-
-        <p class="text-xs text-neutral-500 mb-4 leading-relaxed">
-          O‘qigan kitobingiz haqida o‘z taassurotingiz va tavsiyangizni yozing.
-        </p>
-
-        <form @submit.prevent="submitQuickPost" class="space-y-4">
-          <div>
-            <textarea
-              v-model="newPostText"
-              rows="4"
-              required
-              placeholder="Qaysi kitobni o‘qiyapsiz? Fikrlaringiz qanday?.."
-              class="w-full rounded-2xl border border-neutral-300 p-3 text-sm focus:outline-hidden focus:border-primary resize-none"
-            ></textarea>
-          </div>
-
-          <div class="flex items-center justify-end gap-2.5 pt-1">
-            <button
-              type="button"
-              @click="showCreateModal = false"
-              class="px-4 py-2 rounded-full text-neutral-600 text-xs sm:text-sm font-semibold hover:bg-neutral-100 transition-colors border-none bg-transparent cursor-pointer"
-            >
-              Bekor qilish
-            </button>
-            <button
-              type="submit"
-              :disabled="isSubmitting || !newPostText.trim()"
-              class="px-5 py-2 rounded-full bg-primary text-white text-xs sm:text-sm font-bold hover:bg-primary-hover disabled:opacity-50 transition-colors border-none cursor-pointer"
-            >
-              {{ isSubmitting ? 'Yuborilmoqda...' : 'Chop etish' }}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -331,6 +449,58 @@ const config = useRuntimeConfig()
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+
+// Current logged in user details
+const currentUserDisplayName = computed(() => {
+  const u = authStore.user
+  if (!u) return 'Kitobxon'
+  if (u.name && u.lastname) return `${u.name} ${u.lastname}`
+  return u.name || u.username || 'Kitobxon'
+})
+
+const currentUserAvatar = computed(() => {
+  const av = authStore.user?.avatar || authStore.user?.photo
+  if (!av) return null
+  return resolveImageUrl(av)
+})
+
+const currentUserInitials = computed(() => {
+  const name = currentUserDisplayName.value.trim()
+  const parts = name.split(/\s+/)
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[1][0]).toUpperCase()
+  }
+  return name.slice(0, 2).toUpperCase()
+})
+
+// Unified Composer State
+const composerText = ref('')
+const selectedImages = ref<File[]>([])
+const imagePreviews = ref<string[]>([])
+const isSubmitting = ref(false)
+const mobileTextareaRef = ref<HTMLTextAreaElement | null>(null)
+
+function handleAutoResize(e: Event) {
+  const target = e.target as HTMLTextAreaElement
+  target.style.height = 'auto'
+  target.style.height = `${Math.min(target.scrollHeight, 120)}px`
+}
+
+function handleImageSelect(e: Event) {
+  const input = e.target as HTMLInputElement
+  if (!input.files || input.files.length === 0) return
+  const files = Array.from(input.files)
+  selectedImages.value = [...selectedImages.value, ...files]
+  files.forEach((file) => {
+    imagePreviews.value.push(URL.createObjectURL(file))
+  })
+  input.value = ''
+}
+
+function removeImage(idx: number) {
+  selectedImages.value.splice(idx, 1)
+  imagePreviews.value.splice(idx, 1)
+}
 
 // Active Theme State
 const activeThemeSlug = ref<string | null>((route.query.theme as string) || null)
@@ -424,37 +594,46 @@ async function loadMore() {
   }
 }
 
-// Create Post Modal
-const showCreateModal = ref(false)
-const newPostText = ref('')
-const isSubmitting = ref(false)
-
-function handleCreatePost() {
+async function submitPost() {
   if (!authStore.isAuthenticated) {
     authStore.openAuthModal()
     return
   }
-  showCreateModal.value = true
-}
 
-async function submitQuickPost() {
-  if (!newPostText.value.trim() || isSubmitting.value) return
+  const text = composerText.value.trim()
+  if (!text && selectedImages.value.length === 0) return
+  if (isSubmitting.value) return
+
   isSubmitting.value = true
 
   try {
     const token = useCookie('kc_token').value
-    await $fetch(`${config.public.apiBase}/v1/kitobchi/book_club/new`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-      body: {
-        text: newPostText.value.trim(),
-        product_type: 'book'
-      }
+    const formData = new FormData()
+    formData.append('post_text', text)
+    formData.append('text', text)
+    formData.append('product_type', 'book')
+    selectedImages.value.forEach((file) => {
+      formData.append('images[]', file)
     })
 
-    showCreateModal.value = false
-    newPostText.value = ''
-    await selectTheme(null)
+    const res: any = await $fetch(`${config.public.apiBase}/v1/kitobchi/book_club/new`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData
+    })
+
+    composerText.value = ''
+    selectedImages.value = []
+    imagePreviews.value = []
+    if (mobileTextareaRef.value) {
+      mobileTextareaRef.value.style.height = 'auto'
+    }
+
+    if (res?.data) {
+      posts.value = [res.data, ...posts.value]
+    } else {
+      await selectTheme(null)
+    }
   } catch (err: any) {
     alert(err?.data?.message || 'Xatolik yuz berdi, qayta urinib ko‘ring.')
   } finally {

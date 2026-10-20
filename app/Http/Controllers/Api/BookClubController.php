@@ -903,7 +903,7 @@ class BookClubController extends Controller
                 }
 
                 // ── Post ──────────────────────────────────────────────────────
-                $postText = (string) $request->input('post_text', '');
+                $postText = (string) $request->input('post_text', $request->input('text', ''));
                 $bookClub = BookClub::create(array_merge([
                     'user_id'      => $user->id,
                     'text'         => $postText,

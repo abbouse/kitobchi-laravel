@@ -75,31 +75,31 @@
         v-if="post.images && post.images.length > 0"
         class="mb-4 rounded-2xl overflow-hidden"
       >
-        <!-- Single Image -->
-        <NuxtLink
+        <!-- Single Image: max height 320px capped -->
+        <div
           v-if="post.images.length === 1"
-          :to="`/club/${post.id}`"
-          class="block aspect-video sm:aspect-[16/10] bg-neutral-100 overflow-hidden group"
+          @click="openGallery(0)"
+          class="block max-h-72 sm:max-h-80 w-full bg-neutral-100 overflow-hidden group cursor-pointer rounded-2xl"
         >
           <img
             :src="resolveImageUrl(post.images[0].image)"
             alt="Kitobxon surati"
-            class="w-full h-full object-cover group-hover:scale-102 transition-transform duration-300"
+            class="w-full h-full max-h-72 sm:max-h-80 object-cover group-hover:scale-102 transition-transform duration-300"
             loading="lazy"
           />
-        </NuxtLink>
+        </div>
 
         <!-- Multiple Images (2 or more) -->
         <div
           v-else
-          class="grid gap-2"
-          :class="post.images.length === 2 ? 'grid-cols-2 aspect-[16/9]' : 'grid-cols-3 aspect-[16/9]'"
+          class="grid gap-2 max-h-72 sm:max-h-80 overflow-hidden rounded-2xl"
+          :class="post.images.length === 2 ? 'grid-cols-2 aspect-[16/10]' : 'grid-cols-3 aspect-[16/10]'"
         >
-          <NuxtLink
+          <div
             v-for="(img, i) in post.images.slice(0, 3)"
             :key="i"
-            :to="`/club/${post.id}`"
-            class="relative bg-neutral-100 overflow-hidden group rounded-xl"
+            @click="openGallery(i)"
+            class="relative bg-neutral-100 overflow-hidden group rounded-xl cursor-pointer h-full"
           >
             <img
               :src="resolveImageUrl(img.image)"
@@ -113,7 +113,7 @@
             >
               +{{ post.images.length - 3 }}
             </div>
-          </NuxtLink>
+          </div>
         </div>
       </div>
 
@@ -203,6 +203,14 @@
         </template>
       </button>
     </div>
+
+    <!-- Fullscreen Image Lightbox Modal -->
+    <ImageGalleryModal
+      :is-open="isGalleryOpen"
+      :images="galleryImages"
+      :initial-index="galleryIndex"
+      @close="isGalleryOpen = false"
+    />
   </article>
 </template>
 
@@ -309,5 +317,18 @@ function formatPrice(val: number | string) {
   const num = typeof val === 'string' ? parseFloat(val) : val
   if (isNaN(num)) return '0'
   return Math.round(num).toLocaleString('uz-UZ').replace(/,/g, ' ')
+}
+
+// Lightbox gallery
+const isGalleryOpen = ref(false)
+const galleryIndex = ref(0)
+const galleryImages = computed(() => {
+  if (!props.post?.images) return []
+  return props.post.images
+})
+
+function openGallery(idx: number) {
+  galleryIndex.value = idx
+  isGalleryOpen.value = true
 }
 </script>
