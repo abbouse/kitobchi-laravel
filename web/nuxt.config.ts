@@ -134,7 +134,7 @@ export default defineNuxtConfig({
         // Structured Data (JSON-LD) for Google & Yandex Rich Snippets
         {
           type: 'application/ld+json',
-          children: JSON.stringify({
+          innerHTML: JSON.stringify({
             '@context': 'https://schema.org',
             '@graph': [
               {
