@@ -76,7 +76,7 @@
 
               <!-- Name & Time -->
               <div class="min-w-0">
-                <div class="flex items-center gap-1">
+                <div class="flex items-center gap-1 flex-wrap">
                   <NuxtLink
                     v-if="post.user?.id"
                     :to="`/club/user/${post.user.id}`"
@@ -94,6 +94,18 @@
                   >
                     <path fill-rule="evenodd" d="M8.603 3.799A4.49 4.49 0 0 1 12 2.25c1.357 0 2.573.6 3.397 1.549a4.49 4.49 0 0 1 3.498 1.307 4.491 4.491 0 0 1 1.307 3.497A4.49 4.49 0 0 1 21.75 12a4.49 4.49 0 0 1-1.549 3.397 4.491 4.491 0 0 1-1.307 3.497 4.491 4.491 0 0 1-3.497 1.307A4.49 4.49 0 0 1 12 21.75a4.49 4.49 0 0 1-3.397-1.549 4.49 4.49 0 0 1-3.498-1.306 4.491 4.491 0 0 1-1.307-3.498A4.49 4.49 0 0 1 2.25 12c0-1.357.6-2.573 1.549-3.397a4.49 4.49 0 0 1 1.307-3.497 4.49 4.49 0 0 1 3.497-1.307Zm7.007 6.387a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z" clip-rule="evenodd" />
                   </svg>
+
+                  <!-- Attached Book Link next to author name (Matching screenshot) -->
+                  <template v-if="post.product || post.product_snapshot">
+                    <span class="text-neutral-400 font-normal select-none">›</span>
+                    <NuxtLink
+                      :to="`/books/${(post.product || post.product_snapshot).id}`"
+                      class="font-semibold text-xs text-primary hover:underline truncate max-w-[120px] sm:max-w-[160px] inline-block no-underline"
+                      :title="(post.product || post.product_snapshot).name || (post.product || post.product_snapshot).title"
+                    >
+                      {{ (post.product || post.product_snapshot).name || (post.product || post.product_snapshot).title }}
+                    </NuxtLink>
+                  </template>
                 </div>
                 <div class="text-[11px] text-neutral-400">
                   <time :datetime="post.created_at">{{ formatRelativeTime(post.created_at) }}</time>

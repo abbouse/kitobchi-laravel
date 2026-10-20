@@ -50,6 +50,18 @@
               >
                 <path fill-rule="evenodd" d="M8.603 3.799A4.49 4.49 0 0 1 12 2.25c1.357 0 2.573.6 3.397 1.549a4.49 4.49 0 0 1 3.498 1.307 4.491 4.491 0 0 1 1.307 3.497A4.49 4.49 0 0 1 21.75 12a4.49 4.49 0 0 1-1.549 3.397 4.491 4.491 0 0 1-1.307 3.497 4.491 4.491 0 0 1-3.497 1.307A4.49 4.49 0 0 1 12 21.75a4.49 4.49 0 0 1-3.397-1.549 4.49 4.49 0 0 1-3.498-1.306 4.491 4.491 0 0 1-1.307-3.498A4.49 4.49 0 0 1 2.25 12c0-1.357.6-2.573 1.549-3.397a4.49 4.49 0 0 1 1.307-3.497 4.49 4.49 0 0 1 3.497-1.307Zm7.007 6.387a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z" clip-rule="evenodd" />
               </svg>
+
+              <!-- Attached Book Link next to author name (Matching screenshot) -->
+              <template v-if="linkedProduct">
+                <span class="text-neutral-400 font-normal select-none">›</span>
+                <NuxtLink
+                  :to="`/books/${linkedProduct.id}`"
+                  class="font-semibold text-sm text-primary hover:underline truncate max-w-[160px] sm:max-w-[260px] inline-block no-underline"
+                  :title="linkedProduct.name || linkedProduct.title"
+                >
+                  {{ linkedProduct.name || linkedProduct.title }}
+                </NuxtLink>
+              </template>
             </div>
             <div class="flex items-center gap-2 text-xs text-neutral-400">
               <span v-if="post.user?.role_title || post.user?.position">
@@ -124,39 +136,6 @@
           </div>
         </div>
       </div>
-
-      <!-- Attached Product Capsule (Kitob bog'lamasi) -->
-      <NuxtLink
-        v-if="linkedProduct"
-        :to="`/books/${linkedProduct.id}`"
-        class="mb-4 p-2.5 sm:p-3 rounded-2xl bg-neutral-50/80 hover:bg-neutral-100/90 border border-neutral-200/70 transition-all flex items-center justify-between gap-3 no-underline group/prod"
-      >
-        <div class="flex items-center gap-3 min-w-0">
-          <div class="shrink-0 w-10 h-14 rounded-lg overflow-hidden bg-white border border-neutral-200/80 shadow-2xs">
-            <img
-              :src="resolveProductImage(linkedProduct)"
-              :alt="linkedProduct.name || linkedProduct.title"
-              class="w-full h-full object-cover group-hover/prod:scale-105 transition-transform duration-300"
-              loading="lazy"
-            />
-          </div>
-          <div class="min-w-0">
-            <div class="text-[10px] uppercase font-bold text-neutral-400 tracking-wider">Mavzu kitobi</div>
-            <div class="font-bold text-xs sm:text-sm text-neutral-900 group-hover/prod:text-primary transition-colors truncate">
-              {{ linkedProduct.name || linkedProduct.title }}
-            </div>
-            <div v-if="linkedProduct.price" class="text-xs font-bold text-primary mt-0.5">
-              {{ formatPrice(linkedProduct.price) }} so‘m
-            </div>
-          </div>
-        </div>
-
-        <div class="shrink-0 w-7 h-7 rounded-full bg-white border border-neutral-200/70 flex items-center justify-center text-neutral-400 group-hover/prod:text-primary group-hover/prod:border-primary/40 transition-colors">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
-          </svg>
-        </div>
-      </NuxtLink>
     </div>
 
     <!-- Actions & Stats Footer -->
