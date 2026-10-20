@@ -40,7 +40,7 @@
           </div>
           <h2 class="text-2xl font-bold text-neutral-900 mb-2 m-0">Savatingiz bo'sh</h2>
           <p class="text-neutral-500 mb-8 max-w-xs text-center m-0">Savatga mahsulot qo'shish uchun katalogni ko'ring</p>
-          <NuxtLink to="/catalog" class="inline-flex items-center px-8 py-3.5 rounded-2xl bg-primary text-white font-bold text-sm hover:bg-primary/90 transition-colors no-underline">
+          <NuxtLink to="/catalog" class="inline-flex items-center px-8 py-3.5 rounded-2xl bg-brand-gradient text-white font-bold text-sm hover:brightness-105 transition-all no-underline shadow-md">
             Katalogga o'tish
           </NuxtLink>
         </div>
@@ -174,14 +174,14 @@
             class="checkout-summary-col shrink-0 space-y-4 lg:sticky top-24 mt-4 lg:mt-0"
             :style="isMobile ? { display: 'flex', flexDirection: 'column', flexGrow: 1 } : {}"
           >
-            <div class="p-4 sm:p-6 rounded-2xl bg-white space-y-2 sm:space-y-3 md:space-y-4">
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-neutral-200/80 shadow-2xs space-y-3 sm:space-y-4">
               <div class="relative inline-flex items-center w-full">
-                <input v-model="promoCode" type="text" placeholder="Promokod" class="w-full appearance-none placeholder:text-neutral-400 text-base/5 text-neutral-900 focus:outline-none md:text-sm rounded-2xl p-3 md:p-4 bg-[#F1F2F7] border border-transparent focus:border-primary/20 transition-all">
+                <input v-model="promoCode" type="text" placeholder="Promokod" class="w-full appearance-none placeholder:text-neutral-400 text-base/5 text-neutral-900 focus:outline-none md:text-sm rounded-2xl p-3 md:p-4 bg-[#F5F6F8] hover:bg-[#EFF1F4] focus:bg-white border border-transparent focus:border-primary focus:ring-2 focus:ring-primary/15 transition-all">
               </div>
-              <div class="space-y-4 pt-2">
+              <div class="space-y-3 pt-2">
                 <div class="flex justify-between text-[#8F8FA1] text-sm md:text-base">
                   <span>{{ cartStore.selectedCount }} ta mahsulot</span>
-                  <span class="font-medium">{{ formatPrice(cartStore.originalTotalAmount) }} so'm</span>
+                  <span class="font-medium text-neutral-900">{{ formatPrice(cartStore.originalTotalAmount) }} so'm</span>
                 </div>
                 <div v-if="cartStore.totalDiscount > 0" class="flex justify-between text-[#8F8FA1] text-sm md:text-base">
                   <span>Chegirma</span>
@@ -189,16 +189,16 @@
                 </div>
                 <div class="flex justify-between text-[#8F8FA1] text-sm md:text-base">
                   <span>Yetkazib berish narxi</span>
-                  <span class="font-medium">Bepul</span>
+                  <span class="font-semibold text-emerald-600">Bepul</span>
                 </div>
               </div>
-              <div class="flex justify-between items-center bg-white">
-                <span class="text-xl font-bold">Jami</span>
-                <span class="text-xl font-bold">{{ formatPrice(cartStore.totalAmount) }} so'm</span>
+              <div class="pt-3 border-t border-neutral-200/80 flex justify-between items-baseline">
+                <span class="text-lg font-bold text-neutral-900">Jami</span>
+                <span class="text-2xl font-extrabold text-primary">{{ formatPrice(cartStore.totalAmount) }} so'm</span>
               </div>
             </div>
 
-            <div class="p-4 sm:p-6 rounded-2xl bg-white space-y-3 max-md:hidden">
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-neutral-200/80 shadow-2xs space-y-3 max-md:hidden">
               <div class="flex items-center justify-between gap-4">
                 <h3 class="text-base md:text-xl font-semibold leading-6 m-0">Muddatli to‘lovga rasmiylashtirish</h3>
                 <button @click="isInstallmentActive = !isInstallmentActive" class="w-14 h-7 rounded-full transition-colors relative border-none cursor-pointer p-0 shrink-0" :class="isInstallmentActive ? 'bg-primary' : 'bg-neutral-300'">
@@ -226,24 +226,13 @@
               </div>
             </div>
 
-            <!-- TUZATILDI: avvalgi max-md:fixed/max-md:bottom-0/max-md:left-0/
-                 max-md:right-0/max-md:z-50 klasslari kitobchining piyola.css
-                 to'plamida UMUMAN KOMPILYATSIYA QILINMAGAN edi (jonli saytda
-                 fetch qilib tekshirildi) — shuning uchun tugma aslida hech
-                 qachon fixed bo'lmagan, oddiy oqimda turgan, faqat qisqa
-                 savatda tasodifan pastda ko'rinardi. Piyolaning o'zi ham bu
-                 qismni position:fixed bilan EMAS, balki flexbox orqali
-                 (yuqoridagi ikkita wrapper — min-height + flex-grow) pastga
-                 "itarib" chiqaradi (jonli getComputedStyle bilan tasdiqlandi:
-                 piyolada barcha ota-elementlar position:static). mt-auto
-                 shu texnikaning davomi — flex-grow bo'lgan sidebar ichida
-                 shu kartani pastga suradi. -->
             <div
               class="p-4 rounded-t-2xl md:rounded-2xl bg-white"
               :style="isMobile ? { marginTop: 'auto' } : {}"
             >
-              <button @click="$router.push('/checkout')" :disabled="cartStore.selectedCount === 0" type="button" class="inline-flex items-center justify-center transition-colors px-2.5 py-1.5 gap-1.5 hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed outline-none w-full bg-primary text-white rounded-2xl h-14 text-base font-bold border-none cursor-pointer shadow-sm">
-                Rasmiylashtirishga o'tish <svg class="w-5 h-5 ml-1 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+              <button @click="$router.push('/checkout')" :disabled="cartStore.selectedCount === 0" type="button" class="inline-flex items-center justify-center transition-all px-4 py-3 gap-2 hover:brightness-105 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed outline-none w-full bg-brand-gradient text-white rounded-2xl h-14 text-base font-bold border-none cursor-pointer shadow-md">
+                <span>Rasmiylashtirishga o'tish</span>
+                <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
               </button>
             </div>
           </div>

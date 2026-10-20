@@ -825,6 +825,25 @@ class ProductCatalogController extends Controller
                 $collections = \App\Models\Collection::where('is_active', true)
                     ->select('slug', 'updated_at')
                     ->get();
+
+                // Book Club postlari (taqrizlar) — Google tomonidan indekslanishi uchun
+                $clubPosts = \App\Models\BookClub::where('is_deleted', false)
+                    ->where('is_hidden_by_ai', false)
+                    ->select('id', 'updated_at')
+                    ->orderByDesc('updated_at')
+                    ->take(3000)
+                    ->get();
+
+                // Book Club faol kitobxonlari profillari
+                $clubUserIds = \App\Models\BookClub::where('is_deleted', false)
+                    ->where('is_hidden_by_ai', false)
+                    ->distinct()
+                    ->pluck('user_id');
+
+                $clubUsers = \App\Models\User::whereIn('id', $clubUserIds)
+                    ->select('id', 'updated_at')
+                    ->take(1000)
+                    ->get();
             } catch (\Throwable $e) {
                 $books = collect();
                 $stationeries = collect();
@@ -832,9 +851,11 @@ class ProductCatalogController extends Controller
                 $stationeryCategories = collect();
                 $policies = collect();
                 $collections = collect();
+                $clubPosts = collect();
+                $clubUsers = collect();
             }
 
-            return view('seo.sitemap', compact('books', 'stationeries', 'bookCategories', 'stationeryCategories', 'policies', 'collections'))->render();
+            return view('seo.sitemap', compact('books', 'stationeries', 'bookCategories', 'stationeryCategories', 'policies', 'collections', 'clubPosts', 'clubUsers'))->render();
         });
 
         return response($xml, 200)

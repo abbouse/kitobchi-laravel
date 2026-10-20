@@ -107,4 +107,28 @@
         <priority>0.75</priority>
     </url>
     @endforeach
+
+    <!-- Kitobxonlar Klubi — Taqrizlar va sharhlar -->
+    @if(isset($clubPosts))
+    @foreach($clubPosts as $post)
+    <url>
+        <loc>{{ url('/club/' . $post->id) }}</loc>
+        <lastmod>{{ $post->updated_at?->format('Y-m-d') ?? date('Y-m-d') }}</lastmod>
+        <changefreq>daily</changefreq>
+        <priority>0.70</priority>
+    </url>
+    @endforeach
+    @endif
+
+    <!-- Kitobxonlar Klubi — Kitobxonlar profillari -->
+    @if(isset($clubUsers))
+    @foreach($clubUsers as $u)
+    <url>
+        <loc>{{ url('/club/user/' . $u->id) }}</loc>
+        <lastmod>{{ $u->updated_at?->format('Y-m-d') ?? date('Y-m-d') }}</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.65</priority>
+    </url>
+    @endforeach
+    @endif
 </urlset>

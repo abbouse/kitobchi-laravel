@@ -1,23 +1,19 @@
 <template>
-  <main class="max-md:grow h-full md:min-h-dvh">
+  <main class="max-md:grow h-full md:min-h-dvh pb-20 lg:pb-10">
     <!-- Mobile Header (hidden on md) -->
-    <div class="md:hidden py-3 rounded-b-2xl mb-2 bg-white sticky top-0 z-40 transition-all duration-300 shadow-sm">
-      <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto space-y-2">
-        <div class="grid grid-cols-5 items-center gap-2">
-          <div class="col-span-1">
-            <button @click="$router.back()" type="button" class="relative overflow-hidden transition-shadow duration-300 rounded-full hover:shadow-sm h-11 w-11 flex items-center justify-center p-0 cursor-pointer border-none bg-secondary-100 text-primary">
-              <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
-            </button>
-          </div>
-          <div class="col-span-3">
-            <h1 class="text-xl sm:text-2xl text-primary font-semibold text-center m-0">Buyurtma</h1>
-          </div>
-          <div class="col-span-1 flex justify-end"></div>
+    <div class="md:hidden py-3 rounded-b-2xl mb-3 bg-white sticky top-0 z-40 transition-all duration-300 shadow-2xs border-b border-neutral-200/70">
+      <div class="px-4 w-full max-w-(--ui-container) mx-auto">
+        <div class="flex items-center justify-between">
+          <button @click="$router.back()" type="button" aria-label="Orqaga" class="w-10 h-10 rounded-full flex items-center justify-center p-0 cursor-pointer border-none bg-neutral-100 hover:bg-neutral-200 text-neutral-700 transition-colors">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
+          </button>
+          <h1 class="text-lg font-bold text-neutral-900 m-0">Buyurtma rasmiylashtirish</h1>
+          <div class="w-10"></div>
         </div>
       </div>
     </div>
 
-    <div class="min-h-dvh md:py-6 bg-white md:bg-transparent">
+    <div class="md:py-6">
       <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
 
         <!-- Desktop Breadcrumb (hidden on max-md) -->
@@ -36,125 +32,125 @@
           </div>
         </div>
 
-        <!-- TUZATILDI: cart/index.vue'dagi bilan bir xil muammo — pastdagi
-             "To'lov sahifasiga o'tish" tugmasi max-md:sticky/max-md:z-50
-             orqali "yopishqoq" bo'lishi kerak edi, lekin bu klasslar
-             piyola.css'da kompilyatsiya qilinmagan (jonli tekshirildi),
-             shu sabab u aslida oddiy static holatda edi. Endi savatchadagi
-             kabi flex-grow + min-height texnikasi qo'llanildi. -->
-        <div
-          class="flex max-lg:flex-col gap-2 md:gap-3 lg:gap-5"
-          :style="isMobile ? { minHeight: 'calc(100dvh - 71px)' } : {}"
-        >
+        <div class="flex flex-col lg:flex-row gap-5 lg:items-start">
           <!-- Main Form Content -->
-          <form class="w-full space-y-2 md:space-y-4" @submit.prevent="submitOrder">
+          <form class="flex-1 min-w-0 space-y-4" @submit.prevent="submitOrder">
 
             <!-- Section 1: Buyurtmani oluvchi (Recipient) -->
-            <div class="p-4 sm:p-6 rounded-3xl bg-secondary-50 w-full">
-              <h2 class="text-xl font-bold m-0">Buyurtmani oluvchi</h2>
-              <div class="mt-4">
-                <label for="fullName" class="block font-medium text-neutral-800 text-base mb-1">To'liq ism</label>
-                <div class="relative">
-                  <input v-model="form.fullName" type="text" id="fullName" placeholder="Ismingizni kiriting" class="w-full appearance-none placeholder:text-neutral-400 text-neutral-900 focus:outline-none md:text-sm text-base rounded-2xl max-md:h-12 p-3 md:p-4 bg-white border border-transparent focus:border-primary/20 transition-all">
-                </div>
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-neutral-200/80 shadow-2xs w-full">
+              <div class="flex items-center gap-3 mb-5">
+                <div class="w-8 h-8 rounded-full bg-primary/10 text-primary font-bold text-sm flex items-center justify-center shrink-0">1</div>
+                <h2 class="text-lg sm:text-xl font-bold text-neutral-900 m-0">Buyurtmani oluvchi</h2>
               </div>
-              <div class="mt-4">
-                <label for="phone" class="block font-medium text-neutral-800 text-base mb-1">Telefon raqam</label>
-                <div class="relative">
-                  <input v-model="form.phone" type="tel" id="phone" placeholder="+998" class="w-full appearance-none placeholder:text-neutral-400 text-neutral-900 focus:outline-none md:text-sm text-base rounded-2xl max-md:h-12 p-3 md:p-4 bg-white border border-transparent focus:border-primary/20 transition-all">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label for="fullName" class="block font-medium text-neutral-700 text-sm mb-1.5">To'liq ism</label>
+                  <input
+                    v-model="form.fullName"
+                    type="text"
+                    id="fullName"
+                    placeholder="Ismingiz va familiyangiz"
+                    class="w-full appearance-none placeholder:text-neutral-400 text-neutral-900 focus:outline-none text-sm sm:text-base rounded-2xl h-12 px-4 bg-[#F5F6F8] hover:bg-[#EFF1F4] focus:bg-white border border-transparent focus:border-primary focus:ring-2 focus:ring-primary/15 transition-all"
+                  >
+                </div>
+                <div>
+                  <label for="phone" class="block font-medium text-neutral-700 text-sm mb-1.5">Telefon raqam</label>
+                  <input
+                    v-model="form.phone"
+                    type="tel"
+                    id="phone"
+                    placeholder="+998"
+                    class="w-full appearance-none placeholder:text-neutral-400 text-neutral-900 focus:outline-none text-sm sm:text-base rounded-2xl h-12 px-4 bg-[#F5F6F8] hover:bg-[#EFF1F4] focus:bg-white border border-transparent focus:border-primary focus:ring-2 focus:ring-primary/15 transition-all"
+                  >
                 </div>
               </div>
             </div>
 
             <!-- Section 2: Yetkazib berish manzili (Delivery Address) -->
-            <div class="p-4 sm:p-6 rounded-3xl bg-secondary-50 w-full">
-              <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-bold m-0">Yetkazib berish manzili</h2>
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-neutral-200/80 shadow-2xs w-full">
+              <div class="flex items-center justify-between gap-3 mb-5">
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 rounded-full bg-primary/10 text-primary font-bold text-sm flex items-center justify-center shrink-0">2</div>
+                  <h2 class="text-lg sm:text-xl font-bold text-neutral-900 m-0">Yetkazib berish manzili</h2>
+                </div>
+                <button
+                  v-if="savedAddresses.length > 0"
+                  type="button"
+                  @click="openAddAddressModal"
+                  class="text-xs sm:text-sm font-semibold text-primary hover:underline bg-transparent border-none cursor-pointer flex items-center gap-1"
+                >
+                  <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+                  Manzil qo'shish
+                </button>
               </div>
 
-              <!-- MUHIM: profil (profile/info.vue) bilan bir xil holat mantig'i.
-                   Userning saqlangan manzillari (`v1/kitobchi/locations`) yuklanmoqda
-                   bo'lsa — skeleton; agar saqlangan manzillar mavjud bo'lsa —
-                   gorizontal scroll orqali tanlanadigan kartochkalar + "Manzil
-                   qo'shish" kartasi (bosilganda profildagi bilan bir xil modal
-                   ochiladi); agar umuman manzil bo'lmasa — to'g'ridan-to'g'ri
-                   Viloyat → Tuman → Mahalla/qishloq formasi (UzAddressPicker)
-                   ko'rsatiladi, chunki tanlaydigan hech narsa yo'q. -->
-
-              <!-- Yuklanmoqda -->
-              <div v-if="addressesLoading" class="flex gap-3 overflow-x-auto pb-1">
-                <div v-for="n in 2" :key="n" class="shrink-0 w-64 rounded-2xl bg-white/60 animate-pulse" style="height: 76px;"></div>
+              <!-- Loading Skeleton -->
+              <div v-if="addressesLoading" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div v-for="n in 2" :key="n" class="h-20 rounded-2xl bg-neutral-100 animate-pulse"></div>
               </div>
 
-              <!-- Saqlangan manzillar bor: gorizontal scroll orqali tanlash -->
-              <div v-else-if="savedAddresses.length > 0" class="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1 snap-x snap-mandatory">
+              <!-- Saved Addresses: Clean VK grid cards -->
+              <div v-else-if="savedAddresses.length > 0" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <button
                   v-for="loc in savedAddresses"
                   :key="loc.id"
                   type="button"
                   @click="selectedAddressId = loc.id"
-                  class="shrink-0 snap-start w-64 text-left rounded-2xl p-4 border-2 transition-all cursor-pointer bg-white"
-                  :class="selectedAddressId === loc.id ? 'border-primary' : 'border-transparent hover:border-neutral-200'"
+                  class="text-left rounded-2xl p-4 border-2 transition-all cursor-pointer relative"
+                  :class="selectedAddressId === loc.id ? 'border-primary bg-[#F4F8FD]' : 'border-neutral-200/80 bg-neutral-50/50 hover:bg-white hover:border-neutral-300'"
                 >
-                  <div class="flex items-start gap-2.5">
-                    <div class="w-9 h-9 rounded-full bg-[#F6F6F9] flex items-center justify-center shrink-0">
-                      <svg class="text-neutral-500" style="width: 18px; height: 18px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg>
+                  <div class="flex items-start gap-3">
+                    <div class="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" :class="selectedAddressId === loc.id ? 'bg-primary text-white' : 'bg-neutral-100 text-neutral-500'">
+                      <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg>
                     </div>
-                    <div class="min-w-0">
-                      <p class="text-sm text-neutral-900 font-medium m-0 line-clamp-2">{{ loc.fullAddress }}</p>
-                      <span v-if="mainAddressId === loc.id" class="text-primary text-xs font-semibold">Asosiy manzil</span>
+                    <div class="min-w-0 flex-1">
+                      <p class="text-sm text-neutral-900 font-semibold m-0 line-clamp-2 leading-snug">{{ loc.fullAddress }}</p>
+                      <div class="flex items-center gap-2 mt-1.5">
+                        <span v-if="mainAddressId === loc.id" class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">Asosiy manzil</span>
+                        <span v-if="selectedAddressId === loc.id" class="text-[11px] font-semibold text-emerald-600 flex items-center gap-0.5">
+                          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg> Tanlangan
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </button>
-
-                <button
-                  type="button"
-                  @click="openAddAddressModal"
-                  class="shrink-0 snap-start w-36 rounded-2xl p-4 border-2 border-dashed border-neutral-300 hover:border-primary/50 transition-all cursor-pointer bg-white/60 flex flex-col items-center justify-center gap-1.5 text-primary"
-                >
-                  <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
-                  <span class="text-sm font-medium text-center">Manzil qo'shish</span>
-                </button>
               </div>
 
-              <!-- Saqlangan manzil umuman yo'q: to'g'ridan-to'g'ri forma -->
+              <!-- No saved address: directly show address picker -->
               <template v-else>
                 <UzAddressPicker ref="addressPickerRef" @update="onAddrUpdate" />
-
-                <div v-if="addressSummary.fullAddress" class="mt-3 p-3.5 rounded-2xl bg-white text-sm text-neutral-600">
-                  {{ addressSummary.fullAddress }}
+                <div v-if="addressSummary.fullAddress" class="mt-3 p-3.5 rounded-2xl bg-neutral-50 border border-neutral-200/80 text-sm text-neutral-700 flex items-center gap-2">
+                  <svg class="w-4 h-4 text-primary shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg>
+                  <span>{{ addressSummary.fullAddress }}</span>
                 </div>
               </template>
             </div>
 
             <!-- Section 3: Yetkazib berish usuli (Delivery Method) -->
-            <!-- MUHIM: narx/muddat manzilga bog'liq bo'lgani uchun faqat
-                 manzil serverda "asosiy" sifatida tanlangandan keyin (ya'ni
-                 saqlangan manzillardan biri tanlanganda) yuklanadi — pastdagi
-                 `watch(selectedAddressId, ...)` orqali. Yangi (hali
-                 saqlanmagan) manzil holatida narx faqat "Yuborish" bosilganda
-                 hisoblanadi. -->
-            <div v-if="deliveryServices.length > 0" class="p-4 sm:p-6 rounded-3xl bg-secondary-50 w-full">
-              <h2 class="text-xl font-bold m-0 mb-4">Yetkazib berish usuli</h2>
-              <div class="space-y-2">
+            <div v-if="deliveryServices.length > 0" class="p-5 sm:p-6 rounded-3xl bg-white border border-neutral-200/80 shadow-2xs w-full">
+              <div class="flex items-center gap-3 mb-5">
+                <div class="w-8 h-8 rounded-full bg-primary/10 text-primary font-bold text-sm flex items-center justify-center shrink-0">3</div>
+                <h2 class="text-lg sm:text-xl font-bold text-neutral-900 m-0">Yetkazib berish usuli</h2>
+              </div>
+              <div class="space-y-2.5">
                 <button
                   v-for="svc in deliveryServices"
                   :key="svc.id"
                   type="button"
                   @click="selectedDeliveryServiceId = svc.id"
-                  class="w-full flex items-center justify-between p-3.5 rounded-2xl bg-white border-2 transition-all cursor-pointer text-left"
-                  :class="selectedDeliveryServiceId === svc.id ? 'border-primary' : 'border-transparent hover:border-neutral-200'"
+                  class="w-full flex items-center justify-between p-4 rounded-2xl border-2 transition-all cursor-pointer text-left"
+                  :class="selectedDeliveryServiceId === svc.id ? 'border-primary bg-[#F4F8FD]' : 'border-neutral-200/80 bg-neutral-50/50 hover:bg-white hover:border-neutral-300'"
                 >
-                  <div class="flex items-center gap-3 min-w-0">
-                    <div class="rounded-full w-4 h-4 border-2 flex items-center justify-center shrink-0" :class="selectedDeliveryServiceId === svc.id ? 'border-primary' : 'border-neutral-300'">
-                      <div v-if="selectedDeliveryServiceId === svc.id" class="w-2 h-2 bg-primary rounded-full"></div>
+                  <div class="flex items-center gap-3.5 min-w-0">
+                    <div class="rounded-full w-5 h-5 border-2 flex items-center justify-center shrink-0 transition-all" :class="selectedDeliveryServiceId === svc.id ? 'border-primary bg-primary' : 'border-neutral-300 bg-white'">
+                      <div v-if="selectedDeliveryServiceId === svc.id" class="w-2 h-2 bg-white rounded-full"></div>
                     </div>
                     <div class="min-w-0">
-                      <p class="text-sm font-medium m-0 text-neutral-900">{{ svc.name }}</p>
-                      <p v-if="svc.muddat" class="text-xs text-neutral-400 m-0">{{ svc.muddat }} kun ichida</p>
+                      <p class="text-sm font-semibold m-0 text-neutral-900">{{ svc.name }}</p>
+                      <p v-if="svc.muddat" class="text-xs text-neutral-500 m-0 mt-0.5">{{ svc.muddat }} kun ichida yetkaziladi</p>
                     </div>
                   </div>
-                  <span class="text-sm font-semibold shrink-0" :class="svc.calculated_price > 0 ? 'text-neutral-900' : 'text-primary'">
+                  <span class="text-sm font-bold shrink-0 px-2.5 py-1 rounded-xl" :class="svc.calculated_price > 0 ? 'text-neutral-900 bg-neutral-100' : 'text-emerald-700 bg-emerald-50'">
                     {{ svc.calculated_price > 0 ? formatPrice(svc.calculated_price) + " so'm" : 'Bepul' }}
                   </span>
                 </button>
@@ -162,37 +158,39 @@
             </div>
 
             <!-- Section 4: To'lov turi (Payment Method) -->
-            <div class="p-4 sm:p-6 rounded-3xl bg-secondary-50 w-full">
-              <h2 class="text-xl font-bold m-0 mb-4">To'lov turi</h2>
-              <div class="text-sm">
-                <fieldset class="grid grid-cols-2 gap-3 md:gap-5 border-none p-0 m-0">
-
-                  <label v-for="method in paymentMethods" :key="method.id" class="flex items-start flex-row text-sm p-3.5 w-full sm:pr-6 rounded-2xl bg-white border-2 transition-all cursor-pointer" :class="form.paymentMethod === method.id ? 'border-primary' : 'border-transparent'">
-                    <input type="radio" :value="method.id" v-model="form.paymentMethod" class="sr-only">
-                    <div class="flex items-center h-5 sm:hidden my-auto mr-3">
-                      <div class="rounded-full w-4 h-4 border-2 flex items-center justify-center transition-colors" :class="form.paymentMethod === method.id ? 'border-primary' : 'border-neutral-300'">
-                        <div v-if="form.paymentMethod === method.id" class="w-2 h-2 bg-primary rounded-full"></div>
-                      </div>
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-neutral-200/80 shadow-2xs w-full">
+              <div class="flex items-center gap-3 mb-5">
+                <div class="w-8 h-8 rounded-full bg-primary/10 text-primary font-bold text-sm flex items-center justify-center shrink-0">4</div>
+                <h2 class="text-lg sm:text-xl font-bold text-neutral-900 m-0">To'lov turi</h2>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <label
+                  v-for="method in paymentMethods"
+                  :key="method.id"
+                  class="flex items-center justify-between p-4 rounded-2xl border-2 transition-all cursor-pointer"
+                  :class="form.paymentMethod === method.id ? 'border-primary bg-[#F4F8FD]' : 'border-neutral-200/80 bg-neutral-50/50 hover:bg-white hover:border-neutral-300'"
+                >
+                  <input type="radio" :value="method.id" v-model="form.paymentMethod" class="sr-only">
+                  <div class="flex items-center gap-3.5">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" :class="form.paymentMethod === method.id ? 'bg-primary text-white' : 'bg-neutral-100 text-neutral-600'">
+                      <svg v-if="method.id === 'card'" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="7" cy="15" r="1"/></svg>
+                      <svg v-else class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></svg>
                     </div>
-                    <div class="w-full">
-                      <div class="block font-medium text-neutral-900">
-                        <div class="w-full sm:mx-auto max-sm:flex-row-reverse flex flex-col justify-between items-center sm:gap-2">
-                          <div class="h-6 sm:h-8 flex items-center justify-center text-primary font-bold text-lg italic my-auto" style="max-width: 110px;">{{ method.name }}</div>
-                          <p class="sm:mt-1 leading-6 font-base m-0">{{ method.label }}</p>
-                        </div>
-                      </div>
+                    <div>
+                      <p class="text-sm font-bold text-neutral-900 m-0">{{ method.name }}</p>
+                      <p class="text-xs text-neutral-500 m-0">{{ method.label }}</p>
                     </div>
-                  </label>
-
-                </fieldset>
+                  </div>
+                  <div class="rounded-full w-5 h-5 border-2 flex items-center justify-center shrink-0 transition-all" :class="form.paymentMethod === method.id ? 'border-primary bg-primary' : 'border-neutral-300 bg-white'">
+                    <div v-if="form.paymentMethod === method.id" class="w-2 h-2 bg-white rounded-full"></div>
+                  </div>
+                </label>
               </div>
 
-              <!-- Karta tanlash / qo'shish — faqat "Karta" usuli tanlanganda,
-                   xuddi Kitobchi ilovamizdagi kabi: saqlangan kartalar ro'yxati
-                   + "Yangi karta qo'shish" (tanlangach avtomatik selected). -->
-              <div v-if="form.paymentMethod === 'card'" class="mt-4 space-y-2">
-                <div v-if="cardsLoading" class="flex flex-col gap-2">
-                  <div v-for="n in 2" :key="n" class="rounded-2xl bg-white/60 animate-pulse" style="height: 62px;"></div>
+              <!-- Saved cards when 'card' is selected -->
+              <div v-if="form.paymentMethod === 'card'" class="mt-4 space-y-2.5">
+                <div v-if="cardsLoading" class="space-y-2">
+                  <div v-for="n in 2" :key="n" class="h-16 rounded-2xl bg-neutral-100 animate-pulse"></div>
                 </div>
                 <template v-else>
                   <button
@@ -200,78 +198,93 @@
                     :key="c.id"
                     type="button"
                     @click="selectedCardId = c.id"
-                    class="w-full flex items-center justify-between p-3.5 rounded-2xl bg-white border-2 transition-all cursor-pointer text-left"
-                    :class="selectedCardId === c.id ? 'border-primary' : 'border-transparent hover:border-neutral-200'"
+                    class="w-full flex items-center justify-between p-3.5 rounded-2xl border-2 transition-all cursor-pointer text-left"
+                    :class="selectedCardId === c.id ? 'border-primary bg-[#F4F8FD]' : 'border-neutral-200/80 bg-neutral-50/50 hover:bg-white hover:border-neutral-300'"
                   >
                     <div class="flex items-center gap-3 min-w-0">
-                      <div class="w-9 h-9 rounded-lg bg-[#F6F6F9] flex items-center justify-center shrink-0">
-                        <svg class="w-5 h-5 text-neutral-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+                      <div class="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center shrink-0 text-primary">
+                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
                       </div>
                       <div class="min-w-0">
-                        <p class="text-sm font-medium m-0 text-neutral-900">{{ c.masked_number || c.card_number }}</p>
-                        <p class="text-xs text-neutral-400 m-0">{{ c.card_name || c.vendor || 'Karta' }}</p>
+                        <p class="text-sm font-semibold m-0 text-neutral-900 font-mono">{{ c.masked_number || c.card_number }}</p>
+                        <p class="text-xs text-neutral-500 m-0">{{ c.card_name || c.vendor || 'Bank kartasi' }}</p>
                       </div>
                     </div>
-                    <div class="rounded-full w-4 h-4 border-2 flex items-center justify-center shrink-0" :class="selectedCardId === c.id ? 'border-primary' : 'border-neutral-300'">
-                      <div v-if="selectedCardId === c.id" class="w-2 h-2 bg-primary rounded-full"></div>
+                    <div class="rounded-full w-5 h-5 border-2 flex items-center justify-center shrink-0 transition-all" :class="selectedCardId === c.id ? 'border-primary bg-primary' : 'border-neutral-300 bg-white'">
+                      <div v-if="selectedCardId === c.id" class="w-2 h-2 bg-white rounded-full"></div>
                     </div>
                   </button>
 
                   <button
                     type="button"
                     @click="openCardModal"
-                    class="w-full flex items-center gap-3 p-3.5 rounded-2xl border-2 border-dashed border-neutral-300 hover:border-primary/50 transition-all cursor-pointer bg-white/60 text-primary"
+                    class="w-full flex items-center justify-center gap-2.5 p-3.5 rounded-2xl border-2 border-dashed border-neutral-300 hover:border-primary/60 transition-all cursor-pointer bg-white text-primary font-semibold text-sm hover:bg-primary/5"
                   >
-                    <div class="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                      <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
-                    </div>
-                    <span class="text-sm font-medium">Yangi karta qo'shish</span>
+                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+                    <span>Yangi karta qo'shish</span>
                   </button>
                 </template>
               </div>
             </div>
           </form>
 
-          <!-- Right Side: Order Summary -->
-          <div
-            class="checkout-summary-col w-full shrink-0 h-fit lg:sticky top-24"
-            :style="isMobile ? { display: 'flex', flexDirection: 'column', flexGrow: 1 } : {}"
-          >
-            <div class="p-4 sm:p-6 rounded-3xl bg-secondary-50">
+          <!-- Right Side: Sticky Order Summary (VK style card) -->
+          <div class="w-full lg:w-[380px] xl:w-[420px] shrink-0 h-fit lg:sticky lg:top-24">
+            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-neutral-200/80 shadow-2xs space-y-4">
+              <h3 class="text-lg font-bold text-neutral-900 m-0 pb-3 border-b border-neutral-100">Buyurtmangiz</h3>
 
-              <div class="space-y-4 mb-4 border-b border-neutral-200/50 pb-4">
-                <div class="text-neutral-500 flex justify-between items-center text-sm md:text-base">
-                  <span>{{ cartStore.selectedCount }} ta mahsulot</span><span class="text-neutral-900 font-medium">{{ formatPrice(cartStore.totalAmount) }} so'm</span>
+              <div class="space-y-3 text-sm">
+                <div class="flex justify-between items-center text-neutral-600">
+                  <span>Mahsulotlar ({{ cartStore.selectedCount }} ta)</span>
+                  <span class="text-neutral-900 font-semibold">{{ formatPrice(cartStore.totalAmount) }} so'm</span>
                 </div>
-                <div v-if="cartStore.totalDiscount > 0" class="text-neutral-500 flex justify-between items-center text-sm md:text-base">
-                  <span>Chegirma</span><span class="text-red-500 font-medium"> -{{ formatPrice(cartStore.totalDiscount) }} so'm</span>
+                <div v-if="cartStore.totalDiscount > 0" class="flex justify-between items-center text-neutral-600">
+                  <span>Chegirma</span>
+                  <span class="text-red-500 font-semibold">-{{ formatPrice(cartStore.totalDiscount) }} so'm</span>
                 </div>
-                <div class="text-neutral-500 flex justify-between items-center text-sm md:text-base">
-                  <span>Yetkazib berish narxi</span>
-                  <span class="font-medium" :class="deliveryPrice > 0 ? 'text-neutral-900' : 'text-primary'">
+                <div class="flex justify-between items-center text-neutral-600">
+                  <span>Yetkazib berish</span>
+                  <span class="font-semibold" :class="deliveryPrice > 0 ? 'text-neutral-900' : 'text-emerald-600'">
                     {{ selectedDeliveryService ? (deliveryPrice > 0 ? formatPrice(deliveryPrice) + " so'm" : 'Bepul') : 'Hisoblanadi' }}
                   </span>
                 </div>
               </div>
 
-              <!-- Total -->
-              <div class="flex justify-between items-center font-bold text-xl text-neutral-900">
-                <p class="m-0">Jami</p><p class="m-0 text-primary">{{ formatPrice(cartStore.totalAmount - cartStore.totalDiscount + deliveryPrice) }} so'm</p>
+              <div class="pt-4 border-t border-neutral-200/80 flex justify-between items-baseline">
+                <span class="text-base font-bold text-neutral-900">Jami to'lov</span>
+                <span class="text-2xl font-extrabold text-primary">{{ formatPrice(cartStore.totalAmount - cartStore.totalDiscount + deliveryPrice) }} so'm</span>
               </div>
-            </div>
 
-            <!-- Final Submit Button -->
-            <div
-              class="p-4 sm:p-6 md:px-0 max-md:bg-white max-md:rounded-t-2xl"
-              :style="isMobile ? { marginTop: 'auto' } : {}"
-            >
-              <div v-if="orderError" class="mb-3 p-3 bg-red-50 text-red-600 rounded-xl text-sm font-medium text-center">
+              <!-- Error message if any -->
+              <div v-if="orderError" class="p-3 bg-red-50 text-red-600 rounded-xl text-xs sm:text-sm font-medium text-center">
                 {{ orderError }}
               </div>
-              <button @click="submitOrder" type="button" :disabled="submitting" class="font-bold items-center justify-center transition-colors py-1.5 gap-2 text-white bg-primary hover:bg-primary/90 h-14 flex rounded-2xl text-base px-6 w-full cursor-pointer border-none shadow-sm disabled:opacity-60">
-                {{ submitting ? "Yuborilmoqda..." : "To'lov sahifasiga o'tish" }}
-                <svg v-if="!submitting" class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
+
+              <!-- Desktop submit button -->
+              <button
+                @click="submitOrder"
+                type="button"
+                :disabled="submitting"
+                class="w-full h-14 rounded-2xl bg-brand-gradient text-white font-bold text-base shadow-md hover:brightness-105 active:scale-[0.99] transition-all flex items-center justify-center gap-2 border-none cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                <span v-if="submitting">Yuborilmoqda...</span>
+                <template v-else>
+                  <span>To'lov sahifasiga o'tish</span>
+                  <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
+                </template>
               </button>
+
+              <!-- Trust & Security Badges -->
+              <div class="pt-3 border-t border-neutral-100 space-y-2 text-xs text-neutral-500">
+                <div class="flex items-center gap-2">
+                  <svg class="w-4 h-4 text-emerald-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/></svg>
+                  <span>100% xavfsiz to'lov va ma'lumotlar kafolati</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <svg class="w-4 h-4 text-primary shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.25V3.75a1.125 1.125 0 00-1.125-1.125H3.375A1.125 1.125 0 002.25 3.75v10.5c0 .621.504 1.125 1.125 1.125h1.5"/></svg>
+                  <span>Butun O'zbekiston bo'ylab tez yetkazib berish</span>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -279,25 +292,44 @@
       </div>
     </div>
 
+    <!-- Sticky Mobile Bottom Bar -->
+    <div
+      v-if="!isSuccessOpen && !isCardModalOpen && !isAddAddressModalOpen"
+      class="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-neutral-200/80 px-4 py-3 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] flex items-center justify-between gap-3"
+    >
+      <div class="min-w-0">
+        <p class="text-xs text-neutral-500 m-0">Jami to'lov:</p>
+        <p class="text-lg font-extrabold text-primary m-0 leading-tight">
+          {{ formatPrice(cartStore.totalAmount - cartStore.totalDiscount + deliveryPrice) }} so'm
+        </p>
+      </div>
+      <button
+        @click="submitOrder"
+        type="button"
+        :disabled="submitting"
+        class="h-12 px-5 rounded-2xl bg-brand-gradient text-white font-bold text-sm shadow-md hover:brightness-105 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 border-none cursor-pointer disabled:opacity-60 shrink-0"
+      >
+        <span v-if="submitting">Yuborilmoqda...</span>
+        <template v-else>
+          <span>To'lovga o'tish</span>
+          <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
+        </template>
+      </button>
+    </div>
+
     <!-- Success Modal -->
-    <!-- MUHIM: bu yerda ham `<UModal>` (o'rnatilmagan `@nuxt/ui`) ishlatilgan
-         edi — buyurtma muvaffaqiyatli qabul qilingandan keyingi eng muhim
-         lahzada (checkout yakuni) tasdiqlash oynasi overlay sifatida emas,
-         sahifa oxirida oddiy blok sifatida chizilib, foydalanuvchini
-         chalg'itardi. AuthModal.vue'dagi bilan bir xil fixed-overlay
-         naqshiga o'tkazildi. -->
     <div
       v-if="isSuccessOpen"
       class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
     >
       <div class="relative bg-white rounded-3xl w-full max-w-md shadow-2xl">
         <div class="p-8 text-center">
-          <div class="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4 text-green-500">
+          <div class="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4 text-emerald-600">
             <svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
           </div>
           <h3 class="text-2xl font-bold text-neutral-900 mb-2">Buyurtma qabul qilindi!</h3>
           <p class="text-sm text-neutral-600 mb-6">Tez orada operatorlarimiz siz bilan bog'lanadi.</p>
-          <button @click="finishOrder" type="button" class="w-full px-4 py-3 rounded-xl bg-primary text-white hover:bg-primary/90 transition-colors font-bold border-none cursor-pointer">Tushunarli, Asosiyga qaytish</button>
+          <button @click="finishOrder" type="button" class="w-full h-12 rounded-2xl bg-brand-gradient text-white font-bold text-base hover:brightness-105 transition-all border-none cursor-pointer shadow-md">Tushunarli, Asosiyga qaytish</button>
         </div>
       </div>
     </div>
@@ -330,7 +362,7 @@
               {{ modalAddressSummary.fullAddress }}
             </div>
 
-            <button type="submit" :disabled="!modalAddressSummary.isValid || savingModalAddress" class="w-full font-bold items-center transition-colors gap-1.5 text-white bg-primary hover:bg-primary/90 h-12 md:h-14 flex justify-center rounded-2xl text-base px-6 mt-6 border-none cursor-pointer disabled:opacity-75 shadow-sm">
+            <button type="submit" :disabled="!modalAddressSummary.isValid || savingModalAddress" class="w-full font-bold items-center transition-all gap-1.5 text-white bg-brand-gradient hover:brightness-105 h-12 md:h-14 flex justify-center rounded-2xl text-base px-6 mt-6 border-none cursor-pointer disabled:opacity-75 shadow-md">
               {{ savingModalAddress ? "Qo'shilmoqda..." : "Qo'shish" }}
             </button>
           </form>
@@ -375,7 +407,7 @@
                 <input v-model="cardForm.expireYear" type="text" inputmode="numeric" autocomplete="cc-exp-year" maxlength="2" placeholder="YY" class="w-full appearance-none placeholder:text-neutral-400 text-neutral-900 focus:outline-none text-base rounded-2xl h-12 p-3 bg-[#F6F6F9] border border-transparent focus:border-primary/20 transition-all">
               </div>
             </div>
-            <button type="submit" :disabled="cardSaving" class="w-full font-bold items-center transition-colors gap-1.5 text-white bg-primary hover:bg-primary/90 h-12 flex justify-center rounded-2xl text-base px-6 mt-6 border-none cursor-pointer disabled:opacity-75 shadow-sm">
+            <button type="submit" :disabled="cardSaving" class="w-full font-bold items-center transition-all gap-1.5 text-white bg-brand-gradient hover:brightness-105 h-12 flex justify-center rounded-2xl text-base px-6 mt-6 border-none cursor-pointer disabled:opacity-75 shadow-md">
               {{ cardSaving ? "Saqlanmoqda..." : "Davom etish" }}
             </button>
           </form>
@@ -388,7 +420,7 @@
               <label class="block font-medium text-neutral-800 text-sm mb-1">SMS kod</label>
               <input v-model="cardOtpCode" type="text" inputmode="numeric" maxlength="6" placeholder="000000" class="w-full appearance-none placeholder:text-neutral-400 text-neutral-900 focus:outline-none text-center tracking-[0.5em] text-lg rounded-2xl h-12 p-3 bg-[#F6F6F9] border border-transparent focus:border-primary/20 transition-all">
             </div>
-            <button type="submit" :disabled="cardSaving" class="w-full font-bold items-center transition-colors gap-1.5 text-white bg-primary hover:bg-primary/90 h-12 flex justify-center rounded-2xl text-base px-6 mt-2 border-none cursor-pointer disabled:opacity-75 shadow-sm">
+            <button type="submit" :disabled="cardSaving" class="w-full font-bold items-center transition-all gap-1.5 text-white bg-brand-gradient hover:brightness-105 h-12 flex justify-center rounded-2xl text-base px-6 mt-2 border-none cursor-pointer disabled:opacity-75 shadow-md">
               {{ cardSaving ? "Tekshirilmoqda..." : "Tasdiqlash" }}
             </button>
           </form>
