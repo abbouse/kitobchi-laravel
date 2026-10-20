@@ -56,10 +56,15 @@
                     class="w-full h-full object-contain"
                     loading="lazy"
                   />
-                  <span
+                  <svg
                     v-else
-                    class="font-bold text-neutral-700 text-xl md:text-2xl leading-none select-none"
-                  >{{ cat.letter }}</span>
+                    class="w-8 h-8 md:w-10 md:h-10 text-neutral-500 group-hover:text-neutral-800 transition-colors"
+                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+                  >
+                    <path d="M12 6.5C10.5 5.3 8.4 4.8 6 4.8c-1 0-2 .1-3 .4v13c1-.3 2-.4 3-.4 2.4 0 4.5.5 6 1.7 1.5-1.2 3.6-1.7 6-1.7 1 0 2 .1 3 .4v-13c-1-.3-2-.4-3-.4-2.4 0-4.5.5-6 1.7Z" />
+                    <path d="M12 6.5v13" />
+                  </svg>
                 </div>
               </div>
               <span class="font-medium text-xs md:text-sm leading-tight text-center text-neutral-700 group-hover:text-neutral-950 transition-colors truncate max-w-full">

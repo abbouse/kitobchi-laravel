@@ -231,11 +231,11 @@
               </div>
               <div v-if="product.coverType" class="p-2.5 rounded-xl bg-secondary-50 flex justify-between items-center">
                 <span class="text-neutral-500">Muqova:</span>
-                <span class="font-semibold text-neutral-800">{{ product.coverType }}</span>
+                <span class="font-semibold text-neutral-800">{{ coverTypeLabel(String(product.coverType)) }}</span>
               </div>
               <div v-if="product.lang" class="p-2.5 rounded-xl bg-secondary-50 flex justify-between items-center">
                 <span class="text-neutral-500">Til:</span>
-                <span class="font-semibold text-neutral-800">{{ product.lang }}</span>
+                <span class="font-semibold text-neutral-800">{{ bookLangLabel(String(product.lang)) }}</span>
               </div>
               <div v-if="product.year" class="p-2.5 rounded-xl bg-secondary-50 flex justify-between items-center">
                 <span class="text-neutral-500">Yil:</span>
@@ -493,11 +493,11 @@
                       </div>
                       <div v-if="product.coverType" class="p-3 rounded-xl bg-white">
                         <span class="text-neutral-400 block text-xs">Muqova:</span>
-                        <span class="font-semibold text-neutral-800">{{ product.coverType }}</span>
+                        <span class="font-semibold text-neutral-800">{{ coverTypeLabel(String(product.coverType)) }}</span>
                       </div>
                       <div v-if="product.lang" class="p-3 rounded-xl bg-white">
                         <span class="text-neutral-400 block text-xs">Til:</span>
-                        <span class="font-semibold text-neutral-800">{{ product.lang }}</span>
+                        <span class="font-semibold text-neutral-800">{{ bookLangLabel(String(product.lang)) }}</span>
                       </div>
                       <div v-if="product.year" class="p-3 rounded-xl bg-white">
                         <span class="text-neutral-400 block text-xs">Yil:</span>
@@ -819,6 +819,17 @@ const cartStore = useCartStore()
 const favStore = useFavoritesStore()
 
 const isReviewsOpen = ref(false)
+
+// Xususiyatlar jadvalida xom qiymatlar ("hard", "uz") ko'rinmasin
+const { coverTypeLabel } = useBookFilterLabels()
+const BOOK_LANG_LABELS: Record<string, string> = {
+  uz: "O'zbek", oz: "O'zbek", ru: 'Rus', en: 'Ingliz', kk: 'Qozoq', kz: 'Qozoq',
+  tr: 'Turk', ar: 'Arab', ja: 'Yapon', de: 'Nemis', fr: 'Fransuz', ko: 'Koreys', zh: 'Xitoy',
+}
+function bookLangLabel(value: string): string {
+  const key = value.trim().toLowerCase()
+  return BOOK_LANG_LABELS[key] ?? value
+}
 
 watch(isReviewsOpen, (open) => {
   if (typeof document !== 'undefined') {
