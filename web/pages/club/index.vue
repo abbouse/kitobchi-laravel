@@ -15,12 +15,12 @@
 
       <!-- Mobile Only Themes / Category Pills (Hidden on Desktop) -->
       <div class="lg:hidden mb-4">
-        <div class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
+        <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
           <button
             type="button"
             @click="selectTheme(null)"
             :class="[
-              'shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer border',
+              'shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer border flex items-center gap-1',
               !activeThemeSlug
                 ? 'bg-neutral-900 text-white border-neutral-900 shadow-2xs'
                 : 'bg-white text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50 border-neutral-200/80'
@@ -30,19 +30,23 @@
           </button>
 
           <button
-            v-for="t in themes"
+            v-for="t in trendingThemes"
             :key="t.id"
             type="button"
             @click="selectTheme(t)"
             :class="[
-              'shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer border flex items-center gap-1.5',
+              'shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer border flex items-center gap-1',
               activeThemeSlug === (t.slug || String(t.id))
-                ? 'bg-neutral-900 text-white border-neutral-900 shadow-2xs'
+                ? 'bg-primary text-white border-primary shadow-2xs'
                 : 'bg-white text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50 border-neutral-200/80'
             ]"
           >
-            <span>#{{ t.name }}</span>
-            <AppEmoji v-if="t.firework" name="fire" :size="13" class="ml-1" />
+            <span :class="activeThemeSlug === (t.slug || String(t.id)) ? 'text-white/80' : 'text-primary/70'">#</span>
+            <span>{{ t.name }}</span>
+            <span v-if="t.usage_count" :class="activeThemeSlug === (t.slug || String(t.id)) ? 'text-white/80' : 'text-neutral-400'" class="text-[10px]">
+              {{ t.usage_count }}
+            </span>
+            <AppEmoji v-if="t.firework || (t.usage_count && t.usage_count >= 5)" name="fire" :size="12" class="ml-0.5" />
           </button>
         </div>
       </div>
@@ -218,7 +222,7 @@
         </main>
 
         <!-- RIGHT: SIDEBAR (4 cols) with NEW POST COMPOSER FOR DESKTOP -->
-        <aside class="lg:col-span-4 space-y-5">
+        <aside class="lg:col-span-4 space-y-4 lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto no-scrollbar">
           <!-- DESKTOP POST COMPOSER CARD -->
           <div
             class="hidden lg:block bg-white rounded-3xl p-5 border border-neutral-200/70 shadow-2xs relative transition-all"
@@ -364,21 +368,61 @@
             </div>
           </div>
 
-          <!-- Trending Topics / Ommabop mavzular -->
-          <div v-if="themes.length > 0" class="bg-white rounded-3xl p-5 sm:p-6 border border-neutral-200/70 shadow-2xs">
-            <h3 class="font-bold text-sm sm:text-base text-neutral-900 mb-3 m-0 flex items-center gap-2">
-              <AppEmoji name="fire" :size="16" />
-              <span>Muhokamadagi mavzular</span>
-            </h3>
-            <div class="flex flex-wrap gap-1.5">
+          <!-- Trending Topics / Ommabop mavzular Card -->
+          <div v-if="trendingThemes.length > 0" class="bg-white rounded-3xl p-5 sm:p-6 border border-neutral-200/70 shadow-2xs">
+            <div class="flex items-center justify-between mb-3.5">
+              <h3 class="font-bold text-sm sm:text-base text-neutral-900 m-0 flex items-center gap-2">
+                <AppEmoji name="fire" :size="16" />
+                <span>Ommabop mavzular</span>
+              </h3>
               <button
-                v-for="t in themes.slice(0, 8)"
+                v-if="activeThemeSlug"
+                type="button"
+                @click="selectTheme(null)"
+                class="text-[11px] font-semibold text-primary hover:underline bg-transparent border-none cursor-pointer p-0"
+              >
+                Tozalash
+              </button>
+            </div>
+
+            <!-- Professional Chips Grid -->
+            <div class="flex flex-wrap gap-2">
+              <button
+                v-for="t in trendingThemes"
                 :key="'side-' + t.id"
                 type="button"
                 @click="selectTheme(t)"
-                class="text-xs px-2.5 py-1 rounded-full bg-neutral-50 hover:bg-neutral-100 text-neutral-700 hover:text-neutral-950 border border-neutral-200/70 transition-colors cursor-pointer"
+                :class="[
+                  'group inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer border',
+                  activeThemeSlug === (t.slug || String(t.id))
+                    ? 'bg-primary text-white border-primary shadow-xs'
+                    : 'bg-neutral-50/80 hover:bg-primary/5 text-neutral-700 hover:text-primary border-neutral-200/80 hover:border-primary/30'
+                ]"
               >
-                #{{ t.name }}
+                <span
+                  :class="[
+                    'font-bold transition-colors',
+                    activeThemeSlug === (t.slug || String(t.id)) ? 'text-white/80' : 'text-primary/70 group-hover:text-primary'
+                  ]"
+                >
+                  #
+                </span>
+                <span>{{ t.name }}</span>
+                <span
+                  v-if="t.usage_count"
+                  :class="[
+                    'text-[10px] ml-0.5 font-normal transition-colors',
+                    activeThemeSlug === (t.slug || String(t.id)) ? 'text-white/80' : 'text-neutral-400 group-hover:text-primary/70'
+                  ]"
+                >
+                  {{ t.usage_count }}
+                </span>
+                <AppEmoji
+                  v-if="t.firework || (t.usage_count && t.usage_count >= 5)"
+                  name="fire"
+                  :size="12"
+                  class="ml-0.5"
+                />
               </button>
             </div>
           </div>
@@ -502,6 +546,16 @@ const { data: initialData } = await useAsyncData('book-club-page', async () => {
 const posts = ref<any[]>(initialData.value?.posts || [])
 const themes = computed(() => initialData.value?.themes || [])
 const activeMembers = computed(() => initialData.value?.activeMembers || [])
+
+// Trending themes limited to top 8 most popular/active
+const trendingThemes = computed(() => {
+  const all = themes.value || []
+  const sorted = [...all].sort((a: any, b: any) => (b.usage_count || 0) - (a.usage_count || 0))
+  const withUsage = sorted.filter((t: any) => (t.usage_count || 0) > 0)
+  const source = withUsage.length >= 3 ? withUsage : sorted
+  return source.slice(0, 8)
+})
+
 const currentPage = ref(initialData.value?.meta?.current_page || 1)
 const lastPage = ref(initialData.value?.meta?.last_page || 1)
 const hasMore = computed(() => currentPage.value < lastPage.value)
