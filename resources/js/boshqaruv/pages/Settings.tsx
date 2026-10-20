@@ -189,11 +189,13 @@ function submitForm(event: FormEvent<HTMLFormElement>, method: 'post' | 'put', u
   const data = new FormData(event.currentTarget);
   const options = { preserveScroll: true };
 
-  if (method === 'post') {
-    router.post(url, data, options);
-  } else {
-    router.put(url, data, options);
+  if (method === 'put') {
+    // PHP multipart PUT tanasini o'qimaydi — Inertia 3 FormData uchun
+    // method spoofing qilmaydi. Shuning uchun POST + _method=PUT yuboramiz
+    // (aks holda barcha maydonlar bo'sh keladi: "field is required").
+    data.append('_method', 'put');
   }
+  router.post(url, data, options);
 }
 
 function destroy(url?: string, label = "O'chirilsinmi?") {

@@ -21,7 +21,9 @@ export function Vakansiyalar() {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     const options = { preserveScroll: true, onSuccess: () => { setShowForm(false); setEditing(null); } };
-    editing?.updateUrl ? router.put(editing.updateUrl, data, options) : router.post(createUrl, data, options);
+    // FormData + PUT: PHP multipart PUT tanasini o'qimaydi → POST + _method
+    if (editing?.updateUrl) data.append('_method', 'put');
+    router.post(editing?.updateUrl || createUrl, data, options);
   };
 
   return (
