@@ -39,7 +39,8 @@ class WebAuthController extends Controller
         }
 
         $isTestPhone = in_array($phone, ['998901234567', '998991234567', '998931234567']);
-        $verifyCode = $isTestPhone ? '222222' : (string) rand(100001, 999999);
+        $verifyCode = $isTestPhone ? '222222' : (string) random_int(100001, 999999);
+        \Illuminate\Support\Facades\Cache::forget('web_otp_attempts:'.$phone);
 
         if (!$isTestPhone) {
             try {
@@ -97,11 +98,36 @@ class WebAuthController extends Controller
             ], 404);
         }
 
-        if (trim((string) $user->verifyCode) !== $code && $code !== '222222') {
+        // XAVFSIZLIK: avval '222222' har qanday raqam uchun qabul qilinardi —
+        // istalgan akkauntga kirish mumkin edi. Endi faqat haqiqiy kod; 5 ta
+        // noto'g'ri urinishdan keyin kod bekor qilinadi.
+        $attemptsKey = 'web_otp_attempts:'.$phone;
+        $stored = trim((string) $user->verifyCode);
+        if ($stored === '' || $code === '' || ! hash_equals($stored, $code)) {
+            $attempts = (int) \Illuminate\Support\Facades\Cache::get($attemptsKey, 0) + 1;
+            \Illuminate\Support\Facades\Cache::put($attemptsKey, $attempts, now()->addMinutes(15));
+            if ($attempts >= 5) {
+                $user->update(['verifyCode' => null]);
+                \Illuminate\Support\Facades\Cache::forget($attemptsKey);
+
+                return response()->json([
+                    'status'  => 'error',
+                    'message' => "Juda ko'p noto'g'ri urinish. Yangi kod so'rang.",
+                ], 429);
+            }
+
             return response()->json([
                 'status'  => 'error',
                 'message' => 'Tasdiqlash kodi noto\'g\'ri.',
             ], 422);
+        }
+        \Illuminate\Support\Facades\Cache::forget($attemptsKey);
+
+        if (method_exists($user, 'isBlocked') && $user->isBlocked()) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Akkaunt bloklangan.',
+            ], 423);
         }
 
         // Verification successful -> Clear code and log in

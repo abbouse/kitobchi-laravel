@@ -103,8 +103,8 @@ Route::get('/google-merchant.xml', [\App\Http\Controllers\Web\ProductCatalogCont
 Route::get('/robots.txt', [\App\Http\Controllers\Web\ProductCatalogController::class, 'robots'])->name('web.robots');
 
 // ── Web User Auth & Profile Routes ───────────────────────────────────
-Route::post('/auth/send-code', [\App\Http\Controllers\Web\WebAuthController::class, 'sendCode'])->name('web.auth.send_code');
-Route::post('/auth/verify-code', [\App\Http\Controllers\Web\WebAuthController::class, 'verifyCode'])->name('web.auth.verify_code');
+Route::post('/auth/send-code', [\App\Http\Controllers\Web\WebAuthController::class, 'sendCode'])->middleware('throttle:5,1')->name('web.auth.send_code');
+Route::post('/auth/verify-code', [\App\Http\Controllers\Web\WebAuthController::class, 'verifyCode'])->middleware('throttle:10,1')->name('web.auth.verify_code');
 Route::get('/profile', [\App\Http\Controllers\Web\WebAuthController::class, 'profile'])->name('web.profile');
 Route::post('/profile/update', [\App\Http\Controllers\Web\WebAuthController::class, 'updateProfile'])->name('web.profile.update');
 Route::post('/profile/location', [\App\Http\Controllers\Web\WebAuthController::class, 'addLocation'])->name('web.profile.location.add');
