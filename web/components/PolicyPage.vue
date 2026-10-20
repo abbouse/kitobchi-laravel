@@ -44,39 +44,73 @@
 
       <!-- Asosiy Hujjat Sahifasi -->
       <div v-else-if="policy" class="space-y-8">
-        <!-- Document Hero Card -->
-        <div class="bg-white rounded-3xl p-6 sm:p-8 md:p-10 border border-neutral-200/70 shadow-xs relative overflow-hidden">
-          <div class="flex flex-col md:flex-row md:items-start justify-between gap-6">
-            <div class="max-w-3xl">
-              <!-- Category Badge -->
-              <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold mb-3">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-                </svg>
-                <span>Rasmiy huquqiy hujjat</span>
+        <!-- Main Body: 2 Columns on Desktop (Content + Sticky Table of Contents) -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          <!-- Main Content (8 cols on lg) -->
+          <div class="lg:col-span-8 bg-white rounded-3xl p-6 sm:p-10 md:p-12 border border-neutral-200/70 shadow-xs">
+            
+            <!-- Document Header Inside Card (No extra hero card) -->
+            <div class="mb-8 pb-6 border-b border-neutral-100">
+              <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                <div>
+                  <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold mb-3">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                    </svg>
+                    <span>Rasmiy huquqiy hujjat</span>
+                  </div>
+                  <h1 class="text-2xl sm:text-3xl md:text-4xl font-extrabold text-neutral-900 tracking-tight leading-tight mb-3">
+                    {{ policy.title }}
+                  </h1>
+                </div>
+
+                <!-- Action buttons (Print & Copy) -->
+                <div class="flex items-center gap-2 shrink-0 print:hidden">
+                  <button
+                    type="button"
+                    @click="copyPageUrl"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-neutral-200/80 bg-neutral-50 hover:bg-neutral-100 text-neutral-700 text-xs font-semibold transition-all cursor-pointer shadow-2xs"
+                    :title="copied ? 'Nusxa olindi!' : 'Havoladan nusxa olish'"
+                  >
+                    <svg v-if="!copied" class="w-3.5 h-3.5 text-neutral-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" />
+                    </svg>
+                    <svg v-else class="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                    </svg>
+                    <span>{{ copied ? 'Nusxa olindi!' : 'Ulashish' }}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    @click="printPage"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-neutral-200/80 bg-neutral-50 hover:bg-neutral-100 text-neutral-700 text-xs font-semibold transition-all cursor-pointer shadow-2xs"
+                    title="Hujjatni chop etish"
+                  >
+                    <svg class="w-3.5 h-3.5 text-neutral-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.656l10.5 0Z" />
+                    </svg>
+                    <span>Chop etish</span>
+                  </button>
+                </div>
               </div>
 
-              <!-- H1 Title -->
-              <h1 class="text-2xl sm:text-3xl md:text-4xl font-extrabold text-neutral-900 tracking-tight leading-tight mb-4">
-                {{ policy.title }}
-              </h1>
-
-              <!-- Meta info bar -->
-              <div class="flex flex-wrap items-center gap-y-2 gap-x-4 text-xs sm:text-sm text-neutral-500">
+              <!-- Meta info row -->
+              <div class="flex flex-wrap items-center gap-y-2 gap-x-4 text-xs text-neutral-500 mt-3">
                 <span v-if="policy.updated_at" class="inline-flex items-center gap-1.5">
-                  <svg class="w-4 h-4 text-neutral-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <svg class="w-3.5 h-3.5 text-neutral-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.253M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
                   </svg>
                   <span>Tahrir: {{ formatDate(policy.updated_at) }}</span>
                 </span>
                 <span class="inline-flex items-center gap-1.5">
-                  <svg class="w-4 h-4 text-neutral-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <svg class="w-3.5 h-3.5 text-neutral-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                   </svg>
                   <span>{{ readingTime }} daqiqalik mutolaa</span>
                 </span>
-                <span class="inline-flex items-center gap-1.5 text-emerald-600 font-medium">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <span class="inline-flex items-center gap-1.5 text-emerald-600 font-semibold">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                   </svg>
                   <span>Amalda</span>
@@ -84,42 +118,6 @@
               </div>
             </div>
 
-            <!-- Action buttons (Print & Copy) -->
-            <div class="flex items-center gap-2.5 shrink-0 print:hidden pt-2 md:pt-0">
-              <button
-                type="button"
-                @click="copyPageUrl"
-                class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-neutral-200/80 bg-neutral-50 hover:bg-neutral-100 text-neutral-700 text-xs font-semibold transition-all cursor-pointer shadow-2xs"
-                :title="copied ? 'Nusxa olindi!' : 'Havoladan nusxa olish'"
-              >
-                <svg v-if="!copied" class="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" />
-                </svg>
-                <svg v-else class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                </svg>
-                <span>{{ copied ? 'Nusxa olindi!' : 'Ulashish' }}</span>
-              </button>
-
-              <button
-                type="button"
-                @click="printPage"
-                class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-neutral-200/80 bg-neutral-50 hover:bg-neutral-100 text-neutral-700 text-xs font-semibold transition-all cursor-pointer shadow-2xs"
-                title="Hujjatni chop etish"
-              >
-                <svg class="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.656l10.5 0Z" />
-                </svg>
-                <span>Chop etish</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Main Body: 2 Columns on Desktop (Content + Sticky Table of Contents) -->
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          <!-- Main Content (8 cols on lg) -->
-          <div class="lg:col-span-8 bg-white rounded-3xl p-6 sm:p-10 md:p-12 border border-neutral-200/70 shadow-xs">
             <!-- Mobile Table of Contents Dropdown -->
             <div v-if="headings.length > 2" class="lg:hidden mb-8 p-4 rounded-2xl bg-neutral-50 border border-neutral-200/70 print:hidden">
               <button
@@ -191,7 +189,7 @@
                 </svg>
                 <span>Hujjat mundarijasi</span>
               </div>
-              <nav class="space-y-1 max-h-[calc(100vh-220px)] overflow-y-auto pr-1">
+              <nav class="space-y-1 max-h-[calc(100vh-260px)] overflow-y-auto pr-1">
                 <a
                   v-for="(h, idx) in headings"
                   :key="idx"
@@ -208,20 +206,20 @@
               </nav>
             </div>
 
-            <!-- Help / Question Card -->
-            <div class="bg-gradient-to-br from-neutral-900 to-neutral-800 text-white rounded-3xl p-6 shadow-xs">
-              <div class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center mb-3">
-                <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <!-- Help / Question Card: Brand Gradient -->
+            <div class="bg-brand-gradient text-white rounded-3xl p-6 shadow-md">
+              <div class="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center mb-3.5 backdrop-blur-xs">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z" />
                 </svg>
               </div>
-              <h3 class="text-sm font-bold mb-1">Savolingiz bormi?</h3>
-              <p class="text-xs text-neutral-300 leading-relaxed mb-4">
+              <h3 class="text-base font-bold mb-1 text-white">Savolingiz bormi?</h3>
+              <p class="text-xs text-white/85 leading-relaxed mb-4">
                 Hujjat shartlari bo‘yicha tushunarsiz joylar bo‘lsa, mutaxassisimiz sizga tushuntirish beradi.
               </p>
               <NuxtLink
                 to="/contacts"
-                class="inline-flex items-center justify-center w-full py-2.5 px-4 rounded-xl bg-white text-neutral-900 text-xs font-bold hover:bg-neutral-100 transition-colors"
+                class="inline-flex items-center justify-center w-full h-11 px-4 rounded-2xl bg-white text-primary text-xs font-bold hover:bg-white/95 transition-all shadow-xs no-underline"
               >
                 Biz bilan bog‘lanish
               </NuxtLink>
