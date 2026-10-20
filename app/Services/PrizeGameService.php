@@ -581,7 +581,8 @@ class PrizeGameService
 
     public function rewards(int $userId): array
     {
-        return GameReward::where('user_id', $userId)->orderByDesc('id')->limit(100)->get()
+        return GameReward::with('prize.edition:id,front_image,images')
+            ->where('user_id', $userId)->orderByDesc('id')->limit(100)->get()
             ->map(function (GameReward $r) {
                 $promo = $r->promocode_id ? Promocode::find($r->promocode_id) : null;
                 $used = $r->used_at || ($promo && (int) $promo->usedCount >= max(1, (int) $promo->usesLimit));
@@ -595,6 +596,10 @@ class PrizeGameService
                     'status' => $used ? 'used' : ($r->expires_at && $r->expires_at->isPast() ? 'expired' : 'active'),
                     'scope_type' => $promo?->scope_type,
                     'scope_id' => $promo?->scope_id,
+                    'image' => self::imageUrl($r->prize?->image) ?? self::imageUrl($r->prize?->edition?->coverPath()),
+                    'discount_type' => $promo?->type,
+                    'amount' => $promo ? (int) $promo->amount : null,
+                    'won_at' => $r->created_at?->toIso8601String(),
                 ];
             })->all();
     }

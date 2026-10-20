@@ -12,4 +12,9 @@ class GameReward extends Model
     protected $guarded = ['id'];
 
     protected $casts = ['expires_at' => 'datetime', 'used_at' => 'datetime'];
+
+    public function prize()
+    {
+        return $this->belongsTo(GamePrize::class, 'prize_id');
+    }
 }
