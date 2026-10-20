@@ -1011,6 +1011,20 @@ if (! hash_equals($expected, $signature)) {
         <p class="doc-p">Endpoint 200 qaytarmasa, webhook 3 marta qayta yuboriladi: 1 daqiqa, 5 daqiqa va 30 daqiqadan keyin. Barcha urinish muvaffaqiyatsiz tugasa webhook to'xtatiladi.</p>
         @break
 
+      {{-- KITOBCHI ID --}}
+      @case('kitobchi-id')
+        @include('developers.kitobchi-id.overview')
+        @break
+      @case('kitobchi-id-integration')
+        @include('developers.kitobchi-id.integration')
+        @break
+      @case('kitobchi-id-security')
+        @include('developers.kitobchi-id.security')
+        @break
+      @case('kitobchi-id-branding')
+        @include('developers.kitobchi-id.branding')
+        @break
+
       {{-- ERRORS --}}
       @case('errors')
         <h2 class="doc-h2" id="statuses">HTTP status kodlar</h2>

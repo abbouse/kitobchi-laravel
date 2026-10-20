@@ -252,3 +252,6 @@ Route::prefix('hub-desk')->name('hubdesk.')->group(function () {
 // endi hech qayerdan chaqirilmaydi. Agar biror sabab bilan eski panelga
 // vaqtincha qaytish kerak bo'lsa, quyidagi qatorni qayta oching:
 // require __DIR__.'/a122.php';
+
+// Kitobchi ID (OIDC) — kirish, rozilik va chiqish sahifalari
+require __DIR__.'/kitobchi_id_web.php';

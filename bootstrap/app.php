@@ -75,6 +75,10 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Asosiy buyurtma yopilgan-u kuryer qatori/topshirig'i ochiq qolganlarni moslash (xavfsizlik to'ri)
         // Vaqtinchalik cheklovlar muddati tugaganda avtomatik ochiladi
+        // Kitobchi ID: muddati o'tgan kodlar va refresh tokenlarni tozalash
+        $schedule->command('kitobchi-id:prune')
+            ->dailyAt('03:20')->timezone($tz)->withoutOverlapping();
+
         $schedule->command('accounts:expire-blocks')
             ->everyTenMinutes()->timezone($tz)->withoutOverlapping();
 

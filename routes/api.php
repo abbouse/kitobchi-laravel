@@ -70,3 +70,6 @@ Route::prefix('v1')->group(function () {
     Route::prefix('hub')->group(base_path('routes/api_hub.php'));
 
 });
+
+// Kitobchi ID (OIDC) — token, userinfo, jwks, discovery, revoke
+require __DIR__.'/kitobchi_id_api.php';

@@ -178,6 +178,26 @@ class ApiDocsController extends Controller
                 'description' => 'Mobil ilova URL schemelari, Web, Play Market va App Store havolalarini generatsiya qilish.',
                 'group' => 'Endpointlar',
             ],
+            'kitobchi-id' => [
+                'title' => 'Kitobchi ID — umumiy',
+                'description' => 'Kitobchi akkaunti bilan boshqa ilovalarga kirish: OAuth 2.1 + OpenID Connect, oqim, endpointlar, scope va claim‘lar, ilovani ulash.',
+                'group' => 'Kitobchi ID',
+            ],
+            'kitobchi-id-integration' => [
+                'title' => 'Integratsiya',
+                'description' => 'Bosqichma-bosqich: authorize, callback, token almashtirish, ID tokenni tekshirish, userinfo, refresh, chiqish va kod namunalari.',
+                'group' => 'Kitobchi ID',
+            ],
+            'kitobchi-id-security' => [
+                'title' => 'Xavfsizlik',
+                'description' => 'Server tomonidagi himoyalar, integratsiya qoidalari, xato kodlari, token muddatlari va ishga tushirishdan oldingi tekshiruv.',
+                'group' => 'Kitobchi ID',
+            ],
+            'kitobchi-id-branding' => [
+                'title' => 'Logotip va tugma',
+                'description' => 'Kitobchi ID logotipi, ranglar, «Kitobchi ID bilan kirish» tugmasi va foydalanish qoidalari.',
+                'group' => 'Kitobchi ID',
+            ],
             'errors' => [
                 'title' => 'Xatolar',
                 'description' => 'HTTP status kodlar, xato JSON formatlari va integratsiyada tekshiriladigan xavfsizlik holatlari.',
@@ -252,6 +272,34 @@ class ApiDocsController extends Controller
             ],
             'deeplink' => [
                 ['id' => 'deeplink-helper', 'label' => 'Deep Link generator'],
+            ],
+            'kitobchi-id' => [
+                ['id' => 'overview', 'label' => 'Kitobchi ID nima?'],
+                ['id' => 'flow', 'label' => 'Kirish oqimi'],
+                ['id' => 'endpoints', 'label' => 'Endpointlar'],
+                ['id' => 'scopes', 'label' => 'Scope va claim‘lar'],
+                ['id' => 'register', 'label' => 'Ilovani ulash'],
+            ],
+            'kitobchi-id-integration' => [
+                ['id' => 'authorize', 'label' => '1. Yo‘naltirish'],
+                ['id' => 'callback', 'label' => '2. Callback'],
+                ['id' => 'token', 'label' => '3. Token almashtirish'],
+                ['id' => 'id-token', 'label' => '4. ID tokenni tekshirish'],
+                ['id' => 'userinfo', 'label' => '5. UserInfo'],
+                ['id' => 'refresh', 'label' => '6. Refresh token'],
+                ['id' => 'logout', 'label' => '7. Chiqish'],
+                ['id' => 'examples', 'label' => 'Kod namunalari'],
+            ],
+            'kitobchi-id-security' => [
+                ['id' => 'model', 'label' => 'Xavfsizlik modeli'],
+                ['id' => 'rp-rules', 'label' => 'Integratsiya qoidalari'],
+                ['id' => 'errors', 'label' => 'Xato kodlari'],
+                ['id' => 'lifetimes', 'label' => 'Muddatlar'],
+                ['id' => 'checklist', 'label' => 'Tekshiruv ro‘yxati'],
+            ],
+            'kitobchi-id-branding' => [
+                ['id' => 'logo', 'label' => 'Logotip'],
+                ['id' => 'button', 'label' => 'Kirish tugmasi'],
             ],
             'errors' => [
                 ['id' => 'statuses', 'label' => 'HTTP status kodlar'],
