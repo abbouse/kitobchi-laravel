@@ -4,34 +4,42 @@
       <!-- Author Header -->
       <div class="flex items-center justify-between gap-3 mb-4">
         <div class="flex items-center gap-3 min-w-0">
-          <!-- Avatar -->
-          <div class="relative shrink-0">
-            <img
-              v-if="authorAvatar"
-              :src="authorAvatar"
-              :alt="authorName"
-              class="w-11 h-11 rounded-full object-cover border border-neutral-100 bg-neutral-100"
-              loading="lazy"
+          <!-- Avatar linking to Profile -->
+          <NuxtLink
+            v-if="post.user?.id"
+            :to="`/club/user/${post.user.id}`"
+            class="shrink-0 no-underline group/avatar"
+            :title="`${authorName} profilini ko‘rish`"
+          >
+            <AppAvatar
+              :src="post.user?.avatar"
+              :name="authorName"
+              :user-id="post.user?.id"
+              size="w-11 h-11 text-sm"
+              :badge="post.user?.role_emoji"
             />
-            <div
-              v-else
-              class="w-11 h-11 rounded-full bg-gradient-to-br from-primary/10 to-primary/20 text-primary font-bold text-sm flex items-center justify-center border border-primary/10"
-            >
-              {{ authorInitials }}
-            </div>
-            <!-- Role Emoji / Verified Badge -->
-            <span
-              v-if="post.user?.role_emoji"
-              class="absolute -bottom-1 -right-1 text-xs bg-white rounded-full px-0.5 shadow-2xs"
-            >
-              {{ post.user.role_emoji }}
-            </span>
+          </NuxtLink>
+          <div v-else class="shrink-0">
+            <AppAvatar
+              :src="post.user?.avatar"
+              :name="authorName"
+              :user-id="post.user?.id"
+              size="w-11 h-11 text-sm"
+              :badge="post.user?.role_emoji"
+            />
           </div>
 
           <!-- Name & Role -->
           <div class="min-w-0">
             <div class="flex items-center gap-1.5 flex-wrap">
-              <span class="font-bold text-sm text-neutral-900 truncate">
+              <NuxtLink
+                v-if="post.user?.id"
+                :to="`/club/user/${post.user.id}`"
+                class="font-bold text-sm text-neutral-900 hover:text-primary transition-colors no-underline truncate"
+              >
+                {{ authorName }}
+              </NuxtLink>
+              <span v-else class="font-bold text-sm text-neutral-900 truncate">
                 {{ authorName }}
               </span>
               <svg

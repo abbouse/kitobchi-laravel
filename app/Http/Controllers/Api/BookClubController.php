@@ -681,15 +681,20 @@ class BookClubController extends Controller
     public function get_profile(Request $request)
     {
         try {
-            $me           = Auth::guard('user')->user();
-            $targetUserId = $request->input('user_id') ?? ($me ? $me->id : null);
-            $summaryOnly  = $request->boolean('summary_only');
+            $me          = Auth::guard('user')->user();
+            $summaryOnly = $request->boolean('summary_only');
+            $targetParam = $request->input('user_id') ?? $request->input('id') ?? ($me ? $me->id : null);
+            if (!$targetParam && $request->filled('username')) {
+                $targetParam = $request->input('username');
+            }
 
-            if (!$targetUserId) {
+            if (!$targetParam) {
                 return response()->json(['status' => 'error', 'message' => 'User ID required'], 400);
             }
 
-            $user = User::withCount(['followers', 'followings'])->find($targetUserId);
+            $user = is_numeric($targetParam)
+                ? User::withCount(['followers', 'followings'])->find($targetParam)
+                : User::withCount(['followers', 'followings'])->where('username', $targetParam)->first();
 
             if (!$user) {
                 return response()->json(['status' => 'error', 'message' => 'User not found'], 404);

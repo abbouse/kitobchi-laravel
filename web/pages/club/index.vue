@@ -58,20 +58,12 @@
           >
             <div class="flex items-center gap-2.5">
               <!-- Current User Avatar on Left -->
-              <div class="shrink-0">
-                <img
-                  v-if="currentUserAvatar"
-                  :src="currentUserAvatar"
-                  :alt="currentUserDisplayName"
-                  class="w-9 h-9 rounded-full object-cover border border-neutral-100 bg-neutral-100"
-                />
-                <div
-                  v-else
-                  class="w-9 h-9 rounded-full bg-primary/10 text-primary font-bold text-xs flex items-center justify-center"
-                >
-                  {{ currentUserInitials }}
-                </div>
-              </div>
+              <AppAvatar
+                :src="authStore.user?.avatar || authStore.user?.photo"
+                :name="currentUserDisplayName"
+                :user-id="authStore.user?.id"
+                size="w-9 h-9 text-xs"
+              />
 
               <!-- Pill Input container (Grows up to 4 lines) -->
               <div class="flex-1 min-w-0 bg-neutral-100/90 rounded-full py-1.5 px-3 flex items-center gap-2 transition-all focus-within:ring-2 focus-within:ring-primary/20 focus-within:bg-white border border-transparent focus-within:border-primary/30">
@@ -235,20 +227,12 @@
           >
             <!-- Author Header -->
             <div class="flex items-center gap-3 mb-3">
-              <div class="relative shrink-0">
-                <img
-                  v-if="currentUserAvatar"
-                  :src="currentUserAvatar"
-                  :alt="currentUserDisplayName"
-                  class="w-10 h-10 rounded-full object-cover border border-neutral-100 bg-neutral-100"
-                />
-                <div
-                  v-else
-                  class="w-10 h-10 rounded-full bg-primary/10 text-primary font-bold text-sm flex items-center justify-center"
-                >
-                  {{ currentUserInitials }}
-                </div>
-              </div>
+              <AppAvatar
+                :src="authStore.user?.avatar || authStore.user?.photo"
+                :name="currentUserDisplayName"
+                :user-id="authStore.user?.id"
+                size="w-10 h-10 text-sm"
+              />
 
               <div class="min-w-0 flex-1">
                 <div class="font-bold text-sm text-neutral-900 truncate">
@@ -342,32 +326,21 @@
                 :key="member.id"
                 class="flex items-center justify-between gap-3"
               >
-                <div class="flex items-center gap-2.5 min-w-0">
-                  <div class="relative shrink-0">
-                    <img
-                      v-if="member.avatar"
-                      :src="resolveImageUrl(member.avatar)"
-                      :alt="member.name"
-                      class="w-9 h-9 rounded-full object-cover border border-neutral-100 bg-neutral-100"
-                      loading="lazy"
-                    />
-                    <div
-                      v-else
-                      class="w-9 h-9 rounded-full bg-primary/10 text-primary font-bold text-xs flex items-center justify-center"
-                    >
-                      {{ (member.name || 'K').slice(0, 2).toUpperCase() }}
-                    </div>
-                    <span
-                      v-if="member.role_emoji"
-                      class="absolute -bottom-1 -right-1 text-[10px] bg-white rounded-full px-0.5 shadow-2xs"
-                    >
-                      {{ member.role_emoji }}
-                    </span>
-                  </div>
+                <NuxtLink
+                  :to="`/club/user/${member.id}`"
+                  class="flex items-center gap-2.5 min-w-0 no-underline group/mem"
+                >
+                  <AppAvatar
+                    :src="member.avatar"
+                    :name="member.name"
+                    :user-id="member.id"
+                    size="w-9 h-9 text-xs"
+                    :badge="member.role_emoji"
+                  />
 
                   <div class="min-w-0">
                     <div class="flex items-center gap-1">
-                      <span class="font-bold text-xs sm:text-sm text-neutral-900 truncate">
+                      <span class="font-bold text-xs sm:text-sm text-neutral-900 group-hover/mem:text-primary transition-colors truncate">
                         {{ member.name }} {{ member.lastname || '' }}
                       </span>
                       <svg
@@ -382,7 +355,7 @@
                       {{ member.role_title || member.position || (member.posts_count ? `${member.posts_count} ta fikr` : 'Kitobxon') }}
                     </div>
                   </div>
-                </div>
+                </NuxtLink>
 
                 <span v-if="member.posts_count" class="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-600">
                   {{ member.posts_count }} post

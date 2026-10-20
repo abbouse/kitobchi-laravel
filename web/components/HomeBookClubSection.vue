@@ -50,33 +50,41 @@
           <!-- Author Header -->
           <div class="flex items-center justify-between gap-2.5">
             <div class="flex items-center gap-2.5 min-w-0">
-              <!-- Avatar -->
-              <div class="relative shrink-0">
-                <img
-                  v-if="getAvatar(post)"
+              <!-- Avatar linking to Profile -->
+              <NuxtLink
+                v-if="post.user?.id"
+                :to="`/club/user/${post.user.id}`"
+                class="shrink-0 no-underline"
+              >
+                <AppAvatar
                   :src="getAvatar(post)"
-                  :alt="getName(post)"
-                  class="w-9 h-9 rounded-full object-cover border border-neutral-100 bg-neutral-100"
-                  loading="lazy"
+                  :name="getName(post)"
+                  :user-id="post.user?.id"
+                  size="w-9 h-9 text-xs"
+                  :badge="post.user?.role_emoji"
                 />
-                <div
-                  v-else
-                  class="w-9 h-9 rounded-full bg-primary/10 text-primary font-bold text-xs flex items-center justify-center"
-                >
-                  {{ getInitials(post) }}
-                </div>
-                <span
-                  v-if="post.user?.role_emoji"
-                  class="absolute -bottom-1 -right-1 text-[10px] bg-white rounded-full px-0.5 shadow-2xs"
-                >
-                  {{ post.user.role_emoji }}
-                </span>
+              </NuxtLink>
+              <div v-else class="shrink-0">
+                <AppAvatar
+                  :src="getAvatar(post)"
+                  :name="getName(post)"
+                  :user-id="post.user?.id"
+                  size="w-9 h-9 text-xs"
+                  :badge="post.user?.role_emoji"
+                />
               </div>
 
               <!-- Name & Time -->
               <div class="min-w-0">
                 <div class="flex items-center gap-1">
-                  <span class="font-bold text-xs sm:text-sm text-neutral-900 truncate">
+                  <NuxtLink
+                    v-if="post.user?.id"
+                    :to="`/club/user/${post.user.id}`"
+                    class="font-bold text-xs sm:text-sm text-neutral-900 hover:text-primary transition-colors no-underline truncate"
+                  >
+                    {{ getName(post) }}
+                  </NuxtLink>
+                  <span v-else class="font-bold text-xs sm:text-sm text-neutral-900 truncate">
                     {{ getName(post) }}
                   </span>
                   <svg

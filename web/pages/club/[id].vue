@@ -29,39 +29,46 @@
       </nav>
 
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
-        <!-- MAIN POST & COMMENTS (8 cols) -->
+        <!-- LEFT COLUMN: MAIN CONTENT (8 cols) -->
         <main class="lg:col-span-8 space-y-6">
-          <!-- Post Article Card -->
-          <article class="bg-white rounded-3xl p-5 sm:p-7 border border-neutral-200/70 shadow-2xs">
+          <!-- MOBILE-ONLY POST ARTICLE (Hidden on Desktop, moves to Sidebar) -->
+          <article class="lg:hidden bg-white rounded-3xl p-5 border border-neutral-200/70 shadow-2xs">
             <!-- Author Header -->
-            <div class="flex items-center justify-between gap-3 mb-5">
+            <div class="flex items-center justify-between gap-3 mb-4">
               <div class="flex items-center gap-3">
-                <!-- Avatar -->
-                <div class="relative shrink-0">
-                  <img
-                    v-if="authorAvatar"
-                    :src="authorAvatar"
-                    :alt="authorName"
-                    class="w-11 h-11 rounded-full object-cover border border-neutral-100 bg-neutral-100"
+                <NuxtLink
+                  v-if="post?.user?.id"
+                  :to="`/club/user/${post.user.id}`"
+                  class="no-underline shrink-0"
+                >
+                  <AppAvatar
+                    :src="post?.user?.avatar"
+                    :name="authorName"
+                    :user-id="post?.user?.id"
+                    size="w-11 h-11 text-sm"
+                    :badge="post?.user?.role_emoji"
                   />
-                  <div
-                    v-else
-                    class="w-11 h-11 rounded-full bg-gradient-to-br from-primary/10 to-primary/20 text-primary font-bold text-sm flex items-center justify-center border border-primary/10"
-                  >
-                    {{ authorInitials }}
-                  </div>
-                  <span
-                    v-if="post?.user?.role_emoji"
-                    class="absolute -bottom-1 -right-1 text-xs bg-white rounded-full px-0.5 shadow-2xs"
-                  >
-                    {{ post.user.role_emoji }}
-                  </span>
+                </NuxtLink>
+                <div v-else class="shrink-0">
+                  <AppAvatar
+                    :src="post?.user?.avatar"
+                    :name="authorName"
+                    :user-id="post?.user?.id"
+                    size="w-11 h-11 text-sm"
+                    :badge="post?.user?.role_emoji"
+                  />
                 </div>
 
-                <!-- Info -->
                 <div class="min-w-0">
                   <div class="flex items-center gap-1.5 flex-wrap">
-                    <span class="font-bold text-sm sm:text-base text-neutral-900 truncate">
+                    <NuxtLink
+                      v-if="post?.user?.id"
+                      :to="`/club/user/${post.user.id}`"
+                      class="font-bold text-sm text-neutral-900 hover:text-primary transition-colors no-underline truncate"
+                    >
+                      {{ authorName }}
+                    </NuxtLink>
+                    <span v-else class="font-bold text-sm text-neutral-900 truncate">
                       {{ authorName }}
                     </span>
                     <svg
@@ -94,33 +101,30 @@
             </div>
 
             <!-- Full Post Text -->
-            <div class="text-neutral-900 text-sm sm:text-base leading-relaxed whitespace-pre-line mb-5 font-normal">
+            <div class="text-neutral-900 text-sm leading-relaxed whitespace-pre-line mb-4 font-normal">
               {{ post?.text }}
             </div>
 
-            <!-- Capped Images Gallery with Lightbox -->
+            <!-- Images Gallery -->
             <div
               v-if="post?.images && post.images.length > 0"
-              class="mb-5 rounded-2xl overflow-hidden"
+              class="mb-4 rounded-2xl overflow-hidden"
             >
-              <!-- Single Image: capped max height -->
               <div
                 v-if="post.images.length === 1"
                 @click="openGallery(0)"
-                class="block max-h-72 sm:max-h-80 w-full bg-neutral-100 overflow-hidden group cursor-pointer rounded-2xl"
+                class="block max-h-72 w-full bg-neutral-100 overflow-hidden group cursor-pointer rounded-2xl"
               >
                 <img
                   :src="resolveImageUrl(post.images[0].image)"
                   alt="Post rasmi"
-                  class="w-full h-full max-h-72 sm:max-h-80 object-cover group-hover:scale-102 transition-transform duration-300"
+                  class="w-full h-full max-h-72 object-cover group-hover:scale-102 transition-transform duration-300"
                   loading="lazy"
                 />
               </div>
-
-              <!-- Multiple Images (2 or more) -->
               <div
                 v-else
-                class="grid gap-2 max-h-72 sm:max-h-80 overflow-hidden rounded-2xl"
+                class="grid gap-2 max-h-72 overflow-hidden rounded-2xl"
                 :class="post.images.length === 2 ? 'grid-cols-2 aspect-[16/10]' : 'grid-cols-3 aspect-[16/10]'"
               >
                 <div
@@ -145,103 +149,58 @@
               </div>
             </div>
 
-            <!-- Attached Product Showcase -->
-            <NuxtLink
-              v-if="linkedProduct"
-              :to="`/books/${linkedProduct.id}`"
-              class="p-3 sm:p-4 rounded-2xl bg-neutral-50/80 hover:bg-neutral-100/90 border border-neutral-200/80 transition-all mb-5 flex items-center justify-between gap-4 no-underline group/link"
-            >
-              <div class="flex items-center gap-3.5 min-w-0">
-                <div class="shrink-0 w-11 h-15 rounded-lg overflow-hidden bg-white border border-neutral-200/80 shadow-2xs">
-                  <img
-                    :src="resolveProductImage(linkedProduct)"
-                    :alt="linkedProduct.name || linkedProduct.title"
-                    class="w-full h-full object-cover group-hover/link:scale-105 transition-transform duration-300"
-                    loading="lazy"
-                  />
-                </div>
-                <div class="min-w-0">
-                  <span class="text-[10px] uppercase font-bold text-neutral-400 tracking-wider block">Mavzu kitobi</span>
-                  <div class="font-bold text-xs sm:text-sm text-neutral-900 group-hover/link:text-primary transition-colors truncate">
-                    {{ linkedProduct.name || linkedProduct.title }}
-                  </div>
-                  <div v-if="linkedProduct.price" class="text-xs sm:text-sm font-extrabold text-primary mt-0.5">
-                    {{ formatPrice(linkedProduct.price) }} so‘m
-                  </div>
-                </div>
-              </div>
-
-              <div class="shrink-0 inline-flex items-center gap-1 px-3.5 py-1.5 rounded-full bg-primary hover:bg-primary-hover text-white font-bold text-xs transition-colors shadow-2xs">
-                <span>Kitobni ko‘rish</span>
-                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                </svg>
-              </div>
-            </NuxtLink>
-
             <!-- Post Actions -->
-            <div class="flex items-center justify-between pt-4 border-t border-neutral-100 text-xs sm:text-sm">
-              <div class="flex items-center gap-5">
-                <!-- Like Button -->
-                <button
-                  type="button"
-                  @click="toggleLike"
-                  :class="[
-                    'inline-flex items-center gap-1.5 transition-colors cursor-pointer border-none bg-transparent p-0 font-semibold',
-                    isLiked ? 'text-rose-600' : 'hover:text-rose-600 text-neutral-500'
-                  ]"
+            <div class="flex items-center justify-between pt-3 border-t border-neutral-100 text-xs">
+              <button
+                type="button"
+                @click="toggleLike"
+                :class="[
+                  'inline-flex items-center gap-1.5 transition-colors cursor-pointer border-none bg-transparent p-0 font-semibold',
+                  isLiked ? 'text-rose-600' : 'hover:text-rose-600 text-neutral-500'
+                ]"
+              >
+                <svg
+                  class="w-4 h-4 transition-transform active:scale-125"
+                  :fill="isLiked ? 'currentColor' : 'none'"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  viewBox="0 0 24 24"
                 >
-                  <svg
-                    class="w-4 h-4 sm:w-5 sm:h-5 transition-transform active:scale-125"
-                    :fill="isLiked ? 'currentColor' : 'none'"
-                    stroke="currentColor"
-                    stroke-width="1.8"
-                    viewBox="0 0 24 24"
-                  >
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
-                  </svg>
-                  <span>{{ likesCount }} ta yoqdi</span>
-                </button>
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
+                </svg>
+                <span>{{ likesCount }} ta yoqdi</span>
+              </button>
 
-                <!-- Comments Count -->
-                <div class="inline-flex items-center gap-1.5 text-neutral-500 font-semibold">
-                  <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 20.25c4.97 0 9-3.694 9-8.25s-4.03-8.25-9-8.25S3 7.444 3 12c0 2.104.859 4.023 2.273 5.48.432.447.74 1.04.586 1.641a4.483 4.483 0 0 1-.923 1.785A5.969 5.969 0 0 0 6 21c1.282 0 2.47-.402 3.445-1.087.81.22 1.668.337 2.555.337Z" />
-                  </svg>
-                  <span>{{ totalCommentsCount }} ta sharh</span>
-                </div>
-              </div>
-
-              <!-- Share Button -->
               <button
                 type="button"
                 @click="sharePost"
-                class="inline-flex items-center gap-1.5 text-neutral-500 hover:text-neutral-900 transition-colors border-none bg-transparent cursor-pointer p-0 font-semibold"
+                class="inline-flex items-center gap-1 text-neutral-500 hover:text-neutral-900 transition-colors border-none bg-transparent cursor-pointer p-0 font-semibold"
               >
                 <span v-if="copied" class="text-emerald-600 font-bold">Nusxalandi!</span>
-                <template v-else>
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185Z" />
-                  </svg>
-                  <span>Ulashish</span>
-                </template>
+                <span v-else>Ulashish</span>
               </button>
             </div>
           </article>
 
-          <!-- ====== COMMENTS THREAD (MATCHING APP "SHARHLAR" DESIGN) ====== -->
+          <!-- ====== COMMENTS THREAD (DESKTOP MAIN CONTENT) ====== -->
           <section class="bg-white rounded-3xl p-5 sm:p-7 border border-neutral-200/70 shadow-2xs">
             <!-- Top Summary Header (Matching screenshot 2) -->
             <div class="flex items-center justify-between pb-4 border-b border-neutral-100 mb-5">
-              <div class="flex items-center gap-2">
+              <div class="flex items-center gap-2.5">
                 <!-- Stacked commenters avatars -->
-                <div v-if="avatarStack.length > 0" class="flex -space-x-2 overflow-hidden shrink-0">
-                  <img
-                    v-for="(av, i) in avatarStack"
+                <div v-if="comments.length > 0" class="flex -space-x-2 overflow-hidden shrink-0">
+                  <div
+                    v-for="(c, i) in comments.slice(0, 3)"
                     :key="i"
-                    :src="av"
-                    class="inline-block w-6 h-6 rounded-full ring-2 ring-white object-cover bg-neutral-100"
-                  />
+                    class="inline-block ring-2 ring-white rounded-full"
+                  >
+                    <AppAvatar
+                      :src="c.user?.avatar"
+                      :name="c.user?.name || 'Kitobxon'"
+                      :user-id="c.user?.id"
+                      size="w-6 h-6 text-[9px]"
+                    />
+                  </div>
                 </div>
                 <h2 class="text-sm sm:text-base font-bold text-neutral-900 m-0">
                   {{ totalCommentsCount }} ta sharh
@@ -271,27 +230,44 @@
               >
                 <!-- Parent Comment Row -->
                 <div class="flex items-start gap-3">
-                  <!-- Commenter Avatar -->
-                  <div class="shrink-0">
-                    <img
-                      v-if="comment.user?.avatar"
-                      :src="resolveImageUrl(comment.user.avatar)"
-                      :alt="comment.user?.name || 'Kitobxon'"
-                      class="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover border border-neutral-100 bg-neutral-100"
+                  <!-- Commenter Avatar linking to Profile -->
+                  <NuxtLink
+                    v-if="comment.user?.id"
+                    :to="`/club/user/${comment.user.id}`"
+                    class="no-underline shrink-0"
+                    :title="`${comment.user?.name || 'Kitobxon'} profilini ko‘rish`"
+                  >
+                    <AppAvatar
+                      :src="comment.user?.avatar"
+                      :name="comment.user?.name || 'Kitobxon'"
+                      :user-id="comment.user?.id"
+                      size="w-9 h-9 sm:w-10 sm:h-10 text-xs sm:text-sm"
+                      :badge="comment.user?.role_emoji"
                     />
-                    <div
-                      v-else
-                      class="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-primary/10 text-primary font-bold text-xs flex items-center justify-center"
-                    >
-                      {{ (comment.user?.name || 'K').slice(0, 2).toUpperCase() }}
-                    </div>
+                  </NuxtLink>
+                  <div v-else class="shrink-0">
+                    <AppAvatar
+                      :src="comment.user?.avatar"
+                      :name="comment.user?.name || 'Kitobxon'"
+                      :user-id="comment.user?.id"
+                      size="w-9 h-9 sm:w-10 sm:h-10 text-xs sm:text-sm"
+                      :badge="comment.user?.role_emoji"
+                    />
                   </div>
 
                   <!-- Comment Body -->
                   <div class="min-w-0 flex-1">
                     <!-- Name & Role Badge -->
                     <div class="flex items-center gap-1.5 flex-wrap">
-                      <span class="font-bold text-xs sm:text-sm text-neutral-900">
+                      <NuxtLink
+                        v-if="comment.user?.id"
+                        :to="`/club/user/${comment.user.id}`"
+                        class="font-bold text-xs sm:text-sm text-neutral-900 hover:text-primary transition-colors no-underline"
+                      >
+                        {{ comment.user?.name || comment.user?.username || 'Kitobxon' }}
+                        <span v-if="comment.user?.lastname">{{ comment.user.lastname }}</span>
+                      </NuxtLink>
+                      <span v-else class="font-bold text-xs sm:text-sm text-neutral-900">
                         {{ comment.user?.name || comment.user?.username || 'Kitobxon' }}
                         <span v-if="comment.user?.lastname">{{ comment.user.lastname }}</span>
                       </span>
@@ -368,26 +344,41 @@
                         :key="reply.id"
                         class="flex items-start gap-2.5"
                       >
-                        <!-- Reply Avatar -->
-                        <div class="shrink-0">
-                          <img
-                            v-if="reply.user?.avatar"
-                            :src="resolveImageUrl(reply.user.avatar)"
-                            :alt="reply.user?.name || 'Kitobxon'"
-                            class="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover border border-neutral-100 bg-neutral-100"
+                        <!-- Reply Avatar linking to Profile -->
+                        <NuxtLink
+                          v-if="reply.user?.id"
+                          :to="`/club/user/${reply.user.id}`"
+                          class="no-underline shrink-0"
+                        >
+                          <AppAvatar
+                            :src="reply.user?.avatar"
+                            :name="reply.user?.name || 'Kitobxon'"
+                            :user-id="reply.user?.id"
+                            size="w-7 h-7 sm:w-8 sm:h-8 text-[10px] sm:text-xs"
+                            :badge="reply.user?.role_emoji"
                           />
-                          <div
-                            v-else
-                            class="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-primary/10 text-primary font-bold text-[10px] sm:text-xs flex items-center justify-center"
-                          >
-                            {{ (reply.user?.name || 'K').slice(0, 2).toUpperCase() }}
-                          </div>
+                        </NuxtLink>
+                        <div v-else class="shrink-0">
+                          <AppAvatar
+                            :src="reply.user?.avatar"
+                            :name="reply.user?.name || 'Kitobxon'"
+                            :user-id="reply.user?.id"
+                            size="w-7 h-7 sm:w-8 sm:h-8 text-[10px] sm:text-xs"
+                            :badge="reply.user?.role_emoji"
+                          />
                         </div>
 
                         <!-- Reply Body -->
                         <div class="min-w-0 flex-1">
                           <div class="flex items-center gap-1.5 flex-wrap">
-                            <span class="font-bold text-xs text-neutral-900">
+                            <NuxtLink
+                              v-if="reply.user?.id"
+                              :to="`/club/user/${reply.user.id}`"
+                              class="font-bold text-xs text-neutral-900 hover:text-primary transition-colors no-underline"
+                            >
+                              {{ reply.user?.name || reply.user?.username || 'Kitobxon' }}
+                            </NuxtLink>
+                            <span v-else class="font-bold text-xs text-neutral-900">
                               {{ reply.user?.name || reply.user?.username || 'Kitobxon' }}
                             </span>
                             <span class="text-[10px] text-neutral-400">
@@ -476,43 +467,253 @@
           </section>
         </main>
 
-        <!-- RIGHT: SIDEBAR (4 cols) -->
-        <aside class="lg:col-span-4 space-y-6">
-          <!-- Back to Club Banner -->
-          <div class="bg-white rounded-3xl p-6 border border-neutral-200/70 shadow-2xs">
-            <h3 class="font-bold text-base text-neutral-900 mb-2">Boshqa muhokamalar</h3>
-            <p class="text-xs text-neutral-500 leading-relaxed mb-4">
-              Kitobxonlar klubida minglab o‘quvchilar yangi asarlar haqida fikr almashmoqda.
-            </p>
-            <NuxtLink
-              to="/club"
-              class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-full bg-neutral-100 hover:bg-neutral-200/80 text-neutral-900 font-bold text-xs transition-colors no-underline"
+        <!-- RIGHT COLUMN: SIDEBAR (4 cols) - MAIN POST & COMPOSER FOR DESKTOP -->
+        <aside class="lg:col-span-4 space-y-5">
+          <!-- MAIN POST CARD (DESKTOP) -->
+          <article class="hidden lg:block bg-white rounded-3xl p-5 sm:p-6 border border-neutral-200/70 shadow-2xs">
+            <!-- Author Header -->
+            <div class="flex items-center justify-between gap-3 mb-4">
+              <div class="flex items-center gap-3 min-w-0">
+                <NuxtLink
+                  v-if="post?.user?.id"
+                  :to="`/club/user/${post.user.id}`"
+                  class="no-underline shrink-0"
+                  :title="`${authorName} profilini ko‘rish`"
+                >
+                  <AppAvatar
+                    :src="post?.user?.avatar"
+                    :name="authorName"
+                    :user-id="post?.user?.id"
+                    size="w-11 h-11 text-sm"
+                    :badge="post?.user?.role_emoji"
+                  />
+                </NuxtLink>
+                <div v-else class="shrink-0">
+                  <AppAvatar
+                    :src="post?.user?.avatar"
+                    :name="authorName"
+                    :user-id="post?.user?.id"
+                    size="w-11 h-11 text-sm"
+                    :badge="post?.user?.role_emoji"
+                  />
+                </div>
+
+                <div class="min-w-0">
+                  <div class="flex items-center gap-1.5 flex-wrap">
+                    <NuxtLink
+                      v-if="post?.user?.id"
+                      :to="`/club/user/${post.user.id}`"
+                      class="font-bold text-sm text-neutral-900 hover:text-primary transition-colors no-underline truncate"
+                    >
+                      {{ authorName }}
+                    </NuxtLink>
+                    <span v-else class="font-bold text-sm text-neutral-900 truncate">
+                      {{ authorName }}
+                    </span>
+                    <svg
+                      v-if="post?.user?.isVerified || post?.is_verified_author"
+                      class="w-4 h-4 text-primary shrink-0"
+                      viewBox="0 0 24 24" fill="currentColor"
+                      title="Tasdiqlangan kitobxon"
+                    >
+                      <path fill-rule="evenodd" d="M8.603 3.799A4.49 4.49 0 0 1 12 2.25c1.357 0 2.573.6 3.397 1.549a4.49 4.49 0 0 1 3.498 1.307 4.491 4.491 0 0 1 1.307 3.497A4.49 4.49 0 0 1 21.75 12a4.49 4.49 0 0 1-1.549 3.397 4.491 4.491 0 0 1-1.307 3.497 4.491 4.491 0 0 1-3.497 1.307A4.49 4.49 0 0 1 12 21.75a4.49 4.49 0 0 1-3.397-1.549 4.49 4.49 0 0 1-3.498-1.306 4.491 4.491 0 0 1-1.307-3.498A4.49 4.49 0 0 1 2.25 12c0-1.357.6-2.573 1.549-3.397a4.49 4.49 0 0 1 1.307-3.497 4.49 4.49 0 0 1 3.497-1.307Zm7.007 6.387a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z" clip-rule="evenodd" />
+                    </svg>
+                  </div>
+                  <div class="flex items-center gap-2 text-xs text-neutral-400 mt-0.5 truncate">
+                    <span v-if="post?.user?.role_title || post?.user?.position">
+                      {{ post.user?.role_title || post.user?.position }}
+                    </span>
+                    <span v-if="post?.user?.role_title || post?.user?.position">•</span>
+                    <time :datetime="post?.created_at">{{ formattedDate }}</time>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Theme Pill -->
+              <NuxtLink
+                v-if="post?.theme?.name"
+                :to="`/club?theme=${post.theme.slug || post.theme.id}`"
+                class="shrink-0 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+              >
+                #{{ post.theme.name }}
+              </NuxtLink>
+            </div>
+
+            <!-- Truncated/Expanded Post Text with 'Davomi' Button -->
+            <div class="text-neutral-900 text-sm leading-relaxed whitespace-pre-line mb-4 font-normal">
+              <span>{{ displayedPostText }}</span>
+              <button
+                v-if="isTextLong"
+                type="button"
+                @click="isPostExpanded = !isPostExpanded"
+                class="text-primary hover:text-primary-hover font-bold text-xs ml-1 bg-transparent border-none cursor-pointer p-0 underline"
+              >
+                {{ isPostExpanded ? 'Qisqartirish' : 'Davomi...' }}
+              </button>
+            </div>
+
+            <!-- Images Gallery (Capped max height) -->
+            <div
+              v-if="post?.images && post.images.length > 0"
+              class="mb-4 rounded-2xl overflow-hidden"
             >
-              Klub lentasiga qaytish
-            </NuxtLink>
+              <div
+                v-if="post.images.length === 1"
+                @click="openGallery(0)"
+                class="block max-h-60 w-full bg-neutral-100 overflow-hidden group cursor-pointer rounded-2xl"
+              >
+                <img
+                  :src="resolveImageUrl(post.images[0].image)"
+                  alt="Post rasmi"
+                  class="w-full h-full max-h-60 object-cover group-hover:scale-102 transition-transform duration-300"
+                  loading="lazy"
+                />
+              </div>
+              <div
+                v-else
+                class="grid gap-1.5 max-h-60 overflow-hidden rounded-2xl"
+                :class="post.images.length === 2 ? 'grid-cols-2 aspect-[16/10]' : 'grid-cols-3 aspect-[16/10]'"
+              >
+                <div
+                  v-for="(img, i) in post.images.slice(0, 3)"
+                  :key="i"
+                  @click="openGallery(i)"
+                  class="relative bg-neutral-100 overflow-hidden group rounded-xl cursor-pointer h-full"
+                >
+                  <img
+                    :src="resolveImageUrl(img.image)"
+                    alt="Post rasmi"
+                    class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    loading="lazy"
+                  />
+                  <div
+                    v-if="i === 2 && post.images.length > 3"
+                    class="absolute inset-0 bg-neutral-900/60 text-white font-bold text-xs flex items-center justify-center backdrop-blur-xs"
+                  >
+                    +{{ post.images.length - 3 }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Post Actions -->
+            <div class="flex items-center justify-between pt-3 border-t border-neutral-100 text-xs">
+              <button
+                type="button"
+                @click="toggleLike"
+                :class="[
+                  'inline-flex items-center gap-1.5 transition-colors cursor-pointer border-none bg-transparent p-0 font-semibold',
+                  isLiked ? 'text-rose-600' : 'hover:text-rose-600 text-neutral-500'
+                ]"
+              >
+                <svg
+                  class="w-4 h-4 transition-transform active:scale-125"
+                  :fill="isLiked ? 'currentColor' : 'none'"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  viewBox="0 0 24 24"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
+                </svg>
+                <span>{{ likesCount }} ta yoqdi</span>
+              </button>
+
+              <button
+                type="button"
+                @click="sharePost"
+                class="inline-flex items-center gap-1 text-neutral-400 hover:text-neutral-700 transition-colors border-none bg-transparent cursor-pointer p-0 font-medium"
+              >
+                <span v-if="copied" class="text-emerald-600 font-bold">Nusxalandi!</span>
+                <span v-else>Ulashish</span>
+              </button>
+            </div>
+          </article>
+
+          <!-- DESKTOP COMMENT COMPOSER CARD (Directly below post in Sidebar) -->
+          <div
+            class="hidden lg:block bg-white rounded-3xl p-5 border border-neutral-200/70 shadow-2xs relative transition-all"
+            :class="{ 'cursor-pointer hover:border-primary/40': !authStore.isAuthenticated }"
+            @click="!authStore.isAuthenticated && authStore.openAuthModal()"
+          >
+            <!-- Header with Active user avatar -->
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-2.5">
+                <AppAvatar
+                  :src="authStore.user?.avatar || authStore.user?.photo"
+                  :name="currentUserDisplayName"
+                  :user-id="authStore.user?.id"
+                  size="w-8 h-8 text-xs"
+                />
+                <span class="font-bold text-xs text-neutral-900">
+                  {{ authStore.user ? currentUserDisplayName : 'Fikr bildirish' }}
+                </span>
+              </div>
+
+              <!-- Replying To Indicator -->
+              <div
+                v-if="replyingTo"
+                class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-[11px] font-semibold"
+              >
+                <span>@{{ replyingTo.name }} ga javob</span>
+                <button
+                  type="button"
+                  @click.stop="cancelReply"
+                  class="hover:text-primary-hover border-none bg-transparent cursor-pointer p-0 text-xs"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            <!-- Textarea -->
+            <div class="mb-3">
+              <textarea
+                v-model="commentInputText"
+                :disabled="!authStore.isAuthenticated"
+                rows="3"
+                :placeholder="replyingTo ? 'Javobingizni yozing...' : 'Ushbu post haqida fikringiz yoki sharhingizni yozing...'"
+                class="w-full rounded-2xl border border-neutral-200/90 p-3 text-xs sm:text-sm focus:outline-hidden focus:border-primary resize-none bg-neutral-50/50 focus:bg-white transition-colors"
+              ></textarea>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="flex justify-end">
+              <button
+                type="button"
+                @click.stop="submitCommentOrReply"
+                :disabled="isSubmittingComment || !commentInputText.trim()"
+                class="px-5 py-2 rounded-full bg-primary hover:bg-primary-hover text-white text-xs font-bold disabled:opacity-40 transition-colors border-none cursor-pointer shadow-2xs inline-flex items-center gap-1.5"
+              >
+                <svg v-if="isSubmittingComment" class="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                </svg>
+                <span>{{ replyingTo ? 'Javob berish' : 'Sharh qoldirish' }}</span>
+              </button>
+            </div>
           </div>
 
           <!-- Product Details Widget (if attached) -->
           <div
             v-if="linkedProduct"
-            class="bg-white rounded-3xl p-6 border border-neutral-200/70 shadow-2xs text-center"
+            class="bg-white rounded-3xl p-5 border border-neutral-200/70 shadow-2xs text-center"
           >
-            <div class="w-24 h-36 mx-auto mb-3 rounded-xl overflow-hidden bg-white border border-neutral-200 shadow-xs">
+            <div class="w-20 h-28 mx-auto mb-2 rounded-xl overflow-hidden bg-white border border-neutral-200 shadow-2xs">
               <img
                 :src="resolveProductImage(linkedProduct)"
                 :alt="linkedProduct.name || linkedProduct.title"
                 class="w-full h-full object-cover"
               />
             </div>
-            <h4 class="font-bold text-sm text-neutral-900 mb-1">
+            <h4 class="font-bold text-xs sm:text-sm text-neutral-900 mb-1 truncate">
               {{ linkedProduct.name || linkedProduct.title }}
             </h4>
-            <div v-if="linkedProduct.price" class="text-sm font-extrabold text-primary mb-4">
+            <div v-if="linkedProduct.price" class="text-xs font-extrabold text-primary mb-3">
               {{ formatPrice(linkedProduct.price) }} so‘m
             </div>
             <NuxtLink
               :to="`/books/${linkedProduct.id}`"
-              class="w-full inline-flex items-center justify-center px-4 py-2.5 rounded-full bg-primary hover:bg-primary-hover text-white font-bold text-xs transition-colors no-underline"
+              class="w-full inline-flex items-center justify-center px-4 py-2 rounded-full bg-primary hover:bg-primary-hover text-white font-bold text-xs transition-colors no-underline"
             >
               Kitobni sotib olish
             </NuxtLink>
@@ -521,24 +722,16 @@
       </div>
     </div>
 
-    <!-- ====== BOTTOM FLOATING INPUT BAR (MATCHING APP SCREENSHOT) ====== -->
-    <div class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-neutral-200/80 py-2.5 px-4 shadow-lg">
+    <!-- ====== MOBILE-ONLY BOTTOM FLOATING INPUT BAR ====== -->
+    <div class="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-neutral-200/80 py-2.5 px-4 shadow-lg">
       <div class="max-w-2xl mx-auto flex items-center gap-2.5">
-        <!-- Current User Avatar -->
-        <div class="shrink-0">
-          <img
-            v-if="currentUserAvatar"
-            :src="currentUserAvatar"
-            :alt="currentUserDisplayName"
-            class="w-9 h-9 rounded-full object-cover border border-neutral-100 bg-neutral-100"
-          />
-          <div
-            v-else
-            class="w-9 h-9 rounded-full bg-primary/10 text-primary font-bold text-xs flex items-center justify-center"
-          >
-            {{ currentUserInitials }}
-          </div>
-        </div>
+        <!-- Current User Avatar with Telegram fallback -->
+        <AppAvatar
+          :src="authStore.user?.avatar || authStore.user?.photo"
+          :name="currentUserDisplayName"
+          :user-id="authStore.user?.id"
+          size="w-9 h-9 text-xs"
+        />
 
         <!-- Pill Input Box -->
         <div
@@ -561,7 +754,7 @@
             </button>
           </span>
 
-          <!-- Expanding Input -->
+          <!-- Input field -->
           <input
             v-model="commentInputText"
             ref="inputBarRef"
@@ -638,6 +831,20 @@ if (!post.value) {
   })
 }
 
+// Truncated / Expanded post text for Desktop Sidebar
+const isPostExpanded = ref(false)
+const isTextLong = computed(() => {
+  return (post.value?.text || '').length > 200
+})
+
+const displayedPostText = computed(() => {
+  const text = post.value?.text || ''
+  if (!isTextLong.value || isPostExpanded.value) {
+    return text
+  }
+  return text.slice(0, 190) + '...'
+})
+
 // Current Logged-in User
 const currentUserDisplayName = computed(() => {
   const u = authStore.user
@@ -646,42 +853,12 @@ const currentUserDisplayName = computed(() => {
   return u.name || u.username || 'Kitobxon'
 })
 
-const currentUserAvatar = computed(() => {
-  const av = authStore.user?.avatar || authStore.user?.photo
-  if (!av) return null
-  return resolveImageUrl(av)
-})
-
-const currentUserInitials = computed(() => {
-  const name = currentUserDisplayName.value.trim()
-  const parts = name.split(/\s+/)
-  if (parts.length >= 2) {
-    return (parts[0][0] + parts[1][0]).toUpperCase()
-  }
-  return name.slice(0, 2).toUpperCase()
-})
-
 // Author details
 const authorName = computed(() => {
   const u = post.value?.user
   if (!u) return 'Kitobxon'
   if (u.name && u.lastname) return `${u.name} ${u.lastname}`
   return u.name || u.username || 'Kitobxon'
-})
-
-const authorInitials = computed(() => {
-  const name = authorName.value.trim()
-  const parts = name.split(/\s+/)
-  if (parts.length >= 2) {
-    return (parts[0][0] + parts[1][0]).toUpperCase()
-  }
-  return name.slice(0, 2).toUpperCase()
-})
-
-const authorAvatar = computed(() => {
-  const av = post.value?.user?.avatar
-  if (!av) return null
-  return resolveImageUrl(av)
 })
 
 const linkedProduct = computed(() => post.value?.product_snapshot || null)
@@ -777,23 +954,13 @@ function openGallery(idx: number) {
   isGalleryOpen.value = true
 }
 
-// Comments Stats & Stack
+// Comments Stats
 const totalCommentsCount = computed(() => {
   let count = comments.value.length
   comments.value.forEach((c) => {
     count += c.replies_count || c.preview_replies?.length || 0
   })
   return count
-})
-
-const avatarStack = computed(() => {
-  const avatars: string[] = []
-  comments.value.forEach((c) => {
-    if (c.user?.avatar && avatars.length < 3 && !avatars.includes(resolveImageUrl(c.user.avatar))) {
-      avatars.push(resolveImageUrl(c.user.avatar))
-    }
-  })
-  return avatars
 })
 
 // Sort handling
@@ -919,7 +1086,6 @@ async function submitCommentOrReply() {
         }
       })
 
-      // Find parent comment and append reply
       const parent = comments.value.find((c) => c.id === parentId)
       if (parent) {
         if (!parent.preview_replies) {
@@ -928,7 +1094,6 @@ async function submitCommentOrReply() {
         if (res?.data) {
           parent.preview_replies.push(res.data)
         } else {
-          // Fallback refresh comments
           const updated: any = await $fetch(`${config.public.apiBase}/v1/kitobchi/book_club/comments/${post.value.id}`, {
             query: { reply_sort: currentSort.value }
           })
@@ -949,7 +1114,6 @@ async function submitCommentOrReply() {
         }
       })
 
-      // Refresh comments
       const updated: any = await $fetch(`${config.public.apiBase}/v1/kitobchi/book_club/comments/${post.value.id}`, {
         query: { reply_sort: currentSort.value }
       })
@@ -1011,7 +1175,7 @@ const jsonLd = computed(() => {
     author: {
       '@type': 'Person',
       name: authorName.value,
-      image: authorAvatar.value || undefined
+      image: post.value?.user?.avatar ? resolveImageUrl(post.value.user.avatar) : undefined
     },
     interactionStatistic: [
       {
