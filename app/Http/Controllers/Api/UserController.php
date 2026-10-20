@@ -1091,7 +1091,7 @@ class UserController extends Controller
                 'role_title'               => $user?->role_title,
                 'role_place'               => $user?->role_place,
                 'reputation_score'         => $user ? round((float) ($user->reputation_score ?? 82), 2) : 82.0,
-                'cash_on_delivery_allowed' => $user ? (bool) ($user->cash_on_delivery_allowed ?? true) : true,
+                'cash_on_delivery_allowed' => \App\Support\CashOnDelivery::forUser($user)['allowed'],
                 'cod_return_strikes'       => $user ? (int) ($user->cod_return_strikes ?? 0) : 0,
                 'unread_group_messages'    => $user
                     ? (int) Conversation::query()

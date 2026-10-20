@@ -172,6 +172,12 @@ class UserReputationService
         ];
     }
 
+    /** Muvaffaqiyatli yakunlangan (to'langan va topshirilgan) buyurtmalar soni. */
+    public function completedOrdersCount(User $user): int
+    {
+        return $this->completedOrdersQuery($user)->count();
+    }
+
     private function completedOrdersQuery(User $user): Builder
     {
         return Sold::query()

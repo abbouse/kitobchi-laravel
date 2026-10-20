@@ -11356,6 +11356,7 @@ PROMPT;
                 'on_reels' => (bool) $settings->on_reels,
                 'ramadan' => (bool) $settings->ramadan,
                 'stop_sales' => (bool) $settings->stop_sales,
+                'cash_on_delivery_enabled' => (bool) ($settings->cash_on_delivery_enabled ?? true),
                 'show_home_special_sections' => $settings->show_home_special_sections === null ? true : (bool) $settings->show_home_special_sections,
                 'packaging_price_small' => (int) ($settings->packaging_price_small ?? 25000),
                 'packaging_price_large' => (int) ($settings->packaging_price_large ?? 40000),

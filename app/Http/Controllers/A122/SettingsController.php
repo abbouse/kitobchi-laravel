@@ -240,6 +240,11 @@ class SettingsController extends Controller
             'on_reels'              => $request->boolean('on_reels'),
             'ramadan'               => $request->boolean('ramadan'),
             'stop_sales'            => $request->boolean('stop_sales'),
+            ...(\Illuminate\Support\Facades\Schema::hasColumn('project_settings', 'cash_on_delivery_enabled') ? [
+                'cash_on_delivery_enabled' => $request->has('cash_on_delivery_enabled')
+                    ? $request->boolean('cash_on_delivery_enabled')
+                    : (bool) ($settings->cash_on_delivery_enabled ?? true),
+            ] : []),
             'show_home_special_sections' => $request->has('show_home_special_sections')
                 ? $request->boolean('show_home_special_sections')
                 : (bool) ($settings->show_home_special_sections ?? true),
@@ -258,6 +263,7 @@ class SettingsController extends Controller
 
         Cache::forget('project_settings');
         Cache::forget('flash_delivery:setting');
+        \App\Support\CashOnDelivery::forgetCache();
         \App\Services\ReviewCashbackService::forgetSettingsCache();
         \App\Services\ChatBotKnowledgeService::forgetCache();
 

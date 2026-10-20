@@ -453,6 +453,7 @@ class PurchaseController extends Controller
 
         $sellerCount = count($sellers);
         // Predzakaz: butun buyurtma shu kungacha kutadi, faqat karta
+        $cod = \App\Support\CashOnDelivery::forUser($user);
         $preorderReason = $preorderShipsAt
             ? "Savatda oldindan buyurtma bor — buyurtma ".$preorderShipsAt->format('d.m.Y')." dan jo'natiladi va faqat karta orqali to'lanadi."
             : null;
@@ -492,11 +493,12 @@ class PurchaseController extends Controller
             ],
             'user_reputation' => [
                 'score' => round((float) ($user->reputation_score ?? UserReputationService::BASELINE_SCORE), 2),
-                'cash_on_delivery_allowed' => $preorderShipsAt === null && (bool) ($user->cash_on_delivery_allowed ?? true),
+                'cash_on_delivery_allowed' => $preorderShipsAt === null && $cod['allowed'],
+                // false — naqd to'lov varianti va ogohlantirish umuman ko'rsatilmaydi
+                'cash_on_delivery_visible' => $cod['visible'],
+                'cash_on_delivery_code' => $cod['code'],
                 'cod_return_strikes' => (int) ($user->cod_return_strikes ?? 0),
-                'cash_on_delivery_block_reason' => $preorderReason ?? (($user->cash_on_delivery_allowed ?? true)
-                    ? null
-                    : "Avvalgi naqd buyurtma qaytib kelgani uchun hozircha naqd to'lov yopilgan."),
+                'cash_on_delivery_block_reason' => $preorderReason ?? $cod['reason'],
             ],
             'active_certificates' => GiftCertificate::where('recipient_user_id', $user->id)
                 ->where('status', GiftCertificate::STATUS_ACTIVE)
@@ -1336,11 +1338,12 @@ class PurchaseController extends Controller
             $this->userReputationService->recalculateUser($user);
             $user->refresh();
 
-            if (! $user->canUseCashOnDelivery()) {
+            $cod = \App\Support\CashOnDelivery::forUser($user);
+            if (! $cod['allowed']) {
                 return response()->json([
                     'status' => 'error',
-                    'error_code' => 'cash_on_delivery_blocked',
-                    'message' => "Avvalgi naqd buyurtma qaytib kelgani uchun hozircha naqd to'lovdan foydalana olmaysiz.",
+                    'error_code' => $cod['code'] ?? 'cash_on_delivery_blocked',
+                    'message' => $cod['reason'] ?? "Naqd to'lovdan hozircha foydalana olmaysiz.",
                     'data' => [
                         'reputation_score' => round((float) ($user->reputation_score ?? UserReputationService::BASELINE_SCORE), 2),
                         'cod_return_strikes' => (int) ($user->cod_return_strikes ?? 0),

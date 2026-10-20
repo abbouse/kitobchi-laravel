@@ -114,6 +114,20 @@ class WebCheckoutController extends Controller
                 $guestUser->update(['name' => $firstName, 'lastname' => $lastName]);
             }
 
+            // ── 1.1) Naqd to'lov qoidasi (global o'chirish / birinchi buyurtma) ──
+            if ($validated['payment_method'] === 'cash') {
+                $cod = \App\Support\CashOnDelivery::forUser($guestUser);
+                if (! $cod['allowed']) {
+                    DB::rollBack();
+
+                    return response()->json([
+                        'success' => false,
+                        'error_code' => $cod['code'],
+                        'message' => $cod['reason'],
+                    ], 422);
+                }
+            }
+
             // ── 2) Savat itemlarini serverda qayta tekshirish ────────────
             // Faqat haqiqatan sotuvda bo'lgan (tasdiqlangan, yashirilmagan)
             // mahsulotlar qabul qilinadi — mijoz brauzerdan yuborgan

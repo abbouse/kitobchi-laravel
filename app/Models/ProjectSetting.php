@@ -44,6 +44,7 @@ class ProjectSetting extends Model
         'ai_bot_extra_notes',
         // Flash delivery — kunlik bepul yetkazish aksiyasi
         'flash_delivery_enabled',
+        'cash_on_delivery_enabled',
         'flash_delivery_start_time',
         'flash_delivery_duration',
         'flash_delivery_promo_code',
@@ -80,6 +81,7 @@ class ProjectSetting extends Model
         'review_cashback_amount' => 'integer',
         // Flash delivery
         'flash_delivery_enabled'  => 'boolean',
+        'cash_on_delivery_enabled' => 'boolean',
         'flash_delivery_duration' => 'integer',
     ];
 
