@@ -5556,9 +5556,9 @@
     "semantic_hash": ""
   },
   "web/components/AppHeader.vue": {
-    "mtime": 1792514999.2439935,
-    "seen": 1792515130.779367,
-    "ast_hash": "1c7a19d895dfdeafa21ba3d563568e3d",
+    "mtime": 1792575593.7362852,
+    "seen": 1792597686.095662,
+    "ast_hash": "2bca1bfcba3014a41e4792a6eed1733e",
     "semantic_hash": ""
   },
   "web/components/AuthModal.vue": {
@@ -5706,9 +5706,9 @@
     "semantic_hash": "9dbc8afcbc42c8aa949187f93a08d48f"
   },
   "web/pages/books/[id].vue": {
-    "mtime": 1792574813.7362247,
-    "seen": 1792574852.713015,
-    "ast_hash": "1fc72cd881fe051cba2342a78373683e",
+    "mtime": 1792595906.0688639,
+    "seen": 1792597686.0956821,
+    "ast_hash": "390adde2508120c1f92477c89180c4d2",
     "semantic_hash": ""
   },
   "web/pages/cart/index.vue": {
@@ -5730,9 +5730,9 @@
     "semantic_hash": ""
   },
   "web/pages/checkout/index.vue": {
-    "mtime": 1792573743.031348,
-    "seen": 1792574318.159984,
-    "ast_hash": "933d72e3d0faf2e9ab1159e1273ac8cc",
+    "mtime": 1792595748.41769,
+    "seen": 1792597686.095684,
+    "ast_hash": "b26a787bfb1c4c508a334cdfe7fbb1b8",
     "semantic_hash": ""
   },
   "web/pages/contacts.vue": {
@@ -8490,9 +8490,9 @@
     "semantic_hash": ""
   },
   "web/components/AiMatchModal.vue": {
-    "mtime": 1792570233.9655192,
-    "seen": 1792570619.622298,
-    "ast_hash": "73a2db58d5b3cd8a23aa58e16b382138",
+    "mtime": 1792595944.717467,
+    "seen": 1792597686.095658,
+    "ast_hash": "4e025d7bbcab8de57895429facc78a0c",
     "semantic_hash": ""
   },
   "web/components/ProductVideoModal.vue": {
