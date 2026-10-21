@@ -112,6 +112,11 @@ Route::prefix('share')->group(function () {
 // h.k. — boshqaruv panelida Policy sifatida yaratiladi) va Karyera/
 // Vakansiyalar (boshqaruvda Vacancy sifatida yaratiladi). Kontent bu yerda
 // fabrikatsiya qilinmaydi — faqat mavjud, faol yozuvlar chiqariladi.
+// Shartnoma namunalari (boshqaruv → Shartnomalar): bugungi sana bilan .docx
+Route::prefix('contracts')->middleware('throttle:30,1')->group(function () {
+    Route::get('/', [\App\Http\Controllers\Api\ContractController::class, 'index']);
+    Route::get('{slug}/download', [\App\Http\Controllers\Api\ContractController::class, 'download'])->where('slug', '[a-z0-9-]+');
+});
 Route::prefix('legal')->group(function () {
     Route::get('/', [LegalController::class, 'index']);
     Route::get('{slug}', [LegalController::class, 'show']);

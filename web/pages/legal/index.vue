@@ -166,6 +166,46 @@
         </NuxtLink>
       </div>
 
+      <!-- Shartnoma namunalari: bugungi sana bilan Word fayl (boshqaruv → Shartnomalar) -->
+      <section v-if="contracts.length && (activeTab === 'all' || activeTab === 'partner')" class="mt-10" aria-labelledby="contracts-title">
+        <div class="flex items-end justify-between gap-4 mb-4">
+          <div>
+            <h2 id="contracts-title" class="text-xl sm:text-2xl font-extrabold text-neutral-900 tracking-tight m-0 mb-1">Shartnoma namunalari</h2>
+            <p class="text-sm text-neutral-500 m-0">Word (.docx) formatida — sana va to‘lov jadvali yuklab olingan kun bo‘yicha avtomatik to‘ldiriladi.</p>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
+          <div
+            v-for="c in contracts"
+            :key="c.slug"
+            class="bg-white rounded-3xl p-6 shadow-2xs flex flex-col justify-between gap-4"
+          >
+            <div class="flex items-start gap-4">
+              <div class="w-11 h-11 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m.75 12 3 3m0 0 3-3m-3 3v-6m-1.5-9H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                </svg>
+              </div>
+              <div class="min-w-0">
+                <h3 class="text-base sm:text-lg font-bold text-neutral-900 leading-snug m-0 mb-1">{{ c.title }}</h3>
+                <p class="text-xs sm:text-sm text-neutral-500 leading-relaxed m-0">{{ c.description }}</p>
+              </div>
+            </div>
+            <a
+              :href="`${config.public.apiBase}/v1/kitobchi/contracts/${c.slug}/download`"
+              class="self-start inline-flex items-center gap-2 h-10 px-4 rounded-2xl bg-neutral-100 hover:bg-neutral-200/80 text-neutral-900 text-sm font-semibold no-underline transition-colors"
+              rel="nofollow"
+              download
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+              </svg>
+              Word faylini yuklab olish
+            </a>
+          </div>
+        </div>
+      </section>
+
       <!-- Elegant Single-Line Bottom Note (No bulky marketing blocks) -->
       <div class="mt-10 p-5 sm:p-6 rounded-3xl bg-white border-none flex flex-col sm:flex-row items-center justify-between gap-4 shadow-2xs">
         <div class="flex items-center gap-3">
@@ -202,6 +242,12 @@ const { data, pending } = await useFetch<any>(`${config.public.apiBase}/v1/kitob
   key: 'legal-index-policies',
   lazy: false
 })
+
+const { data: contractsData } = await useFetch<any>(`${config.public.apiBase}/v1/kitobchi/contracts`, {
+  key: 'legal-index-contracts',
+  lazy: false,
+})
+const contracts = computed<any[]>(() => (contractsData.value?.status === 'success' ? contractsData.value.data || [] : []))
 
 const policies = computed(() => {
   if (data.value?.status !== 'success') return []

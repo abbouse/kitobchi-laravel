@@ -456,6 +456,12 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
             Route::patch('/siyosatlar/{policy}/toggle', [AdminController::class, 'togglePolicy'])->name('policies.toggle');
             Route::delete('/siyosatlar/{policy}', [AdminController::class, 'destroyPolicy'])->name('policies.destroy');
 
+            // Shartnoma namunalari: rekvizitlar, shartlar, hujjat yaratish
+            Route::get('/shartnomalar', [\App\Http\Controllers\Boshqaruv\ContractsController::class, 'index'])->name('shartnomalar');
+            Route::post('/shartnomalar/company', [\App\Http\Controllers\Boshqaruv\ContractsController::class, 'saveCompany'])->name('shartnomalar.company');
+            Route::post('/shartnomalar/{slug}/generate', [\App\Http\Controllers\Boshqaruv\ContractsController::class, 'generate'])->where('slug', '[a-z0-9-]+')->name('shartnomalar.generate');
+            Route::post('/shartnomalar/{slug}', [\App\Http\Controllers\Boshqaruv\ContractsController::class, 'saveTemplate'])->where('slug', '[a-z0-9-]+')->name('shartnomalar.save');
+
             Route::get('/api-clients', fn (AdminController $controller) => $controller->page('ApiClients'))->name('api-clients');
             Route::post('/api-clients', [AdminController::class, 'storeApiClient'])->name('api-clients.store');
             Route::put('/api-clients/{apiClient}', [AdminController::class, 'updateApiClient'])->name('api-clients.update');

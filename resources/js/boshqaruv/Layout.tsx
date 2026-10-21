@@ -87,6 +87,7 @@ const nav = [
   { group: 'Tizim va xavfsizlik', section: 'Jamoa va tizim', icon: 'ti-settings', ax: 'iconoir-settings', items: [
     { to: '/boshqaruv/security', match: '/boshqaruv/security', label: 'Kiberxavfsizlik & Server', icon: 'ti-shield-check', ax: 'iconoir-security-pass', perm: 'settings' },
     { to: '/boshqaruv/siyosatlar', match: '/boshqaruv/siyosatlar', label: 'Siyosatlar', icon: 'ti-file-text', perm: 'settings' },
+    { to: '/boshqaruv/shartnomalar', match: '/boshqaruv/shartnomalar', label: 'Shartnomalar', icon: 'ti-file-certificate', perm: 'settings' },
     { to: '/boshqaruv/api-clients', match: '/boshqaruv/api-clients', label: 'API mijozlar', icon: 'ti-code', perm: 'settings' },
     { to: '/boshqaruv/settings', match: '/boshqaruv/settings', label: 'Sozlamalar', icon: 'ti-settings', perm: 'settings' },
   ]},
