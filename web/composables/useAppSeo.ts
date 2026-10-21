@@ -176,9 +176,14 @@ export function useAppSeo() {
       // atama). Google review-snippet uchun ixtiyoriy, lekin mavjud
       // bo'lsa aggregateRating'ni haqiqiy matn bilan tasdiqlaydi.
       if (Array.isArray(options.reviews) && options.reviews.length > 0) {
-        productSchema.review = options.reviews.slice(0, 5).map((r) => ({
+        productSchema.review = options.reviews.slice(0, 5).map((r, rIdx) => ({
           '@type': 'Review',
-          author: { '@type': 'Person', name: r.author || 'Kitobxon' },
+          url: `${canonicalUrl}#review-${rIdx + 1}`,
+          author: {
+            '@type': 'Person',
+            name: r.author || 'Kitobxon',
+            url: canonicalUrl
+          },
           reviewRating: {
             '@type': 'Rating',
             ratingValue: String(r.rating && r.rating > 0 ? r.rating : 5),

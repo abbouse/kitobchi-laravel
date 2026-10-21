@@ -1232,16 +1232,24 @@ useSeoMeta({
 
 // Schema.org DiscussionForumPosting JSON-LD Structured Data
 const jsonLd = computed(() => {
+  const postUrl = `https://kitobchi.com/club/${post.value?.id || postId}`
+  const authorProfileUrl = post.value?.user?.id
+    ? `https://kitobchi.com/club/user/${post.value.user.id}`
+    : postUrl
+
   const schema: any = {
     '@context': 'https://schema.org',
     '@type': 'DiscussionForumPosting',
-    '@id': `https://kitobchi.com/club/${post.value?.id}`,
+    '@id': `${postUrl}#posting`,
+    url: postUrl,
+    mainEntityOfPage: postUrl,
     headline: postSnippet.value.slice(0, 100),
     articleBody: post.value?.text || '',
     datePublished: post.value?.created_at,
     author: {
       '@type': 'Person',
       name: authorName.value,
+      url: authorProfileUrl,
       image: post.value?.user?.avatar ? resolveImageUrl(post.value.user.avatar) : undefined
     },
     interactionStatistic: [
@@ -1256,15 +1264,23 @@ const jsonLd = computed(() => {
         userInteractionCount: totalCommentsCount.value
       }
     ],
-    comment: comments.value.map((c: any) => ({
-      '@type': 'Comment',
-      text: c.content,
-      dateCreated: c.created_at,
-      author: {
-        '@type': 'Person',
-        name: c.user?.name || 'Kitobxon'
+    comment: comments.value.map((c: any) => {
+      const commentAuthorUrl = c.user?.id
+        ? `https://kitobchi.com/club/user/${c.user.id}`
+        : (c.user_id ? `https://kitobchi.com/club/user/${c.user_id}` : postUrl)
+
+      return {
+        '@type': 'Comment',
+        url: `${postUrl}#comment-${c.id}`,
+        text: c.content,
+        dateCreated: c.created_at,
+        author: {
+          '@type': 'Person',
+          name: c.user?.name || 'Kitobxon',
+          url: commentAuthorUrl
+        }
       }
-    }))
+    })
   }
 
   if (linkedProduct.value) {
