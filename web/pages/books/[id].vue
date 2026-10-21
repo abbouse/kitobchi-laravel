@@ -1379,31 +1379,6 @@ const hasVideo = computed(() => {
   return Boolean(p.has_video || p.video || p.video_url)
 })
 
-// Real Split calculation from backend API
-const { data: splitRes } = useFetch<any>(
-  () => `${config.public.apiBase}/v1/kitobchi/split-preview`,
-  {
-    query: computed(() => ({
-      amount: currentPrice.value,
-      product_type: 'book',
-      product_id: product.value?.id || rawId.value
-    })),
-    watch: [() => currentPrice.value, () => product.value?.id],
-    lazy: true
-  }
-)
-
-const isSplitAvailable = computed(() => {
-  return Boolean(splitRes.value?.data?.enabled && splitPlans.value.length > 0)
-})
-
-const splitPlans = computed(() => {
-  return Array.isArray(splitRes.value?.data?.plans) ? splitRes.value.data.plans : []
-})
-
-const selectedSplitPlan = computed(() => {
-  return splitPlans.value[0] || null
-})
 
 // UGC Reviews
 const ugcList = ref<any[]>([])
@@ -1691,6 +1666,32 @@ const discountPercent = computed(() => {
 function formatPrice(val: number) {
   return (val || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
 }
+
+// Real Split calculation from backend API
+const { data: splitRes } = useFetch<any>(
+  () => `${config.public.apiBase}/v1/kitobchi/split-preview`,
+  {
+    query: computed(() => ({
+      amount: currentPrice.value,
+      product_type: 'book',
+      product_id: product.value?.id || rawId.value
+    })),
+    watch: [() => currentPrice.value, () => product.value?.id],
+    lazy: true
+  }
+)
+
+const isSplitAvailable = computed(() => {
+  return Boolean(splitRes.value?.data?.enabled && splitPlans.value.length > 0)
+})
+
+const splitPlans = computed(() => {
+  return Array.isArray(splitRes.value?.data?.plans) ? splitRes.value.data.plans : []
+})
+
+const selectedSplitPlan = computed(() => {
+  return splitPlans.value[0] || null
+})
 
 const isAdded = computed(() => {
   if (!product.value) return false
