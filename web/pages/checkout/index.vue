@@ -229,31 +229,22 @@
 
                 <!-- GUEST / NON-AUTH: Direct inline card inputs (one-time payment) -->
                 <div v-else class="p-4 sm:p-5 rounded-2xl bg-neutral-50/80 space-y-3.5">
-                  <div class="flex items-center justify-between gap-2">
+                  <div class="flex items-center gap-2">
                     <span class="text-xs font-bold uppercase tracking-wide text-neutral-600">Karta ma'lumotlari</span>
-                    <span class="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full flex items-center gap-1 shrink-0">
-                      <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                      Birmartalik to'lov (saqlanmaydi)
-                    </span>
                   </div>
 
                   <div>
                     <label class="block font-medium text-neutral-700 text-xs sm:text-sm mb-1.5">Karta raqami</label>
-                    <div class="relative">
-                      <input
-                        v-model="guestCard.number"
-                        @input="onGuestCardNumberInput"
-                        type="text"
-                        inputmode="numeric"
-                        autocomplete="cc-number"
-                        maxlength="19"
-                        placeholder="8600 0000 0000 0000"
-                        class="w-full appearance-none placeholder:text-neutral-400 text-neutral-900 font-mono tracking-wider focus:outline-none text-sm sm:text-base rounded-2xl h-12 px-4 pl-11 bg-white focus:bg-white border border-transparent focus:border-primary focus:ring-2 focus:ring-primary/15 transition-all shadow-2xs"
-                      >
-                      <div class="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none">
-                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
-                      </div>
-                    </div>
+                    <input
+                      v-model="guestCard.number"
+                      @input="onGuestCardNumberInput"
+                      type="text"
+                      inputmode="numeric"
+                      autocomplete="cc-number"
+                      maxlength="19"
+                      placeholder="8600 0000 0000 0000"
+                      class="w-full appearance-none placeholder:text-neutral-400 text-neutral-900 font-mono tracking-wider focus:outline-none text-sm sm:text-base rounded-2xl h-12 px-4 bg-white focus:bg-white border border-transparent focus:border-primary focus:ring-2 focus:ring-primary/15 transition-all shadow-2xs"
+                    >
                   </div>
 
                   <div class="grid grid-cols-2 gap-3">
@@ -285,9 +276,6 @@
                     </div>
                   </div>
 
-                  <p class="text-xs text-neutral-500 m-0 pt-1 leading-relaxed">
-                    Kartangiz Paylov tizimida saqlanmaydi va hisobingizga bog'lanmaydi. Mablag' faqat ushbu buyurtma uchun bir martalik yechib olinadi.
-                  </p>
                 </div>
               </div>
             </div>
@@ -301,7 +289,7 @@
               <div class="space-y-3 text-sm">
                 <div class="flex justify-between items-center text-neutral-600">
                   <span>Mahsulotlar ({{ cartStore.selectedCount }} ta)</span>
-                  <span class="text-neutral-900 font-semibold">{{ formatPrice(cartStore.totalAmount) }} so'm</span>
+                  <span class="text-neutral-900 font-semibold">{{ formatPrice(cartStore.originalTotalAmount) }} so'm</span>
                 </div>
                 <div v-if="cartStore.totalDiscount > 0" class="flex justify-between items-center text-neutral-600">
                   <span>Chegirma</span>
@@ -317,7 +305,7 @@
 
               <div class="pt-4 border-t border-neutral-100 flex justify-between items-baseline">
                 <span class="text-base font-bold text-neutral-900">Jami to'lov</span>
-                <span class="text-2xl font-extrabold text-primary">{{ formatPrice(cartStore.totalAmount - cartStore.totalDiscount + deliveryPrice) }} so'm</span>
+                <span class="text-2xl font-extrabold text-primary">{{ formatPrice(cartStore.totalAmount + deliveryPrice) }} so'm</span>
               </div>
 
               <!-- Error message if any -->
@@ -696,6 +684,7 @@ const selectedDeliveryService = computed(() =>
 const deliveryPrice = computed(() => Number(selectedDeliveryService.value?.calculated_price || 0))
 
 async function fetchCheckoutInfo() {
+  if (!authStore.isAuthenticated) return
   try {
     const res: any = await $fetch(`${config.public.apiBase}/v1/kitobchi/purchase/getCartCheckoutInfo`, {
       headers: authHeaders.value
@@ -1056,19 +1045,21 @@ async function executeOrderSubmission() {
       return
     }
 
+    // 1. Avval savatdagi tanlangan mahsulotlarni serverga yozamiz
+    const selectedCartIds = await syncCartToServer()
+    if (selectedCartIds.length === 0) {
+      orderError.value = "Savatcha bo'sh"
+      snackbar.showWarning("Savatchada mahsulot topilmadi")
+      return
+    }
+
+    // 2. Server savati to'lgandan keyin yetkazib berish xizmatini olib kelamiz
     if (deliveryServices.value.length === 0) {
       await fetchCheckoutInfo()
     }
     if (!selectedDeliveryServiceId.value) {
       orderError.value = "Bu manzil uchun yetkazib berish xizmati topilmadi"
       snackbar.showError(orderError.value)
-      return
-    }
-
-    const selectedCartIds = await syncCartToServer()
-    if (selectedCartIds.length === 0) {
-      orderError.value = "Savatcha bo'sh"
-      snackbar.showWarning("Savatchada mahsulot topilmadi")
       return
     }
 
@@ -1141,13 +1132,22 @@ function finishOrder() {
   router.push('/')
 }
 
-onMounted(() => {
-  if (cartStore.selectedCount === 0) {
+onMounted(async () => {
+  if (cartStore.selectedCount === 0 && cartStore.items.length === 0) {
     router.push('/cart')
+    return
   }
   if (authStore.isAuthenticated) {
-    fetchAddresses()
+    await fetchAddresses()
     fetchCards()
+    if (cartStore.selectedCount > 0) {
+      try {
+        await syncCartToServer()
+        await fetchCheckoutInfo()
+      } catch (e) {
+        // Buyurtma yuborishda qayta tekshiriladi
+      }
+    }
   } else {
     addressesLoading.value = false
   }

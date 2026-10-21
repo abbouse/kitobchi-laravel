@@ -81,18 +81,22 @@
                 Avvalgi xaridlaringiz va <span class="font-semibold text-neutral-700">{{ categoryName }}</span> yo'nalishiga qiziqishingiz asosida tavsiya qilyapmiz.
               </template>
               <template v-else>
-                Ushbu asarning mavzusi, janri va kitobxonlar fikrlari asosida sun'iy intellekt tomonidan baholandi.
+                Bu kitob <span class="font-semibold text-neutral-700">{{ categoryName }}</span> yo'nalishida bo'lib, umumiy kitobxonlar baholovi asosida baholandi. <span class="italic text-neutral-400">Shaxsiy tahlil uchun ro'yxatdan o'ting.</span>
               </template>
             </p>
 
-            <div v-if="!authStore.isAuthenticated" class="mt-3">
+            <!-- Guest uchun teaser xabari -->
+            <div v-if="!authStore.isAuthenticated" class="mt-3 w-full max-w-sm bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3 text-center">
+              <p class="text-xs text-neutral-700 leading-relaxed m-0">
+                💡 <span class="font-semibold text-primary">Siz ham ro'yxatdan o'tganingizda</span> xaridlaringiz va qiziqishlaringizga asoslangan shunday shaxsiy tahlil tuzib berar edik!
+              </p>
               <button
                 type="button"
                 @click="openAuth"
-                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 hover:bg-blue-100 text-primary text-xs font-semibold transition-colors border-none cursor-pointer"
+                class="mt-2.5 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary hover:bg-primary/90 text-white text-xs font-bold transition-colors border-none cursor-pointer shadow-sm"
               >
                 <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/></svg>
-                Shaxsiy tahlil uchun kiring
+                Bepul ro'yxatdan o'tish
               </button>
             </div>
           </div>
@@ -163,13 +167,23 @@
             <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
             Kitobchi AI neyrotarmog'i tahlili
           </div>
-          <button
-            type="button"
-            @click="close"
-            class="px-4 py-1.5 rounded-xl bg-white hover:bg-neutral-100 text-neutral-800 font-semibold shadow-xs transition-colors border-none cursor-pointer"
-          >
-            Tushunarli
-          </button>
+          <div class="flex items-center gap-2">
+            <button
+              v-if="!authStore.isAuthenticated"
+              type="button"
+              @click="openAuth"
+              class="px-4 py-1.5 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold shadow-xs transition-colors border-none cursor-pointer text-xs"
+            >
+              Ro'yxatdan o'tish
+            </button>
+            <button
+              type="button"
+              @click="close"
+              class="px-4 py-1.5 rounded-xl bg-white hover:bg-neutral-100 text-neutral-800 font-semibold shadow-xs transition-colors border-none cursor-pointer"
+            >
+              {{ authStore.isAuthenticated ? 'Tushunarli' : 'Yopish' }}
+            </button>
+          </div>
         </div>
       </div>
     </div>

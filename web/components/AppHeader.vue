@@ -105,28 +105,65 @@
               <button
                 type="button"
                 @click="isLangOpen = !isLangOpen"
-                class="h-10 px-2.5 rounded-full flex items-center gap-1.5 transition-colors cursor-pointer border-none bg-transparent text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900 text-sm"
+                :aria-expanded="isLangOpen"
+                aria-haspopup="true"
+                class="h-10 px-3 rounded-full flex items-center gap-2 transition-all cursor-pointer border border-transparent hover:border-neutral-200 text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900 text-sm font-medium select-none"
+                :class="isLangOpen ? 'bg-neutral-100 text-neutral-900 border-neutral-200 shadow-2xs' : ''"
               >
-                <i class="icon-globe text-base text-neutral-500"></i>
+                <span class="text-base leading-none">{{ currentLocaleFlag }}</span>
                 <span class="max-lg:hidden leading-none">{{ localeLabel }}</span>
+                <svg
+                  class="w-3.5 h-3.5 text-neutral-400 transition-transform duration-200"
+                  :class="isLangOpen ? 'rotate-180 text-neutral-700' : ''"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                </svg>
               </button>
 
-              <div
-                v-if="isLangOpen"
-                class="absolute z-30 top-full right-0 mt-1.5 w-40 rounded-2xl bg-white shadow-lg border border-neutral-150 py-1.5"
+              <Transition
+                enter-active-class="transition duration-150 ease-out"
+                enter-from-class="transform scale-95 opacity-0 -translate-y-1"
+                enter-to-class="transform scale-100 opacity-100 translate-y-0"
+                leave-active-class="transition duration-100 ease-in"
+                leave-from-class="transform scale-100 opacity-100 translate-y-0"
+                leave-to-class="transform scale-95 opacity-0 -translate-y-1"
               >
-                <button
-                  v-for="opt in availableLocales"
-                  :key="opt.code"
-                  type="button"
-                  @click="selectLocale(opt.code)"
-                  class="w-full flex items-center justify-between gap-2 px-3.5 py-2 text-xs font-medium text-left bg-transparent border-none cursor-pointer hover:bg-neutral-50 transition-colors"
-                  :class="locale === opt.code ? 'text-primary font-semibold' : 'text-neutral-700'"
+                <div
+                  v-if="isLangOpen"
+                  class="absolute z-50 top-full right-0 mt-2 w-48 rounded-2xl bg-white shadow-xl border border-neutral-100 p-1.5 focus:outline-none"
+                  role="menu"
                 >
-                  {{ opt.label }}
-                  <svg v-if="locale === opt.code" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
-                </button>
-              </div>
+                  <div class="px-3 py-1.5 text-[11px] font-bold text-neutral-400 uppercase tracking-wider">
+                    Tilni tanlang
+                  </div>
+                  <button
+                    v-for="opt in availableLocalesWithMeta"
+                    :key="opt.code"
+                    type="button"
+                    @click="selectLocale(opt.code)"
+                    role="menuitem"
+                    class="w-full flex items-center justify-between gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-left transition-all border-none cursor-pointer"
+                    :class="locale === opt.code ? 'bg-blue-50/80 text-primary font-bold' : 'text-neutral-700 hover:bg-neutral-50 hover:text-neutral-900'"
+                  >
+                    <div class="flex items-center gap-2.5">
+                      <span class="text-base leading-none">{{ opt.flag }}</span>
+                      <span>{{ opt.label }}</span>
+                    </div>
+                    <svg
+                      v-if="locale === opt.code"
+                      class="w-4 h-4 text-primary shrink-0"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd" />
+                    </svg>
+                  </button>
+                </div>
+              </Transition>
             </div>
 
             <!-- Profile / Login -->
@@ -156,15 +193,64 @@
         </div>
 
         <!-- Mobile Header -->
-        <div class="md:hidden">
+        <div class="md:hidden flex items-center gap-2">
           <button
             type="button"
             @click="searchStore.open()"
-            class="h-11 px-4 rounded-full bg-neutral-100 text-neutral-400 flex items-center gap-2.5 w-full border border-neutral-200/50 cursor-pointer text-left transition-colors"
+            class="h-11 px-4 rounded-full bg-neutral-100 text-neutral-400 flex items-center gap-2.5 flex-1 border border-neutral-200/50 cursor-pointer text-left transition-colors"
           >
             <i class="icon-search text-lg text-neutral-400 shrink-0"></i>
             <span class="flex-1 text-sm text-neutral-500 truncate m-0 p-0">{{ t('search_placeholder_mobile') }}</span>
           </button>
+
+          <!-- Mobile Lang Selector -->
+          <div ref="mobileLangRootRef" class="relative shrink-0">
+            <button
+              type="button"
+              @click="isMobileLangOpen = !isMobileLangOpen"
+              class="h-11 px-3 rounded-full bg-neutral-100 hover:bg-neutral-200/70 text-neutral-800 flex items-center gap-1.5 border border-neutral-200/50 cursor-pointer text-xs font-semibold"
+              aria-label="Tilni tanlash"
+            >
+              <span class="text-base leading-none">{{ currentLocaleFlag }}</span>
+              <span class="uppercase text-[11px] font-bold text-neutral-700">{{ locale }}</span>
+            </button>
+
+            <Transition
+              enter-active-class="transition duration-150 ease-out"
+              enter-from-class="transform scale-95 opacity-0 -translate-y-1"
+              enter-to-class="transform scale-100 opacity-100 translate-y-0"
+              leave-active-class="transition duration-100 ease-in"
+              leave-from-class="transform scale-100 opacity-100 translate-y-0"
+              leave-to-class="transform scale-95 opacity-0 -translate-y-1"
+            >
+              <div
+                v-if="isMobileLangOpen"
+                class="absolute z-50 top-full right-0 mt-2 w-44 rounded-2xl bg-white shadow-xl border border-neutral-100 p-1.5 focus:outline-none"
+              >
+                <button
+                  v-for="opt in availableLocalesWithMeta"
+                  :key="'mob-' + opt.code"
+                  type="button"
+                  @click="selectMobileLocale(opt.code)"
+                  class="w-full flex items-center justify-between gap-2.5 px-3 py-2.5 rounded-xl text-xs font-medium text-left transition-all border-none cursor-pointer"
+                  :class="locale === opt.code ? 'bg-blue-50/80 text-primary font-bold' : 'text-neutral-700 hover:bg-neutral-50 hover:text-neutral-900'"
+                >
+                  <div class="flex items-center gap-2">
+                    <span class="text-base leading-none">{{ opt.flag }}</span>
+                    <span>{{ opt.label }}</span>
+                  </div>
+                  <svg
+                    v-if="locale === opt.code"
+                    class="w-4 h-4 text-primary shrink-0"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd" />
+                  </svg>
+                </button>
+              </div>
+            </Transition>
+          </div>
         </div>
       </div>
     </header>
@@ -188,14 +274,39 @@ const authStore = useAuthStore()
 const searchStore = useSearchStore()
 const { locale, localeLabel, availableLocales, setLocale, t } = useLocale()
 
+const LOCALE_FLAGS: Record<AppLocale, string> = {
+  uz: '🇺🇿',
+  ru: '🇷🇺',
+  en: '🇬🇧',
+  ja: '🇯🇵'
+}
+
+const currentLocaleFlag = computed(() => LOCALE_FLAGS[locale.value as AppLocale] || '🌐')
+
+const availableLocalesWithMeta = computed(() => {
+  return availableLocales.map(l => ({
+    ...l,
+    flag: LOCALE_FLAGS[l.code as AppLocale] || '🌐'
+  }))
+})
+
 const isCatalogOpen = ref(false)
 const isLangOpen = ref(false)
+const isMobileLangOpen = ref(false)
 const langRootRef = ref<HTMLElement | null>(null)
+const mobileLangRootRef = ref<HTMLElement | null>(null)
+
 onClickOutside(langRootRef, () => { isLangOpen.value = false })
+onClickOutside(mobileLangRootRef, () => { isMobileLangOpen.value = false })
 
 function selectLocale(code: AppLocale) {
   setLocale(code)
   isLangOpen.value = false
+}
+
+function selectMobileLocale(code: AppLocale) {
+  setLocale(code)
+  isMobileLangOpen.value = false
 }
 
 const isHomePage = computed(() => route.path === '/')

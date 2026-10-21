@@ -354,10 +354,10 @@
     "semantic_hash": "69d8133099b62784c43d176a0e3f0fe2"
   },
   "app/Events/MessageSent.php": {
-    "mtime": 1790601470.59588,
-    "seen": 1790601768.517277,
-    "ast_hash": "f6f0d81df49246ca7ce593a956ba75d7",
-    "semantic_hash": "f6f0d81df49246ca7ce593a956ba75d7"
+    "mtime": 1792569115.464413,
+    "seen": 1792569588.667767,
+    "ast_hash": "f42c28eb6fdae3ac177469ec8718f5f0",
+    "semantic_hash": ""
   },
   "app/Events/MessagesRead.php": {
     "mtime": 1790601470.5944583,
@@ -720,9 +720,9 @@
     "semantic_hash": ""
   },
   "app/Http/Controllers/Api/ChatController.php": {
-    "mtime": 1792271044.2406182,
-    "seen": 1792513290.5184782,
-    "ast_hash": "0efbb9664dc067cb00bb4b61bc518b8f",
+    "mtime": 1792569115.9155507,
+    "seen": 1792569588.667802,
+    "ast_hash": "73bccf7d95e4f7f64a75174559c8d360",
     "semantic_hash": ""
   },
   "app/Http/Controllers/Api/Client/SellerApiController.php": {
@@ -1068,9 +1068,9 @@
     "semantic_hash": "42517d7dc7e3d0d3045b06ed842b565e"
   },
   "app/Http/Controllers/Developers/ApiDocsController.php": {
-    "mtime": 1792526725.5525622,
-    "seen": 1792527107.1782012,
-    "ast_hash": "40262466b6a7a0fe757ea84ec6c1d767",
+    "mtime": 1792569055.3100128,
+    "seen": 1792569588.6678479,
+    "ast_hash": "00c0b1c8a975f02ad3135f8839097ed0",
     "semantic_hash": ""
   },
   "app/Http/Controllers/HubDesk/AuthController.php": {
@@ -3000,8 +3000,8 @@
     "semantic_hash": "b7b09d68f8893547a7e5fbd5207fc8fa"
   },
   "config/fcm.php": {
-    "mtime": 1792241633.930928,
-    "seen": 1792241651.095576,
+    "mtime": 1792573472.8086157,
+    "seen": 1792574318.159622,
     "ast_hash": "5ba2ac32c04d161d99057e23212f34b1",
     "semantic_hash": "5ba2ac32c04d161d99057e23212f34b1"
   },
@@ -5592,9 +5592,9 @@
     "semantic_hash": ""
   },
   "web/components/CatalogSortDropdown.vue": {
-    "mtime": 1792527036.027484,
-    "seen": 1792527107.178741,
-    "ast_hash": "3f7fb5e8960e91f6231dfbd595cdfeaf",
+    "mtime": 1792569057.2106888,
+    "seen": 1792569588.668428,
+    "ast_hash": "0526152786c98d2f879c27352e85f5ca",
     "semantic_hash": ""
   },
   "web/components/FaqAccordion.vue": {
@@ -5610,16 +5610,16 @@
     "semantic_hash": ""
   },
   "web/components/ProductCard.vue": {
-    "mtime": 1789927104.9868665,
-    "seen": 1789927361.18732,
-    "ast_hash": "74416d369cbb6a3e0c2a9a8352150165",
+    "mtime": 1792570273.464306,
+    "seen": 1792570619.62231,
+    "ast_hash": "2b3c1c1a9f780709a8686ba85f78cd17",
     "semantic_hash": ""
   },
   "web/components/ProductCardSkeleton.vue": {
-    "mtime": 1787049832.5143454,
-    "seen": 1787659299.020607,
-    "ast_hash": "56b4fec6dbbaeb88be513ea03f10472b",
-    "semantic_hash": "56b4fec6dbbaeb88be513ea03f10472b"
+    "mtime": 1792569088.200203,
+    "seen": 1792569588.6684318,
+    "ast_hash": "0adff3de3f4e50eb2b620a2479a7037e",
+    "semantic_hash": ""
   },
   "web/components/ProductReviews.vue": {
     "mtime": 1788190586.0727172,
@@ -5646,9 +5646,9 @@
     "semantic_hash": ""
   },
   "web/composables/useAppSeo.ts": {
-    "mtime": 1787775060.8414395,
-    "seen": 1787776850.848674,
-    "ast_hash": "87fc7224ac91f2f1d1396dac8fdb981b",
+    "mtime": 1792571709.4176245,
+    "seen": 1792571723.931629,
+    "ast_hash": "c1f396828e2d71c1c0cbb63ce578af1d",
     "semantic_hash": ""
   },
   "web/composables/useBookFilterLabels.ts": {
@@ -5682,9 +5682,9 @@
     "semantic_hash": "a0c824259e15552b50c3830fbd45c87a"
   },
   "web/layouts/default.vue": {
-    "mtime": 1792522910.4651237,
-    "seen": 1792523096.972029,
-    "ast_hash": "d138dbdd525f82aeb846b3f9768c70f4",
+    "mtime": 1792573687.5742779,
+    "seen": 1792574318.15998,
+    "ast_hash": "e1f499a196bf3872173cf4da1b7c8c06",
     "semantic_hash": ""
   },
   "web/nuxt.config.ts": {
@@ -5706,15 +5706,15 @@
     "semantic_hash": "9dbc8afcbc42c8aa949187f93a08d48f"
   },
   "web/pages/books/[id].vue": {
-    "mtime": 1792511143.8235917,
-    "seen": 1792513290.519159,
-    "ast_hash": "b2eeacd70e1c4feb754fd1df8c8b048d",
+    "mtime": 1792574813.7362247,
+    "seen": 1792574852.713015,
+    "ast_hash": "1fc72cd881fe051cba2342a78373683e",
     "semantic_hash": ""
   },
   "web/pages/cart/index.vue": {
-    "mtime": 1792521819.8302035,
-    "seen": 1792521860.010991,
-    "ast_hash": "7a8676284c17efd909b6f3defe88ad1a",
+    "mtime": 1792569005.6908648,
+    "seen": 1792569588.668442,
+    "ast_hash": "ad5b132dde6921625a662f9c742b0a7a",
     "semantic_hash": ""
   },
   "web/pages/catalog/index.vue": {
@@ -5724,27 +5724,27 @@
     "semantic_hash": ""
   },
   "web/pages/category/[slug].vue": {
-    "mtime": 1789929359.4491036,
-    "seen": 1789929417.258944,
-    "ast_hash": "8971546068fed7e59d33248cd6a8c669",
+    "mtime": 1792572390.3563154,
+    "seen": 1792572433.790281,
+    "ast_hash": "1258e1a4fa52894940991b97f723bdfc",
     "semantic_hash": ""
   },
   "web/pages/checkout/index.vue": {
-    "mtime": 1792526466.4694831,
-    "seen": 1792526521.706903,
-    "ast_hash": "89d56fe68e0e5e091dc9366262516f40",
+    "mtime": 1792573743.031348,
+    "seen": 1792574318.159984,
+    "ast_hash": "933d72e3d0faf2e9ab1159e1273ac8cc",
     "semantic_hash": ""
   },
   "web/pages/contacts.vue": {
-    "mtime": 1789929359.6909616,
-    "seen": 1789929417.258945,
-    "ast_hash": "2d9d6180bf405461704367fadabf5764",
+    "mtime": 1792569246.7590923,
+    "seen": 1792569588.668446,
+    "ast_hash": "37c0753a615d78877efac0b5865adf18",
     "semantic_hash": ""
   },
   "web/pages/faq.vue": {
-    "mtime": 1789929359.6846943,
-    "seen": 1789929417.258946,
-    "ast_hash": "331dbf935f5d0706267c2d8ebe3c5a5f",
+    "mtime": 1792569259.8551395,
+    "seen": 1792569588.668447,
+    "ast_hash": "e7d936fe18593f7e62b1ba17280735ce",
     "semantic_hash": ""
   },
   "web/pages/favorites/index.vue": {
@@ -5826,9 +5826,9 @@
     "semantic_hash": "5d5c5d02e6bcba603be717c959922f6e"
   },
   "web/pages/stationery/[id].vue": {
-    "mtime": 1792004814.6763487,
-    "seen": 1792004873.5768268,
-    "ast_hash": "2b8948af9cba5893a8ee9a82fe518ff6",
+    "mtime": 1792570568.413672,
+    "seen": 1792570619.622337,
+    "ast_hash": "3a04e9c02b0d0dfb7965c764c198385c",
     "semantic_hash": ""
   },
   "web/pages/vacancies/[id].vue": {
@@ -6696,9 +6696,9 @@
     "semantic_hash": ""
   },
   "web/pages/legal/index.vue": {
-    "mtime": 1792522335.7676017,
-    "seen": 1792522366.728989,
-    "ast_hash": "d615c60ec010a44eb320ea02d046c979",
+    "mtime": 1792569215.6569533,
+    "seen": 1792569588.66845,
+    "ast_hash": "886f4e71cfa88b960a738001796f8224",
     "semantic_hash": ""
   },
   "resources/css/axelit/tools/icons.py": {
@@ -8046,9 +8046,9 @@
     "semantic_hash": ""
   },
   "web/components/BookClubCard.vue": {
-    "mtime": 1792519295.6058877,
-    "seen": 1792519413.388468,
-    "ast_hash": "10065bbeb8c5b1732c6c7e485b1ccf83",
+    "mtime": 1792572735.621697,
+    "seen": 1792573197.439848,
+    "ast_hash": "0c0d193a3d6e12ccbee85ee3aa83f713",
     "semantic_hash": ""
   },
   "web/components/HomeBookClubSection.vue": {
@@ -8058,15 +8058,15 @@
     "semantic_hash": ""
   },
   "web/pages/club/[id].vue": {
-    "mtime": 1792525732.3941545,
-    "seen": 1792526521.7069042,
-    "ast_hash": "61691eea7736e81175636b1ab33905aa",
+    "mtime": 1792572797.79126,
+    "seen": 1792573197.439869,
+    "ast_hash": "3caf35d79540913651a9b669b403da2b",
     "semantic_hash": ""
   },
   "web/pages/club/index.vue": {
-    "mtime": 1792521070.1110487,
-    "seen": 1792521184.778524,
-    "ast_hash": "56384af7e354f35e8100ed138593647e",
+    "mtime": 1792572756.7012475,
+    "seen": 1792573197.4398699,
+    "ast_hash": "67066714bbb078cf829e5a0bca3ad385",
     "semantic_hash": ""
   },
   "web/components/ImageGalleryModal.vue": {
@@ -8082,9 +8082,9 @@
     "semantic_hash": ""
   },
   "web/pages/club/user/[id].vue": {
-    "mtime": 1792521031.9392333,
-    "seen": 1792521184.7785249,
-    "ast_hash": "0dab05989abfcf4e8e06faba5cbfc80d",
+    "mtime": 1792569127.798617,
+    "seen": 1792569588.668446,
+    "ast_hash": "7195345089bc0b3848696d36cb349993",
     "semantic_hash": ""
   },
   "web/components/AppEmoji.vue": {
@@ -8244,15 +8244,15 @@
     "semantic_hash": ""
   },
   "app/Console/Commands/KitobchiIdPrune.php": {
-    "mtime": 1792526830.2342925,
-    "seen": 1792527107.178091,
-    "ast_hash": "a374fea741386bf48e6b5b0f7e78133b",
+    "mtime": 1792569115.059398,
+    "seen": 1792569588.667731,
+    "ast_hash": "5e65bf10b5cc7d941960f0ccf2be6d88",
     "semantic_hash": ""
   },
   "app/Http/Controllers/KitobchiId/AuthorizeController.php": {
-    "mtime": 1792526830.6271956,
-    "seen": 1792527107.1782038,
-    "ast_hash": "df843dda7af43b192b00ca25f65db1e6",
+    "mtime": 1792569116.3166003,
+    "seen": 1792569588.667849,
+    "ast_hash": "62805cac9335d2f07d9f3b587e6c8a0e",
     "semantic_hash": ""
   },
   "app/Http/Controllers/KitobchiId/TokenController.php": {
@@ -8298,9 +8298,9 @@
     "semantic_hash": ""
   },
   "app/Services/KitobchiId/OtpService.php": {
-    "mtime": 1792526833.92113,
-    "seen": 1792527107.1783628,
-    "ast_hash": "2667efa2e671af414f2c54cfc903bf2a",
+    "mtime": 1792569118.0652823,
+    "seen": 1792569588.668021,
+    "ast_hash": "81026dd0080b48d4799317f722d66034",
     "semantic_hash": ""
   },
   "app/Services/KitobchiId/TokenService.php": {
@@ -8310,9 +8310,9 @@
     "semantic_hash": ""
   },
   "config/kitobchi_id.php": {
-    "mtime": 1792526834.7395546,
-    "seen": 1792527107.178429,
-    "ast_hash": "d8bfa33645221bff1e72b9dd74e4b520",
+    "mtime": 1792569118.903753,
+    "seen": 1792569588.6680908,
+    "ast_hash": "a3ab9011e4306be976c698793ff41b55",
     "semantic_hash": ""
   },
   "database/migrations/2026_10_21_100000_create_kitobchi_id_tables.php": {
@@ -8328,21 +8328,21 @@
     "semantic_hash": ""
   },
   "resources/views/developers/kitobchi-id/integration.blade.php": {
-    "mtime": 1792526839.1843958,
-    "seen": 1792527107.178656,
-    "ast_hash": "ca439586ccc0403cfd5dee224636de23",
+    "mtime": 1792569119.9021978,
+    "seen": 1792569588.668331,
+    "ast_hash": "83043f8f1d32920d753bcad0ddea1530",
     "semantic_hash": ""
   },
   "resources/views/developers/kitobchi-id/overview.blade.php": {
-    "mtime": 1792526839.6022465,
-    "seen": 1792527107.178657,
-    "ast_hash": "2422dfe2869c3f4327f226b3c64706f9",
+    "mtime": 1792569120.2720494,
+    "seen": 1792569588.668332,
+    "ast_hash": "052d2f5b2930b127877feab5710bc0e6",
     "semantic_hash": ""
   },
   "resources/views/developers/kitobchi-id/security.blade.php": {
-    "mtime": 1792526840.0015283,
-    "seen": 1792527107.178657,
-    "ast_hash": "f69539598b09f2a4b81b01b1c19e3729",
+    "mtime": 1792569120.71492,
+    "seen": 1792569588.668333,
+    "ast_hash": "235bcbf38d3c08faeb2a10a2c60bf27b",
     "semantic_hash": ""
   },
   "resources/views/kitobchi-id/_app.blade.php": {
@@ -8382,15 +8382,15 @@
     "semantic_hash": ""
   },
   "resources/views/kitobchi-id/login.blade.php": {
-    "mtime": 1792526842.8546677,
-    "seen": 1792527107.178665,
-    "ast_hash": "87c0e0f73dab5d1d3ca3db8c104b95f2",
+    "mtime": 1792569121.232048,
+    "seen": 1792569588.668342,
+    "ast_hash": "21c6e321c5d33306cca312c62c98985b",
     "semantic_hash": ""
   },
   "routes/kitobchi_id_api.php": {
-    "mtime": 1792526843.261937,
-    "seen": 1792527107.1786869,
-    "ast_hash": "907a64172f16de2159526d470e6d54c2",
+    "mtime": 1792569121.6815794,
+    "seen": 1792569588.668364,
+    "ast_hash": "1b556182e4cce7a22bd380a89e7145b0",
     "semantic_hash": ""
   },
   "routes/kitobchi_id_web.php": {
@@ -8451,6 +8451,66 @@
     "mtime": 1792528695.904434,
     "seen": 1792528744.031775,
     "ast_hash": "439ac7e84b2f40eb941099d6157b035e",
+    "semantic_hash": ""
+  },
+  "app/Http/Controllers/KitobchiId/NativeLoginController.php": {
+    "mtime": 1792569116.725878,
+    "seen": 1792569588.66785,
+    "ast_hash": "b891fc25f988d0aa30cba94cc3e8664a",
+    "semantic_hash": ""
+  },
+  "app/Models/KitobchiId/IdCodeDelivery.php": {
+    "mtime": 1792569117.134339,
+    "seen": 1792569588.6679392,
+    "ast_hash": "3f253ab22d9e3ce2f8ef55f75703a069",
+    "semantic_hash": ""
+  },
+  "app/Services/KitobchiId/AppCodeChannel.php": {
+    "mtime": 1792569117.649147,
+    "seen": 1792569588.668019,
+    "ast_hash": "8aee804828435768c50c1200d7240421",
+    "semantic_hash": ""
+  },
+  "app/Services/KitobchiId/PhoneAccounts.php": {
+    "mtime": 1792569118.4420033,
+    "seen": 1792569588.668021,
+    "ast_hash": "63604437934e046e94344fa16847c5ed",
+    "semantic_hash": ""
+  },
+  "database/migrations/2026_10_22_100000_create_id_code_deliveries_table.php": {
+    "mtime": 1792569119.3898683,
+    "seen": 1792569588.668225,
+    "ast_hash": "1545ae9fd62d7c7fb7fd4fe26d38711f",
+    "semantic_hash": ""
+  },
+  "tests/Feature/KitobchiIdAppDeliveryTest.php": {
+    "mtime": 1792569122.2567558,
+    "seen": 1792569588.6683981,
+    "ast_hash": "469f94f80694d3587ebe54039b62c4cb",
+    "semantic_hash": ""
+  },
+  "web/components/AiMatchModal.vue": {
+    "mtime": 1792570233.9655192,
+    "seen": 1792570619.622298,
+    "ast_hash": "73a2db58d5b3cd8a23aa58e16b382138",
+    "semantic_hash": ""
+  },
+  "web/components/ProductVideoModal.vue": {
+    "mtime": 1792570257.3978915,
+    "seen": 1792570619.622313,
+    "ast_hash": "48838141f9d55aab4b8514fc19fc1fd7",
+    "semantic_hash": ""
+  },
+  "web/components/AppSnackbar.vue": {
+    "mtime": 1792573674.8633132,
+    "seen": 1792574318.159963,
+    "ast_hash": "5b4b943876341b947ecb946774b7574e",
+    "semantic_hash": ""
+  },
+  "web/composables/useSnackbar.ts": {
+    "mtime": 1792573654.1743226,
+    "seen": 1792574318.159979,
+    "ast_hash": "77e9e94e486fab4099337285d05af1c5",
     "semantic_hash": ""
   }
 }

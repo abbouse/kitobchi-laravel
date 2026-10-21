@@ -237,11 +237,10 @@
               <span class="text-[11px] text-neutral-500 font-medium">{{ reviewsCount }} ta sharh</span>
             </div>
 
-            <!-- AI Tahlili: Auth bo'lganlarga moslik ko'rsatiladi, Guestlarga kirish taklif etiladi -->
+            <!-- AI Tahlili: Auth bo'lganlarga moslik ko'rsatiladi, Guestlarga example data bilan modal -->
             <div
-              v-if="authStore.isAuthenticated"
               @click="isAiMatchOpen = true"
-              class="bg-blue-50/70 hover:bg-blue-50 rounded-2xl p-2.5 border border-blue-100/60 flex items-center justify-between cursor-pointer transition-colors group"
+              class="bg-white hover:bg-neutral-50 rounded-2xl p-2.5 border border-neutral-100 flex items-center justify-between cursor-pointer transition-colors group"
             >
               <div class="flex items-center gap-2 min-w-0">
                 <div class="relative w-7 h-7 flex items-center justify-center shrink-0">
@@ -255,34 +254,14 @@
                   <div class="text-xs font-bold text-neutral-900 group-hover:text-primary truncate">
                     {{ aiMatchPercent }}% mos — siz uchun
                   </div>
-                  <div class="text-[10px] text-neutral-500 truncate">Nega ekanini ko'ring</div>
+                  <div class="text-[10px] text-neutral-500 truncate">
+                    {{ authStore.isAuthenticated ? 'Nега ekanini ko\'ring' : 'AI Shaxsiy tahlil' }}
+                  </div>
                 </div>
               </div>
               <svg class="w-3.5 h-3.5 text-neutral-400 group-hover:text-primary shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/>
               </svg>
-            </div>
-
-            <!-- Guest uchun AI Banner (Haqiqiy tahlil uchun profil kerak) -->
-            <div
-              v-else
-              @click="authStore.openAuthModal()"
-              class="bg-gradient-to-r from-blue-50 to-indigo-50/70 hover:from-blue-100/60 hover:to-indigo-100/60 rounded-2xl p-2.5 border border-blue-100/70 flex items-center justify-between cursor-pointer transition-colors group"
-            >
-              <div class="flex items-center gap-2 min-w-0">
-                <div class="w-7 h-7 rounded-xl bg-primary text-white flex items-center justify-center shrink-0 shadow-2xs">
-                  <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z" />
-                  </svg>
-                </div>
-                <div class="min-w-0">
-                  <div class="text-xs font-bold text-neutral-900 group-hover:text-primary truncate">
-                    AI Shaxsiy tahlil
-                  </div>
-                  <div class="text-[10px] text-neutral-500 truncate">Sizga mosligini bilish uchun kiring</div>
-                </div>
-              </div>
-              <span class="text-xs font-bold text-primary shrink-0">Kirish ›</span>
             </div>
           </div>
         </div>
@@ -878,11 +857,10 @@
               </div>
             </div>
 
-            <!-- 2. AI Tahlil Kartasi (Desktop) -->
+            <!-- 2. AI Tahlil Kartasi (Desktop) — Auth va Guest uchun bir xil, modal ochadi -->
             <div
-              v-if="authStore.isAuthenticated"
               @click="isAiMatchOpen = true"
-              class="bg-white hover:bg-blue-50/40 p-4 rounded-3xl shadow-2xs flex items-center justify-between cursor-pointer transition-colors border-none group"
+              class="bg-white hover:bg-blue-50/30 p-4 rounded-3xl shadow-2xs flex items-center justify-between cursor-pointer transition-colors border-none group"
             >
               <div class="flex items-center gap-3">
                 <div class="relative w-11 h-11 flex items-center justify-center shrink-0">
@@ -913,38 +891,13 @@
                     <span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
                   </div>
                   <div class="text-[11px] text-neutral-500">
-                    Sun'iy intellekt tahlilini ko'rish
+                    {{ authStore.isAuthenticated ? 'Sun\'iy intellekt tahlilini ko\'rish' : 'AI Shaxsiy tahlil — batafsil' }}
                   </div>
                 </div>
               </div>
               <svg class="w-4 h-4 text-neutral-400 group-hover:text-primary transition-transform group-hover:translate-x-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/>
               </svg>
-            </div>
-
-            <!-- Guest uchun AI Banner (Desktop) -->
-            <div
-              v-else
-              @click="authStore.openAuthModal()"
-              class="bg-gradient-to-r from-blue-50/90 to-indigo-50/70 hover:from-blue-100/70 hover:to-indigo-100/70 p-4 rounded-3xl shadow-2xs flex items-center justify-between cursor-pointer transition-colors border border-blue-100/70 group"
-            >
-              <div class="flex items-center gap-3">
-                <div class="w-11 h-11 rounded-2xl bg-primary text-white flex items-center justify-center shrink-0 shadow-xs">
-                  <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z" />
-                  </svg>
-                </div>
-                <div>
-                  <div class="text-xs font-bold text-neutral-900 group-hover:text-primary transition-colors flex items-center gap-1.5">
-                    <span>AI Shaxsiy tahlil</span>
-                    <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-blue-100 text-primary">Yangi</span>
-                  </div>
-                  <div class="text-[11px] text-neutral-500">
-                    Kitob sizga mosligini bilish uchun kiring
-                  </div>
-                </div>
-              </div>
-              <span class="text-xs font-bold text-primary">Kirish ›</span>
             </div>
 
             <!-- 3. Ishonch Bloklari (14 kun almashtirish olib tashlandi) -->
