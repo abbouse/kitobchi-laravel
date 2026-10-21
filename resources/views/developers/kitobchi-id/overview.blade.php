@@ -17,7 +17,7 @@
   </div></div>
   <div class="step"><div class="step-num">2</div><div>
     <h3>Foydalanuvchi kiradi va rozilik beradi</h3>
-    <p>Telefon raqam → SMS kod (SMS'da ilovangiz nomi ko'rsatiladi). Birinchi marta ulanishda so'ralgan ma'lumotlar ro'yxati va ilovangiz domeni ko'rsatiladi. Keyingi kirishlarda — bir bosishda.</p>
+    <p>Telefon raqam → tasdiqlash kodi: foydalanuvchida Kitobchi ilovasi bo'lsa — ilovadagi «Kitobchi» chatiga, bo'lmasa SMS (har ikkisida ilovangiz nomi ko'rsatiladi). Birinchi marta ulanishda so'ralgan ma'lumotlar ro'yxati va ilovangiz domeni ko'rsatiladi. Keyingi kirishlarda — bir bosishda.</p>
   </div></div>
   <div class="step"><div class="step-num">3</div><div>
     <h3>Ilova bir martalik kod oladi</h3>

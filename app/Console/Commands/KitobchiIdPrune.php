@@ -21,7 +21,9 @@ class KitobchiIdPrune extends Command
                 ->orWhere('expires_at', '<', now()->subDays(7))
                 ->orWhere('revoked_at', '<', now()->subDays(7));
         })->delete();
-        $this->info("Kodlar: $codes, refresh tokenlar: $tokens");
+        // Ilovaga yuborilgan kodlarning shifrlangan nusxasi muddati o'tishi bilan o'chiriladi
+        $scrubbed = \App\Services\KitobchiId\AppCodeChannel::scrubExpired();
+        $this->info("Kodlar: $codes, refresh tokenlar: $tokens, chat kodlari tozalandi: $scrubbed");
 
         return self::SUCCESS;
     }

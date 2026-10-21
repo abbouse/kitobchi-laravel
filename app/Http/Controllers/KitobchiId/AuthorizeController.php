@@ -7,6 +7,7 @@ use App\Models\KitobchiId\IdClient;
 use App\Models\KitobchiId\IdConsent;
 use App\Models\User;
 use App\Services\KitobchiId\OtpService;
+use App\Services\KitobchiId\PhoneAccounts;
 use App\Services\KitobchiId\TokenService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -182,18 +183,22 @@ class AuthorizeController extends Controller
             return $this->errorPage('Kirish so\'rovi eskirgan. Ilovaga qaytib, qaytadan urinib ko\'ring.', 'expired_request');
         }
 
-        $phone = OtpService::normalizePhone((string) $request->input('phone'));
+        $viaSms = $request->input('via') === 'sms';
+        // SMS zaxirasi faqat sessiyadagi (kod yuborilgan) raqamga
+        $phone = $viaSms
+            ? ((string) $request->session()->get('kid.otp.'.$rid) ?: null)
+            : OtpService::normalizePhone((string) $request->input('phone'));
         if (! $phone) {
             return $this->loginPage($request, $rid, $client, $req, error: 'Telefon raqamni +998 XX XXX XX XX ko\'rinishida kiriting.');
         }
 
-        $res = $this->otp->send($phone, $client->name);
+        $res = $this->otp->send($phone, $client->name, $viaSms);
         if (! $res['ok'] && $res['error'] !== 'wait') {
             $msg = $res['error'] === 'daily_limit'
                 ? 'Bugun bu raqamga juda ko\'p kod yuborildi. Ertaga urinib ko\'ring.'
-                : 'SMS yuborib bo\'lmadi. Birozdan so\'ng qayta urinib ko\'ring.';
+                : 'Kodni yuborib bo\'lmadi. Birozdan so\'ng qayta urinib ko\'ring.';
 
-            return $this->loginPage($request, $rid, $client, $req, error: $msg, phone: $phone);
+            return $this->loginPage($request, $rid, $client, $req, error: $msg, phone: $phone, step: $viaSms ? 'code' : null);
         }
 
         $request->session()->put('kid.otp.'.$rid, $phone);
@@ -224,17 +229,7 @@ class AuthorizeController extends Controller
             return $this->loginPage($request, $rid, $client, $req, error: $msg, phone: $phone, step: $result === 'invalid' ? 'code' : 'phone');
         }
 
-        $user = User::where('phone_number', $phone)->where('isDeleted', 'no')->first();
-        if (! $user) {
-            $user = User::create([
-                'phone_number' => $phone,
-                'password' => bcrypt(Str::random(40)),
-                'phone_verified_at' => now(),
-            ]);
-            Log::info('kitobchi-id: user registered', ['user' => $user->id, 'client' => $client->client_id]);
-        } elseif ($user->phone_verified_at === null) {
-            $user->forceFill(['phone_verified_at' => now()])->save();
-        }
+        $user = app(PhoneAccounts::class)->resolve($phone, $client);
 
         if ($user->isBlocked()) {
             return $this->errorPage('Akkauntingiz vaqtincha cheklangan. Qo\'llab-quvvatlash xizmatiga murojaat qiling.', 'account_blocked');
@@ -429,6 +424,8 @@ class AuthorizeController extends Controller
             'phone' => $phone ?? ($otpPhone ?: $req['login_hint']),
             'error' => $error,
             'resend' => (int) config('kitobchi_id.otp_resend_seconds', 60),
+            // Kod qayerga ketgani: 'app' (Kitobchi ilovasidagi chat) yoki 'sms'
+            'delivery' => $otpPhone !== '' ? $this->otp->status($otpPhone) : null,
         ], $error ? 422 : 200);
     }
 

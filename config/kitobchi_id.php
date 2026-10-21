@@ -26,7 +26,9 @@ return [
     'otp_ttl' => 300,
     'otp_resend_seconds' => 60,
     'otp_max_attempts' => 5,
-    'otp_daily_limit' => 10,          // bitta raqamga kuniga SMS
+    'otp_daily_limit' => 10,          // bitta raqamga kuniga kod (ilova + SMS)
+    // Kod Kitobchi ilovasiga yuborilganda "SMS orqali olish" necha soniyadan keyin ochiladi
+    'sms_fallback_seconds' => 30,
     'session_max_age' => 30 * 24 * 3600, // Kitobchi ID sessiyasi (qayta kod so'ralmaydi)
 
     // Pairwise `sub` uchun maxfiy tuz (o'zgartirilsa uchinchi tomon ilovalaridagi sub'lar o'zgaradi!)

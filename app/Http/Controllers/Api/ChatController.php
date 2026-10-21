@@ -524,6 +524,14 @@ class ChatController extends Controller
         $total = $messages->count();
         $paged = $messages->forPage($page, $perPage)->values()->map(fn (Message $message) => $this->serializeMessage($message));
 
+        // Kitobchi ID kirish kodlari — faqat chat egasiga (kod messages jadvalida yo'q)
+        if ($conversation->type === 'shop' && (int) $conversation->shop_id === \App\Services\KitobchiId\AppCodeChannel::OFFICIAL_SELLER_ID) {
+            $kid = \App\Services\KitobchiId\AppCodeChannel::payloadsFor($paged->pluck('id')->all(), (int) $user->id);
+            if ($kid) {
+                $paged = $paged->map(fn (array $m) => isset($kid[$m['id']]) ? $m + ['kitobchi_id' => $kid[$m['id']]] : $m);
+            }
+        }
+
         return response()->json([
             'status' => 'success',
             'data' => $paged,

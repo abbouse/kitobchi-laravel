@@ -16,6 +16,7 @@
     <tr><td>RS256 + <span class="ic">kid</span>, kalit rotatsiyasi bilan; <span class="ic">alg: none</span> va HS256 hech qachon</td><td>Imzoni soxtalashtirish, algoritm almashtirish</td></tr>
     <tr><td>Pairwise <span class="ic">sub</span> hamkor ilovalar uchun</td><td>Ilovalararo foydalanuvchini kuzatish</td></tr>
     <tr><td>SMS kod: HMAC bilan saqlanadi, 5 urinish, 60 s qayta yuborish, kuniga 10 ta; SMS'da ilova nomi; master-kod yo'q</td><td>Kodni tanlab topish, SMS-bombing, fishing</td></tr>
+    <tr><td>Kod avval foydalanuvchining faol Kitobchi ilovasiga (rasmiy chat + push), keyin SMS; kod chat bazasi va websocket'ga yozilmaydi, faqat chat egasiga shifrlangan holda beriladi</td><td>Xodimlar yoki do'kon paneli orqali kodning sizib chiqishi, SIM-almashtirish</td></tr>
     <tr><td>Kirish sahifalari: <span class="ic">frame-ancestors 'none'</span>, CSRF, <span class="ic">no-store</span>, <span class="ic">no-referrer</span>, sessiya ID login'dan keyin yangilanadi</td><td>Clickjacking, CSRF, sessiya fiksatsiyasi</td></tr>
     <tr><td>Bloklangan yoki o'chirilgan akkaunt — refresh va userinfo darhol ishlamaydi</td><td>Bloklangan foydalanuvchining eski tokenlari</td></tr>
     <tr><td>IP bo'yicha so'rov limitlari (authorize 60/daq, SMS 5/daq, token 60/daq)</td><td>Brute-force va DoS</td></tr>

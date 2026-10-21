@@ -166,6 +166,63 @@
 </div>
 
 <hr class="divider">
+<h2 class="doc-h2" id="native">Ekotizim ilovalari: brauzersiz kirish</h2>
+<p class="doc-p">Kitobchi ekotizimiga kiruvchi (<strong>first-party</strong>) mobil ilovalar foydalanuvchini brauzerga chiqarmasdan, o'z ekranida kirita oladi: ilova raqam va kodni o'zi so'raydi, autentifikatsiyani esa Kitobchi ID bajaradi. Bu imkoniyat faqat Kitobchi tomonidan <span class="ic">first_party</span> deb belgilangan ilovalarga ochiq; hamkor (uchinchi tomon) ilovalar yuqoridagi brauzer oqimidan foydalanadi — foydalanuvchi Kitobchi sahifasi va rozilik oynasini ko'rishi shart.</p>
+<div class="steps">
+  <div class="step"><div class="step-num">1</div><div>
+    <h3>Kod so'rash</h3>
+    <p>Ilova PKCE juftligi va <span class="ic">nonce</span> yaratib, raqamni yuboradi. Raqam Kitobchi'da mavjud va foydalanuvchining Kitobchi ilovasi faol bo'lsa, kod <strong>Kitobchi ilovasidagi rasmiy «Kitobchi» chatiga</strong> (push bilan) yuboriladi — SMS ketmaydi. Aks holda SMS yuboriladi.</p>
+  </div></div>
+  <div class="step"><div class="step-num">2</div><div>
+    <h3>SMS zaxirasi</h3>
+    <p><span class="ic">channel = app</span> bo'lsa, ekranda «Kod Kitobchi ilovasiga yuborildi» deb yozing va <span class="ic">sms_available_in</span> soniyadan keyin «SMS orqali olish» tugmasini faollashtiring — u o'sha kodni SMS bilan yuboradi.</p>
+  </div></div>
+  <div class="step"><div class="step-num">3</div><div>
+    <h3>Kodni tasdiqlash va tokenlar</h3>
+    <p>Kod to'g'ri bo'lsa <span class="ic">authorization_code</span> qaytadi — uni odatdagidek <span class="ic">/token</span> ga <span class="ic">code_verifier</span> bilan almashtirasiz.</p>
+  </div></div>
+</div>
+<div class="codeblock">
+  <div class="codeblock-header"><span class="codeblock-title">1. POST /native/start</span><button class="copy-btn" type="button">Ko'chirish</button></div>
+  <pre>curl -X POST '{{ $kidIss }}/native/start' -H 'Content-Type: application/json' -d '{
+  "client_id": "kid_xxxxxxxxxxxxxxxxxxxxxxxx",
+  "phone": "+998901234567",
+  "scope": "openid profile phone offline_access",
+  "redirect_uri": "uz.kitobchi.express:/oauth",
+  "code_challenge": "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
+  "code_challenge_method": "S256",
+  "nonce": "Tm9uY2VSYW5kb21WYWx1ZQ"
+}'
+
+// 200
+{ "auth_session": "q8Xw...", "masked_phone": "+998 90 *** ** 67",
+  "expires_in": 300, "channel": "app", "sms_available_in": 30 }</pre>
+</div>
+<div class="codeblock">
+  <div class="codeblock-header"><span class="codeblock-title">2. POST /native/resend — SMS orqali</span></div>
+  <pre>{ "client_id": "kid_…", "auth_session": "q8Xw..." }
+// 200 → { "channel": "sms" }   |   30 s o'tmagan bo'lsa → { "channel": "app", "retry_after": 12 }</pre>
+</div>
+<div class="codeblock">
+  <div class="codeblock-header"><span class="codeblock-title">3. POST /native/verify</span></div>
+  <pre>{ "client_id": "kid_…", "auth_session": "q8Xw...", "code": "482913" }
+// 200 → { "authorization_code": "SplxlOBe...", "redirect_uri": "uz.kitobchi.express:/oauth", "iss": "{{ $kidIss }}" }
+// keyin: POST /token  grant_type=authorization_code, code, redirect_uri, code_verifier, client_id</pre>
+</div>
+<table class="doc-table">
+  <thead><tr><th>error</th><th>HTTP</th><th>Ma'nosi</th></tr></thead>
+  <tbody>
+    <tr><td><span class="ic">unauthorized_client</span></td><td>403</td><td>Ilova first-party emas — brauzer oqimidan foydalaning</td></tr>
+    <tr><td><span class="ic">invalid_phone</span></td><td>400</td><td>Raqam formati noto'g'ri</td></tr>
+    <tr><td><span class="ic">invalid_code</span></td><td>400</td><td>Kod noto'g'ri (5 urinishgacha)</td></tr>
+    <tr><td><span class="ic">too_many_attempts</span>, <span class="ic">expired_code</span>, <span class="ic">invalid_session</span></td><td>429 / 400</td><td>Jarayonni qaytadan boshlang (<span class="ic">/native/start</span>)</td></tr>
+    <tr><td><span class="ic">daily_limit</span></td><td>429</td><td>Bu raqamga bugun juda ko'p kod yuborilgan</td></tr>
+    <tr><td><span class="ic">delivery_failed</span></td><td>503</td><td>Kod yuborilmadi, birozdan keyin urinib ko'ring</td></tr>
+  </tbody>
+</table>
+<div class="note"><strong>Kod qayerda ko'rinadi:</strong> Kitobchi ilovasidagi «Kitobchi» chatida maxsus kartochka (nusxalash tugmasi, amal qilish vaqti) va bildirishnomada. Kodning o'zi chat xabarlari bazasiga yozilmaydi va Kitobchi xodimlari uni ko'ra olmaydi; kod ishlatilgach yoki 5 daqiqadan keyin kartochkada ko'rsatilmaydi.</div>
+
+<hr class="divider">
 <h2 class="doc-h2" id="examples">Kod namunalari</h2>
 <h3 class="doc-h3">Node.js (openid-client v6)</h3>
 <div class="codeblock">

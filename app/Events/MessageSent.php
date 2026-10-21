@@ -57,6 +57,9 @@ class MessageSent implements ShouldBroadcastNow
                 'is_deleted' => (bool) $message->is_deleted,
                 'created_at' => $message->created_at ? $message->created_at->toISOString() : null,
                 'reply_to_id' => $message->reply_to_id,
+                // Kitobchi ID kodi: kanalga faqat belgi ketadi (kanalni do'kon xodimlari ham
+                // tinglaydi), kodning o'zini ilova getMessages orqali oladi
+                'kitobchi_id' => $this->isKitobchiIdCode($message) ? ['type' => 'login_code', 'status' => 'pending'] : null,
                 'reply_to' => $message->replyTo ? [
                     'id' => $message->replyTo->id,
                     'conversation_id' => $message->replyTo->conversation_id,
@@ -72,6 +75,19 @@ class MessageSent implements ShouldBroadcastNow
                 ] : null,
             ],
         ];
+    }
+
+    private function isKitobchiIdCode(Message $message): bool
+    {
+        if ($message->sender_type !== Seller::class || (int) $message->sender_id !== \App\Services\KitobchiId\AppCodeChannel::OFFICIAL_SELLER_ID) {
+            return false;
+        }
+
+        try {
+            return \App\Models\KitobchiId\IdCodeDelivery::where('message_id', $message->id)->exists();
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     private function senderName(mixed $sender): ?string

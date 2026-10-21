@@ -288,6 +288,7 @@ class ApiDocsController extends Controller
                 ['id' => 'userinfo', 'label' => '5. UserInfo'],
                 ['id' => 'refresh', 'label' => '6. Refresh token'],
                 ['id' => 'logout', 'label' => '7. Chiqish'],
+                ['id' => 'native', 'label' => 'Ekotizim ilovalari (brauzersiz)'],
                 ['id' => 'examples', 'label' => 'Kod namunalari'],
             ],
             'kitobchi-id-security' => [
