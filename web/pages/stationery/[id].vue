@@ -293,7 +293,7 @@
           <button
             type="button"
             @click="handleBuyNow"
-            class="ios-order-btn flex-1 h-12 rounded-xl text-base font-semibold text-white border-none cursor-pointer flex items-center justify-center active:scale-95 transition-transform shadow-none"
+            class="flex-1 h-12 rounded-xl text-base font-semibold text-white bg-brand-gradient hover:opacity-95 border-none cursor-pointer flex items-center justify-center active:scale-95 transition-all shadow-md"
           >
             Sotib olish
           </button>
@@ -591,15 +591,15 @@
                     <button
                       type="button"
                       @click="handleBuyNow"
-                      class="ios-order-btn flex-1 h-12 rounded-xl text-base font-semibold text-white bg-emerald-600 hover:bg-emerald-700 border-none cursor-pointer flex items-center justify-center shadow-none transition-colors"
+                      class="flex-1 h-12 rounded-xl text-base font-semibold text-white bg-brand-gradient hover:opacity-95 border-none cursor-pointer flex items-center justify-center shadow-md transition-all active:scale-95"
                     >
                       Buyurtma berish
                     </button>
                     <button
                       type="button"
                       @click="handleAddToCart"
-                      class="font-medium inline-flex items-center text-base gap-2 p-2 h-12 px-3.5 rounded-xl border border-neutral-200 cursor-pointer transition-colors shrink-0 shadow-none"
-                      :class="isAdded ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'text-neutral-700 bg-neutral-100 hover:bg-neutral-200/70'"
+                      class="font-medium inline-flex items-center text-base gap-2 p-2 h-12 px-3.5 rounded-xl border-none cursor-pointer transition-colors shrink-0 shadow-none"
+                      :class="isAdded ? 'bg-emerald-50 text-emerald-700' : 'text-neutral-700 bg-neutral-100 hover:bg-neutral-200/70'"
                       :aria-label="isAdded ? 'Savatda' : 'Savatga qo\'shish'"
                     >
                       <svg v-if="!isAdded" class="w-6 h-6 shrink-0 fill-current" viewBox="0 0 20 20">

@@ -64,6 +64,17 @@
         </button>
       </template>
 
+      <!-- Video Indicator Badge (Screenshot 1: Oxirgi ko'rganlaringiz) -->
+      <div
+        v-if="product.has_video || product.video"
+        class="absolute top-1.5 left-1.5 md:top-2 md:left-2 z-20 w-7 h-7 rounded-full bg-black/65 backdrop-blur-xs flex items-center justify-center text-white pointer-events-none shadow-xs transition-transform group-hover:scale-105"
+        title="Video sharh mavjud"
+      >
+        <svg class="w-3.5 h-3.5 fill-current ml-0.5" viewBox="0 0 24 24">
+          <path d="M8 5v14l11-7z" />
+        </svg>
+      </div>
+
       <!-- Discount Pill -->
       <div v-if="discountPercent > 0" class="absolute bottom-1.5 left-1.5 md:bottom-2 md:left-2 z-20 inline-flex items-start flex-col gap-1 pointer-events-none">
         <span class="font-semibold inline-flex items-center text-[11px] rounded-md px-1.5 py-0.5 bg-[#ED3131] text-white">
