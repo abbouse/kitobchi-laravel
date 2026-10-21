@@ -4,49 +4,47 @@
     <!--  1. MOBIL KO'RINISH (Odnoklassniki / VK & Kitobchi uslubi - Screenshot 2)   -->
     <!-- ========================================================================= -->
     <div class="md:hidden">
-      <!-- Rasm Karuseli Kartasi -->
-      <div class="bg-white p-4 sm:p-6 rounded-b-3xl shadow-2xs">
-        <div class="relative">
-          <!-- 3:4 Nisbatdagi Galereya Karuseli -->
-          <div role="region" aria-roledescription="carousel" data-orientation="horizontal" tabindex="0" class="relative focus:outline-none w-full aspect-[3/4] rounded-2xl overflow-hidden bg-neutral-50/60 flex items-center justify-center">
-            <div class="overflow-hidden w-full h-full">
+      <!-- 1. ASOSIY MAHSULOT BLOKI (Galereya, Narx, Nasiya, Rating, AI) -->
+      <div class="bg-white">
+        <!-- 3:4 Galereya Karuseli (Edge-to-edge) -->
+        <div class="relative w-full aspect-[3/4] bg-neutral-50/60 overflow-hidden flex items-center justify-center">
+          <div role="region" aria-roledescription="carousel" tabindex="0" class="w-full h-full focus:outline-none">
+            <div
+              ref="mobileTrackEl"
+              class="flex flex-row w-full h-full overflow-x-auto no-scrollbar snap-x snap-mandatory touch-pan-x"
+              @scroll="onMobileTrackScroll"
+            >
               <div
-                ref="mobileTrackEl"
-                class="flex flex-row w-full h-full overflow-x-auto no-scrollbar snap-x snap-mandatory touch-pan-x"
-                @scroll="onMobileTrackScroll"
+                v-for="(img, idx) in galleryImages"
+                :key="'mob-img-' + idx"
+                role="group"
+                aria-roledescription="slide"
+                class="min-w-full w-full shrink-0 basis-full flex h-full snap-center items-center justify-center bg-transparent p-3"
               >
-                <div
-                  v-for="(img, idx) in galleryImages"
-                  :key="'mob-img-' + idx"
-                  role="group"
-                  aria-roledescription="slide"
-                  class="min-w-full w-full shrink-0 basis-full flex h-full snap-center items-center justify-center bg-transparent p-2"
-                >
-                  <img
-                    :src="img"
-                    :alt="product.name"
-                    class="w-full h-full object-contain select-none"
-                    :loading="idx === 0 ? 'eager' : 'lazy'"
-                    draggable="false"
-                  />
-                </div>
+                <img
+                  :src="img"
+                  :alt="product.name"
+                  class="w-full h-full object-contain select-none"
+                  :loading="idx === 0 ? 'eager' : 'lazy'"
+                  draggable="false"
+                />
               </div>
             </div>
-
-            <!-- Video Play Badge if product has video (Screenshot 1) -->
-            <button
-              v-if="hasVideo"
-              type="button"
-              @click="isVideoOpen = true"
-              class="absolute bottom-3 left-3 z-20 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/70 hover:bg-black/85 text-white backdrop-blur-xs text-xs font-semibold shadow-md transition-transform active:scale-95 border-none cursor-pointer"
-            >
-              <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-              <span>Video sharh</span>
-            </button>
           </div>
 
-          <!-- Pastki o'ngdagi Nuqtalar (Dots Pill Indicator) -->
-          <div v-if="galleryImages.length > 1" class="absolute w-full bottom-2 right-2 z-20 flex justify-end items-end pointer-events-none">
+          <!-- Video Play Badge -->
+          <button
+            v-if="hasVideo"
+            type="button"
+            @click="isVideoOpen = true"
+            class="absolute bottom-3 left-3 z-20 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/70 hover:bg-black/85 text-white backdrop-blur-xs text-xs font-semibold shadow-md transition-transform active:scale-95 border-none cursor-pointer"
+          >
+            <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            <span>Video sharh</span>
+          </button>
+
+          <!-- Dots Pill Indicator -->
+          <div v-if="galleryImages.length > 1" class="absolute bottom-3 right-3 z-20 flex justify-end items-end pointer-events-none">
             <div class="flex items-center gap-1 rounded-full py-1 px-2 bg-white/90 shadow-2xs pointer-events-auto">
               <button
                 v-for="(img, idx) in galleryImages"
@@ -62,7 +60,7 @@
             </div>
           </div>
 
-          <!-- Yuqori chap: Orqaga qaytish tugmasi -->
+          <!-- Orqaga qaytish tugmasi -->
           <button
             type="button"
             @click.stop="$router.back()"
@@ -74,7 +72,7 @@
             </div>
           </button>
 
-          <!-- Yuqori o'ng: Sevimli va Ulashish kapsulasi -->
+          <!-- Sevimli va Ulashish kapsulasi -->
           <div class="absolute top-3 right-3 z-30 flex items-center gap-2">
             <div class="rounded-full flex items-center gap-1 bg-white/95 py-1 px-1.5 shadow-2xs">
               <button
@@ -102,37 +100,32 @@
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Kartalar oqimi (Screenshot 2 uslubida) -->
-      <div class="space-y-2.5 px-3 pt-3 pb-44">
-        <!-- 1-Karta: Narx, Nomi, Do'kon va Hashtaglar (Screenshot 2) -->
-        <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-2xs space-y-2">
-          <!-- Narx bloki -->
+        <!-- Asosiy Ma'lumotlar Qismi -->
+        <div class="px-4 pt-3.5 pb-4 space-y-3">
+          <!-- Narx va Chegirma -->
           <div class="flex items-baseline gap-2.5">
-            <span class="text-2xl font-extrabold text-neutral-950">{{ formatPrice(currentPrice) }} so'm</span>
+            <span class="text-2xl font-black text-neutral-950 tracking-tight">{{ formatPrice(currentPrice) }} so'm</span>
             <span v-if="discountPercent > 0" class="text-sm line-through text-neutral-400 font-medium">{{ formatPrice(product.price) }} so'm</span>
             <span v-if="discountPercent > 0" class="text-xs font-bold px-1.5 py-0.5 rounded-md bg-red-500 text-white">-{{ discountPercent }}%</span>
           </div>
 
           <!-- Nomi va Muallif -->
-          <h1 class="text-base font-bold text-neutral-900 leading-snug m-0">
-            {{ product.name }}
-          </h1>
-          <div v-if="product.author" class="text-xs text-neutral-500">
-            Muallif: <span class="font-semibold text-neutral-800">{{ product.author }}</span>
+          <div class="space-y-1">
+            <h1 class="text-lg font-bold text-neutral-900 leading-snug m-0">
+              {{ product.name }}
+            </h1>
+            <div v-if="product.author" class="text-xs text-neutral-500">
+              Muallif: <span class="font-semibold text-neutral-800">{{ product.author }}</span>
+            </div>
           </div>
 
-          <!-- Do'kon nomi -->
-          <div class="pt-1 flex items-center gap-1.5">
-            <span class="inline-flex items-center text-xs font-medium rounded-lg px-2 py-0.5 bg-blue-50 text-primary gap-1">
+          <!-- Do'kon & Teglar -->
+          <div class="flex flex-wrap items-center gap-1.5 pt-0.5">
+            <span class="inline-flex items-center text-xs font-medium rounded-lg px-2.5 py-1 bg-blue-50 text-primary gap-1">
               <svg class="w-3.5 h-3.5 text-primary" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.403 12.652a3 3 0 0 0 0-5.304a3 3 0 0 0-3.75-3.751a3 3 0 0 0-5.305 0a3 3 0 0 0-3.751 3.75a3 3 0 0 0 0 5.305a3 3 0 0 0 3.75 3.751a3 3 0 0 0 5.305 0a3 3 0 0 0 3.751-3.75Zm-2.546-4.46a.75.75 0 0 0-1.214-.883l-3.483 4.79l-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5Z" clip-rule="evenodd"/></svg>
               {{ product.seller?.shop_name || 'Kitobchi rasmiy do\'koni' }}
             </span>
-          </div>
-
-          <!-- Hashtaglar (Screenshot 2: # Jinoyat, # Psixologik triller) -->
-          <div v-if="productTags.length > 0" class="flex flex-wrap items-center gap-1.5 pt-1">
             <span
               v-for="(tag, tidx) in productTags"
               :key="tag"
@@ -142,130 +135,113 @@
               # {{ tag }}
             </span>
           </div>
-        </div>
 
-        <!-- 2-Karta: Muddatli to'lov kalkulyatori (Screenshot 2) -->
-        <div class="bg-white p-4 rounded-2xl shadow-2xs space-y-3">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <div class="w-8 h-8 rounded-full bg-blue-50 text-primary flex items-center justify-center shrink-0">
+          <!-- Yilqam Muddatli To'lov (Nasiya) Qatori -->
+          <div class="bg-neutral-50 rounded-2xl p-3 border border-neutral-100 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <div class="w-8 h-8 rounded-xl bg-blue-100/70 text-primary flex items-center justify-center shrink-0">
                 <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <circle cx="12" cy="12" r="10" />
                   <path d="M12 6v6l4 2" />
                 </svg>
               </div>
-              <div>
-                <div class="text-sm font-bold text-neutral-900 leading-tight">
-                  {{ installmentParts }} × {{ formatPrice(installmentPartPrice) }} so'm
+              <div class="min-w-0">
+                <div class="text-xs font-bold text-neutral-900 truncate">
+                  {{ installmentParts }} × {{ formatPrice(installmentPartPrice) }} so'm / oyiga
                 </div>
                 <div class="text-[11px] text-neutral-400">
-                  {{ installmentMonthsCount }} oyga
+                  Muddatli to'lov ({{ installmentMonthsCount }} oy)
                 </div>
               </div>
             </div>
-
-            <!-- Segment Tanlovchi (2, 4 oy) -->
-            <div class="flex items-center gap-1.5">
+            <div class="flex items-center gap-1 shrink-0">
               <button
                 v-for="part in [2, 4]"
                 :key="part"
                 type="button"
                 @click="installmentParts = part as (2 | 4)"
-                class="w-7 h-7 rounded-full text-xs font-bold flex items-center justify-center transition-all cursor-pointer border-none"
-                :class="installmentParts === part ? 'bg-primary text-white shadow-xs' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'"
+                class="w-7 h-7 rounded-lg text-xs font-bold flex items-center justify-center transition-all cursor-pointer border-none"
+                :class="installmentParts === part ? 'bg-primary text-white shadow-xs' : 'bg-white text-neutral-600 hover:bg-neutral-100 border border-neutral-200'"
               >
                 {{ part }}
               </button>
             </div>
           </div>
 
-          <!-- Progress Bar (Screenshot 2) -->
-          <div class="w-full bg-neutral-100 h-1.5 rounded-full overflow-hidden flex">
+          <!-- Reyting va AI Tahlili Qisqacha (Bitta qatorda aqlli joylashuv) -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-0.5">
+            <!-- Reyting -->
+            <div class="bg-neutral-50 rounded-2xl p-2.5 border border-neutral-100 flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="text-sm font-extrabold text-neutral-900">{{ productRating || '5.0' }}</span>
+                <div class="flex items-center text-amber-400">
+                  <svg v-for="s in 5" :key="s" class="w-3 h-3 fill-current" viewBox="0 0 20 20">
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                  </svg>
+                </div>
+              </div>
+              <span class="text-[11px] text-neutral-500 font-medium">{{ reviewsCount }} ta sharh</span>
+            </div>
+
+            <!-- AI Tahlili: Auth bo'lganlarga moslik ko'rsatiladi, Guestlarga kirish taklif etiladi -->
             <div
-              class="h-full bg-primary rounded-full transition-all duration-300"
-              :style="{ width: `${(1 / installmentParts) * 100}%` }"
-            ></div>
-          </div>
-
-          <div class="flex items-center justify-between text-xs pt-0.5">
-            <div>
-              <span class="text-neutral-400 block text-[11px]">Bugun</span>
-              <span class="font-bold text-neutral-900">{{ formatPrice(installmentPartPrice) }} so'm</span>
-            </div>
-            <div class="text-right">
-              <span class="text-neutral-400 block text-[11px]">{{ installmentParts - 1 }} ta keyingi to'lov</span>
-              <span class="font-bold text-neutral-900">{{ formatPrice(installmentPartPrice) }} so'm</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- 3-Karta: Reyting va sharhlar qisqacha (Screenshot 2) -->
-        <div class="bg-white p-4 rounded-2xl shadow-2xs flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <div class="text-base font-extrabold text-neutral-900">
-              {{ productRating || '5.0' }}
-            </div>
-            <div class="flex items-center text-amber-400">
-              <svg v-for="s in 5" :key="s" class="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20">
-                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+              v-if="authStore.isAuthenticated"
+              @click="isAiMatchOpen = true"
+              class="bg-blue-50/70 hover:bg-blue-50 rounded-2xl p-2.5 border border-blue-100/60 flex items-center justify-between cursor-pointer transition-colors group"
+            >
+              <div class="flex items-center gap-2 min-w-0">
+                <div class="relative w-7 h-7 flex items-center justify-center shrink-0">
+                  <svg class="w-full h-full -rotate-90 transform" viewBox="0 0 36 36">
+                    <path class="text-blue-100" stroke-width="4" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                    <path class="text-primary" stroke-dasharray="100, 100" :stroke-dashoffset="100 - aiMatchPercent" stroke-width="4" stroke-linecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                  </svg>
+                  <span class="absolute text-[8px] font-black text-primary">{{ aiMatchPercent }}%</span>
+                </div>
+                <div class="min-w-0">
+                  <div class="text-xs font-bold text-neutral-900 group-hover:text-primary truncate">
+                    {{ aiMatchPercent }}% mos — siz uchun
+                  </div>
+                  <div class="text-[10px] text-neutral-500 truncate">Nega ekanini ko'ring</div>
+                </div>
+              </div>
+              <svg class="w-3.5 h-3.5 text-neutral-400 group-hover:text-primary shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/>
               </svg>
             </div>
-            <span class="text-xs text-neutral-500 font-medium">
-              {{ reviewsCount }} ta sharh
-            </span>
-          </div>
-          <div class="w-8 h-8 rounded-full bg-emerald-50 text-emerald-800 text-xs font-bold flex items-center justify-center shrink-0">
-            KM
-          </div>
-        </div>
 
-        <!-- 4-Karta: AI Tahlil va Moslik Bloki (Screenshots 2 & 3 - SHAXSIY TAHLIL) -->
-        <div
-          @click="isAiMatchOpen = true"
-          class="bg-blue-50/70 hover:bg-blue-50 p-4 rounded-2xl shadow-2xs flex items-center justify-between cursor-pointer transition-colors border-none group"
-        >
-          <div class="flex items-center gap-3">
-            <!-- Circular Gauge Preview -->
-            <div class="relative w-10 h-10 flex items-center justify-center shrink-0">
-              <svg class="w-full h-full -rotate-90 transform" viewBox="0 0 36 36">
-                <path
-                  class="text-blue-100"
-                  stroke-width="3.5"
-                  stroke="currentColor"
-                  fill="none"
-                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                />
-                <path
-                  class="text-primary transition-all duration-700"
-                  stroke-dasharray="100, 100"
-                  :stroke-dashoffset="100 - aiMatchPercent"
-                  stroke-width="3.5"
-                  stroke-linecap="round"
-                  stroke="currentColor"
-                  fill="none"
-                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                />
-              </svg>
-              <span class="absolute text-[10px] font-black text-primary">{{ aiMatchPercent }}%</span>
-            </div>
-            <div>
-              <div class="text-xs font-bold text-neutral-900 group-hover:text-primary transition-colors flex items-center gap-1">
-                <span>{{ aiMatchPercent }}% mos — siz uchun</span>
-                <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+            <!-- Guest uchun AI Banner (Haqiqiy tahlil uchun profil kerak) -->
+            <div
+              v-else
+              @click="authStore.openAuthModal()"
+              class="bg-gradient-to-r from-blue-50 to-indigo-50/70 hover:from-blue-100/60 hover:to-indigo-100/60 rounded-2xl p-2.5 border border-blue-100/70 flex items-center justify-between cursor-pointer transition-colors group"
+            >
+              <div class="flex items-center gap-2 min-w-0">
+                <div class="w-7 h-7 rounded-xl bg-primary text-white flex items-center justify-center shrink-0 shadow-2xs">
+                  <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z" />
+                  </svg>
+                </div>
+                <div class="min-w-0">
+                  <div class="text-xs font-bold text-neutral-900 group-hover:text-primary truncate">
+                    AI Shaxsiy tahlil
+                  </div>
+                  <div class="text-[10px] text-neutral-500 truncate">Sizga mosligini bilish uchun kiring</div>
+                </div>
               </div>
-              <div class="text-[11px] text-neutral-500">
-                Nega ekanini ko'ring
-              </div>
+              <span class="text-xs font-bold text-primary shrink-0">Kirish ›</span>
             </div>
           </div>
-          <svg class="w-4 h-4 text-neutral-400 group-hover:text-primary transition-transform group-hover:translate-x-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/>
-          </svg>
         </div>
+      </div>
 
-        <!-- 5-Karta: Mahsulot haqida (Description) -->
-        <div v-if="product.description" class="bg-white p-4 rounded-2xl shadow-2xs space-y-2">
-          <h3 class="text-sm font-bold text-neutral-900 m-0">Mahsulot haqida</h3>
+      <!-- Oraliq bo'shliq (Edge-to-edge ajratuvchi chiziq) -->
+      <div class="h-2 bg-[#f0f2f5] w-full"></div>
+
+      <!-- 2. TAVSIF VA XUSUSIYATLAR BLOKI (Bitta yaxlit bo'lim, ortiqcha kapsulalarsiz) -->
+      <div class="bg-white px-4 py-4 space-y-4">
+        <!-- Mahsulot tavsifi -->
+        <div v-if="product.description" class="space-y-2">
+          <h2 class="text-sm font-bold text-neutral-900 m-0">Mahsulot haqida</h2>
           <div :class="['text-xs text-neutral-600 leading-relaxed m-0', !isDescExpanded ? 'line-clamp-3' : '']" v-html="product.description"></div>
           <button
             type="button"
@@ -277,91 +253,94 @@
           </button>
         </div>
 
-        <!-- 6-Karta: Xususiyatlar va tavsif (Specs) -->
-        <div v-if="hasSpecs" class="bg-white p-4 rounded-2xl shadow-2xs space-y-2">
-          <h3 class="text-sm font-bold text-neutral-900 m-0">Xususiyatlar va tavsif</h3>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-            <div v-if="product.publisher" class="p-2.5 rounded-xl bg-neutral-50 flex justify-between items-center">
-              <span class="text-neutral-500">Nashriyot:</span>
-              <span class="font-semibold text-neutral-800">{{ product.publisher.name || product.publisher }}</span>
+        <!-- Xususiyatlar jadvali -->
+        <div v-if="hasSpecs" class="space-y-2 pt-2 border-t border-neutral-100">
+          <h3 class="text-sm font-bold text-neutral-900 m-0">Xususiyatlar va parametrlar</h3>
+          <div class="grid grid-cols-2 gap-2 text-xs pt-1">
+            <div v-if="product.publisher" class="p-2.5 rounded-xl bg-neutral-50 flex flex-col justify-center">
+              <span class="text-[11px] text-neutral-400">Nashriyot</span>
+              <span class="font-semibold text-neutral-800 truncate">{{ product.publisher.name || product.publisher }}</span>
             </div>
-            <div v-if="product.pages" class="p-2.5 rounded-xl bg-neutral-50 flex justify-between items-center">
-              <span class="text-neutral-500">Sahifalar soni:</span>
+            <div v-if="product.pages" class="p-2.5 rounded-xl bg-neutral-50 flex flex-col justify-center">
+              <span class="text-[11px] text-neutral-400">Sahifalar soni</span>
               <span class="font-semibold text-neutral-800">{{ product.pages }} bet</span>
             </div>
-            <div v-if="product.coverType" class="p-2.5 rounded-xl bg-neutral-50 flex justify-between items-center">
-              <span class="text-neutral-500">Muqova:</span>
+            <div v-if="product.coverType" class="p-2.5 rounded-xl bg-neutral-50 flex flex-col justify-center">
+              <span class="text-[11px] text-neutral-400">Muqova</span>
               <span class="font-semibold text-neutral-800">{{ coverTypeLabel(String(product.coverType)) }}</span>
             </div>
-            <div v-if="product.lang" class="p-2.5 rounded-xl bg-neutral-50 flex justify-between items-center">
-              <span class="text-neutral-500">Til:</span>
+            <div v-if="product.lang" class="p-2.5 rounded-xl bg-neutral-50 flex flex-col justify-center">
+              <span class="text-[11px] text-neutral-400">Til</span>
               <span class="font-semibold text-neutral-800">{{ bookLangLabel(String(product.lang)) }}</span>
             </div>
-            <div v-if="product.year" class="p-2.5 rounded-xl bg-neutral-50 flex justify-between items-center">
-              <span class="text-neutral-500">Yil:</span>
+            <div v-if="product.year" class="p-2.5 rounded-xl bg-neutral-50 flex flex-col justify-center">
+              <span class="text-[11px] text-neutral-400">Nashr yili</span>
               <span class="font-semibold text-neutral-800">{{ product.year }}</span>
             </div>
-            <div v-if="product.isbn" class="p-2.5 rounded-xl bg-neutral-50 flex justify-between items-center">
-              <span class="text-neutral-500">ISBN:</span>
-              <span class="font-semibold text-neutral-800">{{ product.isbn }}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- 7-Karta: Sharhlar va Fikrlar -->
-        <div class="bg-white p-4 rounded-2xl shadow-2xs space-y-3">
-          <div class="flex items-center justify-between">
-            <h3 class="text-sm font-bold text-neutral-900 m-0">Kitobxonlar sharhlari</h3>
-            <button
-              v-if="reviews.length > 0"
-              type="button"
-              @click="openReviewsModal"
-              class="text-xs font-semibold text-primary border-none bg-transparent cursor-pointer p-0"
-            >
-              Barchasi ({{ reviewsCount }})
-            </button>
-          </div>
-
-          <div v-if="reviews.length === 0" class="py-6 text-center text-neutral-400">
-            <svg class="w-8 h-8 mx-auto mb-2 text-neutral-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
-            </svg>
-            <p class="text-xs font-medium text-neutral-600 m-0">Ushbu kitobga hali sharh yozilmagan</p>
-            <p class="text-[11px] text-neutral-400 m-0 mt-0.5">Birinchi bo'lib fikr qoldiring</p>
-          </div>
-
-          <div v-else class="space-y-2.5">
-            <div
-              v-for="r in displayReviews"
-              :key="r.id"
-              class="p-3 rounded-xl bg-neutral-50/80 space-y-1.5"
-            >
-              <div class="flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                  <div class="w-6 h-6 rounded-full bg-primary/10 text-primary text-[10px] font-bold flex items-center justify-center">
-                    {{ (r.user_name || 'K').charAt(0).toUpperCase() }}
-                  </div>
-                  <span class="text-xs font-semibold text-neutral-900">{{ r.user_name || 'Kitobxon' }}</span>
-                </div>
-                <div class="flex items-center text-amber-400">
-                  <svg v-for="s in (r.rating || 5)" :key="s" class="w-3 h-3 fill-current" viewBox="0 0 20 20">
-                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
-                  </svg>
-                </div>
-              </div>
-              <p class="text-xs text-neutral-600 line-clamp-2 m-0">{{ r.comment }}</p>
+            <div v-if="product.isbn" class="p-2.5 rounded-xl bg-neutral-50 flex flex-col justify-center">
+              <span class="text-[11px] text-neutral-400">ISBN</span>
+              <span class="font-semibold text-neutral-800 truncate">{{ product.isbn }}</span>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Mobil Pastki Suzuvchi Xarid Paneli (Screenshot 2: Stepper + Savatcha Button) -->
+      <!-- Oraliq bo'shliq -->
+      <div class="h-2 bg-[#f0f2f5] w-full"></div>
+
+      <!-- 3. SHARHLAR VA KITOBXONLAR FIKRI (Yaxlit bo'lim) -->
+      <div class="bg-white px-4 py-4 pb-36 space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-bold text-neutral-900 m-0">Kitobxonlar sharhlari</h3>
+          <button
+            v-if="reviews.length > 0"
+            type="button"
+            @click="openReviewsModal"
+            class="text-xs font-semibold text-primary border-none bg-transparent cursor-pointer p-0"
+          >
+            Barchasi ({{ reviewsCount }})
+          </button>
+        </div>
+
+        <div v-if="reviews.length === 0" class="py-6 text-center text-neutral-400">
+          <svg class="w-8 h-8 mx-auto mb-2 text-neutral-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
+          </svg>
+          <p class="text-xs font-medium text-neutral-600 m-0">Ushbu kitobga hali sharh yozilmagan</p>
+          <p class="text-[11px] text-neutral-400 m-0 mt-0.5">Birinchi bo'lib fikr qoldiring</p>
+        </div>
+
+        <div v-else class="space-y-2.5">
+          <div
+            v-for="r in displayReviews"
+            :key="r.id"
+            class="p-3 rounded-xl bg-neutral-50/80 space-y-1.5"
+          >
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <div class="w-6 h-6 rounded-full bg-primary/10 text-primary text-[10px] font-bold flex items-center justify-center">
+                  {{ (r.user_name || 'K').charAt(0).toUpperCase() }}
+                </div>
+                <span class="text-xs font-semibold text-neutral-900">{{ r.user_name || 'Kitobxon' }}</span>
+              </div>
+              <div class="flex items-center text-amber-400">
+                <svg v-for="s in (r.rating || 5)" :key="s" class="w-3 h-3 fill-current" viewBox="0 0 20 20">
+                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                </svg>
+              </div>
+            </div>
+            <p class="text-xs text-neutral-600 line-clamp-2 m-0">{{ r.comment }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mobil Pastki Suzuvchi Xarid Paneli (Full-width, edge-to-edge) -->
       <div
-        class="w-full bg-white fixed bottom-0 left-0 z-60 shadow-lg rounded-t-3xl"
+        class="w-full bg-white fixed bottom-0 left-0 z-60 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] border-t border-neutral-100"
         style="padding-bottom: max(1.25rem, env(safe-area-inset-bottom, 1.25rem))"
       >
         <div class="px-4 py-3 flex items-center gap-3">
-          <!-- Stepper: Trash or Minus / Count / Plus (Screenshot 2) -->
+          <!-- Stepper: Trash or Minus / Count / Plus -->
           <div class="flex items-center bg-neutral-100 rounded-2xl p-1 gap-1 h-12">
             <button
               type="button"
@@ -389,7 +368,7 @@
             </button>
           </div>
 
-          <!-- Asosiy Brend Savatcha Tugmasi (Screenshot 2: Savatcha >) -->
+          <!-- Asosiy Brend Savatcha Tugmasi -->
           <button
             type="button"
             @click="handleAddToCart"
@@ -783,6 +762,7 @@
 
             <!-- 2. AI Tahlil Kartasi (Desktop) -->
             <div
+              v-if="authStore.isAuthenticated"
               @click="isAiMatchOpen = true"
               class="bg-white hover:bg-blue-50/40 p-4 rounded-3xl shadow-2xs flex items-center justify-between cursor-pointer transition-colors border-none group"
             >
@@ -824,7 +804,32 @@
               </svg>
             </div>
 
-            <!-- 3. Odnoklassniki / VK Ishonch Bloklari -->
+            <!-- Guest uchun AI Banner (Desktop) -->
+            <div
+              v-else
+              @click="authStore.openAuthModal()"
+              class="bg-gradient-to-r from-blue-50/90 to-indigo-50/70 hover:from-blue-100/70 hover:to-indigo-100/70 p-4 rounded-3xl shadow-2xs flex items-center justify-between cursor-pointer transition-colors border border-blue-100/70 group"
+            >
+              <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-2xl bg-primary text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z" />
+                  </svg>
+                </div>
+                <div>
+                  <div class="text-xs font-bold text-neutral-900 group-hover:text-primary transition-colors flex items-center gap-1.5">
+                    <span>AI Shaxsiy tahlil</span>
+                    <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-blue-100 text-primary">Yangi</span>
+                  </div>
+                  <div class="text-[11px] text-neutral-500">
+                    Kitob sizga mosligini bilish uchun kiring
+                  </div>
+                </div>
+              </div>
+              <span class="text-xs font-bold text-primary">Kirish ›</span>
+            </div>
+
+            <!-- 3. Ishonch Bloklari (14 kun almashtirish olib tashlandi) -->
             <div class="bg-white p-5 rounded-3xl shadow-2xs space-y-3 text-xs">
               <div class="flex items-center gap-3 text-neutral-700">
                 <div class="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
@@ -843,16 +848,6 @@
                 <div>
                   <div class="font-bold text-neutral-900">Tezkor yetkazib berish</div>
                   <div class="text-[11px] text-neutral-400">Toshkentda 24 soat, viloyatlarga 2-3 kun</div>
-                </div>
-              </div>
-
-              <div class="flex items-center gap-3 text-neutral-700">
-                <div class="w-8 h-8 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
-                  <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"/></svg>
-                </div>
-                <div>
-                  <div class="font-bold text-neutral-900">14 kun ichida almashtirish</div>
-                  <div class="text-[11px] text-neutral-400">Nuqson bo'lsa tekinga almashtirib beriladi</div>
                 </div>
               </div>
             </div>
