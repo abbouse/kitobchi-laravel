@@ -11,7 +11,7 @@
       </nav>
 
       <!-- Main Content Card -->
-      <div class="max-w-4xl mx-auto bg-white rounded-2xl border border-neutral-200/60 p-6 md:p-10 shadow-xs">
+      <div class="max-w-4xl mx-auto bg-white rounded-3xl border-none p-6 md:p-10 shadow-2xs">
         <div class="border-b border-neutral-100 pb-6 mb-8">
           <span class="inline-block text-xs font-semibold text-primary uppercase tracking-wider mb-1.5">Mijozlar xizmati</span>
           <h1 class="text-2xl md:text-3xl font-bold text-neutral-900 tracking-tight">Biz bilan bog'lanish</h1>

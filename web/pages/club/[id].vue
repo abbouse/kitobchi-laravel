@@ -19,7 +19,7 @@
 
         <NuxtLink
           to="/club"
-          class="inline-flex items-center gap-1.5 text-xs font-semibold text-neutral-600 hover:text-primary transition-colors no-underline px-3 py-1.5 rounded-full bg-white border border-neutral-200/80 shadow-2xs"
+          class="inline-flex items-center gap-1.5 text-xs font-semibold text-neutral-600 hover:text-primary transition-colors no-underline px-3 py-1.5 rounded-full bg-white border-none shadow-2xs"
         >
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
@@ -32,7 +32,7 @@
         <!-- LEFT COLUMN: MAIN CONTENT (8 cols) -->
         <main class="lg:col-span-8 space-y-6">
           <!-- MOBILE-ONLY POST ARTICLE (Hidden on Desktop, moves to Sidebar) -->
-          <article class="lg:hidden bg-white rounded-3xl p-5 border border-neutral-200/70 shadow-2xs">
+          <article class="lg:hidden bg-white rounded-3xl p-5 border-none shadow-2xs">
             <!-- Author Header -->
             <div class="flex items-center justify-between gap-3 mb-4">
               <div class="flex items-center gap-3">
@@ -195,7 +195,7 @@
           </article>
 
           <!-- ====== COMMENTS THREAD (DESKTOP MAIN CONTENT) ====== -->
-          <section class="bg-white rounded-3xl p-5 sm:p-7 border border-neutral-200/70 shadow-2xs">
+          <section class="bg-white rounded-3xl p-5 sm:p-7 border-none shadow-2xs">
             <!-- Top Summary Header (Matching screenshot 2) -->
             <div class="flex items-center justify-between pb-4 border-b border-neutral-100 mb-5">
               <div class="flex items-center gap-2.5">
@@ -232,7 +232,7 @@
 
                 <div
                   v-if="isSortMenuOpen"
-                  class="absolute right-0 top-full mt-1.5 z-30 w-56 rounded-2xl bg-white shadow-xl border border-neutral-100 py-1.5"
+                  class="absolute right-0 top-full mt-1.5 z-30 w-56 rounded-2xl bg-white shadow-xl border-none py-1.5"
                 >
                   <button
                     v-for="opt in sortOptions"
@@ -498,7 +498,7 @@
         <!-- RIGHT COLUMN: SIDEBAR (4 cols) - MAIN POST & COMPOSER FOR DESKTOP -->
         <aside class="lg:col-span-4 space-y-5">
           <!-- MAIN POST CARD (DESKTOP) -->
-          <article class="hidden lg:block bg-white rounded-3xl p-5 sm:p-6 border border-neutral-200/70 shadow-2xs">
+          <article class="hidden lg:block bg-white rounded-3xl p-5 sm:p-6 border-none shadow-2xs">
             <!-- Author Header -->
             <div class="flex items-center justify-between gap-3 mb-4">
               <div class="flex items-center gap-3 min-w-0">

@@ -57,7 +57,7 @@
         <main class="lg:col-span-8 space-y-4">
           <!-- MOBILE COMPOSER BAR (Matching Mobile App Screenshot) -->
           <div
-            class="lg:hidden bg-white rounded-3xl p-3 border border-neutral-200/80 shadow-2xs transition-shadow"
+            class="lg:hidden bg-white rounded-3xl p-3 border-none shadow-2xs transition-shadow"
             @click="!authStore.isAuthenticated && authStore.openAuthModal()"
           >
             <div class="flex items-center gap-2.5">
@@ -158,7 +158,7 @@
             <div
               v-for="n in 3"
               :key="'shimmer-' + n"
-              class="bg-white rounded-3xl p-6 border border-neutral-200/60 animate-pulse space-y-4"
+              class="bg-white rounded-3xl p-6 border-none shadow-2xs animate-pulse space-y-4"
             >
               <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-full bg-neutral-200"></div>
@@ -177,7 +177,7 @@
           <!-- Empty State -->
           <div
             v-else-if="posts.length === 0"
-            class="bg-white rounded-3xl p-10 text-center border border-neutral-200/70"
+            class="bg-white rounded-3xl p-10 text-center border-none shadow-2xs"
           >
             <div class="w-14 h-14 mx-auto mb-3 rounded-2xl bg-neutral-100 text-neutral-400 flex items-center justify-center">
               <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
@@ -205,7 +205,7 @@
               type="button"
               @click="loadMore"
               :disabled="isLoadingMore"
-              class="px-6 py-2.5 rounded-full bg-white hover:bg-neutral-100 text-neutral-800 font-bold text-xs sm:text-sm border border-neutral-200/80 transition-all cursor-pointer shadow-2xs inline-flex items-center gap-2"
+              class="px-6 py-2.5 rounded-full bg-white hover:bg-neutral-100 text-neutral-800 font-bold text-xs sm:text-sm border-none transition-all cursor-pointer shadow-2xs inline-flex items-center gap-2"
             >
               <svg
                 v-if="isLoadingMore"
@@ -225,8 +225,8 @@
         <aside class="lg:col-span-4 space-y-4 lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto no-scrollbar">
           <!-- DESKTOP POST COMPOSER CARD -->
           <div
-            class="hidden lg:block bg-white rounded-3xl p-5 border border-neutral-200/70 shadow-2xs relative transition-all"
-            :class="{ 'cursor-pointer hover:border-primary/40': !authStore.isAuthenticated }"
+            class="hidden lg:block bg-white rounded-3xl p-5 border-none shadow-2xs relative transition-all"
+            :class="{ 'cursor-pointer hover:shadow-xs': !authStore.isAuthenticated }"
             @click="!authStore.isAuthenticated && authStore.openAuthModal()"
           >
             <!-- Author Header -->
@@ -314,7 +314,7 @@
           </div>
 
           <!-- Active Members / Faol kitobxonlar Card -->
-          <div v-if="activeMembers.length > 0" class="bg-white rounded-3xl p-5 sm:p-6 border border-neutral-200/70 shadow-2xs">
+          <div v-if="activeMembers.length > 0" class="bg-white rounded-3xl p-5 sm:p-6 border-none shadow-2xs">
             <div class="flex items-center justify-between mb-4">
               <h3 class="font-bold text-sm sm:text-base text-neutral-900 m-0 flex items-center gap-2">
                 <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -369,7 +369,7 @@
           </div>
 
           <!-- Trending Topics / Ommabop mavzular Card -->
-          <div v-if="trendingThemes.length > 0" class="bg-white rounded-3xl p-5 sm:p-6 border border-neutral-200/70 shadow-2xs">
+          <div v-if="trendingThemes.length > 0" class="bg-white rounded-3xl p-5 sm:p-6 border-none shadow-2xs">
             <div class="flex items-center justify-between mb-3.5">
               <h3 class="font-bold text-sm sm:text-base text-neutral-900 m-0 flex items-center gap-2">
                 <AppEmoji name="fire" :size="16" />

@@ -84,7 +84,7 @@
                      BITTA "⋮" menyu tugmasi, ichida "Ulashish"/"O'chirish"
                      (piyolada shu menyuni ochib, matnini o'qib tasdiqlandi). -->
             <div class="space-y-4 mt-4">
-              <div v-for="item in cartStore.items" :key="item.id" class="rounded-[20px] p-4 bg-white flex flex-col gap-3 border border-transparent hover:border-neutral-200 transition-colors">
+              <div v-for="item in cartStore.items" :key="item.id" class="rounded-[20px] p-4 bg-white flex flex-col gap-3 shadow-2xs border-none">
 
                 <div class="w-full flex gap-4 items-start">
                   <div class="relative shrink-0">
@@ -174,7 +174,7 @@
             class="checkout-summary-col shrink-0 space-y-4 lg:sticky top-24 mt-4 lg:mt-0"
             :style="isMobile ? { display: 'flex', flexDirection: 'column', flexGrow: 1 } : {}"
           >
-            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-neutral-200/80 shadow-2xs space-y-3 sm:space-y-4">
+            <div class="p-5 sm:p-6 rounded-3xl bg-white shadow-2xs space-y-3 sm:space-y-4 border-none">
               <div class="relative inline-flex items-center w-full">
                 <input v-model="promoCode" type="text" placeholder="Promokod" class="w-full appearance-none placeholder:text-neutral-400 text-base/5 text-neutral-900 focus:outline-none md:text-sm rounded-2xl p-3 md:p-4 bg-[#F5F6F8] hover:bg-[#EFF1F4] focus:bg-white border border-transparent focus:border-primary focus:ring-2 focus:ring-primary/15 transition-all">
               </div>
@@ -192,13 +192,13 @@
                   <span class="font-semibold text-emerald-600">Bepul</span>
                 </div>
               </div>
-              <div class="pt-3 border-t border-neutral-200/80 flex justify-between items-baseline">
+              <div class="pt-3 border-t border-neutral-100 flex justify-between items-baseline">
                 <span class="text-lg font-bold text-neutral-900">Jami</span>
                 <span class="text-2xl font-extrabold text-primary">{{ formatPrice(cartStore.totalAmount) }} so'm</span>
               </div>
             </div>
 
-            <div class="p-5 sm:p-6 rounded-3xl bg-white border border-neutral-200/80 shadow-2xs space-y-3 max-md:hidden">
+            <div class="p-5 sm:p-6 rounded-3xl bg-white shadow-2xs space-y-3 max-md:hidden border-none">
               <div class="flex items-center justify-between gap-4">
                 <h3 class="text-base md:text-xl font-semibold leading-6 m-0">Muddatli to‘lovga rasmiylashtirish</h3>
                 <button @click="isInstallmentActive = !isInstallmentActive" class="w-14 h-7 rounded-full transition-colors relative border-none cursor-pointer p-0 shrink-0" :class="isInstallmentActive ? 'bg-primary' : 'bg-neutral-300'">

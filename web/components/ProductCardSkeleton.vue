@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col rounded-xl bg-white border border-gray-100 overflow-hidden shadow-xs">
+  <div class="flex flex-col rounded-xl bg-white border-none overflow-hidden shadow-2xs">
     <!-- Product Cover Aspect 3:4 Shimmer -->
     <div class="relative w-full rounded-xl shimmer overflow-hidden" style="aspect-ratio: 3 / 4;">
       <!-- Heart placeholder button -->

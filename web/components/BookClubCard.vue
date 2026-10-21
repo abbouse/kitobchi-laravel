@@ -1,5 +1,5 @@
 <template>
-  <article class="bg-white rounded-3xl p-5 sm:p-6 border border-neutral-200/70 hover:border-primary/30 transition-all duration-200 shadow-xs flex flex-col justify-between">
+  <article class="bg-white rounded-3xl p-5 sm:p-6 shadow-2xs hover:shadow-xs transition-all duration-200 border-none flex flex-col justify-between">
     <div>
       <!-- Author Header -->
       <div class="flex items-center justify-between gap-3 mb-4">

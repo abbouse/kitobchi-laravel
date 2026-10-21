@@ -38,7 +38,7 @@
       <div
         v-if="isOpen"
         ref="menuRef"
-        class="fixed w-60 rounded-2xl bg-white shadow-2xl border border-neutral-200/80 py-2 z-50"
+        class="fixed w-60 rounded-2xl bg-white shadow-2xl border-none py-2 z-50"
         :style="menuStyle"
       >
         <button

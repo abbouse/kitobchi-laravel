@@ -11,7 +11,7 @@
       </nav>
 
       <!-- Main Content Card -->
-      <div class="max-w-3xl mx-auto bg-white rounded-2xl border border-neutral-200/60 p-6 md:p-10 shadow-xs">
+      <div class="max-w-3xl mx-auto bg-white rounded-3xl border-none p-6 md:p-10 shadow-2xs">
         <div v-if="pending" class="animate-pulse space-y-4">
           <div class="h-8 bg-neutral-100 rounded-lg w-2/3 mb-6"></div>
           <div class="h-14 bg-neutral-100 rounded-lg w-full"></div>

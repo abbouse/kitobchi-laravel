@@ -93,7 +93,7 @@
       </div>
 
       <!-- Empty State -->
-      <div v-else-if="filteredPolicies.length === 0" class="bg-white rounded-3xl p-12 text-center border border-neutral-200/70 max-w-lg mx-auto shadow-2xs my-8">
+      <div v-else-if="filteredPolicies.length === 0" class="bg-white rounded-3xl p-12 text-center border-none max-w-lg mx-auto shadow-2xs my-8">
         <div class="w-16 h-16 rounded-2xl bg-neutral-100 text-neutral-400 mx-auto flex items-center justify-center mb-4">
           <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
@@ -118,7 +118,7 @@
           v-for="item in filteredPolicies"
           :key="item.slug"
           :to="`/legal/${item.slug}`"
-          class="group bg-white rounded-3xl p-6 border border-neutral-200/80 hover:border-primary/50 hover:shadow-md transition-all duration-200 flex flex-col justify-between no-underline"
+          class="group bg-white rounded-3xl p-6 border-none shadow-2xs hover:shadow-xs transition-all duration-200 flex flex-col justify-between no-underline"
         >
           <div>
             <!-- Top Icon & Category Tag -->
@@ -167,7 +167,7 @@
       </div>
 
       <!-- Elegant Single-Line Bottom Note (No bulky marketing blocks) -->
-      <div class="mt-10 p-5 sm:p-6 rounded-3xl bg-white border border-neutral-200/80 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-2xs">
+      <div class="mt-10 p-5 sm:p-6 rounded-3xl bg-white border-none flex flex-col sm:flex-row items-center justify-between gap-4 shadow-2xs">
         <div class="flex items-center gap-3">
           <div class="w-10 h-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">

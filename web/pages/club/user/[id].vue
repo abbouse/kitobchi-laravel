@@ -19,7 +19,7 @@
 
         <NuxtLink
           to="/club"
-          class="inline-flex items-center gap-1.5 text-xs font-semibold text-neutral-600 hover:text-primary transition-colors no-underline px-3 py-1.5 rounded-full bg-white border border-neutral-200/80 shadow-2xs"
+          class="inline-flex items-center gap-1.5 text-xs font-semibold text-neutral-600 hover:text-primary transition-colors no-underline px-3 py-1.5 rounded-full bg-white border-none shadow-2xs"
         >
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
@@ -30,15 +30,15 @@
 
       <!-- Loading State -->
       <div v-if="pending && !profileUser" class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
-        <div class="lg:col-span-4 bg-white rounded-3xl p-6 sm:p-7 border border-neutral-200/70 shadow-xs animate-pulse flex flex-col items-center">
+        <div class="lg:col-span-4 bg-white rounded-3xl p-6 sm:p-7 border-none shadow-2xs animate-pulse flex flex-col items-center">
           <div class="w-24 h-24 rounded-full bg-neutral-200 mb-3"></div>
           <div class="h-6 bg-neutral-200 rounded w-1/2 mb-2"></div>
           <div class="h-4 bg-neutral-100 rounded w-1/3 mb-4"></div>
           <div class="h-10 bg-neutral-100 rounded-2xl w-full"></div>
         </div>
         <div class="lg:col-span-8 space-y-4 animate-pulse">
-          <div class="h-12 bg-white rounded-2xl border border-neutral-200/70"></div>
-          <div class="h-40 bg-white rounded-3xl border border-neutral-200/70"></div>
+          <div class="h-12 bg-white rounded-2xl border-none shadow-2xs"></div>
+          <div class="h-40 bg-white rounded-3xl border-none shadow-2xs"></div>
         </div>
       </div>
 
@@ -46,7 +46,7 @@
       <div v-else-if="profileUser" class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
         <!-- LEFT COLUMN: USER PROFILE CARD (Sticky Sidebar on Desktop, 4 cols) -->
         <aside class="lg:col-span-4 lg:sticky lg:top-24 space-y-4">
-          <div class="bg-white rounded-3xl p-6 sm:p-7 border border-neutral-200/70 shadow-xs">
+          <div class="bg-white rounded-3xl p-6 sm:p-7 border-none shadow-2xs">
             <!-- User Avatar, Name & Bio -->
             <div class="flex flex-col items-center text-center">
               <div class="relative mb-3">
