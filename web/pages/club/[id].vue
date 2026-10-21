@@ -1,8 +1,8 @@
 <template>
-  <div class="py-4 sm:py-6 md:py-8 pb-24 sm:pb-28">
-    <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
+  <div class="py-2 sm:py-6 md:py-8 pb-24 sm:pb-28">
+    <div class="px-0 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
       <!-- Breadcrumbs & Back -->
-      <nav aria-label="Breadcrumb" class="mb-4 sm:mb-6 flex items-center justify-between">
+      <nav aria-label="Breadcrumb" class="mb-3 px-4 sm:px-0 flex items-center justify-between">
         <ol class="flex items-center gap-2 text-xs sm:text-sm text-neutral-500 list-none p-0 m-0">
           <li>
             <NuxtLink to="/" class="hover:text-primary transition-colors no-underline">Asosiy</NuxtLink>
@@ -32,7 +32,7 @@
         <!-- LEFT COLUMN: MAIN CONTENT (8 cols) -->
         <main class="lg:col-span-8 space-y-6">
           <!-- MOBILE-ONLY POST ARTICLE (Hidden on Desktop, moves to Sidebar) -->
-          <article class="lg:hidden bg-white rounded-3xl p-5 border-none shadow-2xs">
+          <article class="lg:hidden bg-white rounded-none sm:rounded-3xl p-4 sm:p-5 border-none shadow-2xs">
             <!-- Author Header -->
             <div class="flex items-center justify-between gap-3 mb-4">
               <div class="flex items-center gap-3">
@@ -195,7 +195,7 @@
           </article>
 
           <!-- ====== COMMENTS THREAD (DESKTOP MAIN CONTENT) ====== -->
-          <section class="bg-white rounded-3xl p-5 sm:p-7 border-none shadow-2xs">
+          <section class="bg-white rounded-none sm:rounded-3xl p-4 sm:p-7 border-none shadow-2xs">
             <!-- Top Summary Header (Matching screenshot 2) -->
             <div class="flex items-center justify-between pb-4 border-b border-neutral-100 mb-5">
               <div class="flex items-center gap-2.5">

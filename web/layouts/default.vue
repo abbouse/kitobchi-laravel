@@ -9,6 +9,7 @@
     <AuthModal />
     <SearchOverlay />
     <AppDownloadBottomSheet />
+    <AppSnackbar />
     <!-- Flash Delivery Banner: AppBottomNav ustida, client-side only -->
     <ClientOnly>
       <FlashDeliveryBanner />

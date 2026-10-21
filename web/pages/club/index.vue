@@ -1,8 +1,8 @@
 <template>
-  <div class="py-4 sm:py-6 md:py-8">
-    <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
+  <div class="py-2 sm:py-6 md:py-8">
+    <div class="px-0 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
       <!-- Mobile Only Page Header (Hidden on Desktop) -->
-      <div class="lg:hidden flex items-center justify-between gap-4 mb-4">
+      <div class="lg:hidden flex items-center justify-between gap-4 mb-3 px-4 sm:px-0">
         <div>
           <h1 class="text-xl sm:text-2xl font-extrabold text-neutral-900 tracking-tight m-0">
             Kitobxonlar Klubi
@@ -14,8 +14,8 @@
       </div>
 
       <!-- Mobile Only Themes / Category Pills (Hidden on Desktop) -->
-      <div class="lg:hidden mb-4">
-        <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
+      <div class="lg:hidden mb-3 px-4 sm:px-0">
+        <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
           <button
             type="button"
             @click="selectTheme(null)"
@@ -57,7 +57,7 @@
         <main class="lg:col-span-8 space-y-4">
           <!-- MOBILE COMPOSER BAR (Matching Mobile App Screenshot) -->
           <div
-            class="lg:hidden bg-white rounded-3xl p-3 border-none shadow-2xs transition-shadow"
+            class="lg:hidden bg-white rounded-none sm:rounded-3xl p-3 border-none shadow-2xs transition-shadow"
             @click="!authStore.isAuthenticated && authStore.openAuthModal()"
           >
             <div class="flex items-center gap-2.5">

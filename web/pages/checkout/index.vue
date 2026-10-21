@@ -520,10 +520,12 @@
 <script setup lang="ts">
 import { useCartStore } from '~/stores/cart'
 import { useAuthStore } from '~/stores/auth'
+import { useSnackbar } from '~/composables/useSnackbar'
 
 const config = useRuntimeConfig()
 const cartStore = useCartStore()
 const authStore = useAuthStore()
+const snackbar = useSnackbar()
 const router = useRouter()
 
 const isSuccessOpen = ref(false)
@@ -986,6 +988,7 @@ async function submitOrder() {
 
   if (!form.fullName || !form.phone || !hasValidAddress.value) {
     orderError.value = "Iltimos barcha maydonlarni to'ldiring"
+    snackbar.showWarning("Iltimos, yetkazib berish manzili va barcha maydonlarni to'ldiring")
     return
   }
 
@@ -993,6 +996,7 @@ async function submitOrder() {
     if (authStore.isAuthenticated) {
       if (!selectedCardId.value) {
         orderError.value = "Iltimos, karta tanlang yoki yangi karta qo'shing"
+        snackbar.showWarning("Iltimos, to'lov uchun bank kartasini tanlang")
         return
       }
     } else {
@@ -1001,10 +1005,12 @@ async function submitOrder() {
       const yy = guestCard.expireYear.padStart(2, '0')
       if (digits.length !== 16) {
         orderError.value = "Karta raqami 16 ta raqamdan iborat bo'lishi kerak"
+        snackbar.showWarning("Karta raqami 16 ta raqamdan iborat bo'lishi kerak")
         return
       }
       if (mm.length !== 2 || yy.length !== 2 || Number(mm) < 1 || Number(mm) > 12) {
         orderError.value = "Amal qilish muddatini to'g'ri kiriting"
+        snackbar.showWarning("Karta amal qilish muddatini to'g'ri kiriting")
         return
       }
     }
@@ -1019,6 +1025,7 @@ async function submitOrder() {
       }
       if (rawPhone.length < 9) {
         orderError.value = "Telefon raqamini to'liq kiriting"
+        snackbar.showWarning("Telefon raqamini to'liq kiriting")
         submitting.value = false
         return
       }
@@ -1028,6 +1035,7 @@ async function submitOrder() {
       isAuthOtpModalOpen.value = true
     } catch (e: any) {
       orderError.value = e?.data?.message || "SMS kod yuborishda xatolik yuz berdi"
+      snackbar.showError(orderError.value)
     } finally {
       submitting.value = false
     }
@@ -1044,6 +1052,7 @@ async function executeOrderSubmission() {
     const addressOk = await ensureMainAddress()
     if (!addressOk) {
       orderError.value = "Yetkazib berish manzilini tanlang"
+      snackbar.showWarning("Yetkazib berish manzilini tanlang")
       return
     }
 
@@ -1052,12 +1061,14 @@ async function executeOrderSubmission() {
     }
     if (!selectedDeliveryServiceId.value) {
       orderError.value = "Bu manzil uchun yetkazib berish xizmati topilmadi"
+      snackbar.showError(orderError.value)
       return
     }
 
     const selectedCartIds = await syncCartToServer()
     if (selectedCartIds.length === 0) {
       orderError.value = "Savatcha bo'sh"
+      snackbar.showWarning("Savatchada mahsulot topilmadi")
       return
     }
 
@@ -1084,6 +1095,7 @@ async function executeOrderSubmission() {
           body: { card_id: selectedCardId.value },
         })
         isSuccessOpen.value = true
+        snackbar.showSuccess("Buyurtma muvaffaqiyatli to'landi va qabul qilindi!")
       } else {
         // Guest user: one-time charge without binding to paylov (remember_card: false)
         const digits = guestCard.number.replace(/\D/g, '')
@@ -1113,9 +1125,11 @@ async function executeOrderSubmission() {
       }
     } else {
       isSuccessOpen.value = true
+      snackbar.showSuccess("Buyurtmangiz muvaffaqiyatli qabul qilindi!")
     }
   } catch (e: any) {
     orderError.value = e?.data?.message || 'Buyurtma yaratishda xatolik yuz berdi'
+    snackbar.showError(orderError.value)
   } finally {
     submitting.value = false
   }

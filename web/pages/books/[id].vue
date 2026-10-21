@@ -106,7 +106,7 @@
           <!-- Narx va Chegirma -->
           <div class="flex items-baseline gap-2.5">
             <span class="text-2xl font-black text-neutral-950 tracking-tight">{{ formatPrice(currentPrice) }} so'm</span>
-            <span v-if="discountPercent > 0" class="text-sm line-through text-neutral-400 font-medium">{{ formatPrice(product.price) }} so'm</span>
+            <span v-if="discountPercent > 0" class="text-sm line-through text-neutral-400 font-medium">{{ formatPrice(originalPrice) }} so'm</span>
             <span v-if="discountPercent > 0" class="text-xs font-bold px-1.5 py-0.5 rounded-md bg-red-500 text-white">-{{ discountPercent }}%</span>
           </div>
 
@@ -120,12 +120,8 @@
             </div>
           </div>
 
-          <!-- Do'kon & Teglar -->
-          <div class="flex flex-wrap items-center gap-1.5 pt-0.5">
-            <span class="inline-flex items-center text-xs font-medium rounded-lg px-2.5 py-1 bg-blue-50 text-primary gap-1">
-              <svg class="w-3.5 h-3.5 text-primary" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.403 12.652a3 3 0 0 0 0-5.304a3 3 0 0 0-3.75-3.751a3 3 0 0 0-5.305 0a3 3 0 0 0-3.751 3.75a3 3 0 0 0 0 5.305a3 3 0 0 0 3.75 3.751a3 3 0 0 0 5.305 0a3 3 0 0 0 3.751-3.75Zm-2.546-4.46a.75.75 0 0 0-1.214-.883l-3.483 4.79l-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5Z" clip-rule="evenodd"/></svg>
-              {{ product.seller?.shop_name || 'Kitobchi rasmiy do\'koni' }}
-            </span>
+          <!-- Teglar -->
+          <div v-if="productTags.length > 0" class="flex flex-wrap items-center gap-1.5 pt-0.5">
             <span
               v-for="(tag, tidx) in productTags"
               :key="tag"
@@ -136,8 +132,75 @@
             </span>
           </div>
 
-          <!-- Yilqam Muddatli To'lov (Nasiya) Qatori -->
-          <div class="bg-neutral-50 rounded-2xl p-3 border border-neutral-100 flex items-center justify-between gap-3">
+          <!-- DO'KONLAR VA TAKLIFLAR BLOKI (Katalog asosida bir nechta do'konlar) -->
+          <div v-if="rawOffers.length > 1" class="pt-1 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-neutral-900">Do'konlar ({{ rawOffers.length }} ta taklif)</span>
+              <button
+                v-if="rawOffers.length > 3"
+                type="button"
+                @click="isAllOffersOpen = true"
+                class="text-xs font-semibold text-primary border-none bg-transparent cursor-pointer p-0 hover:underline"
+              >
+                Barchasi ({{ rawOffers.length }}) ›
+              </button>
+            </div>
+
+            <!-- Top 3 Do'konlar ro'yxati -->
+            <div class="space-y-1.5">
+              <button
+                v-for="offer in displayedOffers"
+                :key="'mob-offer-' + offer.id"
+                type="button"
+                @click="selectOffer(offer.id)"
+                class="w-full text-left p-2.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-2.5"
+                :class="offer.id === activeOffer?.id ? 'border-primary bg-blue-50/50 ring-1 ring-primary/30' : 'border-neutral-200/80 bg-neutral-50/50 hover:bg-neutral-100/60'"
+              >
+                <div class="flex items-center gap-2.5 min-w-0">
+                  <div
+                    class="w-4 h-4 rounded-full border flex items-center justify-center shrink-0"
+                    :class="offer.id === activeOffer?.id ? 'border-primary bg-primary' : 'border-neutral-300 bg-white'"
+                  >
+                    <span v-if="offer.id === activeOffer?.id" class="w-1.5 h-1.5 rounded-full bg-white"></span>
+                  </div>
+                  <div class="min-w-0">
+                    <div class="text-xs font-bold text-neutral-900 truncate flex items-center gap-1">
+                      <span>{{ offer.seller?.shop_name || 'Kitobchi do\'koni' }}</span>
+                      <svg v-if="offer.seller?.isVerified" class="w-3.5 h-3.5 text-primary shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M16.403 12.652a3 3 0 0 0 0-5.304a3 3 0 0 0-3.75-3.751a3 3 0 0 0-5.305 0a3 3 0 0 0-3.751 3.75a3 3 0 0 0 0 5.305a3 3 0 0 0 3.75 3.751a3 3 0 0 0 5.305 0a3 3 0 0 0 3.751-3.75Zm-2.546-4.46a.75.75 0 0 0-1.214-.883l-3.483 4.79l-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5Z" clip-rule="evenodd"/>
+                      </svg>
+                    </div>
+                    <div v-if="offer.seller?.rating" class="text-[10px] text-neutral-500">
+                      ★ {{ Number(offer.seller.rating).toFixed(1) }}
+                    </div>
+                  </div>
+                </div>
+                <div class="text-right shrink-0">
+                  <div class="text-xs font-black text-neutral-900">
+                    {{ formatPrice(offer.effective_price || offer.discountPrice || offer.price) }} so'm
+                  </div>
+                  <div v-if="!offer.in_stock || offer.stock <= 0" class="text-[10px] text-rose-500 font-semibold">
+                    Qolmagan
+                  </div>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <!-- Yagona do'kon bo'lsa (Sotuvda mavjud yozuvsiz) -->
+          <div v-else-if="activeSeller?.shop_name" class="pt-0.5">
+            <span class="inline-flex items-center text-xs font-medium rounded-lg px-2.5 py-1 bg-blue-50 text-primary gap-1">
+              <svg class="w-3.5 h-3.5 text-primary" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.403 12.652a3 3 0 0 0 0-5.304a3 3 0 0 0-3.75-3.751a3 3 0 0 0-5.305 0a3 3 0 0 0-3.751 3.75a3 3 0 0 0 0 5.305a3 3 0 0 0 3.75 3.751a3 3 0 0 0 5.305 0a3 3 0 0 0 3.751-3.75Zm-2.546-4.46a.75.75 0 0 0-1.214-.883l-3.483 4.79l-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5Z" clip-rule="evenodd"/></svg>
+              {{ activeSeller.shop_name }}
+            </span>
+          </div>
+
+          <!-- Haqiqiy Split (faqat backend split tizimi ruxsat bergan va rejalar mavjud bo'lganda) -->
+          <div
+            v-if="isSplitAvailable && selectedSplitPlan"
+            @click="isSplitModalOpen = true"
+            class="bg-neutral-50 hover:bg-neutral-100/70 rounded-2xl p-3 border border-neutral-100 flex items-center justify-between gap-3 cursor-pointer transition-colors"
+          >
             <div class="flex items-center gap-2.5 min-w-0">
               <div class="w-8 h-8 rounded-xl bg-blue-100/70 text-primary flex items-center justify-center shrink-0">
                 <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -147,24 +210,15 @@
               </div>
               <div class="min-w-0">
                 <div class="text-xs font-bold text-neutral-900 truncate">
-                  {{ installmentParts }} × {{ formatPrice(installmentPartPrice) }} so'm / oyiga
+                  {{ selectedSplitPlan.installments_count }} × {{ formatPrice(selectedSplitPlan.first_payment) }} so'm
                 </div>
                 <div class="text-[11px] text-neutral-400">
-                  Muddatli to'lov ({{ installmentMonthsCount }} oy)
+                  {{ selectedSplitPlan.monthly_interest_percent === 0 ? "0% foizsiz bo'lib to'lash" : `${selectedSplitPlan.months} oyga bo'lib to'lash` }}
                 </div>
               </div>
             </div>
-            <div class="flex items-center gap-1 shrink-0">
-              <button
-                v-for="part in [2, 4]"
-                :key="part"
-                type="button"
-                @click="installmentParts = part as (2 | 4)"
-                class="w-7 h-7 rounded-lg text-xs font-bold flex items-center justify-center transition-all cursor-pointer border-none"
-                :class="installmentParts === part ? 'bg-primary text-white shadow-xs' : 'bg-white text-neutral-600 hover:bg-neutral-100 border border-neutral-200'"
-              >
-                {{ part }}
-              </button>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <span class="text-xs font-semibold text-primary">Rejalar ›</span>
             </div>
           </div>
 
@@ -368,16 +422,24 @@
             </button>
           </div>
 
-          <!-- Asosiy Brend Savatcha Tugmasi -->
+          <!-- Asosiy Savatcha Tugmasi -->
           <button
             type="button"
             @click="handleAddToCart"
-            class="flex-1 h-12 rounded-2xl bg-brand-gradient text-white font-bold text-base flex items-center justify-center gap-2 shadow-md hover:opacity-95 active:scale-95 transition-all border-none cursor-pointer"
+            class="flex-1 h-12 rounded-2xl font-bold text-base flex items-center justify-center gap-2 shadow-md transition-all border-none cursor-pointer"
+            :class="[
+              !isInStock
+                ? 'bg-neutral-200 text-neutral-500 opacity-90 cursor-not-allowed shadow-none'
+                : 'bg-brand-gradient text-white hover:opacity-95 active:scale-95'
+            ]"
           >
-            <span>{{ isAdded ? 'Savatga o‘tish' : 'Savatcha' }}</span>
-            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/>
-            </svg>
+            <span v-if="!isInStock">Sotuvda qolmagan</span>
+            <template v-else>
+              <span>{{ isAdded ? 'Savatga o‘tish' : 'Savatcha' }}</span>
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/>
+              </svg>
+            </template>
           </button>
         </div>
       </div>
@@ -629,17 +691,8 @@
           <div class="col-span-12 lg:col-span-5 sticky top-20 space-y-4">
             <!-- 1. Asosiy Xarid Kartasi -->
             <div class="bg-white p-6 rounded-3xl shadow-2xs space-y-4">
-              <!-- Sarlavha & Do'kon -->
+              <!-- Sarlavha (Book.Uz va Sotuvda mavjud row olib tashlandi) -->
               <div>
-                <div class="flex items-center gap-1.5 mb-2">
-                  <span class="inline-flex items-center text-xs font-medium rounded-lg px-2 py-0.5 bg-blue-50 text-primary gap-1">
-                    <svg class="w-3.5 h-3.5 text-primary" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.403 12.652a3 3 0 0 0 0-5.304a3 3 0 0 0-3.75-3.751a3 3 0 0 0-5.305 0a3 3 0 0 0-3.751 3.75a3 3 0 0 0 0 5.305a3 3 0 0 0 3.75 3.751a3 3 0 0 0 5.305 0a3 3 0 0 0 3.751-3.75Zm-2.546-4.46a.75.75 0 0 0-1.214-.883l-3.483 4.79l-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5Z" clip-rule="evenodd"/></svg>
-                    {{ product.seller?.shop_name || 'Kitobchi rasmiy' }}
-                  </span>
-                  <span v-if="product.count > 0" class="text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
-                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Sotuvda mavjud
-                  </span>
-                </div>
                 <h1 class="text-xl font-bold text-neutral-900 leading-snug m-0">
                   {{ product.name }}
                 </h1>
@@ -648,7 +701,7 @@
                 </div>
               </div>
 
-              <!-- Hashtaglar (Screenshot 2) -->
+              <!-- Hashtaglar -->
               <div v-if="productTags.length > 0" class="flex flex-wrap items-center gap-1.5">
                 <span
                   v-for="(tag, tidx) in productTags"
@@ -660,47 +713,95 @@
                 </span>
               </div>
 
+              <!-- DO'KONLAR VA TAKLIFLAR BLOKI (Katalog asosida ko'p do'konlar) -->
+              <div v-if="rawOffers.length > 1" class="space-y-2 pt-1 border-t border-neutral-100">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-bold text-neutral-900">Do'konlar ({{ rawOffers.length }} ta taklif)</span>
+                  <button
+                    v-if="rawOffers.length > 3"
+                    type="button"
+                    @click="isAllOffersOpen = true"
+                    class="text-xs font-semibold text-primary border-none bg-transparent cursor-pointer p-0 hover:underline"
+                  >
+                    Barchasi ({{ rawOffers.length }}) ›
+                  </button>
+                </div>
+
+                <!-- Top 3 Do'konlar ro'yxati -->
+                <div class="space-y-1.5">
+                  <button
+                    v-for="offer in displayedOffers"
+                    :key="'pc-offer-' + offer.id"
+                    type="button"
+                    @click="selectOffer(offer.id)"
+                    class="w-full text-left p-2.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-2.5"
+                    :class="offer.id === activeOffer?.id ? 'border-primary bg-primary/5 ring-1 ring-primary/30' : 'border-neutral-200/80 bg-neutral-50/50 hover:bg-neutral-100/60'"
+                  >
+                    <div class="flex items-center gap-2.5 min-w-0">
+                      <div
+                        class="w-4 h-4 rounded-full border flex items-center justify-center shrink-0"
+                        :class="offer.id === activeOffer?.id ? 'border-primary bg-primary' : 'border-neutral-300 bg-white'"
+                      >
+                        <span v-if="offer.id === activeOffer?.id" class="w-1.5 h-1.5 rounded-full bg-white"></span>
+                      </div>
+                      <div class="min-w-0">
+                        <div class="text-xs font-bold text-neutral-900 truncate flex items-center gap-1">
+                          <span>{{ offer.seller?.shop_name || 'Kitobchi do\'koni' }}</span>
+                          <svg v-if="offer.seller?.isVerified" class="w-3.5 h-3.5 text-primary shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M16.403 12.652a3 3 0 0 0 0-5.304a3 3 0 0 0-3.75-3.751a3 3 0 0 0-5.305 0a3 3 0 0 0-3.751 3.75a3 3 0 0 0 0 5.305a3 3 0 0 0 3.75 3.751a3 3 0 0 0 5.305 0a3 3 0 0 0 3.751-3.75Zm-2.546-4.46a.75.75 0 0 0-1.214-.883l-3.483 4.79l-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5Z" clip-rule="evenodd"/>
+                          </svg>
+                        </div>
+                        <div v-if="offer.seller?.rating" class="text-[10px] text-neutral-500">
+                          ★ {{ Number(offer.seller.rating).toFixed(1) }} reyting
+                        </div>
+                      </div>
+                    </div>
+                    <div class="text-right shrink-0">
+                      <div class="text-xs font-black text-neutral-900">
+                        {{ formatPrice(offer.effective_price || offer.discountPrice || offer.price) }} so'm
+                      </div>
+                      <div v-if="!offer.in_stock || offer.stock <= 0" class="text-[10px] text-rose-500 font-semibold">
+                        Qolmagan
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Yagona do'kon bo'lsa (Sotuvda mavjud yozuvsiz) -->
+              <div v-else-if="activeSeller?.shop_name" class="pt-0.5">
+                <span class="inline-flex items-center text-xs font-medium rounded-lg px-2.5 py-1 bg-blue-50 text-primary gap-1">
+                  <svg class="w-3.5 h-3.5 text-primary" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.403 12.652a3 3 0 0 0 0-5.304a3 3 0 0 0-3.75-3.751a3 3 0 0 0-5.305 0a3 3 0 0 0-3.751 3.75a3 3 0 0 0 0 5.305a3 3 0 0 0 3.75 3.751a3 3 0 0 0 5.305 0a3 3 0 0 0 3.751-3.75Zm-2.546-4.46a.75.75 0 0 0-1.214-.883l-3.483 4.79l-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5Z" clip-rule="evenodd"/></svg>
+                  {{ activeSeller.shop_name }}
+                </span>
+              </div>
+
               <!-- Narx va chegirma -->
               <div class="p-4 rounded-2xl bg-neutral-50/80 space-y-1">
                 <div class="text-[11px] text-neutral-400 uppercase font-semibold">Narxi</div>
                 <div class="flex items-baseline gap-2.5">
                   <span class="text-2xl font-black text-neutral-950">{{ formatPrice(currentPrice) }} so'm</span>
-                  <span v-if="discountPercent > 0" class="text-sm line-through text-neutral-400 font-medium">{{ formatPrice(product.price) }} so'm</span>
+                  <span v-if="discountPercent > 0" class="text-sm line-through text-neutral-400 font-medium">{{ formatPrice(originalPrice) }} so'm</span>
                   <span v-if="discountPercent > 0" class="text-xs font-bold px-2 py-0.5 rounded-md bg-red-500 text-white">-{{ discountPercent }}%</span>
                 </div>
               </div>
 
-              <!-- Muddatli to'lov qismi (Screenshot 2) -->
-              <div class="p-4 rounded-2xl bg-neutral-50/60 space-y-3">
+              <!-- Haqiqiy Split (faqat mavjud bo'lsa) -->
+              <div
+                v-if="isSplitAvailable && selectedSplitPlan"
+                @click="isSplitModalOpen = true"
+                class="p-3.5 rounded-2xl bg-neutral-50/60 hover:bg-neutral-100/70 border border-neutral-100 space-y-1 cursor-pointer transition-colors"
+              >
                 <div class="flex items-center justify-between">
                   <div>
-                    <span class="text-[11px] text-neutral-400 font-medium block">Bo'lib to'lash</span>
-                    <span class="text-base font-bold text-neutral-900">{{ installmentParts }} × {{ formatPrice(installmentPartPrice) }} so'm</span>
+                    <span class="text-[11px] text-neutral-400 font-medium block">
+                      {{ selectedSplitPlan.monthly_interest_percent === 0 ? "0% foizsiz bo'lib to'lash" : "Bo'lib to'lash" }}
+                    </span>
+                    <span class="text-base font-bold text-neutral-900">
+                      {{ selectedSplitPlan.installments_count }} × {{ formatPrice(selectedSplitPlan.first_payment) }} so'm
+                    </span>
                   </div>
-                  <div class="flex items-center gap-1">
-                    <button
-                      v-for="part in [2, 4]"
-                      :key="part"
-                      type="button"
-                      @click="installmentParts = part as (2 | 4)"
-                      class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer border-none"
-                      :class="installmentParts === part ? 'bg-primary text-white shadow-xs' : 'bg-neutral-200/80 text-neutral-700 hover:bg-neutral-300'"
-                    >
-                      {{ part }} oy
-                    </button>
-                  </div>
-                </div>
-
-                <div class="w-full bg-neutral-200/70 h-1.5 rounded-full overflow-hidden flex">
-                  <div
-                    class="h-full bg-primary rounded-full transition-all duration-300"
-                    :style="{ width: `${(1 / installmentParts) * 100}%` }"
-                  ></div>
-                </div>
-
-                <div class="flex justify-between text-xs text-neutral-500">
-                  <span>Bugun: <b class="text-neutral-900">{{ formatPrice(installmentPartPrice) }} so'm</b></span>
-                  <span>Qolgani: <b class="text-neutral-900">{{ formatPrice(installmentPartPrice) }} so'm/oy</b></span>
+                  <span class="text-xs font-bold text-primary">Rejalarni ko'rish ›</span>
                 </div>
               </div>
 
@@ -735,10 +836,18 @@
                   <button
                     type="button"
                     @click="handleBuyNow"
-                    class="flex-1 h-12 rounded-2xl bg-brand-gradient text-white font-bold text-sm flex items-center justify-center gap-2 shadow-md hover:opacity-95 active:scale-[0.98] transition-all border-none cursor-pointer"
+                    class="flex-1 h-12 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow-md transition-all border-none cursor-pointer"
+                    :class="[
+                      !isInStock
+                        ? 'bg-neutral-200 text-neutral-500 opacity-90 cursor-not-allowed shadow-none'
+                        : 'bg-brand-gradient text-white hover:opacity-95 active:scale-[0.98]'
+                    ]"
                   >
-                    <span>Hoziroq sotib olish</span>
-                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/></svg>
+                    <span v-if="!isInStock">Sotuvda qolmagan</span>
+                    <template v-else>
+                      <span>Hoziroq sotib olish</span>
+                      <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/></svg>
+                    </template>
                   </button>
                 </div>
 
@@ -747,15 +856,24 @@
                   type="button"
                   @click="handleAddToCart"
                   class="w-full h-11 rounded-2xl font-semibold text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer border-none"
-                  :class="isAdded ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100' : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-800'"
+                  :class="[
+                    !isInStock
+                      ? 'bg-neutral-100 text-neutral-400 cursor-not-allowed'
+                      : (isAdded ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100' : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-800')
+                  ]"
                 >
-                  <svg v-if="!isAdded" class="w-4 h-4 fill-current text-neutral-600" viewBox="0 0 20 20">
-                    <path d="M3 1a1 1 0 0 0 0 2h1.22l.305 1.222l.01.042l1.358 5.43l-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 0 0 0-2H6.414l1-1H14a1 1 0 0 0 .894-.553l3-6A1 1 0 0 0 17 3H6.28l-.31-1.243A1 1 0 0 0 5 1zm13 15.5a1.5 1.5 0 1 1-3 0a1.5 1.5 0 0 1 3 0M6.5 18a1.5 1.5 0 1 0 0-3a1.5 1.5 0 0 0 0 3"/>
-                  </svg>
-                  <svg v-else class="w-4 h-4 text-emerald-600" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd"/>
-                  </svg>
-                  <span>{{ isAdded ? 'Savatda mavjud (Ko\'rish)' : 'Savatga qo‘shish' }}</span>
+                  <template v-if="!isInStock">
+                    <span>Tanlangan do'konda qolmagan</span>
+                  </template>
+                  <template v-else>
+                    <svg v-if="!isAdded" class="w-4 h-4 fill-current text-neutral-600" viewBox="0 0 20 20">
+                      <path d="M3 1a1 1 0 0 0 0 2h1.22l.305 1.222l.01.042l1.358 5.43l-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 0 0 0-2H6.414l1-1H14a1 1 0 0 0 .894-.553l3-6A1 1 0 0 0 17 3H6.28l-.31-1.243A1 1 0 0 0 5 1zm13 15.5a1.5 1.5 0 1 1-3 0a1.5 1.5 0 0 1 3 0M6.5 18a1.5 1.5 0 1 0 0-3a1.5 1.5 0 0 0 0 3"/>
+                    </svg>
+                    <svg v-else class="w-4 h-4 text-emerald-600" viewBox="0 0 20 20" fill="currentColor">
+                      <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd"/>
+                    </svg>
+                    <span>{{ isAdded ? 'Savatda mavjud (Ko\'rish)' : 'Savatga qo‘shish' }}</span>
+                  </template>
                 </button>
               </div>
             </div>
@@ -947,6 +1065,140 @@
         </div>
       </div>
     </Teleport>
+
+    <!-- Barcha do'konlar takliflari modali -->
+    <Teleport to="body">
+      <div
+        v-if="isAllOffersOpen"
+        class="fixed inset-0 z-[120] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
+        @click.self="isAllOffersOpen = false"
+      >
+        <div class="max-h-[85vh] bg-white rounded-3xl w-full max-w-lg p-6 shadow-2xl flex flex-col border-none">
+          <div class="flex items-center justify-between pb-4 border-b border-gray-100">
+            <div class="flex items-center gap-2">
+              <h3 class="text-lg font-bold text-neutral-900 m-0">Barcha do'konlar</h3>
+              <span class="text-xs px-2.5 py-0.5 rounded-full bg-blue-50 text-primary font-semibold">{{ rawOffers.length }} ta taklif</span>
+            </div>
+            <button
+              type="button"
+              @click="isAllOffersOpen = false"
+              class="p-1.5 rounded-full hover:bg-neutral-100 text-neutral-400 border-none bg-transparent cursor-pointer"
+              aria-label="Yopish"
+            >
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+
+          <div class="overflow-y-auto py-4 flex-1 space-y-2 no-scrollbar">
+            <div
+              v-for="offer in rawOffers"
+              :key="'all-offer-' + offer.id"
+              @click="selectOffer(offer.id)"
+              class="p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3"
+              :class="offer.id === activeOffer?.id ? 'border-primary bg-primary/5 ring-1 ring-primary/30' : 'border-neutral-200/80 bg-neutral-50/50 hover:bg-neutral-100/60'"
+            >
+              <div class="flex items-center gap-3 min-w-0">
+                <div
+                  class="w-4 h-4 rounded-full border flex items-center justify-center shrink-0"
+                  :class="offer.id === activeOffer?.id ? 'border-primary bg-primary' : 'border-neutral-300 bg-white'"
+                >
+                  <span v-if="offer.id === activeOffer?.id" class="w-1.5 h-1.5 rounded-full bg-white"></span>
+                </div>
+                <div class="min-w-0">
+                  <div class="text-sm font-bold text-neutral-900 truncate flex items-center gap-1.5">
+                    <span>{{ offer.seller?.shop_name || 'Kitobchi do\'koni' }}</span>
+                    <svg v-if="offer.seller?.isVerified" class="w-4 h-4 text-primary shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                      <path fill-rule="evenodd" d="M16.403 12.652a3 3 0 0 0 0-5.304a3 3 0 0 0-3.75-3.751a3 3 0 0 0-5.305 0a3 3 0 0 0-3.751 3.75a3 3 0 0 0 0 5.305a3 3 0 0 0 3.75 3.751a3 3 0 0 0 5.305 0a3 3 0 0 0 3.751-3.75Zm-2.546-4.46a.75.75 0 0 0-1.214-.883l-3.483 4.79l-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5Z" clip-rule="evenodd"/>
+                    </svg>
+                  </div>
+                  <div class="flex items-center gap-2 mt-0.5 text-xs text-neutral-500">
+                    <span v-if="offer.seller?.rating">★ {{ Number(offer.seller.rating).toFixed(1) }}</span>
+                    <span v-if="offer.artikul" class="text-neutral-400">Art: {{ offer.artikul }}</span>
+                  </div>
+                </div>
+              </div>
+              <div class="text-right shrink-0">
+                <div class="text-sm font-black text-neutral-900">
+                  {{ formatPrice(offer.effective_price || offer.discountPrice || offer.price) }} so'm
+                </div>
+                <div v-if="!offer.in_stock || offer.stock <= 0" class="text-xs text-rose-500 font-semibold">
+                  Qolmagan
+                </div>
+                <div v-else class="text-[11px] text-emerald-600 font-medium">
+                  Sotuvda bor
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Bo'lib to'lash (Split) Modali -->
+    <Teleport to="body">
+      <div
+        v-if="isSplitModalOpen"
+        class="fixed inset-0 z-[120] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
+        @click.self="isSplitModalOpen = false"
+      >
+        <div class="max-h-[85vh] bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl flex flex-col border-none">
+          <div class="flex items-center justify-between pb-4 border-b border-gray-100">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-xl bg-blue-100 text-primary flex items-center justify-center">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 6v6l4 2" />
+                </svg>
+              </div>
+              <div>
+                <h3 class="text-base font-bold text-neutral-900 m-0">Bo'lib to'lash (Split)</h3>
+                <p class="text-xs text-neutral-400 m-0">Qulay va foizsiz to'lov rejalari</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              @click="isSplitModalOpen = false"
+              class="p-1.5 rounded-full hover:bg-neutral-100 text-neutral-400 border-none bg-transparent cursor-pointer"
+              aria-label="Yopish"
+            >
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+
+          <div class="overflow-y-auto py-4 flex-1 space-y-3 no-scrollbar">
+            <div
+              v-for="plan in splitPlans"
+              :key="'plan-' + plan.id"
+              class="p-4 rounded-2xl border border-neutral-200 bg-neutral-50/50 space-y-2"
+            >
+              <div class="flex items-center justify-between">
+                <div>
+                  <span class="text-xs font-bold text-primary px-2 py-0.5 rounded-md bg-blue-50">
+                    {{ plan.monthly_interest_percent === 0 ? "0% Foizsiz" : `${plan.months} oy` }}
+                  </span>
+                  <span class="text-xs text-neutral-500 ml-2">{{ plan.installments_count }} ta to'lov</span>
+                </div>
+                <div class="text-sm font-extrabold text-neutral-900">
+                  {{ formatPrice(plan.first_payment) }} so'm / to'lov
+                </div>
+              </div>
+
+              <div class="text-xs text-neutral-600 flex justify-between pt-1 border-t border-neutral-100">
+                <span>Umumiy to'lov:</span>
+                <span class="font-bold text-neutral-900">{{ formatPrice(plan.total) }} so'm</span>
+              </div>
+            </div>
+
+            <div class="p-3.5 rounded-2xl bg-blue-50/60 border border-blue-100/60 text-xs text-neutral-600 space-y-1">
+              <div class="font-bold text-primary">To'lov qanday ishlaydi?</div>
+              <p class="m-0 leading-relaxed text-[11px] text-neutral-500">
+                Birinchi to'lov buyurtma vaqtida amalga oshiriladi, qolgan to'lovlar esa belgilangan grafik asosida avtomatik yechib olinadi.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 
   <!-- ====== FULL SHIMMER SKELETON (While loading) ====== -->
@@ -981,10 +1233,13 @@ const config = useRuntimeConfig()
 const cartStore = useCartStore()
 const favStore = useFavoritesStore()
 const authStore = useAuthStore()
+const snackbar = useSnackbar()
 
 const isReviewsOpen = ref(false)
 const isAiMatchOpen = ref(false)
 const isVideoOpen = ref(false)
+const isAllOffersOpen = ref(false)
+const isSplitModalOpen = ref(false)
 const orderCount = ref(1)
 
 function incrementQuantity() {
@@ -1012,9 +1267,9 @@ function bookLangLabel(value: string): string {
   return BOOK_LANG_LABELS[key] ?? value
 }
 
-watch(isReviewsOpen, (open) => {
+watch([isReviewsOpen, isAllOffersOpen, isSplitModalOpen], ([revOpen, offersOpen, splitOpen]) => {
   if (typeof document !== 'undefined') {
-    document.body.style.overflow = open ? 'hidden' : ''
+    document.body.style.overflow = (revOpen || offersOpen || splitOpen) ? 'hidden' : ''
   }
 })
 
@@ -1124,12 +1379,30 @@ const hasVideo = computed(() => {
   return Boolean(p.has_video || p.video || p.video_url)
 })
 
-// Installment calculations (Screenshot 2: 4 × 12,500 so'm)
-const installmentParts = ref<2 | 4>(4)
-const installmentMonthsCount = computed(() => installmentParts.value / 2)
-const installmentPartPrice = computed(() => {
-  const price = currentPrice.value || 0
-  return Math.ceil(price / installmentParts.value)
+// Real Split calculation from backend API
+const { data: splitRes } = useFetch<any>(
+  () => `${config.public.apiBase}/v1/kitobchi/split-preview`,
+  {
+    query: computed(() => ({
+      amount: currentPrice.value,
+      product_type: 'book',
+      product_id: product.value?.id || rawId.value
+    })),
+    watch: [() => currentPrice.value, () => product.value?.id],
+    lazy: true
+  }
+)
+
+const isSplitAvailable = computed(() => {
+  return Boolean(splitRes.value?.data?.enabled && splitPlans.value.length > 0)
+})
+
+const splitPlans = computed(() => {
+  return Array.isArray(splitRes.value?.data?.plans) ? splitRes.value.data.plans : []
+})
+
+const selectedSplitPlan = computed(() => {
+  return splitPlans.value[0] || null
 })
 
 // UGC Reviews
@@ -1279,16 +1552,136 @@ function nextImage() {
 
 const isDescExpanded = ref(false)
 
+// Multi-shop catalog offers
+const rawOffers = computed<any[]>(() => {
+  const p = product.value
+  if (!p) return []
+  if (Array.isArray(p.offers) && p.offers.length > 0) {
+    return p.offers.map((off: any) => {
+      const pPrice = Number(off.price || 0)
+      const pDisc = Number(off.discountPrice || 0)
+      const effective = off.effective_price || (pDisc > 0 && pDisc < pPrice ? pDisc : pPrice)
+      const stockCount = off.count ?? off.stock ?? 1
+      const inStock = off.in_stock !== false && stockCount > 0
+      return {
+        ...off,
+        price: pPrice,
+        discountPrice: pDisc,
+        effective_price: effective,
+        stock: stockCount,
+        in_stock: inStock,
+        seller: off.seller || {
+          seller_id: off.seller_id || p.seller_id,
+          shop_name: off.shop_name || p.seller?.shop_name || 'Kitobchi do\'koni',
+          rating: off.seller?.rating || p.seller?.rating || 5,
+          isVerified: off.seller?.isVerified ?? true
+        }
+      }
+    })
+  }
+
+  // Fallback single offer from product
+  const pPrice = Number(p.price || 0)
+  const pDisc = Number(p.discountPrice || 0)
+  const effective = (pDisc > 0 && pDisc < pPrice) ? pDisc : pPrice
+  const stockCount = p.count ?? p.stock ?? 1
+  return [{
+    id: p.id,
+    edition_id: p.edition_id,
+    artikul: p.artikul,
+    price: pPrice,
+    discountPrice: pDisc,
+    effective_price: effective,
+    stock: stockCount,
+    in_stock: p.in_stock !== false && stockCount > 0,
+    seller: p.seller || {
+      seller_id: p.seller_id,
+      shop_name: p.seller_name || 'Kitobchi do\'koni',
+      rating: p.rating || 5,
+      isVerified: true
+    }
+  }]
+})
+
+// Auto-select best offer: prefer in-stock, then lowest price
+const bestOffer = computed(() => {
+  const list = [...rawOffers.value]
+  if (list.length === 0) return null
+
+  list.sort((a, b) => {
+    const aStock = a.in_stock ? 1 : 0
+    const bStock = b.in_stock ? 1 : 0
+    if (aStock !== bStock) return bStock - aStock
+
+    const priceA = Number(a.effective_price || a.price || 0)
+    const priceB = Number(b.effective_price || b.price || 0)
+    return priceA - priceB
+  })
+
+  return list[0]
+})
+
+const selectedOfferId = ref<number | string | null>(null)
+
+watchEffect(() => {
+  if (bestOffer.value && !selectedOfferId.value) {
+    selectedOfferId.value = bestOffer.value.id
+  }
+})
+
+const activeOffer = computed(() => {
+  if (!rawOffers.value.length) return null
+  if (selectedOfferId.value) {
+    const found = rawOffers.value.find(o => o.id === selectedOfferId.value)
+    if (found) return found
+  }
+  return bestOffer.value || rawOffers.value[0]
+})
+
+const activeSeller = computed(() => {
+  return activeOffer.value?.seller || product.value?.seller || null
+})
+
+const displayedOffers = computed(() => {
+  return rawOffers.value.slice(0, 3)
+})
+
+function selectOffer(id: number | string) {
+  selectedOfferId.value = id
+  isAllOffersOpen.value = false
+}
+
+const isInStock = computed(() => {
+  if (activeOffer.value) {
+    return Boolean(activeOffer.value.in_stock && (activeOffer.value.stock ?? 1) > 0)
+  }
+  if (!product.value) return false
+  return product.value.in_stock !== false && (product.value.count ?? product.value.stock ?? 1) > 0
+})
+
+const hasOtherInStockOffer = computed(() => {
+  return rawOffers.value.some(o => o.id !== activeOffer.value?.id && o.in_stock && (o.stock ?? 1) > 0)
+})
+
+const originalPrice = computed(() => {
+  if (activeOffer.value) {
+    return Number(activeOffer.value.price || 0)
+  }
+  return Number(product.value?.price || 0)
+})
+
 const currentPrice = computed(() => {
+  if (activeOffer.value) {
+    return Number(activeOffer.value.effective_price || activeOffer.value.price || 0)
+  }
   if (!product.value) return 0
   const isDisc = product.value.discountPrice > 0 && product.value.discountPrice < product.value.price
   return isDisc ? product.value.discountPrice : product.value.price
 })
 
 const discountPercent = computed(() => {
-  if (!product.value) return 0
-  const base = Number(product.value.price || 0)
-  const curr = Number(currentPrice.value || 0)
+  const base = originalPrice.value
+  const curr = currentPrice.value
   if (base > 0 && curr < base) {
     return Math.round(((base - curr) / base) * 100)
   }
@@ -1301,22 +1694,59 @@ function formatPrice(val: number) {
 
 const isAdded = computed(() => {
   if (!product.value) return false
-  return cartStore.items.some(i => i.productId === product.value.id && i.type === 'book')
+  const targetId = activeOffer.value?.id || product.value.id
+  return cartStore.items.some(i => (i.productId === targetId || i.productId === product.value.id) && i.type === 'book')
 })
 
+function handleOutOfStockClick() {
+  if (hasOtherInStockOffer.value) {
+    snackbar.showWarning("Ushbu do'konda kitob qolmagan. Boshqa do'kon taklifini tanlang.")
+    if (rawOffers.value.length > 3) {
+      isAllOffersOpen.value = true
+    }
+  } else {
+    snackbar.showWarning("Ushbu kitob hozirda sotuvda mavjud emas.")
+  }
+}
+
 function handleAddToCart() {
+  if (!isInStock.value) {
+    handleOutOfStockClick()
+    return
+  }
   if (isAdded.value) {
     router.push('/cart')
     return
   }
   if (product.value) {
-    cartStore.addItem(product.value, 'book', orderCount.value)
+    const targetProduct = activeOffer.value ? {
+      ...product.value,
+      id: activeOffer.value.id,
+      price: originalPrice.value,
+      discountPrice: currentPrice.value < originalPrice.value ? currentPrice.value : 0,
+      seller: activeOffer.value.seller || product.value.seller
+    } : product.value
+
+    cartStore.addItem(targetProduct, 'book', orderCount.value)
+    snackbar.showSuccess("Kitob savatga qo'shildi")
   }
 }
 
 function handleBuyNow() {
+  if (!isInStock.value) {
+    handleOutOfStockClick()
+    return
+  }
   if (product.value) {
-    cartStore.addItem(product.value, 'book', orderCount.value)
+    const targetProduct = activeOffer.value ? {
+      ...product.value,
+      id: activeOffer.value.id,
+      price: originalPrice.value,
+      discountPrice: currentPrice.value < originalPrice.value ? currentPrice.value : 0,
+      seller: activeOffer.value.seller || product.value.seller
+    } : product.value
+
+    cartStore.addItem(targetProduct, 'book', orderCount.value)
     router.push('/cart')
   }
 }
