@@ -10,50 +10,25 @@
         <span class="text-neutral-800 font-medium truncate">Huquqiy hujjatlar</span>
       </nav>
 
-      <!-- Clean Header (No giant hero card) -->
-      <div class="mb-8">
-        <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-neutral-200/80">
-          <div class="max-w-2xl">
-            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold mb-3">
-              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" />
-              </svg>
-              <span>Huquqiy axborot markazi</span>
-            </div>
-            <h1 class="text-2xl sm:text-3xl md:text-4xl font-extrabold text-neutral-900 tracking-tight m-0 mb-2">
-              Huquqiy hujjatlar
-            </h1>
-            <p class="text-sm sm:text-base text-neutral-600 leading-relaxed m-0">
-              Kitobchi platformasi xizmatlaridan foydalanish shartlari, ommaviy oferta va maxfiylik kafolatlari.
-            </p>
-          </div>
-
-          <!-- Search Input -->
-          <div class="relative w-full md:w-80 shrink-0">
-            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-neutral-400">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
-              </svg>
-            </div>
-            <input
-              v-model="searchQuery"
-              type="text"
-              placeholder="Hujjat qidirish..."
-              class="w-full pl-10 pr-9 h-11 bg-white border border-neutral-200/90 rounded-2xl text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-2xs"
-            />
-            <button
-              v-if="searchQuery"
-              type="button"
-              @click="searchQuery = ''"
-              class="absolute inset-y-0 right-0 pr-3 flex items-center text-neutral-400 hover:text-neutral-600 border-none bg-transparent cursor-pointer"
-            >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
+      <!-- Sarlavha: ixcham, hero'siz -->
+      <header class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-5">
+        <div class="min-w-0">
+          <h1 class="text-2xl sm:text-3xl font-extrabold text-neutral-900 tracking-tight m-0">Huquqiy hujjatlar</h1>
+          <p class="text-sm text-neutral-500 m-0 mt-1">Kitobchi’dan foydalanish shartlari, siyosatlar va shartnoma namunalari.</p>
         </div>
-      </div>
+        <label class="relative w-full sm:w-72 shrink-0">
+          <span class="sr-only">Hujjat qidirish</span>
+          <svg class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+          </svg>
+          <input
+            v-model="searchQuery"
+            type="search"
+            placeholder="Hujjat qidirish"
+            class="w-full pl-10 pr-4 h-11 bg-white border border-neutral-200 rounded-full text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+          />
+        </label>
+      </header>
 
       <!-- Quick Filter Tabs -->
       <div class="flex items-center gap-2 overflow-x-auto pb-4 mb-6 scrollbar-none text-sm">
@@ -63,10 +38,10 @@
           type="button"
           @click="activeTab = tab.id"
           :class="[
-            'px-4 py-2 rounded-2xl font-semibold transition-all cursor-pointer whitespace-nowrap text-xs sm:text-sm border-none',
+            'h-9 px-4 rounded-full font-semibold transition-colors cursor-pointer whitespace-nowrap text-sm border',
             activeTab === tab.id
-              ? 'bg-brand-gradient text-white shadow-2xs'
-              : 'bg-white text-neutral-600 border border-neutral-200/70 hover:bg-neutral-50 hover:text-neutral-900'
+              ? 'bg-neutral-900 text-white border-neutral-900'
+              : 'bg-white text-neutral-700 border-neutral-200 hover:border-neutral-400 hover:text-neutral-900'
           ]"
         >
           {{ tab.label }}
@@ -74,7 +49,7 @@
             v-if="tab.count !== undefined"
             :class="[
               'ml-1.5 text-xs px-1.5 py-0.5 rounded-full',
-              activeTab === tab.id ? 'bg-white/20 text-white' : 'bg-neutral-100 text-neutral-500'
+              activeTab === tab.id ? 'bg-white/20 text-white' : 'bg-neutral-100 text-neutral-600'
             ]"
           >
             {{ tab.count }}
@@ -118,7 +93,7 @@
           v-for="item in filteredPolicies"
           :key="item.slug"
           :to="`/legal/${item.slug}`"
-          class="group bg-white rounded-3xl p-6 border-none shadow-2xs hover:shadow-xs transition-all duration-200 flex flex-col justify-between no-underline"
+          class="group bg-white rounded-3xl p-5 sm:p-6 border border-transparent hover:border-neutral-200 transition-colors flex flex-col justify-between gap-3 no-underline"
         >
           <div>
             <!-- Top Icon & Category Tag -->
@@ -143,26 +118,17 @@
             </h2>
 
             <!-- Short Excerpt / Description -->
-            <p class="text-xs sm:text-sm text-neutral-500 leading-relaxed line-clamp-2 m-0 mb-4">
+            <p class="text-sm text-neutral-500 leading-relaxed line-clamp-2 m-0">
               {{ getPolicyDescription(item.slug) }}
             </p>
           </div>
 
-          <!-- Bottom Footer of Card -->
-          <div class="flex items-center justify-between text-xs font-medium text-neutral-400 pt-4 border-t border-neutral-100 mt-2">
-            <span class="inline-flex items-center gap-1 text-emerald-600 font-semibold">
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-              </svg>
-              <span>Amalda</span>
-            </span>
-            <span class="inline-flex items-center gap-1 text-primary font-semibold group-hover:translate-x-1 transition-transform">
-              <span>Hujjatni o‘qish</span>
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
-              </svg>
-            </span>
-          </div>
+          <span class="inline-flex items-center gap-1 text-sm font-semibold text-primary mt-1">
+            O‘qish
+            <svg class="w-4 h-4 transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="m9 5 7 7-7 7" />
+            </svg>
+          </span>
         </NuxtLink>
       </div>
 
@@ -206,29 +172,10 @@
         </div>
       </section>
 
-      <!-- Elegant Single-Line Bottom Note (No bulky marketing blocks) -->
-      <div class="mt-10 p-5 sm:p-6 rounded-3xl bg-white border-none flex flex-col sm:flex-row items-center justify-between gap-4 shadow-2xs">
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" />
-            </svg>
-          </div>
-          <div>
-            <p class="text-sm font-bold text-neutral-900 m-0">Rasmiy elektron tijorat me’yorlari</p>
-            <p class="text-xs text-neutral-500 m-0">Barcha hujjatlar O‘zbekiston Respublikasi elektron tijorat qonunchiligiga to‘liq mos keladi.</p>
-          </div>
-        </div>
-        <NuxtLink
-          to="/contacts"
-          class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-brand-gradient text-white text-xs font-bold shadow-xs hover:brightness-105 transition-all no-underline shrink-0"
-        >
-          <span>Savolingiz bormi? Bog‘laning</span>
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
-          </svg>
-        </NuxtLink>
-      </div>
+      <p class="mt-10 text-sm text-neutral-500 text-center">
+        Hujjatlar bo‘yicha savolingiz bormi?
+        <NuxtLink to="/contacts" class="font-semibold text-primary hover:underline">Biz bilan bog‘laning</NuxtLink>
+      </p>
     </div>
   </div>
 </template>

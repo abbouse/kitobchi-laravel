@@ -15,7 +15,7 @@
       </nav>
 
       <!-- Yuklanmoqda Skeleton -->
-      <div v-if="pending" class="bg-white rounded-3xl p-6 sm:p-10 md:p-12 border border-neutral-200/70 shadow-xs max-w-4xl mx-auto animate-pulse space-y-4">
+      <div v-if="pending" class="bg-white rounded-3xl p-6 sm:p-10 md:p-12 max-w-4xl animate-pulse space-y-4">
         <div class="h-6 bg-neutral-100 rounded-full w-28 mb-4"></div>
         <div class="h-10 bg-neutral-100 rounded-xl w-3/4"></div>
         <div class="h-4 bg-neutral-100 rounded-lg w-1/3 mb-8"></div>
@@ -29,7 +29,7 @@
       </div>
 
       <!-- Kontent hali qo'shilmagan (Not Found) -->
-      <div v-else-if="notFound" class="bg-white rounded-3xl p-12 text-center border border-neutral-200/70 shadow-xs max-w-lg mx-auto my-12">
+      <div v-else-if="notFound" class="bg-white rounded-3xl p-12 text-center max-w-lg mx-auto my-12">
         <div class="w-16 h-16 rounded-2xl bg-neutral-100 text-neutral-400 mx-auto flex items-center justify-center mb-4">
           <svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
             <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
@@ -43,214 +43,121 @@
       </div>
 
       <!-- Asosiy Hujjat Sahifasi -->
-      <div v-else-if="policy" class="space-y-8">
-        <!-- Main Body: 2 Columns on Desktop (Content + Sticky Table of Contents) -->
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          <!-- Main Content (8 cols on lg) -->
-          <div class="lg:col-span-8 bg-white rounded-3xl p-6 sm:p-10 md:p-12 border border-neutral-200/70 shadow-xs">
-            
-            <!-- Document Header Inside Card (No extra hero card) -->
-            <div class="mb-8 pb-6 border-b border-neutral-100">
-              <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                <div>
-                  <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold mb-3">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-                    </svg>
-                    <span>Rasmiy huquqiy hujjat</span>
-                  </div>
-                  <h1 class="text-2xl sm:text-3xl md:text-4xl font-extrabold text-neutral-900 tracking-tight leading-tight mb-3">
-                    {{ policy.title }}
-                  </h1>
-                </div>
-
-                <!-- Action buttons (Print & Copy) -->
-                <div class="flex items-center gap-2 shrink-0 print:hidden">
-                  <button
-                    type="button"
-                    @click="copyPageUrl"
-                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-neutral-200/80 bg-neutral-50 hover:bg-neutral-100 text-neutral-700 text-xs font-semibold transition-all cursor-pointer shadow-2xs"
-                    :title="copied ? 'Nusxa olindi!' : 'Havoladan nusxa olish'"
-                  >
-                    <svg v-if="!copied" class="w-3.5 h-3.5 text-neutral-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" />
-                    </svg>
-                    <svg v-else class="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                    </svg>
-                    <span>{{ copied ? 'Nusxa olindi!' : 'Ulashish' }}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    @click="printPage"
-                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-neutral-200/80 bg-neutral-50 hover:bg-neutral-100 text-neutral-700 text-xs font-semibold transition-all cursor-pointer shadow-2xs"
-                    title="Hujjatni chop etish"
-                  >
-                    <svg class="w-3.5 h-3.5 text-neutral-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.656l10.5 0Z" />
-                    </svg>
-                    <span>Chop etish</span>
-                  </button>
-                </div>
-              </div>
-
-              <!-- Meta info row -->
-              <div class="flex flex-wrap items-center gap-y-2 gap-x-4 text-xs text-neutral-500 mt-3">
-                <span v-if="policy.updated_at" class="inline-flex items-center gap-1.5">
-                  <svg class="w-3.5 h-3.5 text-neutral-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.253M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
-                  </svg>
-                  <span>Tahrir: {{ formatDate(policy.updated_at) }}</span>
-                </span>
-                <span class="inline-flex items-center gap-1.5">
-                  <svg class="w-3.5 h-3.5 text-neutral-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                  </svg>
-                  <span>{{ readingTime }} daqiqalik mutolaa</span>
-                </span>
-                <span class="inline-flex items-center gap-1.5 text-emerald-600 font-semibold">
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                  </svg>
-                  <span>Amalda</span>
-                </span>
-              </div>
-            </div>
-
-            <!-- Mobile Table of Contents Dropdown -->
-            <div v-if="headings.length > 2" class="lg:hidden mb-8 p-4 rounded-2xl bg-neutral-50 border border-neutral-200/70 print:hidden">
-              <button
-                type="button"
-                @click="mobileTocOpen = !mobileTocOpen"
-                class="w-full flex items-center justify-between text-left text-sm font-bold text-neutral-900"
-              >
-                <span class="inline-flex items-center gap-2">
-                  <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-                  </svg>
-                  <span>Mundarija ({{ headings.length }} ta bo‘lim)</span>
-                </span>
-                <svg
-                  class="w-4 h-4 text-neutral-400 transform transition-transform"
-                  :class="mobileTocOpen ? 'rotate-180' : ''"
-                  fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
+      <div v-else-if="policy">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+          <article class="lg:col-span-8 bg-white rounded-3xl p-5 sm:p-10 md:p-12">
+            <header class="flex items-start justify-between gap-4 mb-6">
+              <h1 class="text-2xl sm:text-3xl md:text-4xl font-extrabold text-neutral-900 tracking-tight leading-tight m-0">
+                {{ policy.title }}
+              </h1>
+              <div class="flex items-center gap-1.5 shrink-0 print:hidden">
+                <button
+                  type="button"
+                  @click="copyPageUrl"
+                  class="w-10 h-10 rounded-full bg-neutral-100 hover:bg-neutral-200/80 text-neutral-700 flex items-center justify-center border-none cursor-pointer transition-colors"
+                  :aria-label="copied ? 'Havola nusxalandi' : 'Havolani nusxalash'"
+                  :title="copied ? 'Havola nusxalandi' : 'Havolani nusxalash'"
                 >
+                  <svg v-if="!copied" class="w-4.5 h-4.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" />
+                  </svg>
+                  <svg v-else class="w-4.5 h-4.5 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  @click="printPage"
+                  class="w-10 h-10 rounded-full bg-neutral-100 hover:bg-neutral-200/80 text-neutral-700 flex items-center justify-center border-none cursor-pointer transition-colors"
+                  aria-label="Chop etish yoki PDF saqlash"
+                  title="Chop etish yoki PDF saqlash"
+                >
+                  <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5Zm-3 0h.008v.008H15V10.5Z" />
+                  </svg>
+                </button>
+              </div>
+            </header>
+
+            <!-- Mobil mundarija -->
+            <details v-if="headings.length > 2" class="lg:hidden mb-6 rounded-2xl bg-neutral-50 print:hidden group">
+              <summary class="list-none flex items-center justify-between cursor-pointer px-4 py-3 text-sm font-semibold text-neutral-900">
+                <span>Mundarija · {{ headings.length }} bo‘lim</span>
+                <svg class="w-4 h-4 text-neutral-500 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
                   <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
                 </svg>
-              </button>
-              <div v-show="mobileTocOpen" class="mt-3 pt-3 border-t border-neutral-200/70 space-y-1.5 max-h-64 overflow-y-auto">
+              </summary>
+              <nav class="px-2 pb-3 max-h-72 overflow-y-auto" aria-label="Mundarija">
                 <a
-                  v-for="(h, idx) in headings"
-                  :key="idx"
+                  v-for="h in headings"
+                  :key="h.id"
                   :href="`#${h.id}`"
-                  @click="mobileTocOpen = false"
-                  class="block text-xs py-1.5 px-2 rounded-lg text-neutral-600 hover:text-primary hover:bg-neutral-100/80 transition-colors truncate"
-                >
-                  {{ h.text }}
-                </a>
-              </div>
-            </div>
+                  class="block text-sm py-2 px-2 rounded-lg text-neutral-700 hover:bg-white hover:text-neutral-900 no-underline"
+                >{{ h.text }}</a>
+              </nav>
+            </details>
 
-            <!-- Parsed HTML Content with custom styles -->
             <div
               ref="contentContainer"
-              class="kb-prose leading-relaxed text-neutral-700 text-sm sm:text-base space-y-4"
+              class="kb-prose leading-relaxed text-neutral-700 text-[15px] sm:text-base max-w-[72ch]"
               v-html="enrichedContent"
             ></div>
 
-            <!-- End of Document Seal & Legal Notice -->
-            <div class="mt-12 pt-8 border-t border-neutral-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs text-neutral-400 print:hidden">
-              <div>
-                <p class="font-semibold text-neutral-600">Kitobchi platformasi</p>
-                <p>«Kitobchi» elektron savdo tizimi ma'muriyati</p>
-              </div>
-              <div class="flex items-center gap-3">
-                <NuxtLink to="/legal" class="text-primary font-semibold hover:underline">
-                  ← Barcha hujjatlar
-                </NuxtLink>
-                <a href="#top" class="hover:text-neutral-600 transition-colors inline-flex items-center gap-1">
-                  <span>Yuqoriga</span>
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5" />
-                  </svg>
-                </a>
-              </div>
-            </div>
-          </div>
+            <footer class="mt-10 pt-6 border-t border-neutral-100 flex flex-wrap items-center justify-between gap-3 text-sm print:hidden">
+              <NuxtLink to="/legal" class="inline-flex items-center gap-1.5 font-semibold text-neutral-700 hover:text-neutral-900 no-underline">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m15 19-7-7 7-7" /></svg>
+                Barcha hujjatlar
+              </NuxtLink>
+              <button type="button" @click="scrollTop" class="inline-flex items-center gap-1.5 text-neutral-500 hover:text-neutral-900 bg-transparent border-none cursor-pointer text-sm">
+                Yuqoriga
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m5 15 7-7 7 7" /></svg>
+              </button>
+            </footer>
+          </article>
 
-          <!-- Sticky Sidebar on Desktop (4 cols on lg) -->
-          <div class="hidden lg:block lg:col-span-4 sticky top-20 print:hidden space-y-6">
-            <!-- Table of Contents Card -->
-            <div v-if="headings.length > 2" class="bg-white rounded-3xl p-6 border border-neutral-200/70 shadow-xs">
-              <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-neutral-400 mb-4 pb-3 border-b border-neutral-100">
-                <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-                </svg>
-                <span>Hujjat mundarijasi</span>
-              </div>
-              <nav class="space-y-1 max-h-[calc(100vh-260px)] overflow-y-auto pr-1">
+          <!-- Desktop: sticky mundarija -->
+          <aside class="hidden lg:block lg:col-span-4 sticky top-24 print:hidden">
+            <div v-if="headings.length > 2" class="bg-white rounded-3xl p-5">
+              <p class="text-xs font-bold uppercase tracking-wider text-neutral-500 m-0 mb-3 px-2">Mundarija</p>
+              <nav class="space-y-0.5 max-h-[calc(100vh-220px)] overflow-y-auto pr-1" aria-label="Mundarija">
                 <a
-                  v-for="(h, idx) in headings"
-                  :key="idx"
+                  v-for="h in headings"
+                  :key="h.id"
                   :href="`#${h.id}`"
+                  :aria-current="activeHeadingId === h.id ? 'location' : undefined"
                   :class="[
-                    'block text-xs py-1.5 px-2.5 rounded-xl transition-all leading-snug truncate',
+                    'block text-sm py-2 px-3 rounded-xl leading-snug no-underline transition-colors',
                     activeHeadingId === h.id
-                      ? 'bg-primary/10 text-primary font-bold shadow-2xs'
+                      ? 'bg-neutral-100 text-neutral-900 font-semibold'
                       : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50'
                   ]"
-                >
-                  {{ h.text }}
-                </a>
+                >{{ h.text }}</a>
               </nav>
             </div>
-
-            <!-- Help / Question Card: Brand Gradient -->
-            <div class="bg-brand-gradient text-white rounded-3xl p-6 shadow-md">
-              <div class="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center mb-3.5 backdrop-blur-xs">
-                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z" />
-                </svg>
-              </div>
-              <h3 class="text-base font-bold mb-1 text-white">Savolingiz bormi?</h3>
-              <p class="text-xs text-white/85 leading-relaxed mb-4">
-                Hujjat shartlari bo‘yicha tushunarsiz joylar bo‘lsa, mutaxassisimiz sizga tushuntirish beradi.
-              </p>
-              <NuxtLink
-                to="/contacts"
-                class="inline-flex items-center justify-center w-full h-11 px-4 rounded-2xl bg-white text-primary text-xs font-bold hover:bg-white/95 transition-all shadow-xs no-underline"
-              >
-                Biz bilan bog‘lanish
-              </NuxtLink>
-            </div>
-          </div>
+            <p class="text-sm text-neutral-500 mt-4 px-2">
+              Savolingiz bormi?
+              <NuxtLink to="/contacts" class="font-semibold text-primary hover:underline">Bog‘laning</NuxtLink>
+            </p>
+          </aside>
         </div>
 
-        <!-- Other Policies Navigation (Bottom) -->
-        <div v-if="otherPolicies.length > 0" class="mt-12 pt-8 print:hidden">
-          <h2 class="text-lg font-bold text-neutral-900 mb-4">Boshqa huquqiy hujjatlar</h2>
-          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+        <!-- Boshqa hujjatlar -->
+        <section v-if="otherPolicies.length > 0" class="mt-10 print:hidden" aria-labelledby="other-docs">
+          <h2 id="other-docs" class="text-lg font-bold text-neutral-900 m-0 mb-4">Boshqa hujjatlar</h2>
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
             <NuxtLink
               v-for="other in otherPolicies"
               :key="other.slug"
               :to="`/legal/${other.slug}`"
-              class="group bg-white rounded-2xl p-5 border border-neutral-200/70 hover:border-primary/40 hover:shadow-md transition-all duration-200 flex flex-col justify-between"
+              class="group bg-white rounded-2xl px-5 py-4 border border-transparent hover:border-neutral-200 transition-colors flex items-center justify-between gap-3 no-underline"
             >
-              <div>
-                <h3 class="text-sm font-bold text-neutral-900 group-hover:text-primary transition-colors leading-snug mb-1">
-                  {{ other.title }}
-                </h3>
-              </div>
-              <div class="flex items-center justify-between text-xs text-neutral-400 pt-3 border-t border-neutral-100 mt-3">
-                <span>Batafsil</span>
-                <svg class="w-3.5 h-3.5 text-primary group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
-                </svg>
-              </div>
+              <span class="text-sm font-semibold text-neutral-900 leading-snug">{{ other.title }}</span>
+              <svg class="w-4 h-4 text-neutral-400 shrink-0 transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="m9 5 7 7-7 7" />
+              </svg>
             </NuxtLink>
           </div>
-        </div>
+        </section>
       </div>
     </div>
   </div>
@@ -273,21 +180,12 @@ const { data: allDocsData } = await useFetch<any>(`${config.public.apiBase}/v1/k
 
 const otherPolicies = computed(() => {
   if (allDocsData.value?.status !== 'success' || !allDocsData.value?.data) return []
-  return allDocsData.value.data.filter((item: any) => item.slug !== props.slug).slice(0, 3)
-})
-
-// O'qish vaqti
-const readingTime = computed(() => {
-  if (!policy.value?.content) return 2
-  const plainText = policy.value.content.replace(/<[^>]+>/g, '')
-  const words = plainText.trim().split(/\s+/).length
-  return Math.max(1, Math.ceil(words / 180))
+  return allDocsData.value.data.filter((item: any) => item.slug !== props.slug).slice(0, 6)
 })
 
 // Table of Contents (Mundarija) avtomatik ajratish
 const headings = ref<{ id: string; text: string }[]>([])
 const activeHeadingId = ref<string>('')
-const mobileTocOpen = ref(false)
 
 const enrichedContent = computed(() => {
   if (!policy.value?.content) return ''
@@ -345,12 +243,8 @@ function printPage() {
   }
 }
 
-function formatDate(iso: string) {
-  try {
-    return new Date(iso).toLocaleDateString('uz-UZ', { year: 'numeric', month: 'long', day: 'numeric' })
-  } catch {
-    return '20.10.2026'
-  }
+function scrollTop() {
+  if (process.client) window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
 defineExpose({ policy, pending, notFound })
