@@ -83,13 +83,13 @@
            bo'lgan flex+w-64 klasslar bilan almashtirildi. -->
       <div class="flex flex-col lg:flex-row lg:items-start gap-6">
         <aside class="hidden lg:block lg:w-64 lg:shrink-0">
-          <div class="sticky top-24 bg-white rounded-[20px] border border-neutral-100 p-2 shadow-xs">
+          <div class="sticky top-24 bg-white rounded-3xl p-3 shadow-2xs border-none">
             <NuxtLink
               v-for="cat in siblingCategories"
               :key="cat.id"
               :to="`/category/${activeType}-${cat.id}`"
-              class="block px-4 py-3 rounded-2xl text-sm font-semibold transition-colors"
-              :class="String(cat.id) === String(categoryId) ? 'bg-secondary-200 text-primary' : 'text-neutral-600 hover:text-primary hover:bg-secondary-100'"
+              class="block px-4 py-2.5 rounded-2xl text-sm font-semibold transition-colors no-underline"
+              :class="String(cat.id) === String(categoryId) ? 'bg-primary text-white shadow-xs' : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'"
             >
               {{ cat.name_uz || cat.name }}
             </NuxtLink>
@@ -129,7 +129,7 @@
                sabab o'zgarishi mumkin bo'lgan qattiq pixel qiymat yozib
                qo'yish xavfidan qochilgan. -->
           <div
-            class="z-30 bg-white flex items-center gap-2 pb-5 overflow-x-auto no-scrollbar"
+            class="z-30 bg-[#f0f2f5] flex items-center gap-2 pb-4 overflow-x-auto no-scrollbar"
             :style="{ position: isMobileSticky ? 'sticky' : 'static', top: headerHeight + 'px' }"
           >
             <!-- Saralash — piyoladagi kabi bitta dropdown (Ommabop / Narx:
@@ -231,13 +231,13 @@
             />
           </div>
 
-          <div class="lg:hidden flex items-center gap-2 pb-5 overflow-x-auto no-scrollbar">
+          <div class="lg:hidden flex items-center gap-2 pb-4 overflow-x-auto no-scrollbar">
             <NuxtLink
               v-for="cat in siblingCategories"
               :key="cat.id"
               :to="`/category/${activeType}-${cat.id}`"
-              class="px-4 py-2 rounded-full text-sm font-semibold shrink-0 transition-colors"
-              :class="String(cat.id) === String(categoryId) ? 'bg-primary text-white' : 'bg-secondary-300 text-primary'"
+              class="px-4 py-2 rounded-full text-sm font-semibold shrink-0 transition-colors no-underline shadow-2xs"
+              :class="String(cat.id) === String(categoryId) ? 'bg-primary text-white' : 'bg-white text-neutral-700 hover:bg-neutral-50'"
             >
               {{ cat.name_uz || cat.name }}
             </NuxtLink>
@@ -375,29 +375,7 @@ watchEffect(() => {
   setCategorySeo(pageTitle.value, activeType.value, slug.value)
 })
 
-// TUZATILDI: catalog/index.vue'dagi bilan bir xil — bu sahifada
-// mahsulotlar ro'yxati uchun hech qanday JSON-LD yo'q edi. `ItemList`
-// sxemasi qo'shildi.
-useHead({
-  script: [
-    {
-      type: 'application/ld+json',
-      children: () => JSON.stringify({
-        '@context': 'https://schema.org',
-        '@type': 'ItemList',
-        name: pageTitle.value,
-        url: `${config.public.siteUrl}/category/${slug.value}`,
-        numberOfItems: totalCount.value || products.value.length,
-        itemListElement: products.value.slice(0, 40).map((p: any, idx: number) => ({
-          '@type': 'ListItem',
-          position: idx + 1,
-          url: `${config.public.siteUrl}/${activeType.value}/${p.id}-${String(p.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}`,
-          name: p.name,
-        })),
-      }),
-    },
-  ],
-})
+
 
 // Kitobga xos filtr variantlari (Nashriyot/Do'kon/Yozuv turi/Muqova turi) —
 // faqat book turida kerak, joriy kategoriyada haqiqatda mavjud
@@ -499,8 +477,8 @@ const products = computed(() => allProducts.value)
 
 function chipClass(active: boolean) {
   return [
-    'px-4 py-2 rounded-2xl text-sm font-semibold transition-all border-none cursor-pointer inline-flex items-center gap-1.5 shrink-0',
-    active ? 'bg-primary text-white' : 'bg-secondary-300 text-primary hover:bg-primary/10'
+    'px-4 py-2 rounded-2xl text-sm font-semibold transition-all border-none cursor-pointer inline-flex items-center gap-1.5 shrink-0 shadow-2xs',
+    active ? 'bg-primary text-white' : 'bg-white text-neutral-700 hover:bg-neutral-100'
   ]
 }
 
@@ -550,5 +528,27 @@ function applyFilter(payload: {
 useSeoMeta({
   title: () => `${pageTitle.value} — Kitobchi`,
   description: () => `${pageTitle.value} bo‘limidagi mahsulotlar Kitobchi marketpleysida.`
+})
+
+// ItemList JSON-LD Schema (Placed at the end of setup so `products` is initialized before execution!)
+useHead({
+  script: [
+    {
+      type: 'application/ld+json',
+      children: () => JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'ItemList',
+        name: pageTitle.value,
+        url: `${config.public.siteUrl}/category/${slug.value}`,
+        numberOfItems: totalCount.value || (products.value ? products.value.length : 0),
+        itemListElement: (products.value || []).slice(0, 40).map((p: any, idx: number) => ({
+          '@type': 'ListItem',
+          position: idx + 1,
+          url: `${config.public.siteUrl}/${activeType.value}/${p.id}-${String(p.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}`,
+          name: p.name,
+        })),
+      }),
+    },
+  ],
 })
 </script>
