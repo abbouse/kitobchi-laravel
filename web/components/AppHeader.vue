@@ -102,26 +102,28 @@
 
             <!-- Lang Dropdown -->
             <div ref="langRootRef" class="relative">
+              <!-- Savatcha/Sevimlilar bilan bir xil uslub: shaffof fon, hover'da
+                   neutral-100, ochiq holatda faol element kabi. Bayroq emoji
+                   o'rniga globus — Windows'da bayroqlar harf bo'lib chiqadi. -->
               <button
                 type="button"
                 @click="isLangOpen = !isLangOpen"
                 :aria-expanded="isLangOpen"
                 aria-haspopup="true"
-                class="h-10 px-3 rounded-full flex items-center gap-2 transition-all cursor-pointer border border-transparent hover:border-neutral-200 text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900 text-sm font-medium select-none"
-                :class="isLangOpen ? 'bg-neutral-100 text-neutral-900 border-neutral-200 shadow-2xs' : ''"
+                :aria-label="`Til: ${localeLabel}`"
+                :class="[
+                  'h-10 px-3 rounded-full flex items-center gap-2 transition-colors relative text-sm cursor-pointer border-none select-none',
+                  isLangOpen
+                    ? 'bg-neutral-100 text-neutral-900 font-semibold'
+                    : 'bg-transparent text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900'
+                ]"
               >
-                <span class="text-base leading-none">{{ currentLocaleFlag }}</span>
-                <span class="max-lg:hidden leading-none">{{ localeLabel }}</span>
-                <svg
-                  class="w-3.5 h-3.5 text-neutral-400 transition-transform duration-200"
-                  :class="isLangOpen ? 'rotate-180 text-neutral-700' : ''"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2.5"
-                >
-                  <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M3 12h18" />
+                  <path d="M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3Z" />
                 </svg>
+                <span class="max-lg:hidden leading-none">{{ localeLabel }}</span>
               </button>
 
               <Transition
