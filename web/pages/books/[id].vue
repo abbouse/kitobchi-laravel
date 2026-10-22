@@ -11,7 +11,7 @@
           <div role="region" aria-roledescription="carousel" tabindex="0" class="w-full h-full focus:outline-none">
             <div
               ref="mobileTrackEl"
-              class="flex flex-row w-full h-full overflow-x-auto no-scrollbar snap-x snap-mandatory touch-pan-x"
+              class="flex flex-row w-full h-full overflow-x-auto no-scrollbar snap-x snap-mandatory"
               @scroll="onMobileTrackScroll"
             >
               <div
@@ -19,12 +19,13 @@
                 :key="'mob-img-' + idx"
                 role="group"
                 aria-roledescription="slide"
-                class="min-w-full w-full shrink-0 basis-full flex h-full snap-center items-center justify-center bg-transparent p-3"
+                class="min-w-full w-full shrink-0 basis-full flex h-full snap-center items-center justify-center bg-transparent p-3 cursor-pointer"
+                @click="openImagePreview(idx)"
               >
                 <img
                   :src="img"
                   :alt="product.name"
-                  class="w-full h-full object-contain select-none"
+                  class="w-full h-full object-contain select-none pointer-events-none"
                   :loading="idx === 0 ? 'eager' : 'lazy'"
                   draggable="false"
                 />
@@ -36,11 +37,24 @@
           <button
             v-if="hasVideo"
             type="button"
-            @click="isVideoOpen = true"
+            @click.stop="isVideoOpen = true"
             class="absolute bottom-3 left-3 z-20 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/70 hover:bg-black/85 text-white backdrop-blur-xs text-xs font-semibold shadow-md transition-transform active:scale-95 border-none cursor-pointer"
           >
             <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
             <span>Video sharh</span>
+          </button>
+
+          <!-- Rasm Preview (Kattalashtirish) Badge (Mobil) -->
+          <button
+            type="button"
+            @click.stop="openImagePreview(activeIndex)"
+            class="absolute top-3 right-3 z-20 w-8 h-8 rounded-full bg-black/50 hover:bg-black/70 text-white backdrop-blur-xs flex items-center justify-center shadow-md border-none cursor-pointer"
+            title="Rasmni kattalashtirish"
+            aria-label="Kattalashtirish"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607ZM10.5 7.5v6m3-3h-6" />
+            </svg>
           </button>
 
           <!-- Dots Pill Indicator -->
@@ -488,20 +502,32 @@
               </div>
 
               <!-- Asosiy Bir Xil Hajmdagi Rasm Maydoni (Uniform 3:4 aspect, jumping yo'q) -->
-              <div class="relative flex-1 rounded-2xl bg-neutral-50/60 flex items-center justify-center overflow-hidden aspect-[3/4] max-h-[490px] group select-none">
+              <div
+                class="relative flex-1 rounded-2xl bg-neutral-50/60 flex items-center justify-center overflow-hidden aspect-[3/4] max-h-[490px] group select-none cursor-pointer"
+                @click="openImagePreview(activeIndex)"
+                title="Kattalashtirish uchun bosing"
+              >
                 <img
                   :src="activeImage"
                   :alt="product.name"
-                  class="w-full h-full object-contain p-4 transition-opacity duration-300"
+                  class="w-full h-full object-contain p-4 transition-transform duration-300 group-hover:scale-[1.02]"
                   loading="eager"
                   draggable="false"
                 />
+
+                <!-- Kattalashtirish Preview Hover Badge -->
+                <div class="absolute bottom-3 left-3 z-20 px-2.5 py-1 rounded-full bg-black/60 hover:bg-black/80 text-white text-xs font-medium backdrop-blur-xs flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607ZM10.5 7.5v6m3-3h-6" />
+                  </svg>
+                  <span>Kattalashtirish</span>
+                </div>
 
                 <!-- Video ochish tugmasi (Cover ustida suzuvchi) -->
                 <button
                   v-if="hasVideo"
                   type="button"
-                  @click="isVideoOpen = true"
+                  @click.stop="isVideoOpen = true"
                   class="absolute top-4 left-4 z-20 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-black/70 hover:bg-black/85 text-white backdrop-blur-xs text-xs font-semibold shadow-md transition-all hover:scale-105 border-none cursor-pointer"
                 >
                   <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
@@ -511,7 +537,7 @@
                 <!-- Sevimlilar tugmasi (yuqori o'ng) -->
                 <button
                   type="button"
-                  @click="favStore.toggleFavorite(product, 'book')"
+                  @click.stop="favStore.toggleFavorite(product, 'book')"
                   name="Favorite button"
                   aria-label="Sevimlilar"
                   class="absolute top-4 right-4 z-20 w-10 h-10 rounded-full bg-white/90 hover:bg-white text-neutral-700 flex items-center justify-center shadow-2xs hover:scale-105 active:scale-95 transition-all border-none cursor-pointer"
@@ -961,10 +987,19 @@
       :similar-products="similarProducts"
     />
 
-    <!-- Mahsulot Videosi Modali (HD / SD Player) -->
+    <!-- Mahsulot Videosi Modali (HD / SD / Embed Player) -->
     <ProductVideoModal
       v-model="isVideoOpen"
       :product="product"
+    />
+
+    <!-- Rasm Preview (Lightbox) Modali -->
+    <ImageGalleryModal
+      :is-open="isImagePreviewOpen"
+      :images="galleryImages"
+      :initial-index="previewIndex"
+      :title="product.name"
+      @close="isImagePreviewOpen = false"
     />
 
     <!-- Sharhlar Modali / Drawer -->
@@ -1179,6 +1214,7 @@
 import { useCartStore } from '~/stores/cart'
 import { useFavoritesStore } from '~/stores/favorites'
 import { useAuthStore } from '~/stores/auth'
+import { resolveProductImages } from '~/utils/productImage'
 
 const route = useRoute()
 const router = useRouter()
@@ -1191,6 +1227,8 @@ const snackbar = useSnackbar()
 const isReviewsOpen = ref(false)
 const isAiMatchOpen = ref(false)
 const isVideoOpen = ref(false)
+const isImagePreviewOpen = ref(false)
+const previewIndex = ref(0)
 const isAllOffersOpen = ref(false)
 const isSplitModalOpen = ref(false)
 const orderCount = ref(1)
@@ -1402,25 +1440,13 @@ const hasSpecs = computed(() => {
   return !!(p.publisher || p.pages || p.coverType || p.lang || p.year || p.isbn)
 })
 
-function resolveImg(src: string) {
-  if (!src) return ''
-  return src.startsWith('http') || src.startsWith('data:') ? src : `/storage/${src}`
+function openImagePreview(idx: number) {
+  previewIndex.value = typeof idx === 'number' && idx >= 0 ? idx : 0
+  isImagePreviewOpen.value = true
 }
 
 const galleryImages = computed(() => {
-  const p = product.value
-  if (!p) return []
-  const lists = [p.medium_images, p.image_urls, p.thumb_images, p.images]
-  for (const list of lists) {
-    if (Array.isArray(list) && list.length > 0) {
-      const resolved = list.map(resolveImg).filter(Boolean)
-      if (resolved.length > 0) return resolved
-    }
-  }
-  if (p.first_image) {
-    return [resolveImg(p.first_image)]
-  }
-  return ['/images/logo/logo_blue.png']
+  return resolveProductImages(product.value)
 })
 
 // O'xshash mahsulotlar
