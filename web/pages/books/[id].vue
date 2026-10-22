@@ -464,25 +464,35 @@
         <div class="grid grid-cols-12 gap-8 items-start">
           <!-- CHAP USTUN: BIR HIL HAJMDAGI DESKTOP GALEREYA (7 ustun) -->
           <div class="col-span-12 lg:col-span-7 flex flex-col gap-4 min-w-0 w-full">
-            <div class="bg-white p-5 sm:p-6 rounded-3xl shadow-2xs flex flex-col md:flex-row gap-5 items-stretch w-full min-w-0">
-              <!-- Chap vertikal thumbnails (75x100px bir xil hajm) -->
+            <div class="bg-white p-5 sm:p-6 rounded-3xl shadow-2xs flex flex-col md:flex-row gap-5 items-start w-full min-w-0">
+              <!-- Chap vertikal thumbnails (72x96px bir xil hajm) -->
               <div
                 v-if="galleryImages.length > 1 || hasVideo"
-                class="flex md:flex-col gap-3 overflow-x-auto md:overflow-y-auto no-scrollbar w-full md:w-20 shrink-0 select-none py-1"
-                style="max-height: 490px;"
+                class="flex md:flex-col gap-3 overflow-x-auto md:overflow-y-auto no-scrollbar w-full md:w-auto shrink-0 select-none py-1"
+                style="max-height: 520px;"
               >
                 <!-- Agar video bo'lsa, maxsus video thumbnail -->
                 <button
                   v-if="hasVideo"
                   type="button"
-                  @click="isVideoOpen = true"
-                  title="Video sharhni ko'rish"
-                  class="relative shrink-0 rounded-2xl overflow-hidden bg-neutral-900 text-white w-18 h-24 flex flex-col items-center justify-center gap-1.5 border-none cursor-pointer transition-transform hover:scale-105 shadow-xs"
+                  @click="activeMedia = 'video'"
+                  title="Video sharh"
+                  :class="[
+                    'relative shrink-0 rounded-2xl overflow-hidden transition-all duration-200 cursor-pointer border-none bg-neutral-900 text-white flex flex-col items-center justify-center p-1',
+                    activeMedia === 'video' ? 'ring-2 ring-primary ring-offset-2' : 'opacity-85 hover:opacity-100 hover:scale-105'
+                  ]"
+                  style="width: 72px; height: 96px;"
                 >
-                  <div class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                    <svg class="w-4 h-4 fill-current ml-0.5" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                  <img
+                    v-if="videoPoster"
+                    :src="videoPoster"
+                    alt="Video poster"
+                    class="absolute inset-0 w-full h-full object-cover opacity-60 pointer-events-none"
+                  />
+                  <div class="relative z-10 w-8 h-8 rounded-full bg-black/60 flex items-center justify-center shadow-xs">
+                    <svg class="w-4 h-4 fill-white ml-0.5" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                   </div>
-                  <span class="text-[11px] font-bold">Video</span>
+                  <span class="relative z-10 text-[10px] font-bold mt-1 bg-black/70 px-1.5 py-0.5 rounded-md">Video</span>
                 </button>
 
                 <!-- Rasm thumbnails -->
@@ -490,88 +500,140 @@
                   v-for="(img, idx) in galleryImages"
                   :key="'desk-thumb-' + idx"
                   type="button"
-                  @click="goToSlide(idx)"
+                  @click="activeMedia = 'image'; goToSlide(idx)"
                   :aria-label="`Rasm ${idx + 1}`"
                   :class="[
-                    'relative shrink-0 rounded-2xl overflow-hidden p-1.5 flex items-center justify-center w-18 h-24 transition-all duration-200 cursor-pointer border-none bg-neutral-50/80',
-                    activeIndex === idx ? 'ring-2 ring-primary ring-offset-2' : 'hover:bg-neutral-100 opacity-80 hover:opacity-100'
+                    'relative shrink-0 rounded-2xl overflow-hidden p-1.5 flex items-center justify-center transition-all duration-200 cursor-pointer border-none bg-neutral-50/80',
+                    activeMedia === 'image' && activeIndex === idx ? 'ring-2 ring-primary ring-offset-2' : 'hover:bg-neutral-100 opacity-80 hover:opacity-100'
                   ]"
+                  style="width: 72px; height: 96px;"
                 >
                   <img :src="img" :alt="`${product.name} ${idx + 1}`" class="w-full h-full object-contain pointer-events-none" />
                 </button>
               </div>
 
-              <!-- Asosiy Bir Xil Hajmdagi Rasm Maydoni -->
-              <div
-                class="relative flex-1 w-full min-w-0 rounded-2xl bg-neutral-50/80 flex items-center justify-center overflow-hidden group select-none cursor-pointer min-h-[380px] sm:min-h-[440px] md:min-h-[490px] max-h-[500px] p-4"
-                @click="openImagePreview(activeIndex)"
-                title="Kattalashtirish uchun bosing"
-              >
-                <img
-                  :src="activeImage"
-                  :alt="product.name"
-                  class="max-w-full max-h-[440px] w-auto h-auto object-contain transition-transform duration-300 group-hover:scale-105"
-                  loading="eager"
-                  draggable="false"
-                  @error="onImgError"
-                />
-
-                <!-- Kattalashtirish Preview Hover Badge -->
-                <div class="absolute bottom-4 left-4 z-20 px-3 py-1.5 rounded-full bg-black/65 hover:bg-black/80 text-white text-xs font-medium backdrop-blur-xs flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-md">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607ZM10.5 7.5v6m3-3h-6" />
-                  </svg>
-                  <span>Kattalashtirish</span>
-                </div>
-
-                <!-- Video ochish tugmasi (Cover ustida suzuvchi) -->
-                <button
-                  v-if="hasVideo"
-                  type="button"
-                  @click.stop="isVideoOpen = true"
-                  class="absolute top-4 left-4 z-20 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-black/70 hover:bg-black/85 text-white backdrop-blur-xs text-xs font-semibold shadow-md transition-all hover:scale-105 border-none cursor-pointer"
+              <!-- Asosiy Maydon (Video yoki Rasm) -->
+              <div class="flex-1 min-w-0 relative rounded-2xl bg-neutral-50/80 overflow-hidden flex items-center justify-center min-h-[440px] md:min-h-[500px]">
+                
+                <!-- 1. VIDEO REJIMI -->
+                <div
+                  v-if="activeMedia === 'video' && hasVideo"
+                  class="relative w-full h-full min-h-[440px] md:min-h-[500px] bg-black flex items-center justify-center rounded-2xl overflow-hidden"
                 >
-                  <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                  <span>Videoni ko'rish</span>
-                </button>
+                  <video
+                    v-if="videoSrc"
+                    :src="videoSrc"
+                    :poster="videoPoster"
+                    controls
+                    autoplay
+                    playsinline
+                    class="w-full h-full max-h-[500px] object-contain"
+                  ></video>
+                  <div v-else class="text-white text-center p-6">
+                    <button
+                      type="button"
+                      @click="isVideoOpen = true"
+                      class="px-4 py-2 rounded-xl bg-primary text-white font-semibold text-xs border-none cursor-pointer"
+                    >
+                      Videoni ochish
+                    </button>
+                  </div>
 
-                <!-- Sevimlilar tugmasi (yuqori o'ng) -->
-                <button
-                  type="button"
-                  @click.stop="favStore.toggleFavorite(product, 'book')"
-                  name="Favorite button"
-                  aria-label="Sevimlilar"
-                  class="absolute top-4 right-4 z-20 w-10 h-10 rounded-full bg-white/90 hover:bg-white text-neutral-700 flex items-center justify-center shadow-2xs hover:scale-105 active:scale-95 transition-all border-none cursor-pointer"
-                >
-                  <svg class="w-5 h-5 transition-colors" viewBox="0 0 24 24" :fill="isFav ? '#ef4444' : 'none'" :stroke="isFav ? '#ef4444' : 'currentColor'" stroke-width="1.8">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"/>
-                  </svg>
-                </button>
-
-                <!-- Oldingi / Keyingi strelkalar (Bemalol o'tkazish) -->
-                <template v-if="galleryImages.length > 1">
+                  <!-- Katta ekranga ochish tugmasi -->
                   <button
                     type="button"
-                    @click.stop="prevImage"
-                    aria-label="Oldingi rasm"
-                    class="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-neutral-800 flex items-center justify-center shadow-md transition-all opacity-0 group-hover:opacity-100 cursor-pointer border-none z-20"
+                    @click="isVideoOpen = true"
+                    class="absolute top-4 right-4 z-20 px-3 py-1.5 rounded-full bg-black/60 hover:bg-black/80 text-white text-xs font-medium backdrop-blur-xs flex items-center gap-1.5 transition-all cursor-pointer border-none shadow-md"
+                    title="Katta ekranda ko'rish"
                   >
-                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15"/></svg>
+                    <span>Kattalashtirish</span>
                   </button>
+
+                  <!-- Rasmga qaytish tugmasi -->
                   <button
                     type="button"
-                    @click.stop="nextImage"
-                    aria-label="Keyingi rasm"
-                    class="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-neutral-800 flex items-center justify-center shadow-md transition-all opacity-0 group-hover:opacity-100 cursor-pointer border-none z-20"
+                    @click="activeMedia = 'image'"
+                    class="absolute top-4 left-4 z-20 px-3 py-1.5 rounded-full bg-black/60 hover:bg-black/80 text-white text-xs font-medium backdrop-blur-xs flex items-center gap-1.5 transition-all cursor-pointer border-none shadow-md"
                   >
-                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
+                    <span>‹ Rasmga qaytish</span>
                   </button>
-                </template>
-
-                <!-- Rasm hisoblagichi (1 / 4) -->
-                <div v-if="galleryImages.length > 1" class="absolute bottom-4 right-4 px-2.5 py-1 rounded-full bg-black/60 text-white text-[11px] font-semibold backdrop-blur-xs pointer-events-none">
-                  {{ activeIndex + 1 }} / {{ galleryImages.length }}
                 </div>
+
+                <!-- 2. RASM REJIMI -->
+                <div
+                  v-else
+                  class="relative w-full h-full min-h-[440px] md:min-h-[500px] flex items-center justify-center p-6 group select-none cursor-pointer"
+                  @click="openImagePreview(activeIndex)"
+                  title="Kattalashtirish uchun bosing"
+                >
+                  <img
+                    :src="activeImage"
+                    :alt="product.name"
+                    class="max-w-full max-h-[460px] w-auto h-auto object-contain transition-transform duration-300 group-hover:scale-105"
+                    loading="eager"
+                    draggable="false"
+                    @error="onImgError"
+                  />
+
+                  <!-- Kattalashtirish Preview Hover Badge -->
+                  <div class="absolute bottom-4 left-4 z-20 px-3 py-1.5 rounded-full bg-black/65 hover:bg-black/80 text-white text-xs font-medium backdrop-blur-xs flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-md">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607ZM10.5 7.5v6m3-3h-6" />
+                    </svg>
+                    <span>Kattalashtirish</span>
+                  </div>
+
+                  <!-- Video ochish tugmasi (Cover ustida suzuvchi) -->
+                  <button
+                    v-if="hasVideo"
+                    type="button"
+                    @click.stop="activeMedia = 'video'"
+                    class="absolute top-4 left-4 z-20 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-black/70 hover:bg-black/85 text-white backdrop-blur-xs text-xs font-semibold shadow-md transition-all hover:scale-105 border-none cursor-pointer"
+                  >
+                    <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    <span>Videoni ko'rish</span>
+                  </button>
+
+                  <!-- Sevimlilar tugmasi (yuqori o'ng) -->
+                  <button
+                    type="button"
+                    @click.stop="favStore.toggleFavorite(product, 'book')"
+                    name="Favorite button"
+                    aria-label="Sevimlilar"
+                    class="absolute top-4 right-4 z-20 w-10 h-10 rounded-full bg-white/90 hover:bg-white text-neutral-700 flex items-center justify-center shadow-2xs hover:scale-105 active:scale-95 transition-all border-none cursor-pointer"
+                  >
+                    <svg class="w-5 h-5 transition-colors" viewBox="0 0 24 24" :fill="isFav ? '#ef4444' : 'none'" :stroke="isFav ? '#ef4444' : 'currentColor'" stroke-width="1.8">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"/>
+                    </svg>
+                  </button>
+
+                  <!-- Oldingi / Keyingi strelkalar (Bemalol o'tkazish) -->
+                  <template v-if="galleryImages.length > 1">
+                    <button
+                      type="button"
+                      @click.stop="prevImage"
+                      aria-label="Oldingi rasm"
+                      class="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-neutral-800 flex items-center justify-center shadow-md transition-all opacity-0 group-hover:opacity-100 cursor-pointer border-none z-20"
+                    >
+                      <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
+                    </button>
+                    <button
+                      type="button"
+                      @click.stop="nextImage"
+                      aria-label="Keyingi rasm"
+                      class="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-neutral-800 flex items-center justify-center shadow-md transition-all opacity-0 group-hover:opacity-100 cursor-pointer border-none z-20"
+                    >
+                      <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
+                    </button>
+                  </template>
+
+                  <!-- Rasm hisoblagichi (1 / 4) -->
+                  <div v-if="galleryImages.length > 1" class="absolute bottom-4 right-4 px-2.5 py-1 rounded-full bg-black/60 text-white text-[11px] font-semibold backdrop-blur-xs pointer-events-none">
+                    {{ activeIndex + 1 }} / {{ galleryImages.length }}
+                  </div>
+                </div>
+
               </div>
             </div>
 
@@ -1215,7 +1277,7 @@
 import { useCartStore } from '~/stores/cart'
 import { useFavoritesStore } from '~/stores/favorites'
 import { useAuthStore } from '~/stores/auth'
-import { resolveProductImages } from '~/utils/productImage'
+import { resolveProductImages, resolveImageUrl } from '~/utils/productImage'
 
 const route = useRoute()
 const router = useRouter()
@@ -1468,6 +1530,7 @@ const similarProducts = computed(() => {
 })
 
 const activeIndex = ref(0)
+const activeMedia = ref<'video' | 'image'>('image')
 const mobileTrackEl = ref<HTMLElement | null>(null)
 let scrollRaf = 0
 
@@ -1483,6 +1546,26 @@ const activeImage = computed(() => {
     return list[activeIndex.value] || list[0]
   }
   return '/images/logo/logo_blue.png'
+})
+
+const videoPoster = computed(() => {
+  const p = product.value
+  if (!p) return ''
+  const v = p.video
+  if (v?.poster && typeof v.poster === 'string') return resolveImageUrl(v.poster)
+  return galleryImages.value[0] || ''
+})
+
+const videoSrc = computed(() => {
+  const p = product.value
+  if (!p) return ''
+  const v = p.video
+  if (typeof v === 'string' && v.trim()) return resolveImageUrl(v.trim())
+  if (v?.hd && typeof v.hd === 'string') return resolveImageUrl(v.hd.trim())
+  if (v?.sd && typeof v.sd === 'string') return resolveImageUrl(v.sd.trim())
+  if (v?.url && typeof v.url === 'string') return resolveImageUrl(v.url.trim())
+  if (typeof p.video_url === 'string' && p.video_url.trim()) return resolveImageUrl(p.video_url.trim())
+  return ''
 })
 
 function onImgError(e: Event) {
