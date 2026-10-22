@@ -501,19 +501,19 @@
                 </button>
               </div>
 
-              <!-- Asosiy Bir Xil Hajmdagi Rasm Maydoni (Kafolatlangan o'lcham, h-[420px] md:h-[490px] w-full min-w-0 flex-1) -->
+              <!-- Asosiy Bir Xil Hajmdagi Rasm Maydoni -->
               <div
-                class="relative flex-1 w-full min-w-0 h-[380px] sm:h-[440px] md:h-[490px] rounded-2xl bg-neutral-50/60 flex items-center justify-center overflow-hidden group select-none cursor-pointer"
-                style="aspect-ratio: 3/4; max-height: 490px;"
+                class="relative flex-1 w-full min-w-0 rounded-2xl bg-neutral-50/80 flex items-center justify-center overflow-hidden group select-none cursor-pointer min-h-[380px] sm:min-h-[440px] md:min-h-[490px] max-h-[500px] p-4"
                 @click="openImagePreview(activeIndex)"
                 title="Kattalashtirish uchun bosing"
               >
                 <img
                   :src="activeImage"
                   :alt="product.name"
-                  class="w-full h-full object-contain p-4 transition-transform duration-300 group-hover:scale-[1.02]"
+                  class="max-w-full max-h-[440px] w-auto h-auto object-contain transition-transform duration-300 group-hover:scale-105"
                   loading="eager"
                   draggable="false"
+                  @error="onImgError"
                 />
 
                 <!-- Kattalashtirish Preview Hover Badge -->
@@ -1477,7 +1477,20 @@ watchEffect(() => {
   }
 })
 
-const activeImage = computed(() => galleryImages.value[activeIndex.value] || galleryImages.value[0] || '/images/logo/logo_blue.png')
+const activeImage = computed(() => {
+  const list = galleryImages.value
+  if (Array.isArray(list) && list.length > 0) {
+    return list[activeIndex.value] || list[0]
+  }
+  return '/images/logo/logo_blue.png'
+})
+
+function onImgError(e: Event) {
+  const el = e.target as HTMLImageElement
+  if (el && !el.src.includes('logo_blue.png')) {
+    el.src = '/images/logo/logo_blue.png'
+  }
+}
 
 function onMobileTrackScroll() {
   if (scrollRaf) cancelAnimationFrame(scrollRaf)
