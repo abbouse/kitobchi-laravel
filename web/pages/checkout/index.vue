@@ -298,7 +298,6 @@
                 <div class="flex justify-between items-center text-neutral-600">
                   <span>Yetkazib berish</span>
                   <span class="font-semibold" :class="deliveryPrice > 0 ? 'text-neutral-900' : 'text-emerald-600'">
-                    <span v-if="flashApplies && baseDeliveryPrice > 0" class="mr-1 text-neutral-400 line-through font-normal">{{ formatPrice(baseDeliveryPrice) }}</span>
                     {{ selectedDeliveryService ? (deliveryPrice > 0 ? formatPrice(deliveryPrice) + " so'm" : 'Bepul') : 'Hisoblanadi' }}
                   </span>
                 </div>
