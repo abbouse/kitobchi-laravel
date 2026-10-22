@@ -255,7 +255,7 @@
                     {{ aiMatchPercent }}% mos — siz uchun
                   </div>
                   <div class="text-[10px] text-neutral-500 truncate">
-                    {{ authStore.isAuthenticated ? 'Nега ekanini ko\'ring' : 'AI Shaxsiy tahlil' }}
+                    {{ aiSummarySubtitle }}
                   </div>
                 </div>
               </div>
@@ -891,7 +891,7 @@
                     <span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
                   </div>
                   <div class="text-[11px] text-neutral-500">
-                    {{ authStore.isAuthenticated ? 'Sun\'iy intellekt tahlilini ko\'rish' : 'AI Shaxsiy tahlil — batafsil' }}
+                    {{ aiDesktopSubtitle }}
                   </div>
                 </div>
               </div>
@@ -1204,7 +1204,7 @@ function decrementQuantity() {
     orderCount.value--
   } else if (isAdded.value) {
     if (product.value) {
-      cartStore.removeItem(product.value.id, 'book')
+      cartStore.removeItem(product.value.id)
     }
   }
 }
@@ -1323,6 +1323,14 @@ const aiMatchPercent = computed(() => {
   if (!product.value?.id) return 69
   const seed = Number(product.value.id) + (authStore.user?.id ? Number(authStore.user.id) * 7 : 42)
   return 65 + (seed % 30)
+})
+
+const aiSummarySubtitle = computed(() => {
+  return authStore.isAuthenticated ? "Nega ekanini ko'ring" : "AI Shaxsiy tahlil"
+})
+
+const aiDesktopSubtitle = computed(() => {
+  return authStore.isAuthenticated ? "Sun'iy intellekt tahlilini ko'rish" : "AI Shaxsiy tahlil — batafsil"
 })
 
 // Video support

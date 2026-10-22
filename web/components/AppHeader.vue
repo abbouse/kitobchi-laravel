@@ -102,9 +102,6 @@
 
             <!-- Lang Dropdown -->
             <div ref="langRootRef" class="relative">
-              <!-- Savatcha/Sevimlilar bilan bir xil uslub: shaffof fon, hover'da
-                   neutral-100, ochiq holatda faol element kabi. Bayroq emoji
-                   o'rniga globus — Windows'da bayroqlar harf bo'lib chiqadi. -->
               <button
                 type="button"
                 @click="isLangOpen = !isLangOpen"
@@ -112,17 +109,19 @@
                 aria-haspopup="true"
                 :aria-label="`Til: ${localeLabel}`"
                 :class="[
-                  'h-10 px-3 rounded-full flex items-center gap-2 transition-colors relative text-sm cursor-pointer border-none select-none',
+                  'h-10 px-3 rounded-full flex items-center gap-2 transition-colors relative text-sm cursor-pointer border-none bg-transparent',
                   isLangOpen
                     ? 'bg-neutral-100 text-neutral-900 font-semibold'
-                    : 'bg-transparent text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900'
+                    : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900'
                 ]"
               >
-                <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                  <circle cx="12" cy="12" r="9" />
-                  <path d="M3 12h18" />
-                  <path d="M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3Z" />
-                </svg>
+                <div class="flex items-center justify-center relative">
+                  <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="M3 12h18" />
+                    <path d="M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3Z" />
+                  </svg>
+                </div>
                 <span class="max-lg:hidden leading-none">{{ localeLabel }}</span>
               </button>
 
@@ -194,71 +193,22 @@
           </div>
         </div>
 
-        <!-- Mobile Header -->
-        <div class="md:hidden flex items-center gap-2">
+        <!-- Mobile Header (Til o'zgartirish profilda, search butun kenglikda) -->
+        <div class="md:hidden flex items-center w-full">
           <button
             type="button"
             @click="searchStore.open()"
-            class="h-11 px-4 rounded-full bg-neutral-100 text-neutral-400 flex items-center gap-2.5 flex-1 border border-neutral-200/50 cursor-pointer text-left transition-colors"
+            class="h-11 px-4 rounded-full bg-neutral-100 text-neutral-400 flex items-center gap-2.5 w-full border border-neutral-200/50 cursor-pointer text-left transition-colors"
           >
             <i class="icon-search text-lg text-neutral-400 shrink-0"></i>
             <span class="flex-1 text-sm text-neutral-500 truncate m-0 p-0">{{ t('search_placeholder_mobile') }}</span>
           </button>
-
-          <!-- Mobile Lang Selector -->
-          <div ref="mobileLangRootRef" class="relative shrink-0">
-            <button
-              type="button"
-              @click="isMobileLangOpen = !isMobileLangOpen"
-              class="h-11 px-3 rounded-full bg-neutral-100 hover:bg-neutral-200/70 text-neutral-800 flex items-center gap-1.5 border border-neutral-200/50 cursor-pointer text-xs font-semibold"
-              aria-label="Tilni tanlash"
-            >
-              <span class="text-base leading-none">{{ currentLocaleFlag }}</span>
-              <span class="uppercase text-[11px] font-bold text-neutral-700">{{ locale }}</span>
-            </button>
-
-            <Transition
-              enter-active-class="transition duration-150 ease-out"
-              enter-from-class="transform scale-95 opacity-0 -translate-y-1"
-              enter-to-class="transform scale-100 opacity-100 translate-y-0"
-              leave-active-class="transition duration-100 ease-in"
-              leave-from-class="transform scale-100 opacity-100 translate-y-0"
-              leave-to-class="transform scale-95 opacity-0 -translate-y-1"
-            >
-              <div
-                v-if="isMobileLangOpen"
-                class="absolute z-50 top-full right-0 mt-2 w-44 rounded-2xl bg-white shadow-xl border border-neutral-100 p-1.5 focus:outline-none"
-              >
-                <button
-                  v-for="opt in availableLocalesWithMeta"
-                  :key="'mob-' + opt.code"
-                  type="button"
-                  @click="selectMobileLocale(opt.code)"
-                  class="w-full flex items-center justify-between gap-2.5 px-3 py-2.5 rounded-xl text-xs font-medium text-left transition-all border-none cursor-pointer"
-                  :class="locale === opt.code ? 'bg-blue-50/80 text-primary font-bold' : 'text-neutral-700 hover:bg-neutral-50 hover:text-neutral-900'"
-                >
-                  <div class="flex items-center gap-2">
-                    <span class="text-base leading-none">{{ opt.flag }}</span>
-                    <span>{{ opt.label }}</span>
-                  </div>
-                  <svg
-                    v-if="locale === opt.code"
-                    class="w-4 h-4 text-primary shrink-0"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd" />
-                  </svg>
-                </button>
-              </div>
-            </Transition>
-          </div>
         </div>
       </div>
     </header>
 
     <!-- Catalog Drawer Modal -->
-    <CatalogDrawer :is-open="isCatalogOpen" @close="isCatalogOpen = false" />
+    <CatalogFilterDrawer :is-open="isCatalogOpen" @close="isCatalogOpen = false" />
   </div>
 </template>
 
@@ -283,8 +233,6 @@ const LOCALE_FLAGS: Record<AppLocale, string> = {
   ja: '🇯🇵'
 }
 
-const currentLocaleFlag = computed(() => LOCALE_FLAGS[locale.value as AppLocale] || '🌐')
-
 const availableLocalesWithMeta = computed(() => {
   return availableLocales.map(l => ({
     ...l,
@@ -294,21 +242,13 @@ const availableLocalesWithMeta = computed(() => {
 
 const isCatalogOpen = ref(false)
 const isLangOpen = ref(false)
-const isMobileLangOpen = ref(false)
 const langRootRef = ref<HTMLElement | null>(null)
-const mobileLangRootRef = ref<HTMLElement | null>(null)
 
 onClickOutside(langRootRef, () => { isLangOpen.value = false })
-onClickOutside(mobileLangRootRef, () => { isMobileLangOpen.value = false })
 
 function selectLocale(code: AppLocale) {
   setLocale(code)
   isLangOpen.value = false
-}
-
-function selectMobileLocale(code: AppLocale) {
-  setLocale(code)
-  isMobileLangOpen.value = false
 }
 
 const isHomePage = computed(() => route.path === '/')

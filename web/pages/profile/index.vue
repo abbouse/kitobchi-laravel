@@ -70,6 +70,7 @@
             <button
               v-else
               type="button"
+              @click="handleItemClick(item)"
               class="bg-white rounded-2xl py-2 block group w-full text-left border-none bg-transparent cursor-pointer p-0"
             >
               <div class="flex items-center justify-between gap-3">
@@ -117,12 +118,7 @@
             <svg class="w-5 h-5 text-neutral-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/></svg>
           </NuxtLink>
 
-          <!-- Menu guruhlari (Piyola 1:1) — MUHIM: faqat mobil/planshetda
-               ko'rinadi (lg:hidden). Piyola desktopida /profile darhol
-               /profile/orders'ga yo'naltiriladi (pastdagi onMounted'ga
-               qarang) va o'rniga chap tomonda ProfileSidebar + o'ng
-               tomonda buyurtmalar kontenti ko'rsatiladi — bu menyu ro'yxati
-               chalkash/ortiqcha bo'lib qolardi. -->
+          <!-- Menu guruhlari (Piyola 1:1) -->
           <div v-for="(group, gi) in menuGroups" :key="'auth-group-' + gi" class="lg:hidden py-1 sm:py-2 bg-white rounded-[20px] px-4">
             <template v-for="item in group" :key="item.key">
               <NuxtLink
@@ -147,6 +143,7 @@
               <button
                 v-else
                 type="button"
+                @click="handleItemClick(item)"
                 class="bg-white rounded-2xl py-2 block group w-full text-left border-none bg-transparent cursor-pointer p-0"
               >
                 <div class="flex items-center justify-between gap-3">
@@ -182,15 +179,99 @@
           </div>
         </div>
       </div>
+
+      <!-- Language Selection Bottom Sheet / Modal -->
+      <Transition
+        enter-active-class="transition duration-200 ease-out"
+        enter-from-class="opacity-0"
+        enter-to-class="opacity-100"
+        leave-active-class="transition duration-150 ease-in"
+        leave-from-class="opacity-100"
+        leave-to-class="opacity-0"
+      >
+        <div
+          v-if="isLangModalOpen"
+          class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/40 backdrop-blur-xs"
+          @click.self="isLangModalOpen = false"
+        >
+          <div class="w-full sm:max-w-sm bg-white rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between">
+              <h3 class="text-base font-bold text-neutral-900 m-0">Ilova tili</h3>
+              <button
+                type="button"
+                @click="isLangModalOpen = false"
+                class="w-8 h-8 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-500 flex items-center justify-center border-none cursor-pointer"
+              >
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div class="space-y-1.5">
+              <button
+                v-for="opt in availableLocalesWithMeta"
+                :key="'profile-lang-' + opt.code"
+                type="button"
+                @click="selectLanguage(opt.code)"
+                class="w-full flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer text-left"
+                :class="locale === opt.code ? 'border-primary bg-primary/5 text-primary font-bold' : 'border-neutral-100 hover:bg-neutral-50 text-neutral-800'"
+              >
+                <div class="flex items-center gap-3">
+                  <span class="text-xl leading-none">{{ opt.flag }}</span>
+                  <span class="text-sm font-medium">{{ opt.label }}</span>
+                </div>
+                <svg
+                  v-if="locale === opt.code"
+                  class="w-5 h-5 text-primary shrink-0"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { useAuthStore } from '~/stores/auth'
+import { useLocale, type AppLocale } from '~/composables/useLocale'
 
 const authStore = useAuthStore()
 const router = useRouter()
+const { locale, localeLabel, availableLocales, setLocale } = useLocale()
+
+const LOCALE_FLAGS: Record<AppLocale, string> = {
+  uz: '🇺🇿',
+  ru: '🇷🇺',
+  en: '🇬🇧',
+  ja: '🇯🇵'
+}
+
+const availableLocalesWithMeta = computed(() => {
+  return availableLocales.map(l => ({
+    ...l,
+    flag: LOCALE_FLAGS[l.code as AppLocale] || '🌐'
+  }))
+})
+
+const isLangModalOpen = ref(false)
+
+function handleItemClick(item: MenuItem) {
+  if (item.key === 'lang') {
+    isLangModalOpen.value = true
+  }
+}
+
+function selectLanguage(code: AppLocale) {
+  setLocale(code)
+  isLangModalOpen.value = false
+}
 
 // Profil bo'limi SVG ikonkalar
 const PROFILE_ICONS: Record<string, string> = {
@@ -216,7 +297,7 @@ interface MenuItem {
   value?: string
 }
 
-const menuGroups: MenuItem[][] = [
+const menuGroups = computed<MenuItem[][]>(() => [
   [
     { key: 'orders', label: 'Buyurtmalarim', icon: 'orders', to: '/profile/orders' },
     { key: 'comments', label: 'Sharhlarim', icon: 'comments', to: '/profile/comments' },
@@ -230,12 +311,12 @@ const menuGroups: MenuItem[][] = [
     { key: 'vacancies', label: 'Karyera', icon: 'vacancies', to: '/vacancies' },
   ],
   [
-    { key: 'lang', label: 'Ilova tili', icon: 'lang', value: "O’zbekcha" },
+    { key: 'lang', label: 'Ilova tili', icon: 'lang', value: localeLabel.value },
     { key: 'contacts', label: "Biz bilan bog‘lanish", icon: 'contacts', to: '/contacts' },
   ],
-]
+])
 
-const guestMenuGroups: MenuItem[][] = [menuGroups[1], menuGroups[2]]
+const guestMenuGroups = computed(() => [menuGroups.value[1], menuGroups.value[2]])
 
 function formatPhone(phone?: string) {
   if (!phone) return ''

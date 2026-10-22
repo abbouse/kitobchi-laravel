@@ -605,7 +605,12 @@ async function submitAuthOtp() {
   try {
     await authStore.verifyOtp(rawPhone, code)
     if (form.fullName && authStore.user && !authStore.user.name) {
-      await authStore.updateProfile({ name: form.fullName }).catch(() => {})
+      $fetch(`${config.public.apiBase}/v1/kitobchi/settings`, {
+        method: 'POST',
+        headers: authHeaders.value,
+        body: { name: form.fullName }
+      }).catch(() => {})
+      authStore.updateUser({ name: form.fullName })
     }
     isAuthOtpModalOpen.value = false
     await executeOrderSubmission()
