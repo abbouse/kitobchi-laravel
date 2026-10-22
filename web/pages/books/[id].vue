@@ -463,12 +463,12 @@
         <!-- Asosiy 2 Ustunli Grid (Galereya chapda, Ma'lumot va Side o'ngda) -->
         <div class="grid grid-cols-12 gap-8 items-start">
           <!-- CHAP USTUN: BIR HIL HAJMDAGI DESKTOP GALEREYA (7 ustun) -->
-          <div class="col-span-12 lg:col-span-7 flex flex-col gap-4">
-            <div class="bg-white p-6 rounded-3xl shadow-2xs flex flex-col md:flex-row gap-5 items-stretch">
+          <div class="col-span-12 lg:col-span-7 flex flex-col gap-4 min-w-0 w-full">
+            <div class="bg-white p-5 sm:p-6 rounded-3xl shadow-2xs flex flex-col md:flex-row gap-5 items-stretch w-full min-w-0">
               <!-- Chap vertikal thumbnails (75x100px bir xil hajm) -->
               <div
                 v-if="galleryImages.length > 1 || hasVideo"
-                class="flex md:flex-col gap-3 overflow-x-auto md:overflow-y-auto no-scrollbar w-full md:w-20 shrink-0 select-none"
+                class="flex md:flex-col gap-3 overflow-x-auto md:overflow-y-auto no-scrollbar w-full md:w-20 shrink-0 select-none py-1"
                 style="max-height: 490px;"
               >
                 <!-- Agar video bo'lsa, maxsus video thumbnail -->
@@ -477,12 +477,12 @@
                   type="button"
                   @click="isVideoOpen = true"
                   title="Video sharhni ko'rish"
-                  class="relative shrink-0 rounded-2xl overflow-hidden bg-neutral-900 text-white w-18 h-24 flex flex-col items-center justify-center gap-1 border-none cursor-pointer transition-transform hover:scale-105"
+                  class="relative shrink-0 rounded-2xl overflow-hidden bg-neutral-900 text-white w-18 h-24 flex flex-col items-center justify-center gap-1.5 border-none cursor-pointer transition-transform hover:scale-105 shadow-xs"
                 >
-                  <div class="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center">
-                    <svg class="w-3.5 h-3.5 fill-current ml-0.5" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                  <div class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                    <svg class="w-4 h-4 fill-current ml-0.5" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                   </div>
-                  <span class="text-[10px] font-bold">Video</span>
+                  <span class="text-[11px] font-bold">Video</span>
                 </button>
 
                 <!-- Rasm thumbnails -->
@@ -501,9 +501,10 @@
                 </button>
               </div>
 
-              <!-- Asosiy Bir Xil Hajmdagi Rasm Maydoni (Uniform 3:4 aspect, jumping yo'q) -->
+              <!-- Asosiy Bir Xil Hajmdagi Rasm Maydoni (Kafolatlangan o'lcham, h-[420px] md:h-[490px] w-full min-w-0 flex-1) -->
               <div
-                class="relative flex-1 rounded-2xl bg-neutral-50/60 flex items-center justify-center overflow-hidden aspect-[3/4] max-h-[490px] group select-none cursor-pointer"
+                class="relative flex-1 w-full min-w-0 h-[380px] sm:h-[440px] md:h-[490px] rounded-2xl bg-neutral-50/60 flex items-center justify-center overflow-hidden group select-none cursor-pointer"
+                style="aspect-ratio: 3/4; max-height: 490px;"
                 @click="openImagePreview(activeIndex)"
                 title="Kattalashtirish uchun bosing"
               >
@@ -516,8 +517,8 @@
                 />
 
                 <!-- Kattalashtirish Preview Hover Badge -->
-                <div class="absolute bottom-3 left-3 z-20 px-2.5 py-1 rounded-full bg-black/60 hover:bg-black/80 text-white text-xs font-medium backdrop-blur-xs flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <div class="absolute bottom-4 left-4 z-20 px-3 py-1.5 rounded-full bg-black/65 hover:bg-black/80 text-white text-xs font-medium backdrop-blur-xs flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-md">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607ZM10.5 7.5v6m3-3h-6" />
                   </svg>
                   <span>Kattalashtirish</span>
@@ -551,24 +552,24 @@
                 <template v-if="galleryImages.length > 1">
                   <button
                     type="button"
-                    @click="prevImage"
+                    @click.stop="prevImage"
                     aria-label="Oldingi rasm"
-                    class="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-neutral-800 flex items-center justify-center shadow-md transition-all opacity-0 group-hover:opacity-100 cursor-pointer border-none"
+                    class="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-neutral-800 flex items-center justify-center shadow-md transition-all opacity-0 group-hover:opacity-100 cursor-pointer border-none z-20"
                   >
                     <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
                   </button>
                   <button
                     type="button"
-                    @click="nextImage"
+                    @click.stop="nextImage"
                     aria-label="Keyingi rasm"
-                    class="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-neutral-800 flex items-center justify-center shadow-md transition-all opacity-0 group-hover:opacity-100 cursor-pointer border-none"
+                    class="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-neutral-800 flex items-center justify-center shadow-md transition-all opacity-0 group-hover:opacity-100 cursor-pointer border-none z-20"
                   >
                     <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
                   </button>
                 </template>
 
                 <!-- Rasm hisoblagichi (1 / 4) -->
-                <div v-if="galleryImages.length > 1" class="absolute bottom-3 right-3 px-2.5 py-1 rounded-full bg-black/60 text-white text-[11px] font-semibold backdrop-blur-xs pointer-events-none">
+                <div v-if="galleryImages.length > 1" class="absolute bottom-4 right-4 px-2.5 py-1 rounded-full bg-black/60 text-white text-[11px] font-semibold backdrop-blur-xs pointer-events-none">
                   {{ activeIndex + 1 }} / {{ galleryImages.length }}
                 </div>
               </div>
