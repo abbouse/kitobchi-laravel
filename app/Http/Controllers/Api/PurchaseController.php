@@ -1553,6 +1553,11 @@ class PurchaseController extends Controller
 
             // Bepul yetkazish soati: aksiya vaqtida mijozning (bugungi) birinchi buyurtmasida yetkazish bepul
             $flashDeliverySaved = 0;
+            if ($deliveryPrice > 0 && \App\Support\FlashDelivery::isActive(\App\Support\FlashDelivery::GRACE_SECONDS)) {
+                // Bir vaqtda yuborilgan ikki buyurtma ikkalasi ham bepul bo'lib ketmasligi uchun
+                // mijoz qatorini tranzaksiya oxirigacha qulflaymiz (keyingi so'rov shu yerda kutadi).
+                DB::table('users')->where('id', $user->id)->lockForUpdate()->value('id');
+            }
             if ($deliveryPrice > 0 && \App\Support\FlashDelivery::appliesTo($user)) {
                 $flashDeliverySaved = (int) $deliveryPrice;
                 $deliveryPrice = 0;

@@ -298,6 +298,7 @@
                 <div class="flex justify-between items-center text-neutral-600">
                   <span>Yetkazib berish</span>
                   <span class="font-semibold" :class="deliveryPrice > 0 ? 'text-neutral-900' : 'text-emerald-600'">
+                    <span v-if="flashApplies && baseDeliveryPrice > 0" class="mr-1 text-neutral-400 line-through font-normal">{{ formatPrice(baseDeliveryPrice) }}</span>
                     {{ selectedDeliveryService ? (deliveryPrice > 0 ? formatPrice(deliveryPrice) + " so'm" : 'Bepul') : 'Hisoblanadi' }}
                   </span>
                 </div>
@@ -686,7 +687,11 @@ const selectedDeliveryServiceId = ref<number | null>(null)
 const selectedDeliveryService = computed(() =>
   deliveryServices.value.find((s: any) => s.id === selectedDeliveryServiceId.value) || null
 )
-const deliveryPrice = computed(() => Number(selectedDeliveryService.value?.calculated_price || 0))
+const baseDeliveryPrice = computed(() => Number(selectedDeliveryService.value?.calculated_price || 0))
+// Bepul yetkazish soati: server "applies" desa (aksiya davom etmoqda va mijoz bugun ishlatmagan) — yetkazish 0.
+// Yakuniy narxni baribir server hisoblaydi, bu faqat to'g'ri ko'rsatish uchun.
+const flashApplies = ref(false)
+const deliveryPrice = computed(() => (flashApplies.value ? 0 : baseDeliveryPrice.value))
 
 async function fetchCheckoutInfo() {
   if (!authStore.isAuthenticated) return
@@ -698,6 +703,7 @@ async function fetchCheckoutInfo() {
       .slice()
       .sort((a, b) => (a.calculated_price || 0) - (b.calculated_price || 0))
     deliveryServices.value = services
+    flashApplies.value = res?.data?.flash_delivery?.applies === true
     if (services.length > 0 && !services.find((s) => s.id === selectedDeliveryServiceId.value)) {
       selectedDeliveryServiceId.value = services[0].id
     }
