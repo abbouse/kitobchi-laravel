@@ -10,51 +10,70 @@
         <span class="text-neutral-800 font-medium truncate">Huquqiy hujjatlar</span>
       </nav>
 
-      <!-- Sarlavha: ixcham, hero'siz -->
-      <header class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-5">
-        <div class="min-w-0">
-          <h1 class="text-2xl sm:text-3xl font-extrabold text-neutral-900 tracking-tight m-0">Huquqiy hujjatlar</h1>
-          <p class="text-sm text-neutral-500 m-0 mt-1">Kitobchi’dan foydalanish shartlari, siyosatlar va shartnoma namunalari.</p>
-        </div>
-        <label class="relative w-full sm:w-72 shrink-0">
-          <span class="sr-only">Hujjat qidirish</span>
-          <svg class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
-          </svg>
-          <input
-            v-model="searchQuery"
-            type="search"
-            placeholder="Hujjat qidirish"
-            class="w-full pl-10 pr-4 h-11 bg-white border border-neutral-200 rounded-full text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-          />
-        </label>
-      </header>
+      <!-- Sarlavha va Qidiruv bloki: toza, ixcham va buzilmaydigan -->
+      <div class="legal-header-block mb-6">
+        <div class="legal-header-row flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-neutral-100">
+          <div class="legal-title-col">
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-neutral-900 tracking-tight m-0">Huquqiy hujjatlar</h1>
+            <p class="text-sm sm:text-base text-neutral-500 m-0 mt-1.5">
+              Kitobchi platformasidan foydalanish shartlari, siyosatlar va shartnoma namunalari.
+            </p>
+          </div>
 
-      <!-- Quick Filter Tabs -->
-      <div class="flex items-center gap-2 overflow-x-auto pb-4 mb-6 scrollbar-none text-sm">
-        <button
-          v-for="tab in filterTabs"
-          :key="tab.id"
-          type="button"
-          @click="activeTab = tab.id"
-          :class="[
-            'h-9 px-4 rounded-full font-semibold transition-colors cursor-pointer whitespace-nowrap text-sm border',
-            activeTab === tab.id
-              ? 'bg-neutral-900 text-white border-neutral-900'
-              : 'bg-white text-neutral-700 border-neutral-200 hover:border-neutral-400 hover:text-neutral-900'
-          ]"
-        >
-          {{ tab.label }}
-          <span
-            v-if="tab.count !== undefined"
+          <!-- Qidiruv qatori -->
+          <div class="legal-search-col">
+            <div class="relative w-full">
+              <span class="sr-only">Hujjat qidirish</span>
+              <svg class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+              </svg>
+              <input
+                v-model="searchQuery"
+                type="search"
+                placeholder="Hujjat qidirish..."
+                class="w-full pl-10 pr-9 h-11 bg-white border border-neutral-200 rounded-full text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-xs"
+              />
+              <button
+                v-if="searchQuery"
+                type="button"
+                @click="searchQuery = ''"
+                class="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 p-1"
+                title="Tozalash"
+              >
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Filter Tabs -->
+        <div class="flex items-center gap-2 overflow-x-auto pt-4 pb-1 scrollbar-none text-sm">
+          <button
+            v-for="tab in filterTabs"
+            :key="tab.id"
+            type="button"
+            @click="activeTab = tab.id"
             :class="[
-              'ml-1.5 text-xs px-1.5 py-0.5 rounded-full',
-              activeTab === tab.id ? 'bg-white/20 text-white' : 'bg-neutral-100 text-neutral-600'
+              'h-9 px-4 rounded-full font-semibold transition-colors cursor-pointer whitespace-nowrap text-sm border',
+              activeTab === tab.id
+                ? 'bg-neutral-900 text-white border-neutral-900'
+                : 'bg-white text-neutral-700 border-neutral-200 hover:border-neutral-400 hover:text-neutral-900'
             ]"
           >
-            {{ tab.count }}
-          </span>
-        </button>
+            {{ tab.label }}
+            <span
+              v-if="tab.count !== undefined"
+              :class="[
+                'ml-1.5 text-xs px-1.5 py-0.5 rounded-full',
+                activeTab === tab.id ? 'bg-white/20 text-white' : 'bg-neutral-100 text-neutral-600'
+              ]"
+            >
+              {{ tab.count }}
+            </span>
+          </button>
+        </div>
       </div>
 
       <!-- Loading Skeleton -->
@@ -361,3 +380,38 @@ useHead({
   link: [{ rel: 'canonical', href: 'https://kitobchi.com/legal' }]
 })
 </script>
+
+<style scoped>
+.legal-header-row {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.legal-title-col {
+  width: 100%;
+}
+
+.legal-search-col {
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .legal-header-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .legal-title-col {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding-right: 1.5rem;
+  }
+
+  .legal-search-col {
+    width: 320px;
+    flex-shrink: 0;
+  }
+}
+</style>
