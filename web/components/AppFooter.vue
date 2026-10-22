@@ -55,6 +55,14 @@
             <li v-for="item in footerPolicies" :key="item.slug">
               <NuxtLink :to="policyLink(item.slug)" class="text-sm text-[#CEE3FB]/85 hover:text-white transition-colors no-underline">{{ item.title }}</NuxtLink>
             </li>
+            <li>
+              <NuxtLink to="/legal" class="inline-flex items-center gap-1 text-sm text-[#74AFEE] hover:text-white transition-colors no-underline font-medium">
+                <span>Hammasini ko'rish</span>
+                <svg class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M3 10a.75.75 0 01.75-.75h10.638L10.23 5.29a.75.75 0 111.04-1.08l5.5 5.25a.75.75 0 010 1.08l-5.5 5.25a.75.75 0 11-1.04-1.08l4.158-3.96H3.75A.75.75 0 013 10z" clip-rule="evenodd" />
+                </svg>
+              </NuxtLink>
+            </li>
           </ul>
         </div>
 
@@ -162,6 +170,6 @@ function policyLink(slug: string) {
 
 const footerPolicies = computed(() => {
   const list = legalData.value?.data || []
-  return list.slice(-4)
+  return list.slice(0, 3)
 })
 </script>
