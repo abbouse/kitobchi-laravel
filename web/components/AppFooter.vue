@@ -4,16 +4,27 @@
     style="background: linear-gradient(180deg, #10263E 0%, #081523 100%);"
   >
     <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
+      <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-8 lg:gap-10">
         <!-- 1. Umumiy -->
         <div>
           <h3 class="font-bold text-xs uppercase tracking-wider text-[#A5CCF5] mb-4">Umumiy</h3>
           <ul class="space-y-3 list-none p-0 m-0">
             <li><NuxtLink to="/about" class="text-sm text-[#CEE3FB]/85 hover:text-white transition-colors no-underline">Biz haqimizda</NuxtLink></li>
             <li><NuxtLink to="/contacts" class="text-sm text-[#CEE3FB]/85 hover:text-white transition-colors no-underline">Aloqa</NuxtLink></li>
-            <li><NuxtLink to="/vacancies" class="text-sm text-[#CEE3FB]/85 hover:text-white transition-colors no-underline">Karyera</NuxtLink></li>
             <li><NuxtLink to="/kolleksiya" class="text-sm text-[#CEE3FB]/85 hover:text-white transition-colors no-underline">Kolleksiyalar</NuxtLink></li>
             <li><NuxtLink to="/club" class="text-sm text-[#CEE3FB]/85 hover:text-white transition-colors no-underline">Kitobxonlar klubi</NuxtLink></li>
+          </ul>
+        </div>
+
+        <!-- Xizmatlar: hamkorlik, kuryerlik, dasturchilar, investorlar, vakansiyalar -->
+        <div>
+          <h3 class="font-bold text-xs uppercase tracking-wider text-[#A5CCF5] mb-4">Xizmatlar</h3>
+          <ul class="space-y-3 list-none p-0 m-0">
+            <li><NuxtLink to="/hamkor" class="text-sm text-[#CEE3FB]/85 hover:text-white transition-colors no-underline">Hamkor bo'lish</NuxtLink></li>
+            <li><NuxtLink to="/kuryer" class="text-sm text-[#CEE3FB]/85 hover:text-white transition-colors no-underline">Kuryer bo'lish</NuxtLink></li>
+            <li><a href="/developers/api" class="text-sm text-[#CEE3FB]/85 hover:text-white transition-colors no-underline">Dasturchilar uchun</a></li>
+            <li><NuxtLink to="/investorlar" class="text-sm text-[#CEE3FB]/85 hover:text-white transition-colors no-underline">Investor sifatida</NuxtLink></li>
+            <li><NuxtLink to="/vacancies" class="text-sm text-[#CEE3FB]/85 hover:text-white transition-colors no-underline">Vakansiyalar</NuxtLink></li>
           </ul>
         </div>
 
@@ -78,7 +89,7 @@
           >{{ kitobchiPhone }}</a>
 
           <!-- App Store & Google Play Capsules -->
-          <div class="flex flex-col sm:flex-row gap-2">
+          <div class="flex flex-col gap-2 items-start">
             <a
               :href="SITE_LINKS.googlePlay" target="_blank" rel="noopener"
               class="inline-flex items-center gap-2.5 bg-gradient-to-r from-white/[0.08] to-white/[0.04] hover:from-white/[0.16] hover:to-white/[0.08] border border-white/15 hover:border-[#65A4E7]/50 rounded-2xl px-3.5 py-2 transition-all no-underline group shadow-2xs"
