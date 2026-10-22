@@ -56,18 +56,18 @@
             type="button"
             @click="activeTab = tab.id"
             :class="[
-              'h-9 px-4 rounded-full font-semibold transition-colors cursor-pointer whitespace-nowrap text-sm border',
+              'h-9 px-4 rounded-full font-semibold transition-all cursor-pointer whitespace-nowrap text-sm border flex items-center gap-1.5',
               activeTab === tab.id
-                ? 'bg-neutral-900 text-white border-neutral-900'
-                : 'bg-white text-neutral-700 border-neutral-200 hover:border-neutral-400 hover:text-neutral-900'
+                ? 'bg-brand-gradient text-white border-transparent shadow-xs'
+                : 'bg-white text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50 border-neutral-200/80'
             ]"
           >
-            {{ tab.label }}
+            <span>{{ tab.label }}</span>
             <span
               v-if="tab.count !== undefined"
               :class="[
-                'ml-1.5 text-xs px-1.5 py-0.5 rounded-full',
-                activeTab === tab.id ? 'bg-white/20 text-white' : 'bg-neutral-100 text-neutral-600'
+                'text-xs px-2 py-0.5 rounded-full font-medium',
+                activeTab === tab.id ? 'bg-white/20 text-white' : 'bg-neutral-100 text-neutral-500'
               ]"
             >
               {{ tab.count }}
