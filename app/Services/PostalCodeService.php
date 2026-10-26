@@ -92,7 +92,8 @@ class PostalCodeService
     {
         $list = $json;
         if (is_array($json) && ! array_is_list($json)) {
-            foreach (['data', 'results', 'offices', 'items', 'features'] as $key) {
+            // O'zpochta: {"result": [{"index":"100000","lat":"41.31","lng":"69.28", ...}]}
+            foreach (['result', 'data', 'results', 'offices', 'items', 'features'] as $key) {
                 if (isset($json[$key]) && is_array($json[$key])) {
                     $list = $json[$key];
                     break;

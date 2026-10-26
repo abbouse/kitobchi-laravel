@@ -33,6 +33,19 @@ class PostalCodeServiceTest extends TestCase
         $this->assertTrue($km > 260 && $km < 280, "Toshkent–Samarqand ~270 km, keldi: $km");
     }
 
+    public function test_parse_real_uzpost_response(): void
+    {
+        // new.pochta.uz/api/v1/maps/new/post/offices/ javobidan namuna
+        $json = json_decode('{"result":[{"id":5218,"uzum":"Bor","central_department":"Bor","index":"100000","lat":"41.316650","lng":"69.283869"},'
+            .'{"id":5219,"uzum":"Bor","central_department":"Yo\'q","index":"100002","lat":"41.330299","lng":"69.233848"}]}', true);
+        $parsed = PostalCodeService::parseOffices($json);
+
+        $this->assertCount(2, $parsed);
+        $this->assertSame('100000', $parsed[0]['postal_index']);
+        $this->assertEqualsWithDelta(41.31665, $parsed[0]['lat'], 0.00001);
+        $this->assertEqualsWithDelta(69.283869, $parsed[0]['lon'], 0.00001);
+    }
+
     public function test_parse_handles_various_shapes(): void
     {
         $json = ['data' => [
