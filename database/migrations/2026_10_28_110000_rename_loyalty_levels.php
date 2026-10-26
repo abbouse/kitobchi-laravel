@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     private const MAP = [
-        'reader' => ['Kitobxon', ['Yangi varaq', 'Новая страница', 'New Page', '新しいページ'], '#51CF66'],
+        'reader' => ['Kitobxon', ['Yangi sahifa', 'Новая страница', 'New Page', '新しいページ'], '#51CF66'],
         'active_reader' => ['Faol kitobxon', ['Sahifa sayyohi', 'Странник страниц', 'Page Wanderer', 'ページの旅人'], '#339AF0'],
         'book_lover' => ['Kitob muxlisi', ['Kitob ishqibozi', 'Книжный энтузиаст', 'Book Enthusiast', '本の熱狂者'], '#FF6B6B'],
         'bibliophile' => ['Bibliofil', ['Javon sohibi', 'Хранитель полки', 'Shelf Keeper', '本棚の守り手'], '#845EF7'],
@@ -24,7 +24,7 @@ return new class extends Migration
             return;
         }
         foreach (self::MAP as $key => [$old, $names, $color]) {
-            DB::table('loyalty_levels')->where('key', $key)->where('name_uz', $old)->update([
+            DB::table('loyalty_levels')->where('key', $key)->whereIn('name_uz', [$old, 'Yangi varaq'])->update([
                 'name_uz' => $names[0], 'name_ru' => $names[1], 'name_en' => $names[2], 'name_ja' => $names[3],
                 'color' => $color, 'updated_at' => now(),
             ]);

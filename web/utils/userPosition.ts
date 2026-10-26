@@ -1,7 +1,7 @@
 // Kitobxonlar klubi darajalari (backend: App\Services\UserPositionService::POSITIONS).
 // API kod qaytaradi ("active_reader") — saytda xom kod ko'rinib qolmasin.
 const POSITION_LABELS: Record<string, string> = {
-  reader: 'Yangi varaq',
+  reader: 'Yangi sahifa',
   active_reader: 'Sahifa sayyohi',
   book_lover: 'Kitob ishqibozi',
   bibliophile: 'Javon sohibi',
