@@ -21,18 +21,18 @@ interface PageProps { levels: Level[]; badges: Badge[]; [k: string]: unknown }
 const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n);
 
 const BADGES: Record<string, { name: string; emoji: string }> = {
-  first_order: { name: 'Birinchi xarid', emoji: '📦' },
+  first_order: { name: 'Ilk sahifa', emoji: '🔖' },
   bookworm: { name: 'Kitob qurti', emoji: '🐛' },
-  collector: { name: "Kitob yig'uvchi", emoji: '📚' },
+  collector: { name: 'Kolleksioner', emoji: '📚' },
   genre_explorer: { name: 'Janrlar sayyohi', emoji: '🧭' },
-  shop_explorer: { name: "Do'konlar kashfiyotchisi", emoji: '🛍️' },
-  reviewer: { name: 'Sharhlovchi', emoji: '📝' },
-  club_voice: { name: 'Klub ovozi', emoji: '💬' },
-  conversationalist: { name: 'Suhbatdosh', emoji: '🗨️' },
+  shop_explorer: { name: "Do'konma-do'kon", emoji: '🛍️' },
+  reviewer: { name: 'Tanqidchi', emoji: '🖋️' },
+  club_voice: { name: "Klub notig'i", emoji: '📣' },
+  conversationalist: { name: 'Suhbat ustasi', emoji: '💬' },
   club_star: { name: 'Klub yulduzi', emoji: '🌟' },
-  inspirer: { name: 'Ilhomchi', emoji: '✨' },
-  lucky: { name: 'Omadli', emoji: '🍀' },
-  veteran: { name: 'Kitobchi faxriysi', emoji: '🏅' },
+  inspirer: { name: 'Ilhom manbai', emoji: '💡' },
+  lucky: { name: 'Omad qushi', emoji: '🍀' },
+  veteran: { name: "Bir yillik do'st", emoji: '⏳' },
 };
 const METRIC: Record<string, string> = {
   orders: 'yetkazilgan buyurtma', books: 'turli kitob', categories: 'turli kategoriya', sellers: "turli do'kondan xarid",
