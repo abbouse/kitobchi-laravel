@@ -90,6 +90,19 @@ class FlashDeliveryTest extends TestCase
         $this->assertFalse(FlashDelivery::appliesTo($this->user));
     }
 
+    public function test_min_order_amount(): void
+    {
+        DB::table('project_settings')->update(['flash_delivery_min_amount' => 50000]);
+        Cache::forget('flash_delivery:setting');
+        $this->at('20:05:00');
+
+        $this->assertSame(50000, FlashDelivery::status($this->user)['min_amount']);
+        $this->assertFalse(FlashDelivery::appliesTo($this->user, null, 10000));
+        $this->assertTrue(FlashDelivery::appliesTo($this->user, null, 50000));
+        // Summa berilmasa (holat so'rovi) — faqat vaqt va limit tekshiriladi
+        $this->assertTrue(FlashDelivery::appliesTo($this->user));
+    }
+
     public function test_flash_promo_code_only_works_inside_window(): void
     {
         DB::table('promocodes')->insert([

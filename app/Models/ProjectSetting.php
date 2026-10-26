@@ -49,6 +49,7 @@ class ProjectSetting extends Model
         'flash_delivery_duration',
         'flash_delivery_promo_code',
         'flash_delivery_limit',
+        'flash_delivery_min_amount',
     ];
 
     protected $casts = [
@@ -83,6 +84,7 @@ class ProjectSetting extends Model
         'flash_delivery_enabled'  => 'boolean',
         'cash_on_delivery_enabled' => 'boolean',
         'flash_delivery_duration' => 'integer',
+        'flash_delivery_min_amount' => 'integer',
     ];
 
     /**

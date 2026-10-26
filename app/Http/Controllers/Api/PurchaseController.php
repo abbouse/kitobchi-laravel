@@ -512,8 +512,10 @@ class PurchaseController extends Controller
                 ]),
             'delivery_services' => $services,
             // Bepul yetkazish soati: aktiv va mijoz hali foydalanmagan bo'lsa yetkazish narxi 0 bo'ladi
+            // applies — savatdagi summa bo'yicha (promokodsiz); ilova promokoddan keyingi
+            // summani min_amount bilan o'zi ham solishtiradi, yakuniy qarorni server qiladi.
             'flash_delivery' => array_merge(\App\Support\FlashDelivery::status($user), [
-                'applies' => \App\Support\FlashDelivery::appliesTo($user),
+                'applies' => \App\Support\FlashDelivery::appliesTo($user, null, (int) $totalSum),
             ]),
             'split' => $preorderShipsAt
                 ? ['available' => false]
@@ -1558,7 +1560,7 @@ class PurchaseController extends Controller
                 // mijoz qatorini tranzaksiya oxirigacha qulflaymiz (keyingi so'rov shu yerda kutadi).
                 DB::table('users')->where('id', $user->id)->lockForUpdate()->value('id');
             }
-            if ($deliveryPrice > 0 && \App\Support\FlashDelivery::appliesTo($user)) {
+            if ($deliveryPrice > 0 && \App\Support\FlashDelivery::appliesTo($user, null, $totalSum)) {
                 $flashDeliverySaved = (int) $deliveryPrice;
                 $deliveryPrice = 0;
             }

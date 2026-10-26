@@ -379,6 +379,16 @@ export default function Settings() {
               </div>
               <div className="col-md-4">
                 <TextInput
+                  name="flash_delivery_min_amount"
+                  label="Minimal buyurtma summasi (so'm)"
+                  type="number"
+                  min={0}
+                  placeholder="0 — cheklovsiz"
+                  defaultValue={value(project, 'flash_delivery_min_amount', '0')}
+                />
+              </div>
+              <div className="col-md-4">
+                <TextInput
                   name="flash_delivery_promo_code"
                   label="Promokod (ixtiyoriy, sayt uchun)"
                   type="text"
@@ -389,7 +399,8 @@ export default function Settings() {
               <div className="col-12 f-s-13 text-muted">
                 <i className="ti ti-info-circle me-1" />
                 Har kuni belgilangan vaqtda {value(project, 'flash_delivery_duration', '15')} daqiqa davomida ilovada yetkazish <strong>avtomatik bepul</strong> bo'ladi —
-                mijoz promokod kiritmaydi. Ilova bosh sahifasida pastda orqaga sanovchi banner chiqadi.
+                mijoz promokod kiritmaydi. Mahsulotlar summasi minimal summadan kam bo'lsa, yetkazish pullik qoladi.
+                Banner faqat aksiya vaqtida (boshlangandan tugaguncha) chiqadi.
                 Promokod faqat aksiya vaqtida ishlaydi (boshqa vaqtda kiritilsa rad etiladi).
               </div>
               <div className="col-12"><hr className="my-2" /></div>

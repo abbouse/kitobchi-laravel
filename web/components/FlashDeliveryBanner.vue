@@ -25,7 +25,10 @@
           <div class="flash-text">
             <template v-if="isActive">
               <p class="flash-title">Yetkazish <strong>BEPUL!</strong></p>
-              <p class="flash-sub">Hoziroq buyurtma bering — faqat {{ timerLabel }} qoldi</p>
+              <p class="flash-sub">
+                <template v-if="minAmount > 0">{{ minAmountLabel }} so'mdan buyurtmalarga — {{ timerLabel }} qoldi</template>
+                <template v-else>Hoziroq buyurtma bering — faqat {{ timerLabel }} qoldi</template>
+              </p>
             </template>
             <template v-else>
               <p class="flash-title">Bepul yetkazish boshlangunicha</p>
@@ -67,6 +70,7 @@ interface FlashStatus {
   enabled: boolean
   active: boolean
   promo_code: string | null
+  min_amount?: number
   seconds_remaining: number
   seconds_until_next: number | null
   start_time?: string
@@ -113,6 +117,8 @@ function startTimer() {
 }
 
 const isActive   = computed(() => status.value?.active ?? false)
+const minAmount  = computed(() => Number(status.value?.min_amount || 0))
+const minAmountLabel = computed(() => minAmount.value.toLocaleString('ru-RU').replace(/,/g, ' '))
 const promoCode  = computed(() => status.value?.promo_code ?? null)
 const totalSec   = computed(() => (status.value?.duration_minutes ?? 15) * 60)
 
@@ -129,6 +135,8 @@ const show = computed(() =>
   !dismissed.value &&
   !isHiddenPage.value &&
   status.value?.enabled === true &&
+  // Faqat aksiya vaqtida — oldindan "tez boshlanadi" e'loni ko'rsatilmaydi
+  isActive.value &&
   remaining.value > 0
 )
 

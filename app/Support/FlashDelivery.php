@@ -18,6 +18,8 @@ use Illuminate\Support\Facades\Schema;
  *  - once  — umrida bir marta
  *
  * Promokod kiritish shart emas: aksiya vaqtida checkout'da avtomatik qo'llanadi.
+ * Minimal summa (project_settings.flash_delivery_min_amount): mahsulotlar summasi
+ * (promokoddan keyin, yetkazishsiz) shundan kam bo'lsa — yetkazish pullik qoladi.
  */
 class FlashDelivery
 {
@@ -94,10 +96,35 @@ class FlashDelivery
         return $query->exists();
     }
 
-    /** Hozir shu mijozga bepul yetkazish qo'llanadimi (to'lov muhlati bilan). */
-    public static function appliesTo(?User $user, ?Carbon $now = null): bool
+    /** Minimal buyurtma summasi (so'm); 0 — cheklov yo'q. */
+    public static function minAmount(): int
     {
-        return $user !== null && self::isActive(self::GRACE_SECONDS, $now) && ! self::usedBy($user, $now);
+        if (! Schema::hasColumn('project_settings', 'flash_delivery_min_amount')) {
+            return 0;
+        }
+
+        return max(0, (int) (self::setting()?->flash_delivery_min_amount ?? 0));
+    }
+
+    /** Summa minimal chegaradan o'tadimi (summa noma'lum bo'lsa — tekshirilmaydi). */
+    public static function meetsMinimum(int|float|null $amount): bool
+    {
+        $min = self::minAmount();
+
+        return $amount === null || $min <= 0 || $amount >= $min;
+    }
+
+    /**
+     * Hozir shu mijozga bepul yetkazish qo'llanadimi (to'lov muhlati bilan).
+     *
+     * @param  int|float|null  $amount  mahsulotlar summasi (promokoddan keyin); null — summa tekshirilmaydi
+     */
+    public static function appliesTo(?User $user, ?Carbon $now = null, int|float|null $amount = null): bool
+    {
+        return $user !== null
+            && self::isActive(self::GRACE_SECONDS, $now)
+            && self::meetsMinimum($amount)
+            && ! self::usedBy($user, $now);
     }
 
     /**
@@ -118,6 +145,7 @@ class FlashDelivery
                 'seconds_until_next' => null,
                 'eligible' => null,
                 'used' => false,
+                'min_amount' => 0,
                 'server_time' => $nowTz->toIso8601String(),
             ];
         }
@@ -138,6 +166,7 @@ class FlashDelivery
             'starts_at' => ($active ? $window['start'] : $nextStart)->toIso8601String(),
             'ends_at' => ($active ? $window['end'] : $nextStart->copy()->addMinutes((int) $window['start']->diffInMinutes($window['end'])))->toIso8601String(),
             'limit' => self::limitMode(),
+            'min_amount' => self::minAmount(),
             // Mehmon uchun null; kirgan mijoz uchun: bugun (yoki umuman) hali ishlatmagan bo'lsa true
             'eligible' => $user ? ! $used : null,
             'used' => $used,
