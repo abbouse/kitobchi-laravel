@@ -39,6 +39,12 @@ class PrizeGameController extends Controller
         return response()->json(['status' => 'success', 'data' => $this->game->rewards((int) Auth::guard('user')->id())]);
     }
 
+    /** POST game/rewards/{id}/cart — yutilgan kitobni savatga 1000 so'mga qo'shish. */
+    public function rewardToCart(int $id): JsonResponse
+    {
+        return $this->respond($this->game->addBookRewardToCart(Auth::guard('user')->user(), $id));
+    }
+
     private function respond(array $res): JsonResponse
     {
         if (! ($res['ok'] ?? false)) {

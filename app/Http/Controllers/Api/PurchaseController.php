@@ -97,6 +97,17 @@ class PurchaseController extends Controller
 
     private function effectiveCartItemUnitPrice(MyCart $cartItem): float
     {
+        // Omadli maydonda yutilgan kitob: bitta nusxa 1000 so'm; yutuq amalda bo'lmasa — oddiy narx.
+        // Do'konga to'liq narx boradi (sellerFacingCartItemUnitPrice), farqini platforma qoplaydi.
+        if ($cartItem->game_reward_id) {
+            $full = $this->effectivePrice($cartItem->product);
+            if (! app(\App\Services\PrizeGameService::class)->cartRewardValid($cartItem)) {
+                return $full;
+            }
+            $qty = max(1, (int) $cartItem->count_item);
+
+            return (\App\Services\PrizeGameService::GAME_BOOK_PRICE + $full * ($qty - 1)) / $qty;
+        }
         if (is_numeric($cartItem->priceItem) && (float) $cartItem->priceItem >= 0) {
             return (float) $cartItem->priceItem;
         }
@@ -1391,6 +1402,7 @@ class PurchaseController extends Controller
             $uniqueSellerIds = [];
             $totalSum = 0;
             $productsToUpdate = [];
+            $gameRewardIds = [];
 
             foreach ($cartItems as $cartItem) {
                 $product = $cartItem->product;
@@ -1432,6 +1444,11 @@ class PurchaseController extends Controller
 
                 if ((int) round($sellerFacingPrice) !== (int) round($price)) {
                     $item['seller_item_price'] = (int) round($sellerFacingPrice);
+                }
+                // Omadli maydon yutug'i — boshqaruv va hub uchun belgi
+                if ($cartItem->game_reward_id && app(\App\Services\PrizeGameService::class)->cartRewardValid($cartItem)) {
+                    $item['game_reward_id'] = (int) $cartItem->game_reward_id;
+                    $gameRewardIds[] = (int) $cartItem->game_reward_id;
                 }
 
                 if ($cartItem->product_type === 'book') {
@@ -1853,6 +1870,9 @@ class PurchaseController extends Controller
 
             $purchase = Sold::create($purchasePayload);
             $this->trace('sold_created', ['order_id' => $purchase->id, 'amount' => $finalPrice]);
+
+            // Omadli maydonda yutilgan kitob(lar) — ishlatildi
+            app(\App\Services\PrizeGameService::class)->markBookRewardsUsed($gameRewardIds, (int) $purchase->id);
 
             // Omadli maydonda yutilgan "Sovg'a qutisi" — shu buyurtmaga qo'shiladi (bittadan)
             try {

@@ -15,6 +15,7 @@ class MyCart extends Model
         'variant_id',
         'count_item',
         'priceItem',
+        'game_reward_id',   // Omadli maydonda yutilgan kitob (user uchun 1000 so'm)
     ];
 
     /**

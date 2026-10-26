@@ -56,10 +56,19 @@ class CartController extends Controller
             return null;
         }
 
+        $formatted = $this->formatProduct($product, $user, $item->product_type, $item->variant);
+        // Omadli maydonda yutilgan kitob: shu user uchun 1000 so'm (do'konga to'liq narx)
+        $gameReward = $item->game_reward_id && app(\App\Services\PrizeGameService::class)->cartRewardValid($item);
+        if ($gameReward) {
+            $formatted['discountPrice'] = \App\Services\PrizeGameService::GAME_BOOK_PRICE;
+            $formatted['game_reward'] = true;
+        }
+
         return [
             'cart_id' => $item->id,
             'quantity' => $item->count_item,
-            'product' => $this->formatProduct($product, $user, $item->product_type, $item->variant),
+            'game_reward' => $gameReward,
+            'product' => $formatted,
             'variant' => $item->variant
       ? [
           'id' => $item->variant->id,
@@ -146,6 +155,15 @@ class CartController extends Controller
     $newCount = $plusType === 'productDetail'
         ? $currentCount + 1                     // Mahsulot sahifasidan → +1
         : $request->new_count_item;             // Savat sahifasidan → to‘liq yangi son
+
+    // Yutilgan kitob qatori — faqat 1 dona (1000 so'm faqat bitta nusxa uchun)
+    if ($cartItem && $cartItem->game_reward_id && $newCount > 1) {
+        return response()->json([
+            'status'  => 'error',
+            'message' => "Omadli maydon yutug'i — faqat 1 dona",
+            'data'    => ['quantity' => 1, 'cart_id' => $cartItem->id, 'available_stock' => $availableStock],
+        ], 422);
+    }
 
     // Stock tekshiruvi — server hech qachon mavjud zaxiradan oshiq qabul qilmaydi.
     // Agar client ketma-ket bosib yuborsa ham, shu yerda max stockka clamp qilamiz.

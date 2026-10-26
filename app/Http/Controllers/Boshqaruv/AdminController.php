@@ -14435,6 +14435,9 @@ PROMPT;
             'price' => $price,
             'total' => $price * $quantity,
             'preorderDate' => $item['preorder_release_date'] ?? null,
+            // Omadli maydon yutug'i: mijoz 1000 so'm to'lagan, do'konga to'liq narx (farqini platforma qoplaydi)
+            'gameReward' => ! empty($item['game_reward_id']),
+            'sellerPrice' => isset($item['seller_item_price']) ? (float) $item['seller_item_price'] : null,
             'sellerId' => $sellerId ?: null,
             'seller' => $seller?->shop_name ?? $product?->seller?->shop_name ?? ($item['seller'] ?? $item['seller_name'] ?? null),
             'ownerLabel' => $type === 'gift'

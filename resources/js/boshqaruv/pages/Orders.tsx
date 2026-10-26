@@ -28,6 +28,8 @@ interface OrderItem {
   price: number;
   total: number;
   preorderDate?: string | null;
+  gameReward?: boolean;
+  sellerPrice?: number | null;
   sellerId?: number | null;
   seller?: string | null;
   ownerLabel?: string | null;
@@ -1208,6 +1210,9 @@ export default function Orders() {
                                   )}
                                   {item.preorderDate ? (
                                     <span className="badge text-light-warning ms-2">Predzakaz · {item.preorderDate} dan</span>
+                                  ) : null}
+                                  {item.gameReward ? (
+                                    <span className="badge text-light-success ms-2" title={`Mijoz ${fmt(item.price)} so'm to'lagan, do'konga to'liq narx${item.sellerPrice ? ` (${fmt(item.sellerPrice)} so'm)` : ''} — farqini platforma qoplaydi`}>🎁 Omadli maydon yutug'i</span>
                                   ) : null}
                                 </div>
                               </td>

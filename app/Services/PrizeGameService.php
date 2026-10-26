@@ -25,8 +25,11 @@ use Illuminate\Support\Str;
  */
 class PrizeGameService
 {
-    /** Yutilgan promokod va bepul kitob kodining amal qilish muddati (kun). */
-    public const REWARD_VALID_DAYS = 30;
+    /** Yutilgan promokod va kitobning amal qilish muddati (kun). */
+    public const REWARD_VALID_DAYS = 15;
+
+    /** Yutilgan kitob user uchun shu narxda (do'konga to'liq narx, farqini platforma to'laydi). */
+    public const GAME_BOOK_PRICE = 1000;
 
     public const DEFAULT_SETTINGS = [
         'enabled' => '1',
@@ -264,6 +267,11 @@ class PrizeGameService
     /** Foydalanuvchi bu sovg'ani hozir yuta oladimi. */
     public function eligible(GamePrize $prize, int $userId, int $orders, int $spins): bool
     {
+        // Bir marta yutilgan kitob qayta tushmaydi — o'rniga boshqa kitob chiqadi
+        if ($prize->type === 'fragments'
+            && GameReward::where('user_id', $userId)->where('prize_id', $prize->id)->where('type', 'book')->exists()) {
+            return false;
+        }
         if ($prize->min_orders > 0 && $orders < $prize->min_orders) {
             return false;
         }
@@ -454,24 +462,24 @@ class PrizeGameService
 
                 $prize->increment('won_count');
                 GameFragment::where('user_id', $user->id)->where('prize_id', $prize->id)->delete();
-                $reward = $this->issuePromocode($prize, $user->id, [
-                    'type' => 'free_item',
-                    'amount' => 0,
-                    'max' => null,
-                    'min' => null,
-                    'scope_type' => 'edition',
-                    'scope_id' => $prize->edition_id,
-                ], 'book');
+                // Kitob user uchun 1000 so'm — "Savatga qo'shish" tugmasi bilan (promokodsiz)
+                $reward = GameReward::create([
+                    'user_id' => $user->id,
+                    'prize_id' => $prize->id,
+                    'type' => 'book',
+                    'title' => $prize->title_uz,
+                    'expires_at' => now()->addDays(self::REWARD_VALID_DAYS),
+                ]);
 
                 return ['result' => 'completed', 'title' => $prize->title(), 'fragment_index' => $index,
-                    'collected' => $total, 'total' => $total, 'code' => $reward->code,
+                    'collected' => $total, 'total' => $total, 'price' => self::GAME_BOOK_PRICE,
                     'expires_at' => $reward->expires_at?->toIso8601String(), 'reward_id' => $reward->id];
         }
     }
 
     private function issuePromocode(GamePrize $prize, int $userId, array $o, string $rewardType = 'promocode'): GameReward
     {
-        $expires = now()->addDays(max(1, (int) ($prize->valid_days ?: self::REWARD_VALID_DAYS)));
+        $expires = now()->addDays(self::REWARD_VALID_DAYS);
         do {
             $code = 'KB'.strtoupper(Str::random(8));
         } while (Promocode::where('code', $code)->exists());
@@ -505,6 +513,78 @@ class PrizeGameService
         ]);
     }
 
+    // ── Yutilgan kitob (user uchun 1000 so'm) ──────────────────
+
+    /** Amaldagi (sotib olinmagan, muddati o'tmagan) kitob yutug'i. */
+    public function activeBookReward(int $userId, ?int $rewardId = null, ?int $editionId = null): ?GameReward
+    {
+        $q = GameReward::query()->with('prize:id,edition_id')
+            ->where('user_id', $userId)->where('type', 'book')
+            ->whereNull('used_at')->where('expires_at', '>', now());
+        if ($rewardId) {
+            $q->whereKey($rewardId);
+        }
+        if ($editionId) {
+            $q->whereHas('prize', fn ($p) => $p->where('edition_id', $editionId));
+        }
+
+        return $q->orderBy('expires_at')->first();
+    }
+
+    /** Savatdagi qator yutilgan kitob narxida turishi mumkinmi (yutuq amalda va kitob mos). */
+    public function cartRewardValid(\App\Models\MyCart $row): bool
+    {
+        if (! $row->game_reward_id || $row->product_type !== 'book') {
+            return false;
+        }
+        $reward = $this->activeBookReward((int) $row->user_id, (int) $row->game_reward_id);
+        $editionId = $reward?->prize?->edition_id;
+
+        return $reward && $editionId && (int) ($row->product?->edition_id ?? 0) === (int) $editionId;
+    }
+
+    /**
+     * "Savatga qo'shish": kitobning sotuvdagi taklifi savatga 1 dona, user uchun
+     * 1000 so'm narxda qo'shiladi (do'kon to'liq narxni oladi).
+     */
+    public function addBookRewardToCart(User $user, int $rewardId): array
+    {
+        $reward = $this->activeBookReward($user->id, $rewardId);
+        if (! $reward) {
+            return ['ok' => false, 'error' => "Yutuq topilmadi yoki muddati o'tgan"];
+        }
+        $editionId = (int) ($reward->prize?->edition_id ?? 0);
+        $offer = \App\Support\ProductVisibilityScope::applyBooks(\App\Models\Books::query()->withAvailableTotal())
+            ->where('edition_id', $editionId)
+            ->get()
+            ->filter(fn ($b) => (int) ($b->count ?? 0) > 0)
+            ->sortBy(fn ($b) => (float) (($b->discountPrice ?? 0) > 0 ? $b->discountPrice : $b->price))
+            ->first();
+        if (! $offer) {
+            return ['ok' => false, 'error' => "Bu kitob hozir sotuvda yo'q. Keyinroq urinib ko'ring."];
+        }
+
+        // Boshqa qatorlardagi shu yutuq bog'lanishini olib tashlaymiz (bitta yutuq — bitta qator)
+        \App\Models\MyCart::where('user_id', $user->id)->where('game_reward_id', $reward->id)
+            ->where('product_id', '!=', $offer->id)->update(['game_reward_id' => null, 'priceItem' => null]);
+
+        $row = \App\Models\MyCart::updateOrCreate(
+            ['user_id' => $user->id, 'product_id' => $offer->id, 'product_type' => 'book', 'variant_id' => null],
+            ['count_item' => 1, 'priceItem' => self::GAME_BOOK_PRICE, 'game_reward_id' => $reward->id],
+        );
+
+        return ['ok' => true, 'cart_id' => $row->id, 'product_id' => $offer->id, 'price' => self::GAME_BOOK_PRICE];
+    }
+
+    /** Buyurtma yaratilgach: savatdagi kitob yutuqlari ishlatildi deb belgilanadi. */
+    public function markBookRewardsUsed(array $rewardIds, int $orderId): void
+    {
+        if ($rewardIds && \Illuminate\Support\Facades\Schema::hasColumn('game_rewards', 'order_id')) {
+            GameReward::whereIn('id', $rewardIds)->where('type', 'book')
+                ->update(['used_at' => now(), 'order_id' => $orderId]);
+        }
+    }
+
     // ── Sovg'a qutisi ──────────────────────────────────────────
 
     /** Yangi buyurtmaga kutib turgan bitta sovg'a qutisini biriktiradi. */
@@ -532,6 +612,9 @@ class PrizeGameService
             return;
         }
         GameReward::where('order_id', $orderId)->where('type', 'surprise')
+            ->update(['order_id' => null, 'used_at' => null]);
+        // Kitob yutug'i ham qaytadi (muddati o'tmagan bo'lsa — user qayta savatga qo'shadi)
+        GameReward::where('order_id', $orderId)->where('type', 'book')
             ->update(['order_id' => null, 'used_at' => null]);
     }
 
@@ -657,8 +740,9 @@ class PrizeGameService
                     'discount_type' => $promo?->type,
                     'amount' => $promo ? (int) $promo->amount : null,
                     'won_at' => $r->created_at?->toIso8601String(),
-                    // Sovg'a qutisi qaysi buyurtma bilan yuboriladi
+                    // Sovg'a qutisi / kitob qaysi buyurtma bilan ketgan
                     'order_id' => $r->order_id ?? null,
+                    'price' => $r->type === 'book' ? self::GAME_BOOK_PRICE : null,
                 ];
             })->all();
     }

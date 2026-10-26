@@ -90,7 +90,7 @@ class PrizeGameTest extends TestCase
         $this->assertSame(1, $p->fresh()->won_count);
     }
 
-    public function test_promocode_prize_is_personal_scoped_and_valid_for_a_month(): void
+    public function test_promocode_prize_is_personal_scoped_and_valid_for_15_days(): void
     {
         $seller = $this->makeSeller();
         $other = $this->makeSeller();
@@ -106,7 +106,8 @@ class PrizeGameTest extends TestCase
         $this->assertSame($this->user->id, (int) $promo->user_id);
         $this->assertSame('seller', $promo->scope_type);
         $this->assertSame('game', $promo->source);
-        $this->assertTrue(now()->addDays(29)->lt($promo->expires_at));
+        $this->assertTrue(now()->addDays(14)->lt($promo->expires_at));
+        $this->assertTrue(now()->addDays(16)->gt($promo->expires_at), 'Promokod 15 kun amal qiladi');
 
         // Faqat boshqa do'kon mahsuloti savatda — rad etiladi
         $cartForeign = DB::table('my_carts')->insertGetId(['user_id' => $this->user->id, 'product_id' => $foreign->id,
@@ -124,28 +125,41 @@ class PrizeGameTest extends TestCase
         $this->assertNotNull($cartForeign);
     }
 
-    public function test_fragments_complete_into_free_book_code(): void
+    public function test_won_book_costs_1000_for_the_winner_and_is_not_won_twice(): void
     {
         $seller = $this->makeSeller();
         $book = $this->makeBook($seller, $this->makeCategory(), ['price' => 45000]);
         $editionId = (int) $book->fresh()->edition_id;
         $this->assertGreaterThan(0, $editionId, 'Kitob global katalogga ulanmagan');
 
-        $this->prize(['type' => 'fragments', 'fragments_total' => 2, 'edition_id' => $editionId]);
+        $p = $this->prize(['type' => 'fragments', 'fragments_total' => 2, 'edition_id' => $editionId]);
 
-        $first = $this->postJson('/api/v1/kitobchi/game/spin')->assertOk()->json('data.result');
-        $this->assertSame('fragment', $first['result']);
+        $this->assertSame('fragment', $this->postJson('/api/v1/kitobchi/game/spin')->assertOk()->json('data.result.result'));
         $second = $this->postJson('/api/v1/kitobchi/game/spin')->assertOk()->json('data.result');
         $this->assertSame('completed', $second['result']);
+        $this->assertArrayNotHasKey('code', $second, 'Promokod yo\'q');
+        $this->assertSame(1000, $second['price']);
 
-        $promo = DB::table('promocodes')->where('code', $second['code'])->first();
-        $this->assertSame('free_item', $promo->type);
-        $this->assertSame($editionId, (int) $promo->scope_id);
+        // Savatga qo'shish — 1 dona, user uchun 1000 so'm
+        $this->postJson("/api/v1/kitobchi/game/rewards/{$second['reward_id']}/cart")->assertOk();
+        $row = DB::table('my_carts')->where('user_id', $this->user->id)->first();
+        $this->assertSame(1, (int) $row->count_item);
+        $this->assertSame((int) $second['reward_id'], (int) $row->game_reward_id);
+        $this->getJson('/api/v1/kitobchi/cart_user')->assertOk()
+            ->assertJsonPath('data.items.0.product.discountPrice', 1000)
+            ->assertJsonPath('data.items.0.game_reward', true);
 
-        DB::table('my_carts')->insert(['user_id' => $this->user->id, 'product_id' => $book->id,
-            'product_type' => 'book', 'count_item' => 2, 'created_at' => now(), 'updated_at' => now()]);
-        $this->getJson('/api/v1/kitobchi/purchase/checkPromo?code='.$second['code'])
-            ->assertOk()->assertJsonPath('discount', 45000);
+        // Mahsulot sahifasida ham shu user uchun 1000 so'm
+        $this->getJson("/api/v1/kitobchi/share/product/{$book->id}?type=book")->assertOk()
+            ->assertJsonPath('data.game_reward.price', 1000);
+
+        // Yutilgan kitob qayta tushmaydi
+        $this->postJson('/api/v1/kitobchi/game/spin')->assertOk()->assertJsonPath('data.result.result', 'nothing');
+        $this->assertSame(1, $p->fresh()->won_count);
+
+        // Muddati o'tsa — oddiy narx
+        DB::table('game_rewards')->where('id', $second['reward_id'])->update(['expires_at' => now()->subDay()]);
+        $this->getJson('/api/v1/kitobchi/cart_user')->assertOk()->assertJsonPath('data.items.0.game_reward', false);
     }
 
     public function test_board_has_eight_cells_and_spin_stops_on_won_prize(): void

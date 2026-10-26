@@ -202,6 +202,7 @@ Route::middleware(['auth:user', \App\Http\Middleware\EnsureUserActive::class])->
         Route::post('daily', [\App\Http\Controllers\Api\PrizeGameController::class, 'daily']);
         Route::post('tasks/{key}/claim', [\App\Http\Controllers\Api\PrizeGameController::class, 'claimTask']);
         Route::get('rewards', [\App\Http\Controllers\Api\PrizeGameController::class, 'rewards']);
+        Route::post('rewards/{id}/cart', [\App\Http\Controllers\Api\PrizeGameController::class, 'rewardToCart'])->whereNumber('id')->middleware('throttle:30,1');
     });
     // Sovg'alar
     Route::prefix('gifts')->group(function () {

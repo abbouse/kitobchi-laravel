@@ -9,6 +9,11 @@
   $hasLabel   = in_array('print.label',   $permissions ?? [], true);
   $hasReceipt = in_array('print.receipt', $permissions ?? [], true);
 
+  // Omadli maydon: yutilgan kitob (mijozga 1000 so'm) va "Sovg'a qutisi" (kichik sovg'a solinadi)
+  $gameBooks  = collect((array) ($order?->items ?? []))->filter(fn ($i) => ! empty($i['game_reward_id']))->pluck('name')->all();
+  $surpriseBox = $order && \Illuminate\Support\Facades\Schema::hasColumn('game_rewards', 'order_id')
+      && \Illuminate\Support\Facades\DB::table('game_rewards')->where('order_id', $order->id)->where('type', 'surprise')->exists();
+
   // ── Status pipeline ───────────────────────────────────────────────────
   // Best-effort mapping from a free-form status_code to a step index.
   $status = strtolower((string) $fulfillment->status_code);
@@ -62,6 +67,18 @@
     @endif
   </div>
 </div>
+
+@if($surpriseBox || $gameBooks)
+<section class="hd-card" aria-label="Omadli maydon" style="border:2px solid #FFD8A8;background:#FFF9F0">
+  <div class="hd-card-title">🎁 Omadli maydon</div>
+  @if($surpriseBox)
+    <div class="hd-card-sub" style="margin-top:6px"><b>Sovg'a qutisi:</b> buyurtmaga kichik tasodifiy sovg'a soling (xatcho'p, stiker, ruchka va h.k.).</div>
+  @endif
+  @foreach($gameBooks as $bookName)
+    <div class="hd-card-sub" style="margin-top:6px"><b>Yutilgan kitob:</b> {{ $bookName }} — mijoz 1 000 so'm to'lagan.</div>
+  @endforeach
+</section>
+@endif
 
 {{-- Status pipeline ─────────────────────────────────────────── --}}
 <section class="hd-card" aria-label="Holat zinapoyasi">

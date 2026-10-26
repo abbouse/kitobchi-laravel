@@ -79,6 +79,18 @@ class ShareController extends Controller
         // ProductModel formatiga moslashtirish
         $data = $this->formatProduct($product, $type, $isFavourite);
 
+        // Omadli maydonda yutilgan kitob: shu user uchun 1000 so'm (15 kun)
+        if ($user && $type === 'book' && $product->edition_id) {
+            $reward = app(\App\Services\PrizeGameService::class)->activeBookReward((int) $user->id, null, (int) $product->edition_id);
+            if ($reward) {
+                $data['game_reward'] = [
+                    'reward_id' => $reward->id,
+                    'price' => \App\Services\PrizeGameService::GAME_BOOK_PRICE,
+                    'expires_at' => $reward->expires_at?->toIso8601String(),
+                ];
+            }
+        }
+
         return response()->json([
             'status' => 'success',
             'data'   => $data,
