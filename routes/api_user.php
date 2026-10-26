@@ -57,6 +57,9 @@ Route::prefix('products')->group(function () {
     Route::get('sellers/profile/{id}', [ProductsController::class, 'seller']);
     Route::get('sellers/profile/{id}/category-products', [ProductsController::class, 'sellerCategoryProducts']);
     Route::get('books-by-category', [ProductsController::class, 'booksByCategory']);
+    // Kitobxonlar klubi profilidagi "Javon" (sotib olingan kitoblar)
+    Route::get('shelf/{userId}', [ProductsController::class, 'shelf'])->whereNumber('userId')->middleware('throttle:60,1');
+    Route::get('shelf/{userId}/category/{categoryId}', [ProductsController::class, 'shelfCategory'])->whereNumber('userId')->whereNumber('categoryId')->middleware('throttle:120,1');
     Route::get('recommendation/{col}', [ProductsController::class, 'recommendation']);
     Route::get('cart-recommendation', [ProductsController::class, 'cartRecommendation']);
     Route::get('{type}/{id}/similar', [ProductsController::class, 'similarProducts']);
@@ -169,6 +172,7 @@ Route::middleware(['auth:user', \App\Http\Middleware\EnsureUserActive::class])->
     Route::post('/bot/add-to-cart', [ChatBotController::class, 'addAIToCart']);
 
     // Book Club yo'llari
+    Route::post('book_club/shelf/visibility', [ProductsController::class, 'setShelfVisibility']);
     Route::prefix('book_club')->group(function () {
         Route::get('repost/{id}', [BookClubController::class, 'repost']);
         Route::get('delete/{id}', [BookClubController::class, 'deleteClubPost']);

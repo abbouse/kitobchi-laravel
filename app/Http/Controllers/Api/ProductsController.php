@@ -1107,6 +1107,233 @@ class ProductsController extends Controller
     }
 
     // =========================================================================
+    //  JAVON — kitobxonlar klubi profilidagi "Javon"
+    //  Foydalanuvchi sotib olgan (yetkazilgan) KITOBLAR, kategoriya bo'yicha.
+    //  Boshqalarga faqat kitobning o'zi ko'rinadi: narx, sana, buyurtma yo'q.
+    //  Kanselyariya, sovg'a qilib boshqaga yuborilgan buyurtmalar kirmaydi;
+    //  sotuvdan olingan (taqiqlangan) kitoblar ham ko'rinmaydi.
+    //
+    //  GET /products/shelf/{userId}?page=1&category_limit=6&per_category=10
+    //  GET /products/shelf/{userId}/category/{categoryId}?offset=10&limit=10
+    // =========================================================================
+
+    /**
+     * Javon yozuvlari (eng oxirgi xariddan boshlab), har kitobdan bittasi:
+     * [['key' => 'e:12', 'edition_id' => 12, 'offer_id' => 345, 'category_id' => 7], ...]
+     */
+    private function shelfEntries(int $userId): array
+    {
+        return Cache::remember("shelf:entries:{$userId}", 600, function () use ($userId) {
+            $orders = \App\Models\Sold::query()
+                ->where('user_id', $userId)
+                ->whereNotNull('completed_at')
+                ->where(fn ($q) => $q->whereNull('is_gift_to_other')->orWhere('is_gift_to_other', false))
+                ->orderByDesc('completed_at')
+                ->limit(500)
+                ->get(['items']);
+
+            $offerIds = [];
+            foreach ($orders as $order) {
+                foreach ((array) $order->items as $item) {
+                    if (($item['type'] ?? 'book') !== 'book') {
+                        continue;
+                    }
+                    $id = (int) ($item['item_id'] ?? 0);
+                    if ($id > 0 && ! in_array($id, $offerIds, true)) {
+                        $offerIds[] = $id;
+                    }
+                }
+            }
+            if (! $offerIds) {
+                return [];
+            }
+
+            $offers = Books::withoutGlobalScopes()->whereIn('id', $offerIds)
+                ->get(['id', 'edition_id', 'category_id'])->keyBy('id');
+
+            $entries = [];
+            foreach ($offerIds as $id) {
+                $o = $offers[$id] ?? null;
+                if (! $o) {
+                    continue;
+                }
+                $key = $o->edition_id ? 'e:'.$o->edition_id : 'o:'.$o->id;
+                if (! isset($entries[$key])) {
+                    $entries[$key] = [
+                        'key' => $key,
+                        'edition_id' => $o->edition_id ? (int) $o->edition_id : null,
+                        'offer_id' => (int) $o->id,
+                        'category_id' => (int) ($o->category_id ?? 0),
+                    ];
+                }
+            }
+
+            return array_values($entries);
+        });
+    }
+
+    /** Javon yozuvlarini hozir sotuvda bo'lgan kitob kartalariga aylantiradi (tartib saqlanadi). */
+    private function shelfProducts(array $entries, $viewer): array
+    {
+        if (! $entries) {
+            return [];
+        }
+        $editionIds = array_values(array_filter(array_column($entries, 'edition_id')));
+        $looseOfferIds = array_values(array_map(fn ($e) => $e['offer_id'], array_filter($entries, fn ($e) => ! $e['edition_id'])));
+
+        $books = $this->bookListScope()
+            ->where(function ($q) use ($editionIds, $looseOfferIds) {
+                $q->whereIn('edition_id', $editionIds ?: [0])->orWhereIn('id', $looseOfferIds ?: [0]);
+            })
+            ->with(['seller', 'category', 'tags'])
+            ->get();
+
+        $byKey = [];
+        foreach ($books as $b) {
+            $byKey[$b->edition_id ? 'e:'.$b->edition_id : 'o:'.$b->id] ??= $b;
+        }
+
+        $out = [];
+        foreach ($entries as $e) {
+            if (isset($byKey[$e['key']])) {
+                $out[] = $this->formatProduct($byKey[$e['key']], $viewer, 'book');
+            }
+        }
+
+        return $out;
+    }
+
+    /** Javon egasi va ko'rish huquqi: [owner, viewer, isOwner] yoki xato javobi. */
+    private function shelfContext($userId): array
+    {
+        $viewer = Auth::guard('user')->user();
+        $owner = \App\Models\User::find((int) $userId);
+        if (! $owner) {
+            return [null, null, false, response()->json(['status' => 'error', 'message' => 'User not found'], 404)];
+        }
+        $isOwner = $viewer && (int) $viewer->id === (int) $owner->id;
+        $hidden = (bool) ($owner->shelf_hidden ?? false);
+        if ($hidden && ! $isOwner) {
+            return [$owner, $viewer, false, response()->json([
+                'status' => 'success', 'hidden' => true, 'is_owner' => false, 'data' => [],
+                'meta' => ['has_more' => false, 'total_books' => 0],
+            ])];
+        }
+
+        return [$owner, $viewer, $isOwner, null];
+    }
+
+    /** @return array<int, array{category_id:int, entries: array}> kategoriya — ko'p kitobli birinchi */
+    private function shelfGroups(array $entries): array
+    {
+        $groups = [];
+        foreach ($entries as $i => $e) {
+            $cid = $e['category_id'];
+            $groups[$cid] ??= ['category_id' => $cid, 'entries' => [], 'first' => $i];
+            $groups[$cid]['entries'][] = $e;
+        }
+        // Mavjud bo'lmagan / faol bo'lmagan kategoriyalar — "Boshqa" (0)
+        $active = BookCategories::whereIn('id', array_keys($groups))->where('is_active', 1)->pluck('id')->all();
+        $merged = [];
+        foreach ($groups as $cid => $g) {
+            $key = in_array($cid, $active) ? $cid : 0;
+            $merged[$key] ??= ['category_id' => $key, 'entries' => [], 'first' => $g['first']];
+            $merged[$key]['entries'] = array_merge($merged[$key]['entries'], $g['entries']);
+            $merged[$key]['first'] = min($merged[$key]['first'], $g['first']);
+        }
+        $list = array_values($merged);
+        usort($list, fn ($a, $b) => [$a['category_id'] === 0, -count($a['entries']), $a['first']] <=> [$b['category_id'] === 0, -count($b['entries']), $b['first']]);
+
+        return $list;
+    }
+
+    private function shelfCategoryNames(array $ids): array
+    {
+        $names = BookCategories::whereIn('id', $ids)->get(['id', 'name_uz', 'name_ru', 'name_en', 'name_ja'])->keyBy('id');
+        $out = [];
+        foreach ($ids as $id) {
+            $c = $names[$id] ?? null;
+            $out[$id] = $c
+                ? ['name_uz' => $c->name_uz ?? '', 'name_ru' => $c->name_ru ?? '', 'name_en' => $c->name_en ?? '', 'name_ja' => $c->name_ja ?? '']
+                : ['name_uz' => 'Boshqa', 'name_ru' => 'Другое', 'name_en' => 'Other', 'name_ja' => 'その他'];
+        }
+
+        return $out;
+    }
+
+    public function shelf(Request $request, $userId)
+    {
+        [$owner, $viewer, $isOwner, $deny] = $this->shelfContext($userId);
+        if ($deny) {
+            return $deny;
+        }
+        $page = max(1, (int) $request->query('page', 1));
+        $categoryLimit = max(1, min(20, (int) $request->query('category_limit', 6)));
+        $perCategory = max(1, min(30, (int) $request->query('per_category', 10)));
+
+        $entries = $this->shelfEntries((int) $owner->id);
+        $groups = $this->shelfGroups($entries);
+        $slice = array_slice($groups, ($page - 1) * $categoryLimit, $categoryLimit);
+        $names = $this->shelfCategoryNames(array_column($slice, 'category_id'));
+
+        $data = [];
+        foreach ($slice as $g) {
+            $books = $this->shelfProducts(array_slice($g['entries'], 0, $perCategory), $viewer);
+            if (! $books) {
+                continue;
+            }
+            $data[] = ['category_id' => $g['category_id']] + $names[$g['category_id']] + [
+                'total' => count($g['entries']),
+                'has_more' => count($g['entries']) > $perCategory,
+                'books' => $books,
+            ];
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'hidden' => false,
+            'is_owner' => $isOwner,
+            'hidden_from_others' => $isOwner ? (bool) ($owner->shelf_hidden ?? false) : null,
+            'data' => $data,
+            'meta' => [
+                'page' => $page,
+                'has_more' => ($page * $categoryLimit) < count($groups),
+                'total_books' => count($entries),
+            ],
+        ]);
+    }
+
+    public function shelfCategory(Request $request, $userId, $categoryId)
+    {
+        [$owner, $viewer, , $deny] = $this->shelfContext($userId);
+        if ($deny) {
+            return $deny;
+        }
+        $offset = max(0, (int) $request->query('offset', 0));
+        $limit = max(1, min(30, (int) $request->query('limit', 10)));
+
+        $group = collect($this->shelfGroups($this->shelfEntries((int) $owner->id)))
+            ->firstWhere('category_id', (int) $categoryId);
+        $entries = $group['entries'] ?? [];
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $this->shelfProducts(array_slice($entries, $offset, $limit), $viewer),
+            'meta' => ['offset' => $offset, 'limit' => $limit, 'has_more' => count($entries) > $offset + $limit],
+        ]);
+    }
+
+    /** POST /book_club/shelf/visibility {hidden: bool} — o'z javonini boshqalardan yashirish. */
+    public function setShelfVisibility(Request $request)
+    {
+        $data = $request->validate(['hidden' => 'required|boolean']);
+        $user = Auth::guard('user')->user();
+        $user->forceFill(['shelf_hidden' => (bool) $data['hidden']])->save();
+
+        return response()->json(['status' => 'success', 'hidden_from_others' => (bool) $user->shelf_hidden]);
+    }
+
+    // =========================================================================
     //  5. SELLER SAHIFASI
     //  GET /products/seller/{id}
     // =========================================================================
