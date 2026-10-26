@@ -19,6 +19,7 @@ class Locations extends Model
         'region_name',
         'district_name',
         'city_name',
+        'postal_code',
         'phone_number',
         'isDeleted'
     ];

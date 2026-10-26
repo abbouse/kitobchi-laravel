@@ -561,6 +561,14 @@ class UserController extends Controller
         $location->region_name = $validated['regionName'] ?? null;
         $location->district_name = $validated['districtName'] ?? null;
         $location->city_name = $validated['cityName'] ?? null;
+        // Pochta indeksi — userdan so'ramaymiz: eng yaqin O'zpochta bo'limi
+        try {
+            if (\Illuminate\Support\Facades\Schema::hasColumn('locations', 'postal_code')) {
+                $location->postal_code = app(\App\Services\PostalCodeService::class)->codeFor($lat, $lon);
+            }
+        } catch (\Throwable $e) {
+            report($e);
+        }
         $location->save();
         $user->update(['mainAddressID' => $location->id]);
         return response()->json(['status' => 'success', 'location_id' => $location->id], 201);

@@ -56,6 +56,10 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $tz = 'Asia/Tashkent';
 
+        // O'zpochta bo'limlari (pochta indeksi uchun) — haftada bir yangilanadi
+        $schedule->command('postal:sync-uzpost --backfill')
+            ->weeklyOn(1, '04:40')->timezone($tz)->withoutOverlapping();
+
         $schedule->command('ai:daily-reset')
             ->dailyAt('00:05')->timezone($tz)->withoutOverlapping()->runInBackground();
 

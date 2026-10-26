@@ -296,6 +296,7 @@ class YandexGeocoderService
             'district' => $last('district'),
             'street' => $first('street'),
             'house' => $first('house'),
+            'postal_code' => ($address['postal_code'] ?? null) ?: null,
             'components' => $components->all(),
             'lat' => (float) $pos[1],
             'lon' => (float) $pos[0],

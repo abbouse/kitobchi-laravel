@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Services\PostalCodeService;
 use App\Services\YandexGeocoderService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,8 +18,10 @@ use Illuminate\Http\Request;
  */
 class GeocodeController extends Controller
 {
-    public function __construct(private readonly YandexGeocoderService $geocoder)
-    {
+    public function __construct(
+        private readonly YandexGeocoderService $geocoder,
+        private readonly PostalCodeService $postal,
+    ) {
     }
 
     public function reverse(Request $request): JsonResponse
@@ -30,6 +33,14 @@ class GeocodeController extends Controller
         ]);
 
         $result = $this->geocoder->reverse((float) $data['lat'], (float) $data['lon'], $this->lang($request));
+        if (is_array($result)) {
+            // Pochta indeksi: eng yaqin O'zpochta bo'limi, bo'lmasa Yandex'niki
+            try {
+                $result['postal_code'] = $this->postal->codeFor((float) $data['lat'], (float) $data['lon'], $result['postal_code'] ?? null);
+            } catch (\Throwable $e) {
+                report($e); // indeks bo'lmasa ham manzil qaytadi
+            }
+        }
 
         return response()->json([
             'success' => $result !== null,
