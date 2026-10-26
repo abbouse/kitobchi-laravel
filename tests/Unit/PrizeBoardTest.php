@@ -78,25 +78,32 @@ class PrizeBoardTest extends TestCase
         $this->assertSame(PrizeBoard::build($p, [], 'a'), PrizeBoard::build($p, [], 'a'));
     }
 
-    public function test_few_prizes_repeat_without_inventing(): void
+    public function test_few_prizes_do_not_repeat(): void
     {
         $p = $this->prizes(['fragments' => 1, 'promocode' => 1, 'coins' => 1]);
         $board = PrizeBoard::build($p, [], 'x');
         $this->assertCount(8, $board);
-        $this->assertSame(1, $this->countType($board, $this->types($p), null));
-        foreach ($board as $id) {
-            $this->assertTrue($id === null || in_array($id, [1, 2, 3], true));
-        }
-        $this->assertNoSameNeighbours($board, $this->types($p));
+        $this->assertSame(5, $this->countType($board, $this->types($p), null));
+        $ids = array_values(array_filter($board, fn ($v) => $v !== null));
+        sort($ids);
+        $this->assertSame([1, 2, 3], $ids, 'Har sovg\'a bir marta');
     }
 
-    public function test_single_prize_alternates_with_nothing(): void
+    public function test_single_prize_once_rest_nothing(): void
     {
         $p = $this->prizes(['coins' => 1]);
         $board = PrizeBoard::build($p, [], 'x');
-        $this->assertSame(4, $this->countType($board, $this->types($p), 'coins'));
-        $this->assertSame(4, $this->countType($board, $this->types($p), null));
-        $this->assertNoSameNeighbours($board, $this->types($p));
+        $this->assertSame(1, $this->countType($board, $this->types($p), 'coins'));
+        $this->assertSame(7, $this->countType($board, $this->types($p), null));
+    }
+
+    public function test_surprise_box_takes_one_cell(): void
+    {
+        $p = $this->prizes(['fragments' => 2, 'promocode' => 3, 'coins' => 2, 'surprise' => 2]);
+        $board = PrizeBoard::build($p, [], 'x');
+        $t = $this->types($p);
+        $this->assertSame(1, $this->countType($board, $t, 'surprise'));
+        $this->assertSame(1, $this->countType($board, $t, null), 'Kamida bitta "Keyingi safar"');
     }
 
     public function test_mixed_board_has_no_same_type_neighbours(): void

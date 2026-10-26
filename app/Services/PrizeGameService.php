@@ -398,6 +398,19 @@ class PrizeGameService
         $prize = GamePrize::whereKey($prize->id)->lockForUpdate()->first();
 
         switch ($prize->type) {
+            case 'surprise':
+                // Sovg'a qutisi: keyingi buyurtmaga Kitobchi jamoasi kichik tasodifiy sovg'a qo'shadi
+                $prize->increment('won_count');
+                $reward = GameReward::create([
+                    'user_id' => $user->id,
+                    'prize_id' => $prize->id,
+                    'type' => 'surprise',
+                    'title' => $prize->title_uz,
+                    'expires_at' => now()->addDays(90),
+                ]);
+
+                return ['result' => 'surprise', 'title' => $prize->title(), 'reward_id' => $reward->id];
+
             case 'coins':
                 $prize->increment('won_count');
                 $this->credit($user->id, (int) $prize->coins_amount, 'prize', (string) $spin->id, $prize->title_uz);
@@ -492,6 +505,36 @@ class PrizeGameService
         ]);
     }
 
+    // ── Sovg'a qutisi ──────────────────────────────────────────
+
+    /** Yangi buyurtmaga kutib turgan bitta sovg'a qutisini biriktiradi. */
+    public function attachSurpriseToOrder(int $userId, int $orderId): ?int
+    {
+        if (! \Illuminate\Support\Facades\Schema::hasColumn('game_rewards', 'order_id')) {
+            return null;
+        }
+        $reward = GameReward::where('user_id', $userId)->where('type', 'surprise')
+            ->whereNull('order_id')->whereNull('used_at')
+            ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()))
+            ->orderBy('id')->lockForUpdate()->first();
+        if (! $reward) {
+            return null;
+        }
+        $reward->forceFill(['order_id' => $orderId, 'used_at' => now()])->save();
+
+        return (int) $reward->id;
+    }
+
+    /** Buyurtma bekor qilinsa — quti keyingi buyurtmaga qaytadi. */
+    public function releaseSurpriseForOrder(int $orderId): void
+    {
+        if (! \Illuminate\Support\Facades\Schema::hasColumn('game_rewards', 'order_id')) {
+            return;
+        }
+        GameReward::where('order_id', $orderId)->where('type', 'surprise')
+            ->update(['order_id' => null, 'used_at' => null]);
+    }
+
     // ── Ilova uchun holat ──────────────────────────────────────
 
     public function prizePayload(GamePrize $p, ?int $userId = null): array
@@ -564,11 +607,14 @@ class PrizeGameService
             return GameSpin::query()
                 ->join('users', 'users.id', '=', 'game_spins.user_id')
                 ->leftJoin('game_prizes', 'game_prizes.id', '=', 'game_spins.prize_id')
-                ->whereIn('game_spins.result', ['completed', 'promocode', 'coins'])
+                ->whereIn('game_spins.result', ['fragment', 'completed', 'promocode', 'coins', 'surprise'])
                 ->orderByDesc('game_spins.id')->limit($limit)
-                ->get(['users.name', 'game_prizes.title_uz', 'game_prizes.title_ru', 'game_spins.created_at'])
+                ->get(['users.name', 'game_prizes.title_uz', 'game_prizes.title_ru', 'game_prizes.type', 'game_spins.result', 'game_spins.created_at'])
                 ->map(fn ($r) => [
                     'name' => self::maskName((string) $r->name),
+                    // fragment — kitob bo'lagi, completed — butun kitob, promocode, coins, surprise
+                    'kind' => $r->result,
+                    'type' => $r->type,
                     'prize' => (app()->getLocale() === 'ru' && $r->title_ru) ? $r->title_ru : $r->title_uz,
                     'at' => Carbon::parse($r->created_at)->toIso8601String(),
                 ])->all();
@@ -592,6 +638,9 @@ class PrizeGameService
             ->map(function (GameReward $r) {
                 $promo = $r->promocode_id ? Promocode::find($r->promocode_id) : null;
                 $used = $r->used_at || ($promo && (int) $promo->usedCount >= max(1, (int) $promo->usesLimit));
+                if ($r->type === 'surprise') {
+                    $used = $r->order_id !== null;
+                }
 
                 return [
                     'id' => $r->id,
@@ -608,6 +657,8 @@ class PrizeGameService
                     'discount_type' => $promo?->type,
                     'amount' => $promo ? (int) $promo->amount : null,
                     'won_at' => $r->created_at?->toIso8601String(),
+                    // Sovg'a qutisi qaysi buyurtma bilan yuboriladi
+                    'order_id' => $r->order_id ?? null,
                 ];
             })->all();
     }

@@ -171,6 +171,7 @@ interface Ord {
   isGiftToOther?: boolean;
   recipient?: { name?: string | null; phone?: string | null; region?: string | null; address?: string | null };
   buyerWish?: string | null;
+  surpriseGift?: boolean;
   promocode?: string | null;
   courierName?: string | null;
   fulfillment?: {
@@ -996,6 +997,7 @@ export default function Orders() {
                       <Detail label="Oluvchi" value={[selectedOrd.recipient?.name, selectedOrd.recipient?.phone].filter(Boolean).join(' / ')} />
                       <Detail label="Oluvchi manzili" value={[selectedOrd.recipient?.region, selectedOrd.recipient?.address].filter(Boolean).join(', ')} />
                       <Detail label="Mijoz izohi" value={selectedOrd.buyerWish} />
+                      {selectedOrd.surpriseGift ? <Detail label="Sovg'a qutisi" value="🎁 Ha — buyurtmaga kichik tasodifiy sovg'a soling" /> : null}
                     </div>
                   </div></div>
 

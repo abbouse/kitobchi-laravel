@@ -1854,6 +1854,13 @@ class PurchaseController extends Controller
             $purchase = Sold::create($purchasePayload);
             $this->trace('sold_created', ['order_id' => $purchase->id, 'amount' => $finalPrice]);
 
+            // Omadli maydonda yutilgan "Sovg'a qutisi" — shu buyurtmaga qo'shiladi (bittadan)
+            try {
+                app(\App\Services\PrizeGameService::class)->attachSurpriseToOrder((int) $user->id, (int) $purchase->id);
+            } catch (\Throwable $e) {
+                report($e);
+            }
+
             $routingDecision = $this->fulfillmentRoutingService->decide(
                 buyerLocation: $location,
                 deliveryService: $deliveryService,

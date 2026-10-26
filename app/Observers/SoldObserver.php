@@ -55,6 +55,15 @@ class SoldObserver
      */
     public function updated(Sold $order): void
     {
+        // Bekor qilingan buyurtmadagi "Sovg'a qutisi" keyingi buyurtmaga qaytadi
+        if ($order->wasChanged('status_code') && in_array($order->status_code, [OrderStatusCode::CANCELLED->value, OrderStatusCode::RETURNED->value], true)) {
+            try {
+                app(\App\Services\PrizeGameService::class)->releaseSurpriseForOrder((int) $order->id);
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        }
+
         $statusChanged = $order->wasChanged('status');
         $paymentStatusChanged = $order->wasChanged('paymentStatus');
         $previousStatus = (string) $order->getOriginal('status');

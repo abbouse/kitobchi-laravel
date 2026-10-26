@@ -10,9 +10,12 @@ namespace App\Services;
  * Katak qiymati — sovg'a ID si yoki null ("Keyingi safar").
  *
  * Qoidalar:
- *  - kitob (fragments) ko'pi bilan 2 katak, promokod 3, tanga 2, "Keyingi safar" 1;
+ *  - kitob (fragments) ko'pi bilan 2 katak, promokod 3, tanga 2, sovg'a qutisi 1,
+ *    kamida 1 ta "Keyingi safar";
  *  - yig'ilayotgan kitob (bo'laklari bor) birinchi o'rinda, qolgan kitoblar kunma-kun almashadi;
- *  - sovg'a kam bo'lsa, borlari takrorlanadi (hech narsa o'ylab topilmaydi);
+ *  - HAR KATAKDA BOSHQA SOVG'A — takror yo'q. Sovg'a kam bo'lsa, qolgan kataklar
+ *    "Keyingi safar". (Katak soni tushish ehtimoliga ta'sir qilmaydi — ehtimolni
+ *    boshqaruvdagi foiz belgilaydi; takrorlar userga noto'g'ri tasavvur berardi.)
  *  - kitoblar qarama-qarshi burchaklarda, bir xil turdagilar yonma-yon turmaydi;
  *  - yutilgan sovg'a maydonda bo'lmasa, o'sha turdagi katak almashtiriladi.
  */
@@ -20,7 +23,7 @@ class PrizeBoard
 {
     public const SIZE = 8;
 
-    public const QUOTA = ['fragments' => 2, 'promocode' => 3, 'coins' => 2];
+    public const QUOTA = ['fragments' => 2, 'promocode' => 3, 'coins' => 2, 'surprise' => 1];
 
     /**
      * @param  array<int, array{id:int, type:string}>  $prizes  yutish mumkin bo'lgan sovg'alar (tartib — admin tartibi)
@@ -36,7 +39,7 @@ class PrizeBoard
             return [];
         }
 
-        $groups = ['fragments' => [], 'promocode' => [], 'coins' => []];
+        $groups = ['fragments' => [], 'promocode' => [], 'coins' => [], 'surprise' => []];
         foreach ($prizes as $p) {
             $type = isset($groups[$p['type']]) ? $p['type'] : 'coins';
             $groups[$type][] = (int) $p['id'];
@@ -60,27 +63,35 @@ class PrizeBoard
         }
 
         $type = [];
-        $unique = [];
+        $picked = [];
         foreach (self::QUOTA as $t => $max) {
-            foreach (array_slice($groups[$t], 0, $max) as $id) {
+            $picked[$t] = array_slice($groups[$t], 0, $max);
+        }
+        // Kamida bitta "Keyingi safar" uchun joy: ortiqchasi eng ko'p turdan (avval promokod) olinadi
+        while (array_sum(array_map('count', $picked)) > self::SIZE - 1) {
+            $drop = null;
+            foreach (['promocode', 'coins', 'fragments', 'surprise'] as $t) {
+                if ($drop === null || count($picked[$t]) > count($picked[$drop])) {
+                    $drop = $t;
+                }
+            }
+            $picked[$drop] = array_slice($picked[$drop], 0, -1);
+        }
+        $unique = [];
+        foreach ($picked as $t => $ids) {
+            foreach ($ids as $id) {
                 $unique[] = $id;
                 $type[$id] = $t;
             }
         }
 
-        // 1 ta "Keyingi safar" + noyob sovg'alar; kam bo'lsa — takrorlash
-        $items = array_merge($unique, [null]);
-        $i = 0;
+        // Noyob sovg'alar (ko'pi bilan 7) + qolgani "Keyingi safar"
+        $items = $unique;
         while (count($items) < self::SIZE) {
-            if (count($unique) < 2 && $i % 2 === 1) {
-                $items[] = null; // bitta sovg'a bo'lsa — navbatma-navbat
-            } else {
-                $items[] = $unique[intdiv($i, count($unique) < 2 ? 2 : 1) % count($unique)];
-            }
-            $i++;
+            $items[] = null;
         }
 
-        return self::arrange(array_slice($items, 0, self::SIZE), $type, $seed);
+        return self::arrange($items, $type, $seed);
     }
 
     /**

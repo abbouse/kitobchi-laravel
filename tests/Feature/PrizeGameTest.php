@@ -62,6 +62,23 @@ class PrizeGameTest extends TestCase
         $this->postJson('/api/v1/kitobchi/game/spin')->assertStatus(422);
     }
 
+    public function test_surprise_box_goes_to_next_order_and_returns_on_cancel(): void
+    {
+        $this->prize(['type' => 'surprise', 'coins_amount' => null, 'title_uz' => "Sovg'a qutisi"]);
+        $this->postJson('/api/v1/kitobchi/game/spin')->assertOk()->assertJsonPath('data.result.result', 'surprise');
+
+        $svc = app(\App\Services\PrizeGameService::class);
+        $this->assertNotNull($svc->attachSurpriseToOrder($this->user->id, 501));
+        $this->assertNull($svc->attachSurpriseToOrder($this->user->id, 502), 'Bitta quti — bitta buyurtma');
+
+        $svc->releaseSurpriseForOrder(501);
+        $this->assertNotNull($svc->attachSurpriseToOrder($this->user->id, 503), 'Bekor qilinsa keyingisiga o\'tadi');
+
+        // Yutuqlar lentasida ham ko'rinadi
+        Cache::forget('game_winners');
+        $this->assertSame('surprise', $svc->winners()[0]['kind']);
+    }
+
     public function test_coins_prize_and_max_wins(): void
     {
         $p = $this->prize(['coins_amount' => 7, 'max_wins_per_user' => 1]);

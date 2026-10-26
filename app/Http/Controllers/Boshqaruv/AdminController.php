@@ -14169,6 +14169,9 @@ PROMPT;
                 'address' => $order->recipient_address,
             ],
             'buyerWish' => $order->buyerWish,
+            // Omadli maydondan "Sovg'a qutisi" — buyurtmaga kichik sovg'a solinadi
+            'surpriseGift' => Schema::hasColumn('game_rewards', 'order_id')
+                && DB::table('game_rewards')->where('order_id', $order->id)->where('type', 'surprise')->exists(),
             'promocode' => $order->promocode,
             'courierName' => $order->courierName,
             'fulfillment' => $fulfillment ? [

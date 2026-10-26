@@ -92,7 +92,27 @@ class PrizeGameController extends Controller
                 'at' => $r->created_at,
             ]);
 
+        // Sovg'a qutilari: qaysi buyurtmaga qo'shilishi kerak (Kitobchi jamoasi soladi)
+        $surprises = \Illuminate\Support\Facades\Schema::hasColumn('game_rewards', 'order_id')
+            ? DB::table('game_rewards')
+                ->leftJoin('users', 'users.id', '=', 'game_rewards.user_id')
+                ->leftJoin('solds', 'solds.id', '=', 'game_rewards.order_id')
+                ->where('game_rewards.type', 'surprise')->whereNotNull('game_rewards.order_id')
+                ->orderByDesc('game_rewards.used_at')->limit(50)
+                ->get(['game_rewards.id', 'game_rewards.order_id', 'game_rewards.user_id', 'users.name', 'users.lastname', 'solds.status_code', 'game_rewards.used_at'])
+                ->map(fn ($r) => [
+                    'id' => $r->id, 'order_id' => $r->order_id, 'user_id' => $r->user_id,
+                    'user' => trim(($r->name ?? '').' '.($r->lastname ?? '')) ?: "#{$r->user_id}",
+                    'status' => $r->status_code, 'at' => $r->used_at,
+                ])
+            : collect();
+        $surprisesWaiting = \Illuminate\Support\Facades\Schema::hasColumn('game_rewards', 'order_id')
+            ? DB::table('game_rewards')->where('type', 'surprise')->whereNull('order_id')->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()))->count()
+            : 0;
+
         return Inertia::render('PrizeGame', [
+            'surprises' => $surprises,
+            'surprises_waiting' => $surprisesWaiting,
             'settings' => array_map('intval', $this->game->settings()),
             'prizes' => $prizes,
             'tasks' => GameTask::orderBy('position')->get(['id', 'key', 'title_uz', 'title_ru', 'coins', 'is_active']),
@@ -220,7 +240,7 @@ class PrizeGameController extends Controller
     private function fill(GamePrize $prize, Request $request): void
     {
         $data = $request->validate([
-            'type' => ['required', Rule::in(['fragments', 'promocode', 'coins'])],
+            'type' => ['required', Rule::in(['fragments', 'promocode', 'coins', 'surprise'])],
             'title_uz' => 'nullable|string|max:120',
             'title_ru' => 'nullable|string|max:120',
             'chance' => 'required|numeric|min:0|max:100',
@@ -301,6 +321,9 @@ class PrizeGameController extends Controller
     private function autoTitle(GamePrize $p): array
     {
         $num = fn (int $n) => number_format($n, 0, '.', ' ');
+        if ($p->type === 'surprise') {
+            return ["Sovg'a qutisi", 'Подарок-сюрприз'];
+        }
         if ($p->type === 'coins') {
             return ["+{$p->coins_amount} tanga", "+{$p->coins_amount} монет"];
         }

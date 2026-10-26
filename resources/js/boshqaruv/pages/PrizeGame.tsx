@@ -11,7 +11,7 @@ import { EmptyState, MiniStat } from '../components/Axelit';
  */
 
 type Difficulty = 'easy' | 'medium' | 'hard';
-type PrizeType = 'fragments' | 'promocode' | 'coins';
+type PrizeType = 'fragments' | 'promocode' | 'coins' | 'surprise';
 
 interface Prize {
   id: number;
@@ -54,7 +54,11 @@ interface Stats {
 }
 interface Recent { id: number; user_id: number; user: string; prize: string | null; result: string; code: string | null; at: string }
 
+interface Surprise { id: number; order_id: number; user_id: number; user: string; status: string | null; at: string }
+
 interface PageProps {
+  surprises: Surprise[];
+  surprises_waiting: number;
   settings: Settings;
   prizes: Prize[];
   tasks: Task[];
@@ -72,13 +76,15 @@ const TYPES: Record<PrizeType, { label: string; icon: string; hint: string }> = 
   fragments: { label: "Kitob bo'laklari", icon: 'ti-book', hint: "Bo'laklar yig'ilsa — kitob bepul (shaxsiy kod)" },
   promocode: { label: 'Promokod', icon: 'ti-ticket', hint: "Har bir g'olibga alohida kod yaratiladi" },
   coins: { label: 'Tangalar', icon: 'ti-coins', hint: "Hamyonga qo'shimcha tanga" },
+  surprise: { label: "Sovg'a qutisi", icon: 'ti-gift', hint: "Keyingi buyurtmasiga kichik tasodifiy sovg'a qo'shamiz" },
 };
 
 const RESULT_LABEL: Record<string, string> = {
-  fragment: "Bo'lak", completed: 'Kitob yig\'ildi', promocode: 'Promokod', coins: 'Tanga',
+  fragment: "Bo'lak", completed: 'Kitob yig\'ildi', promocode: 'Promokod', coins: 'Tanga', surprise: "Sovg'a qutisi",
 };
 
 function prizeValue(p: Partial<Prize>): string {
+  if (p.type === 'surprise') return "Sovg'a qutisi";
   if (p.type === 'coins') return `+${fmt(p.coins_amount)} tanga`;
   if (p.type === 'fragments') return `${p.fragments_total ?? 0} bo'lakdan iborat kitob`;
   return p.discount_type === 'percent' ? `${p.discount_value ?? 0}% chegirma` : `${fmt(p.discount_value)} so'm chegirma`;
@@ -99,16 +105,16 @@ function PrizeBadge({ p, size = 40 }: { p: Partial<Prize>; size?: number }) {
   const text = p.type === 'coins' ? `+${p.coins_amount ?? 0}` : p.type === 'promocode'
     ? (p.discount_type === 'percent' ? `${p.discount_value ?? 0}%` : `${Math.round((p.discount_value ?? 0) / 1000)}K`)
     : '';
-  const bg = p.type === 'coins' ? 'linear-gradient(135deg,#FFD43B,#F59F00)' : p.type === 'promocode' ? 'linear-gradient(135deg,#4DABF7,#2980DD)' : 'rgba(var(--primary),.12)';
+  const bg = p.type === 'coins' ? 'linear-gradient(135deg,#FFD43B,#F59F00)' : p.type === 'promocode' ? 'linear-gradient(135deg,#4DABF7,#2980DD)' : p.type === 'surprise' ? 'linear-gradient(135deg,#FF8787,#E03131)' : 'rgba(var(--primary),.12)';
   return (
     <span className="d-flex-center b-r-10 flex-shrink-0 f-w-700 text-white" style={{ width: size, height: size, background: bg, fontSize: size * 0.3 }}>
-      {p.type === 'fragments' ? <i className="ti ti-book text-primary f-s-18"></i> : text}
+      {p.type === 'fragments' ? <i className="ti ti-book text-primary f-s-18"></i> : p.type === 'surprise' ? <i className="ti ti-gift f-s-20"></i> : text}
     </span>
   );
 }
 
 export default function PrizeGame() {
-  const { settings, prizes = [], tasks = [], stats, recent = [] } = usePage<PageProps>().props;
+  const { settings, prizes = [], tasks = [], stats, recent = [], surprises = [], surprises_waiting = 0 } = usePage<PageProps>().props;
   const [editing, setEditing] = useState<Partial<Prize> | null>(null);
   const [chances, setChances] = useState<Record<number, string>>({});
 
@@ -249,6 +255,28 @@ export default function PrizeGame() {
         </div>
 
         <div className="col-xl-4">
+          <div className="card mb-3">
+            <div className="card-header">
+              <h5 className="mb-0">Sovg'a qutilari</h5>
+              <p className="mb-0 f-s-12 text-secondary">Shu buyurtmalarga kichik tasodifiy sovg'a solinadi. Yutib, hali buyurtma qilmaganlar: <b>{fmt(surprises_waiting)}</b></p>
+            </div>
+            <div className="card-body">
+              {surprises.length === 0 ? <EmptyState text="Hozircha yo'q" /> : (
+                <div className="app-scroll" style={{ maxHeight: 280, overflowY: 'auto' }}>
+                  {surprises.map((x) => (
+                    <div key={x.id} className="d-flex align-items-center gap-2 py-2 border-bottom">
+                      <i className="ti ti-gift text-danger f-s-18"></i>
+                      <div className="flex-grow-1 min-w-0">
+                        <span className="f-w-600 text-dark">Buyurtma #{x.order_id}</span>
+                        <div className="f-s-12 text-secondary txt-ellipsis-1">{x.user}</div>
+                      </div>
+                      <span className={`badge ${x.status === 'delivered' || x.status === 'customer_received' ? 'text-light-success' : 'text-light-warning'}`}>{x.status ?? '—'}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
           <SettingsCard settings={settings} />
           <TasksCard tasks={tasks} />
         </div>
@@ -448,7 +476,7 @@ function PrizeForm({ prize, onHide }: { prize: Partial<Prize> | null; onHide: ()
           <Section title="1. Nima beriladi?">
             <div className="row g-2">
               {(Object.keys(TYPES) as PrizeType[]).map((t) => (
-                <div className="col-md-4" key={t}>
+                <div className="col-md-3 col-6" key={t}>
                   <button type="button" onClick={() => setType(t)} className={`w-100 h-100 text-start p-3 b-r-12 border ${type === t ? 'border-primary bg-light-primary' : 'bg-white'}`} style={{ borderWidth: type === t ? 1.5 : 1 }}>
                     <div className="d-flex align-items-center gap-2 f-w-600 text-dark"><i className={`ti ${TYPES[t].icon} f-s-18 ${type === t ? 'text-primary' : 'text-secondary'}`}></i>{TYPES[t].label}</div>
                     <div className="f-s-12 text-secondary mt-1">{TYPES[t].hint}</div>
@@ -491,6 +519,9 @@ function PrizeForm({ prize, onHide }: { prize: Partial<Prize> | null; onHide: ()
                   {err('coins_amount')}
                 </div>
               </div>
+            ) : null}
+            {type === 'surprise' ? (
+              <Hint>G'olibning keyingi buyurtmasiga Kitobchi jamoasi kichik tasodifiy sovg'a (xatcho'p, stiker, ruchka va h.k.) qo'shadi. Bir buyurtmaga bitta quti; buyurtma bekor qilinsa, quti keyingisiga o'tadi. Qaysi buyurtmalarga solish kerakligi shu sahifadagi "Sovg'a qutilari" ro'yxatida. Xarajatni "Soni" bilan cheklang.</Hint>
             ) : null}
             {type === 'fragments' ? (
               <div className="row g-3">
