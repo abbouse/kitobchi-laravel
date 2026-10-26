@@ -3,16 +3,15 @@ import { Link } from '@inertiajs/react';
 import InfoHint from './InfoHint';
 
 /**
- * Axelit e-commerce dashboard vidjetlari (ecommerce_dashboard / widget sahifasi):
- *   provided — "card orders-provided-card"   (oq, katak fon, pastda aylana)
- *   primary  — "card bg-primary-300 product-sold-card"
- *   danger   — "card bg-danger-300 product-sold-card"
- *   store    — "card product-store-card"      (oq, yashil, tepada aylana)
- *   info / warning / success — "card bg-*-300 product-sold-card"
- * KPI qatorlarida `index` bo'yicha Axelit ritmi (provided → primary → danger → store) takrorlanadi.
+ * KPI kartasi (yangi dizayn): oq yuza, 1px chegara, yuqorida nom (rangli nuqta
+ * bilan), katta qiymat, ostida izoh/trend. `variant` — nuqta rangi; eski
+ * Axelit ritmi (index bo'yicha) saqlangan, shuning uchun sahifalar o'zgarmaydi.
  */
 export type StatVariant = 'provided' | 'primary' | 'danger' | 'store' | 'info' | 'warning' | 'success';
 const RHYTHM: StatVariant[] = ['provided', 'primary', 'danger', 'store'];
+const DOT: Record<StatVariant, string> = {
+  provided: 'secondary', primary: 'primary', danger: 'danger', store: 'success', info: 'info', warning: 'warning', success: 'success',
+};
 
 interface StatWidgetProps {
   label: ReactNode;
@@ -31,52 +30,30 @@ interface StatWidgetProps {
 
 export function StatWidget({ label, value, index = 0, variant, sub, trend, trendTone = 'success', help, href, onClick, selected, className = '' }: StatWidgetProps) {
   const v = variant || RHYTHM[index % RHYTHM.length];
-  const sold = v !== 'provided' && v !== 'store';
-  const tone = v === 'store' ? 'success' : v;
+  const dot = DOT[v];
 
   const cardCls = [
-    'card h-100 kc-stat',
-    v === 'provided' ? 'orders-provided-card' : v === 'store' ? 'product-store-card' : `bg-${tone}-300 product-sold-card`,
-    href || onClick ? 'hover-effect' : '',
-    selected ? 'b-2-primary' : '',
+    'card h-100 kc-stat kb-stat',
+    href || onClick ? 'kb-stat-action' : '',
+    selected ? 'is-selected' : '',
     className,
   ].filter(Boolean).join(' ');
 
-  const helpEl = help ? <InfoHint text={help} /> : null;
-  const subEl = sub || trend ? (
-    <p className="mb-0 text-dark f-w-500 mt-1 d-flex align-items-center gap-2 min-w-0">
-      {trend ? <span className={`badge flex-shrink-0 ${sold ? `bg-white-300 text-${trendTone}-dark` : `text-light-${trendTone}`}`}>{trend}</span> : null}
-      {sub ? <span className="txt-ellipsis-1">{sub}</span> : null}
-    </p>
-  ) : null;
-
-  const body = sold ? (
+  const body = (
     <div className="card-body">
-      <div>
-        <h5 className={`text-${tone}-dark f-w-600 d-flex align-items-center gap-1`}>
-          <span className="kc-stat-label" title={typeof label === 'string' ? label : undefined}>{label}</span>{helpEl}
-        </h5>
+      <div className="kb-stat-head">
+        <span className={`kb-stat-dot bg-${dot}`} aria-hidden="true"></span>
+        <span className="kc-stat-label kb-stat-label" title={typeof label === 'string' ? label : undefined}>{label}</span>
+        {help ? <InfoHint text={help} /> : null}
+        {href ? <i className="ti ti-arrow-up-right kb-stat-go" aria-hidden="true"></i> : null}
       </div>
-      <div className="mt-3">
-        <h4 className={`text-${tone}-dark mb-0`}>{value}</h4>
-        {subEl}
-      </div>
-      {href ? (
-        <span className={`bg-${tone} h-35 w-35 d-flex-center b-r-50 product-sold-icon`}>
-          <i className="iconoir-arrow-right f-w-600 f-s-18"></i>
-        </span>
-      ) : null}
-    </div>
-  ) : (
-    <div className="card-body">
-      <i className="ph-bold ph-circle circle-bg-img"></i>
-      <div>
-        <p className={`f-s-18 f-w-600 d-flex align-items-center gap-1 ${v === 'store' ? 'text-success' : 'text-dark'}`}>
-          <span className="kc-stat-label" title={typeof label === 'string' ? label : undefined}>{label}</span>{helpEl}
+      <h4 className="kb-stat-value">{value}</h4>
+      {sub || trend ? (
+        <p className="kb-stat-sub">
+          {trend ? <span className={`kb-stat-trend text-${trendTone}-dark`}>{trend}</span> : null}
+          {sub ? <span className="txt-ellipsis-1">{sub}</span> : null}
         </p>
-        <h2 className={`${v === 'store' ? 'text-success-dark' : 'text-secondary-dark'} mb-0`}>{value}</h2>
-        {subEl}
-      </div>
+      ) : null}
     </div>
   );
 
@@ -102,8 +79,8 @@ interface MiniStatProps {
 }
 export function MiniStat({ label, value, icon, meta, help, tone = 'primary', valueTone = '', className = '' }: MiniStatProps) {
   return (
-    <div className={`kc-surface b-1-light b-r-15 p-3 h-100 d-flex align-items-start gap-3 ${className}`}>
-      {icon ? <span className={`h-40 w-40 d-flex-center b-r-10 f-s-20 flex-shrink-0 text-light-${tone}`}><i className={icon}></i></span> : null}
+    <div className={`kb-mini h-100 d-flex align-items-start gap-3 ${className}`}>
+      {icon ? <span className={`kb-mini-ico d-flex-center flex-shrink-0 text-light-${tone}`}><i className={icon}></i></span> : null}
       <div className="min-w-0 flex-grow-1">
         <p className="mb-0 text-secondary f-s-13 f-w-500 d-flex align-items-center gap-1">
           <span className="kc-stat-label" title={typeof label === 'string' ? label : undefined}>{label}</span>{help ? <InfoHint text={help} /> : null}
@@ -119,7 +96,7 @@ export function MiniStat({ label, value, icon, meta, help, tone = 'primary', val
 export function EmptyState({ text, icon = 'iconoir-archive', className = '' }: { text: ReactNode; icon?: string; className?: string }) {
   return (
     <div className={`text-center py-4 ${className}`}>
-      <i className={`${icon} d-flex justify-content-center mb-2 f-s-30 text-primary`}></i>
+      <i className={`${icon} d-flex justify-content-center mb-2 f-s-28`} style={{ color: '#94A3B8' }}></i>
       <p className="mb-0 text-secondary f-s-14">{text}</p>
     </div>
   );

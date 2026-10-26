@@ -1,9 +1,11 @@
 // Tartib muhim: Bootstrap (Axelit bilan kelgan versiya) → ikonkalar →
-// Axelit asl uslublari → Kitobchi qatlami.
+// Axelit asl uslublari → Kitobchi qatlami → yangi dizayn qatlami.
 import '../../css/axelit/bootstrap.min.css';
 import '../../css/axelit/icons.css';
 import '../../css/axelit/axelit.css';
 import '../../css/boshqaruv.css';
+// Yangi dizayn qatlami (2026-10) — eng oxirida: tokenlar, komponentlar, karkas
+import '../../css/boshqaruv-theme.css';
 // Bootstrap'ning JS qismi (dropdown, modal, offcanvas va h.k.) — avval faqat
 // CSS import qilingan edi, shuning uchun data-bs-toggle="dropdown" kabi
 // barcha elementlar butun panelda bosilganda hech narsa qilmasdi.
@@ -35,6 +37,6 @@ createInertiaApp({
     createRoot(el).render(<App {...props} />);
   },
   progress: {
-    color: '#8C76F0',
+    color: '#2980DD',
   },
 });
