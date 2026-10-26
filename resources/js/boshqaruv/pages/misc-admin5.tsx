@@ -59,7 +59,7 @@ export function MysteryBox() {
 
       <div className="card">
 <div className="card-header">
-          <h5 className="mb-0">📦 Obunalar</h5>
+          <h5 className="mb-0">Obunalar</h5>
         </div>
 <div className="card-body">
 

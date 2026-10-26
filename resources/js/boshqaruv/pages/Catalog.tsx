@@ -191,7 +191,7 @@ export default function Catalog() {
           </form>
 
           {/* Arizalar tugmasi */}
-          <Link href="/boshqaruv/catalog/submissions" className="btn btn-sm btn-outline-primary position-relative d-inline-flex align-items-center gap-1">
+          <Link href="/boshqaruv/catalog/submissions" className="btn btn-sm btn-light-secondary position-relative">
             <i className="ti ti-inbox"></i>
             <span>Arizalar</span>
             {(counts.submissions || 0) > 0 ? (
@@ -202,7 +202,7 @@ export default function Catalog() {
           {/* Muqovalarni avto-tuzatish */}
           <button
             type="button"
-            className="btn btn-sm btn-outline-warning d-inline-flex align-items-center gap-1"
+            className="btn btn-sm btn-light-secondary"
             onClick={handleAutoFixBatch}
             disabled={batchLoading}
             title="Book.uz va Asaxiy orqali muqovasiz yoki noto'g'ri rasmli kitoblarni avtomatik tuzatish"
@@ -466,7 +466,7 @@ export default function Catalog() {
                       {/* Do'kon takliflari */}
                       <td>
                         <div className="d-flex align-items-center gap-2">
-                          <span className="f-w-600 f-s-14 text-dark">{edition.offersCount} ta</span>
+                          <span className="f-w-600 f-s-14 text-dark text-nowrap">{edition.offersCount} ta</span>
                           {edition.inStockOffers > 0 ? (
                             <span className="badge bg-light-success text-success f-s-11">
                               <i className="ti ti-check me-1"></i>{edition.inStockOffers} ta omborda
@@ -483,7 +483,7 @@ export default function Catalog() {
                       <td>
                         {edition.minPrice ? (
                           <div>
-                            <span className="f-w-600 text-dark f-s-14">{fmt(edition.minPrice)} so'm</span>
+                            <span className="f-w-600 text-dark f-s-14 text-nowrap">{fmt(edition.minPrice)} so'm</span>
                             <small className="d-block text-secondary f-s-11">Eng arzon narx</small>
                           </div>
                         ) : (

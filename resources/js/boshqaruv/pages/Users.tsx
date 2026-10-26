@@ -7,8 +7,8 @@ import Modal from '../components/AppModal';
 import PaginationControls from '../components/PaginationControls';
 
 import { toneBadge } from '../utils/tone';
-import { StatWidget, EmptyState, MiniStat } from '../components/Axelit';
-import { Avatar as UserAvatar, ProfileCard, AboutList } from '../components/Profile';
+import { StatWidget, EmptyState } from '../components/Axelit';
+import { Avatar as UserAvatar } from '../components/Profile';
 import FormAction, { ActionRow } from '../components/FormAction';
 
 const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n || 0);
@@ -64,19 +64,26 @@ export default function Users() {
         ].map(([label, val, icon, color], kpiIndex) => <div className="col-xl-3 col-md-6" key={String(label)}><StatWidget index={kpiIndex} label={label} value={val} /></div>)}
       </div>
       <div className="card">
-        <div className="card-header d-flex align-items-center justify-content-between gap-2 flex-wrap"><div><h5 className="f-w-600">Foydalanuvchilar ro‘yxati</h5><small className="text-muted">{userPagination.total} ta yozuv</small></div><form className="d-flex gap-2" onSubmit={(e) => { e.preventDefault(); loadUsers(); }}><input className="form-control form-control-sm" style={{ maxWidth: 280 }} value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Ism, telefon, email yoki ID" /><button className="btn btn-sm btn-outline-secondary"><i className="ti ti-search"></i></button></form></div>
         <div className="card-body">
-
           <div className="nav kc-segment mb-3">{tabs.map(([key, label]) => <div key={key} className="nav-item"><button
               className={`nav-link ${tab === key ? 'active' : ''}`}
-              onClick={() => { setTab(key); loadUsers(1, key); }}>{label}<span className="badge text-light-secondary ms-2">{fmt(userCounts[key] || 0)}</span></button></div>)}</div>
+              onClick={() => { setTab(key); loadUsers(1, key); }}>{label} <span className="badge">{fmt(userCounts[key] || 0)}</span></button></div>)}</div>
+          <form className="d-flex align-items-center gap-2 flex-wrap mb-3" onSubmit={(e) => { e.preventDefault(); loadUsers(); }}>
+            <div className="app-form app-icon-form position-relative" style={{ width: 'min(320px, 100%)' }}>
+              <i className="ti ti-search"></i>
+              <input className="form-control form-control-sm" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Ism, telefon, email yoki ID" aria-label="Foydalanuvchi qidirish" />
+            </div>
+            <button className="btn btn-sm btn-light-secondary" type="submit">Qidirish</button>
+            {search ? <button className="btn btn-sm btn-light-secondary" type="button" onClick={() => { setSearch(''); loadUsers(1, tab, ''); }}>Tozalash</button> : null}
+            <span className="ms-auto f-s-13 text-secondary">{fmt(userPagination.total)} ta foydalanuvchi</span>
+          </form>
           <div className="table-responsive app-scroll"><table className="table table-bottom-border align-middle"><thead><tr><th>ID</th><th>Foydalanuvchi</th><th>Telefon</th><th className="text-end">Buyurtma</th><th className="text-end">Sarflangan</th><th className="text-end">Karta</th><th className="text-end">Oxirgi aktivlik</th><th>Holat</th><th></th></tr></thead><tbody>
-            {users.map((user) => <tr key={user.id}>
-              <td className="f-w-600 text-nowrap">#{user.id}</td><td><div className="d-flex align-items-center gap-2"><UserAvatar src={user.avatar} name={user.name} size="lg" /><div><div className="f-w-600">{user.name}</div><small className="text-muted">A'zo bo'lgan: {user.joinedLabel || user.joined || '—'}</small></div></div></td>
-              <td className="f-w-600 text-nowrap">{user.phone || '—'}</td><td className="text-end f-w-600 text-nowrap">{user.orders}</td><td className="text-end f-w-600 text-nowrap">{fmt(user.spent)}</td><td className="text-end f-w-600 text-nowrap">{user.cards || 0}</td><td className="text-end">{user.online ? <span className="st ok"><i></i>Online</span> : <span className="f-s-13 text-secondary">{user.lastSeenAt || '—'}</span>}</td><td><Status user={user} /></td>
-              <td><button className="btn btn-light-primary icon-btn w-30 h-30 b-r-22" onClick={() => openDetail(user)}><i className="ti ti-eye"></i></button></td>
+            {users.map((user) => <tr key={user.id} role="button" onClick={() => openDetail(user)}>
+              <td className="text-secondary text-nowrap kb-num">#{user.id}</td><td><div className="d-flex align-items-center gap-2"><UserAvatar src={user.avatar} name={user.name} size="md" /><div className="min-w-0"><div className="f-w-600 text-nowrap">{user.name}{user.verified ? <i className="ti ti-discount-check-filled text-primary ms-1" title="Tasdiqlangan"></i> : null}</div><div className="f-s-12 text-secondary text-nowrap">A'zo: {user.joinedLabel || user.joined || '—'}</div></div></div></td>
+              <td className="text-nowrap">{user.phone || '—'}</td><td className="text-end f-w-600 text-nowrap">{user.orders}</td><td className="text-end f-w-600 text-nowrap">{fmt(user.spent)}</td><td className="text-end f-w-600 text-nowrap">{user.cards || 0}</td><td className="text-end">{user.online ? <span className="st ok"><i></i>Online</span> : <span className="f-s-13 text-secondary">{user.lastSeenAt || '—'}</span>}</td><td><Status user={user} /></td>
+              <td className="text-end" onClick={(e) => e.stopPropagation()}><button type="button" className="btn btn-light-secondary icon-btn w-30 h-30" onClick={() => openDetail(user)} title="Profilni ochish" aria-label="Profilni ochish"><i className="ti ti-arrows-maximize"></i></button></td>
             </tr>)}
-            {userPagination.total === 0 ? <tr><td colSpan={9} className="text-center py-5 text-secondary"><i className="iconoir-archive d-flex justify-content-center mb-2 f-s-30 text-primary"></i>Foydalanuvchi topilmadi</td></tr> : null}
+            {userPagination.total === 0 ? <tr><td colSpan={9} className="text-center py-5 text-secondary"><i className="ti ti-users d-block f-s-24 mb-2"></i>Foydalanuvchi topilmadi</td></tr> : null}
           </tbody></table></div>
           <PaginationControls {...userPagination} onPageChange={(page) => loadUsers(page)} />
         </div>
@@ -129,49 +136,41 @@ function ProfileModal({ user, detail, loading, onHide, reload }: { user: UserRow
         ) : !detail ? (
           <div className="alert alert-light-danger mb-0">Profilni yuklab bo‘lmadi.</div>
         ) : (
-          <div className="row">
-            <div className="col-lg-5 col-xl-4">
-              <ProfileCard
-                image={String(p.avatar || user?.avatar || '') || null}
-                name={String(p.name || user?.name || '')}
-                subtitle={[p.username ? `@${String(p.username)}` : null, String(p.position || p.roleTitle || '') || null].filter(Boolean).join(' · ') || 'Foydalanuvchi'}
-                verified={Boolean(p.verified)}
-                badges={<>
-                  <Status user={user!} />
-                  {user?.online ? <span className="badge text-light-success"><i className="ti ti-point-filled me-1"></i>Online</span> : null}
-                  {p.phoneVerified ? <span className="badge text-light-success">Telefon tasdiqlangan</span> : <span className="badge text-light-warning">Telefon tasdiqlanmagan</span>}
-                  {p.support ? <span className="badge text-light-info">Support</span> : null}
-                </>}
-                stats={[
-                  { label: 'Buyurtma', value: fmt(Number(s.orders || 0)) },
-                  { label: 'Kuzatuvchi', value: fmt(Number(s.followers || 0)) },
-                  { label: 'Kuzatadi', value: fmt(Number(s.following || 0)) },
-                ]}
-              />
-              <AboutList title="Aloqa va profil" rows={[
-                { icon: 'ti-phone', label: 'Telefon', value: p.phone ? String(p.phone) : null },
-                { icon: 'ti-mail', label: 'Email', value: p.email ? String(p.email) : null },
-                { icon: 'ti-at', label: 'Username', value: p.username ? String(p.username) : null },
-                { icon: 'ti-brand-telegram', label: 'Telegram ID', value: p.telegramId ? String(p.telegramId) : null },
-                { icon: 'ti-language', label: 'Til', value: p.locale ? String(p.locale) : null },
-                { icon: 'ti-calendar-event', label: "Ro'yxatdan o'tgan", value: p.joined ? String(p.joined) : null },
-                { icon: 'ti-clock', label: 'Oxirgi faollik', value: p.lastSeenAt ? String(p.lastSeenAt) : null },
-                { icon: 'ti-hourglass', label: 'Ilovada vaqt', value: `${fmt(Math.round(Number(p.spentSeconds || 0) / 60))} daqiqa` },
-              ]}>
-                {p.bio ? <p className="text-muted f-s-13">{String(p.bio)}</p> : null}
-              </AboutList>
-
-              <div className="card">
-                <div className="card-header"><h5 className="mb-0">Akkaunt boshqaruvi</h5></div>
-                <div className="card-body pt-0">
-                  <ActionRow
-                    icon="ti ti-lock"
-                    tone={blocked ? 'danger' : 'success'}
-                    title="Akkaunt holati"
-                    value={blocked ? `Bloklangan · ${String(p.blockLabel || 'Abadiy')}` : 'Faol'}
-                    meta={blocked ? `Sabab: ${String(p.blockReason || '—')}` : 'Ilovaga kirish ochiq'}
-                    action={blocked ? (
-                      <button type="button" className="btn btn-sm btn-light-success" onClick={() => post(detail.actions.unblockUrl)}><i className="ti ti-lock-open me-1"></i>Blokdan chiqarish</button>
+          <div data-kb-bare>
+            {/* ── 360 sarlavha: kim, holati, aloqa, asosiy amallar ── */}
+            <div className="card kb-u360-head">
+              <div className="card-body">
+                <div className="d-flex align-items-start gap-3">
+                  <UserAvatar src={String(p.avatar || user?.avatar || '') || null} name={String(p.name || user?.name || '')} size="xl" />
+                  <div className="flex-grow-1 min-w-0">
+                    <div className="d-flex align-items-center gap-2 flex-wrap">
+                      <h5 className="kb-u360-name mb-0">{String(p.name || user?.name || '')}</h5>
+                      {p.verified ? <i className="ti ti-discount-check-filled text-primary f-s-18" title="Tasdiqlangan (verified)"></i> : null}
+                      <Status user={user!} />
+                      {user?.online ? <span className="badge text-light-success"><i className="ti ti-point-filled"></i>Online</span> : null}
+                      {p.support ? <span className="badge text-light-info">Support</span> : null}
+                      {p.phoneVerified ? null : <span className="badge text-light-warning">Telefon tasdiqlanmagan</span>}
+                    </div>
+                    <div className="kb-u360-meta">
+                      {[
+                        p.position || p.roleTitle ? String(p.position || p.roleTitle) : null,
+                        p.phone ? String(p.phone) : null,
+                        p.username ? `@${String(p.username)}` : null,
+                        p.email ? String(p.email) : null,
+                        p.joined ? `ro‘yxatdan o‘tgan: ${String(p.joined)}` : null,
+                        user?.online ? null : p.lastSeenAt ? `oxirgi faollik: ${String(p.lastSeenAt)}` : null,
+                      ].filter(Boolean).map((item, index) => <span key={index}>{item}</span>)}
+                    </div>
+                    {p.bio ? <p className="text-secondary f-s-13 mb-0 mt-2">{String(p.bio)}</p> : null}
+                  <div className="d-flex gap-2 flex-wrap kb-u360-actions mt-3">
+                    <button type="button" className={`btn btn-sm ${p.verified ? 'btn-light-secondary' : 'btn-light-primary'}`} disabled={!detail.actions.verifyUrl} onClick={() => patch(detail.actions.verifyUrl)}>
+                      <i className="ti ti-discount-check"></i>{p.verified ? 'Verified — o‘chirish' : 'Verified berish'}
+                    </button>
+                    <button type="button" className={`btn btn-sm ${p.premium ? 'btn-light-secondary' : 'btn-light-warning'}`} disabled={!detail.actions.premiumUrl} onClick={() => patch(detail.actions.premiumUrl)}>
+                      <i className="ti ti-crown"></i>{p.premium ? 'Premium — o‘chirish' : 'Premium berish'}
+                    </button>
+                    {blocked ? (
+                      <button type="button" className="btn btn-sm btn-light-success" disabled={!detail.actions.unblockUrl} onClick={() => post(detail.actions.unblockUrl)}><i className="ti ti-lock-open"></i>Blokdan chiqarish</button>
                     ) : (
                       <FormAction label="Bloklash" icon="ti ti-lock" variant="light-danger" title="Foydalanuvchini bloklash" description="Bloklangan foydalanuvchi ilovaga kira olmaydi va buyurtma bera olmaydi." submitLabel="Bloklash" submitVariant="danger" disabled={!detail.actions.blockUrl} onSubmit={submitTo(detail.actions.blockUrl)}>
                         <label className="form-label">Muddat</label>
@@ -186,47 +185,126 @@ function ProfileModal({ user, detail, loading, onHide, reload }: { user: UserRow
                         <textarea name="block_reason" className="form-control" rows={2} placeholder="Bloklash sababi" required />
                       </FormAction>
                     )}
-                  />
-                  <ActionRow
-                    icon="ti ti-discount-check"
-                    tone="info"
-                    title="Verified belgisi"
-                    value={p.verified ? 'Yoqilgan' : "O'chiq"}
-                    action={<button type="button" className={`btn btn-sm ${p.verified ? 'btn-light-secondary' : 'btn-light-info'}`} onClick={() => patch(detail.actions.verifyUrl)}>{p.verified ? "O'chirish" : 'Yoqish'}</button>}
-                  />
-                  <ActionRow
-                    icon="ti ti-crown"
-                    tone="warning"
-                    title="Premium"
-                    value={p.premium ? 'Faol' : "Yo'q"}
-                    action={<button type="button" className={`btn btn-sm ${p.premium ? 'btn-light-secondary' : 'btn-light-warning'}`} onClick={() => patch(detail.actions.premiumUrl)}>{p.premium ? "O'chirish" : 'Yoqish'}</button>}
-                  />
+                  </div>
+                  </div>
+                </div>
+                {blocked ? (
+                  <div className="alert alert-light-danger d-flex align-items-start gap-2 mb-0 mt-3 py-2">
+                    <i className="ti ti-lock mt-1"></i>
+                    <div><strong>Bloklangan · {String(p.blockLabel || 'Abadiy')}.</strong> Sabab: {String(p.blockReason || '—')}</div>
+                  </div>
+                ) : null}
+                <div className="kb-u360-stats">
+                  {[
+                    ['Buyurtmalar', fmt(Number(s.orders || 0)), `${fmt(Number(s.paidOrders || 0))} ta to‘langan`],
+                    ['Sarflangan', `${fmt(Number(s.spent || 0))} so‘m`, null],
+                    ['Balans', `${fmt(Number(p.balance || 0))} so‘m`, null],
+                    ['Cashback', `${fmt(Number(p.cashback || 0))} so‘m`, null],
+                    ['Kuzatuvchi', fmt(Number(s.followers || 0)), `kuzatadi: ${fmt(Number(s.following || 0))}`],
+                    ['Ilovada', `${fmt(Math.round(Number(p.spentSeconds || 0) / 60))} daq.`, p.locale ? `til: ${String(p.locale)}` : null],
+                  ].map(([label, value, sub]) => (
+                    <div key={String(label)}>
+                      <div className="kb-u360-stat-label">{label}</div>
+                      <div className="kb-u360-stat-value">{value}</div>
+                      {sub ? <div className="kb-u360-stat-sub">{sub}</div> : null}
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
 
-            <div className="col-lg-7 col-xl-8">
-              <div className="row g-3 mb-4">
-                <div className="col-sm-6"><MiniStat icon="ti ti-receipt" tone="primary" label="Buyurtmalar" value={fmt(Number(s.orders || 0))} meta={`${fmt(Number(s.paidOrders || 0))} ta to'langan`} /></div>
-                <div className="col-sm-6"><MiniStat icon="ti ti-cash" tone="success" label="Sarflangan" value={`${fmt(Number(s.spent || 0))} so'm`} /></div>
-                <div className="col-sm-6"><MiniStat icon="ti ti-wallet" tone="info" label="Balans" value={`${fmt(Number(p.balance || 0))} so'm`} /></div>
-                <div className="col-sm-6"><MiniStat icon="ti ti-coins" tone="warning" label="Cashback" value={`${fmt(Number(p.cashback || 0))} so'm`} /></div>
-              </div>
+            <ul className="nav nav-tabs kb-u360-tabs mb-3" role="tablist" aria-label="Profil bo'limlari">
+              {USER_TABS.map(([key, label, icon]) => (
+                <li className="nav-item" key={key}>
+                  <button type="button" role="tab" aria-selected={tab === key} className={`nav-link ${tab === key ? 'active' : ''}`} onClick={() => setTab(key)}>
+                    <i className={icon}></i>{label}{counts[key] ? <span className="kb-tab-count">{counts[key]}</span> : null}
+                  </button>
+                </li>
+              ))}
+            </ul>
 
-              <div className="nav kc-segment kc-segment-wrap mb-3" role="tablist" aria-label="Profil bo'limlari">
-                {USER_TABS.map(([key, label, icon]) => (
-                  <div className="nav-item" key={key}>
-                    <button type="button" role="tab" aria-selected={tab === key} className={`nav-link ${tab === key ? 'active' : ''}`} onClick={() => setTab(key)}>
-                      <i className={icon}></i>{label}{counts[key] ? <span className="badge">{counts[key]}</span> : null}
-                    </button>
-                  </div>
-                ))}
-              </div>
-
+            <div>
               {tab === 'overview' ? (
                 <div className="row">
-                  <Info title="Profil ma'lumotlari" rows={[['Telefon', p.phone], ['Telefon tasdig‘i', p.phoneVerified ? 'Tasdiqlangan' : 'Tasdiqlanmagan'], ['Telefon tasdiqlangan sana', p.phoneVerifiedAt], ['Verified badge', p.verified ? 'Yoqilgan' : 'O‘chiq'], ['Email', p.email], ['Username', p.username], ['Telegram ID', p.telegramId], ['Til', p.locale], ['Daraja', p.position], ['Role title', p.roleTitle], ['Staff roli', p.staffRole], ['AI limiti', p.aiLimit], ['Oxirgi faollik', p.lastSeenAt], ['Ro‘yxatdan o‘tgan', p.joined], ['Spent time', `${fmt(Number(p.spentSeconds || 0))} sec`]]} />
-                  <Info title="Hisob va statistika" rows={[['Buyurtmalar', s.orders], ['To‘langan orderlar', s.paidOrders], ['Sarflangan', `${fmt(s.spent || 0)} so'm`], ['Balans', `${fmt(Number(p.balance || 0))} so'm`], ['Cashback', `${fmt(Number(p.cashback || 0))} so'm`], ['Kartalar', s.cards], ['Qurilmalar', s.devices], ['Manzillar', s.addresses], ['Search history', s.searches], ['Sevimlilar', s.favourites], ['Stock-alert (xabar berish)', s.stockAlerts], ['Savat itemlari', s.cartItems], ['Savat soni', s.cartQuantity], ['Savat jami', `${fmt(s.cartTotal || 0)} so'm`], ['Followers', s.followers], ['Following', s.following], ['Gift sertifikat', s.giftCertificates], ['Mystery Box', s.mysteryBoxes]]} />
+                  <div className="col-xl-7">
+                    <div className="card">
+                      <div className="card-header d-flex align-items-center justify-content-between">
+                        <h5 className="mb-0">So‘nggi buyurtmalar</h5>
+                        {detail.orders.length ? <button type="button" className="btn btn-link btn-sm p-0" onClick={() => setTab('orders')}>Hammasi ({fmt(Number(s.orders || detail.orders.length))})</button> : null}
+                      </div>
+                      <div className="card-body pt-0">
+                        {detail.orders.slice(0, 5).map((order, index) => (
+                          <div className="kb-u360-row" key={String(order.id || index)}>
+                            <div className="min-w-0 flex-grow-1">
+                              <div className="f-w-600 f-s-13">#{String(order.id ?? '—').replace(/^#/, '')}</div>
+                              <div className="f-s-12 text-secondary text-truncate">{[order.date, order.delivery, order.payment].filter(Boolean).map(String).join(' · ')}</div>
+                            </div>
+                            <span className="badge text-light-secondary">{String(order.status ?? '—')}</span>
+                            <div className="f-w-600 f-s-13 text-nowrap kb-num text-end" style={{ minWidth: 96 }}>{fmt(Number(order.amount || 0))} so‘m</div>
+                            {order.url ? <a className="btn btn-light-secondary icon-btn w-30 h-30" href={String(order.url)} title="Buyurtmani ochish" aria-label="Buyurtmani ochish"><i className="ti ti-external-link"></i></a> : null}
+                          </div>
+                        ))}
+                        {detail.orders.length === 0 ? <EmptyState text="Buyurtma hali yo‘q" /> : null}
+                      </div>
+                    </div>
+                    <div className="row">
+                      <Info title="Profil ma'lumotlari" rows={[['Telefon', p.phone], ['Telefon tasdig‘i', p.phoneVerified ? 'Tasdiqlangan' : 'Tasdiqlanmagan'], ['Telefon tasdiqlangan sana', p.phoneVerifiedAt], ['Verified badge', p.verified ? 'Yoqilgan' : 'O‘chiq'], ['Email', p.email], ['Username', p.username], ['Telegram ID', p.telegramId], ['Til', p.locale], ['Daraja', p.position], ['Role title', p.roleTitle], ['Staff roli', p.staffRole], ['AI limiti', p.aiLimit], ['Oxirgi faollik', p.lastSeenAt], ['Ro‘yxatdan o‘tgan', p.joined], ['Spent time', `${fmt(Number(p.spentSeconds || 0))} sec`]]} />
+                      <Info title="Hisob va statistika" rows={[['Buyurtmalar', s.orders], ['To‘langan orderlar', s.paidOrders], ['Sarflangan', `${fmt(s.spent || 0)} so'm`], ['Balans', `${fmt(Number(p.balance || 0))} so'm`], ['Cashback', `${fmt(Number(p.cashback || 0))} so'm`], ['Kartalar', s.cards], ['Qurilmalar', s.devices], ['Manzillar', s.addresses], ['Search history', s.searches], ['Sevimlilar', s.favourites], ['Stock-alert (xabar berish)', s.stockAlerts], ['Savat itemlari', s.cartItems], ['Savat soni', s.cartQuantity], ['Savat jami', `${fmt(s.cartTotal || 0)} so'm`], ['Followers', s.followers], ['Following', s.following], ['Gift sertifikat', s.giftCertificates], ['Mystery Box', s.mysteryBoxes]]} />
+                    </div>
+                  </div>
+                  <div className="col-xl-5">
+                    <div className="card">
+                      <div className="card-header d-flex align-items-center justify-content-between">
+                        <h5 className="mb-0">Manzillar</h5>
+                        {detail.addresses.length > 3 ? <button type="button" className="btn btn-link btn-sm p-0" onClick={() => setTab('devices')}>Hammasi ({detail.addresses.length})</button> : null}
+                      </div>
+                      <div className="card-body pt-0">
+                        {detail.addresses.slice(0, 3).map((address, index) => {
+                          const links = (address.mapLinks || {}) as Record<string, string>;
+                          return (
+                            <div className="kb-u360-row align-items-start" key={String(address.id || index)}>
+                              <i className="ti ti-map-pin text-secondary f-s-18 mt-1"></i>
+                              <div className="min-w-0 flex-grow-1">
+                                <div className="f-s-13 text-dark">{String(address.address || 'Manzil kiritilmagan')}{address.main ? <span className="badge text-light-primary ms-2">Asosiy</span> : null}</div>
+                                <div className="d-flex align-items-center gap-2 flex-wrap mt-1">
+                                  {address.uzpostIndex ? <span className="kb-zip" title="Pochta indeksi"><i className="ti ti-mailbox"></i>{String(address.uzpostIndex)}</span> : <span className="f-s-12 text-secondary">Indeks aniqlanmagan</span>}
+                                  {links.yandex ? <a className="f-s-12" href={links.yandex} target="_blank" rel="noreferrer">Yandex</a> : null}
+                                  {links.google ? <a className="f-s-12" href={links.google} target="_blank" rel="noreferrer">Google</a> : null}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                        {detail.addresses.length === 0 ? <EmptyState text="Manzil saqlanmagan" /> : null}
+                      </div>
+                    </div>
+                    <div className="card">
+                      <div className="card-header"><h5 className="mb-0">To‘lov va qurilmalar</h5></div>
+                      <div className="card-body pt-0">
+                        {detail.cards.map((card, index) => (
+                          <div className="kb-u360-row" key={`c${String(card.id || index)}`}>
+                            <i className="ti ti-credit-card text-secondary f-s-18"></i>
+                            <div className="min-w-0 flex-grow-1">
+                              <div className="f-s-13 f-w-600">{String(card.vendor || 'Karta')} · {String(card.number || '****')}</div>
+                              <div className="f-s-12 text-secondary">{[card.name, card.expires].filter(Boolean).map(String).join(' · ') || '—'}</div>
+                            </div>
+                          </div>
+                        ))}
+                        {detail.devices.map((device, index) => (
+                          <div className="kb-u360-row" key={`d${String(device.id || index)}`}>
+                            <i className="ti ti-device-mobile text-secondary f-s-18"></i>
+                            <div className="min-w-0 flex-grow-1">
+                              <div className="f-s-13 f-w-600 text-truncate">{String(device.name || 'Noma’lum qurilma')}</div>
+                              <div className="f-s-12 text-secondary">{String(device.platform || '—')}</div>
+                            </div>
+                            <span className={`badge ${device.push ? 'text-light-success' : 'text-light-secondary'}`}>Push: {device.push ? 'Ha' : "Yo'q"}</span>
+                          </div>
+                        ))}
+                        {detail.cards.length + detail.devices.length === 0 ? <EmptyState text="Karta yoki qurilma yo‘q" /> : null}
+                        {detail.cards.length ? <button type="button" className="btn btn-link btn-sm p-0 mt-2" onClick={() => setTab('finance')}>Kartalar va Split boshqaruvi</button> : null}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               ) : null}
 
@@ -348,7 +426,7 @@ function ProfileModal({ user, detail, loading, onHide, reload }: { user: UserRow
 function Status({ user }: { user: Pick<UserRow, 'status' | 'premium'> }) {
   const tone = user.status === 'blocked' ? 'danger' : user.status === 'pending' ? 'warn' : 'ok';
   const label = user.status === 'blocked' ? 'Bloklangan' : user.status === 'pending' ? 'Kutilmoqda' : user.premium ? 'Premium' : 'Faol';
-  return <span className={`badge text-uppercase ${toneBadge(tone)}`}>{label}</span>;
+  return <span className={`badge ${toneBadge(tone)}`}>{label}</span>;
 }
 function Info({ title, rows }: { title: string; rows: Array<[string, unknown]> }) { return <div className="col-xl-6"><div className="card h-100"><div className="card-header"><h5 className="mb-0">{title}</h5></div><div className="card-body"><ul className="list-group list-group-flush">{rows.map(([k, v]) => <li className="list-group-item d-flex justify-content-between gap-3 px-0" key={k}><span className="text-secondary">{k}</span><span className="f-w-600 text-dark text-end">{String(v ?? '—')}</span></li>)}</ul></div></div></div>; }
 type ListItem = { title: React.ReactNode; meta?: React.ReactNode; action?: React.ReactNode; extra?: React.ReactNode; avatar?: string | null };

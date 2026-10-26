@@ -372,24 +372,24 @@ export default function CatalogEdition() {
         </div>
 
         <div className="d-flex gap-2 flex-wrap align-items-center">
-          <Link href="/boshqaruv/catalog" className="btn btn-light-secondary btn-sm d-inline-flex align-items-center">
+          <Link href="/boshqaruv/catalog" className="btn btn-light-secondary btn-sm">
             <i className="ti ti-arrow-left me-1"></i>Katalog
           </Link>
 
           {!edition.deleted && edition.status !== 'merged' && (!edition.verified || edition.status !== 'active') && !isBanned ? (
             <button
               type="button"
-              className="btn btn-success btn-sm d-inline-flex align-items-center shadow-sm"
+              className="btn btn-primary btn-sm"
               onClick={() => router.post(`${base}/verify`, {}, { preserveScroll: true })}
             >
-              <i className="ti ti-circle-check me-1"></i>Katalogda Tasdiqlash
+              <i className="ti ti-circle-check me-1"></i>Katalogda tasdiqlash
             </button>
           ) : null}
 
           {!edition.deleted && edition.status !== 'merged' ? (
             <button
               type="button"
-              className="btn btn-outline-primary btn-sm d-inline-flex align-items-center"
+              className="btn btn-light-secondary btn-sm"
               onClick={handleAutoCover}
               disabled={autoCoverLoading}
               title="Internetdan (Book.uz, Asaxiy) kitob muqovasini avtomatik qidirib topish va o'rnatish"
@@ -403,7 +403,7 @@ export default function CatalogEdition() {
             <FormAction
               label="Tahrirlash"
               icon="ti ti-edit"
-              variant="primary"
+              variant="light-secondary"
               modalSize="lg"
               title="Kitob kartasini tahrirlash"
               description="Saqlangach nom, muallif, muqova, annotatsiya shu kitobning barcha do'kon takliflariga avtomatik ko'chiriladi va vektorlar qayta hisoblanadi."
@@ -425,7 +425,7 @@ export default function CatalogEdition() {
             <FormAction
               label="Birlashtirish"
               icon="ti ti-arrows-exchange"
-              variant="light-warning"
+              variant="light-secondary"
               title="Boshqa kartaga birlashtirish"
               description="Bu kartaning barcha takliflari, sharhlari va arizalari tanlangan kartaga o'tadi."
               submitLabel="Birlashtirish"
@@ -461,7 +461,7 @@ export default function CatalogEdition() {
           {isBanned || edition.deleted ? (
             <button
               type="button"
-              className="btn btn-success btn-sm d-inline-flex align-items-center shadow-sm"
+              className="btn btn-primary btn-sm"
               onClick={submitUnban}
             >
               <i className="ti ti-rotate-clockwise me-1"></i>Sotuvga qaytarish
@@ -770,18 +770,18 @@ export default function CatalogEdition() {
             {/* Tab 1: Do'kon takliflari (Offers & BuyBox) */}
             {activeTab === 'offers' && (
               <div className="card-body p-0">
-                <div className="p-3 bg-light-primary bg-opacity-25 border-bottom d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <div className="px-4 py-3 border-bottom d-flex align-items-center justify-content-between flex-wrap gap-2">
                   <div className="d-flex align-items-center gap-2">
-                    <span className="h-35 w-35 d-flex-center b-r-50 bg-primary text-white">
+                    <span className="h-35 w-35 d-flex-center b-r-10 text-light-primary">
                       <i className="ti ti-crown f-s-18"></i>
                     </span>
                     <div>
-                      <h6 className="mb-0 f-w-700 text-dark">BuyBox Tanlovi</h6>
+                      <h6 className="mb-0 f-w-600 text-dark">BuyBox tanlovi</h6>
                       <small className="text-secondary">Xaridorlar ilovasida eng arzon, ishonchli va sotuvda bor do'kon ko'rsatiladi</small>
                     </div>
                   </div>
                   {buyBoxOffer ? (
-                    <span className="badge bg-success-300 text-success-dark f-w-600 f-s-13 px-3 py-2">
+                    <span className="badge text-light-success f-s-13 px-3 py-2">
                       G'olib: {buyBoxOffer.seller} ({fmt(buyBoxOffer.effectivePrice)} so'm)
                     </span>
                   ) : null}
@@ -807,7 +807,7 @@ export default function CatalogEdition() {
                         const isOutOfStock = offer.stock === 0;
 
                         return (
-                          <tr key={offer.id} className={isWinner ? 'bg-light-primary bg-opacity-10' : ''}>
+                          <tr key={offer.id} className={isWinner ? 'kb-row-winner' : ''}>
                             <td className="ps-4">
                               <div className="d-flex align-items-center gap-2">
                                 <div className="h-35 w-35 d-flex-center b-r-8 bg-light-secondary text-dark f-w-700 flex-shrink-0">
@@ -824,11 +824,11 @@ export default function CatalogEdition() {
 
                             <td>
                               <div>
-                                <span className="f-w-700 text-dark f-s-15">
+                                <span className="f-w-700 text-dark f-s-15 text-nowrap">
                                   {fmt(offer.effectivePrice)} so'm
                                 </span>
                                 {offer.discountPrice > 0 && offer.discountPrice < offer.price ? (
-                                  <small className="d-block text-muted text-decoration-line-through">
+                                  <small className="d-block text-muted text-decoration-line-through text-nowrap">
                                     {fmt(offer.price)} so'm
                                   </small>
                                 ) : null}
@@ -855,7 +855,7 @@ export default function CatalogEdition() {
                             </td>
 
                             <td>
-                              <span className="f-w-600 text-secondary d-flex align-items-center gap-1">
+                              <span className="f-w-600 text-secondary d-flex align-items-center gap-1 text-nowrap">
                                 <i className="ti ti-shopping-bag text-muted"></i>
                                 {fmt(offer.sold)} dona
                               </span>

@@ -113,10 +113,9 @@ export default function Fiscalization() {
 
       <div className="row">
         <div className="col-xl-4">
-          <div className="card orders-provided-card h-100">
+          <div className="card h-100">
             <div className="card-body">
-              <i className="ph-bold ph-circle circle-bg-img"></i>
-              <p className="f-s-18 f-w-600 text-dark mb-1">Umumiy holat</p>
+              <p className="kb-res-head mb-1">Umumiy holat</p>
               <h2 className="text-secondary-dark mb-2">{safeCoverage}% <small className="f-s-14 f-w-500">qamrov</small></h2>
               <div className="custom-progress-container mb-2">
                 <div className="progress-bar productive" style={{ width: `${safeCoverage}%` }}></div>

@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 
 /**
  * Axelit "profile" sahifasi komponentlari (apps/profile):
- *   ProfileCard — muqova + aylana avatar + ism + statistikalar ("profile-container")
+ *   ProfileCard — avatar + ism + belgilar, ostida ko'rsatkichlar (yangi dizayn)
  *   AboutList   — "About me" kartasidagi ikonka + nom + qiymat qatorlari ("about-list")
  *   Avatar      — Axelit ro'yxatlaridagi aylana avatar (h-40 w-40 d-flex-center b-r-50 …)
  */
@@ -46,46 +46,35 @@ export function ProfileCard({ image, name, subtitle, badges, stats, actions, ver
   icon?: string;
 }) {
   const plain = typeof name === 'string' ? name : '';
+  // Yangi dizayn: muqova va katta aylana o'rniga — ixcham sarlavha qatori,
+  // ostida teng ustunli ko'rsatkichlar. Props o'zgarmagan.
   return (
-    <div className="card">
+    <div className="card kb-profile">
       <div className="card-body">
-        <div className="profile-container">
-          <div className="image-details">
-            <div className="profile-image kc-profile-cover"></div>
-            <div className="profile-pic">
-              <div className="avatar-upload">
-                <div className="avatar-preview">
-                  <div className={`kc-avatar ${square ? 'kc-avatar-square' : ''}`} style={image ? { backgroundImage: `url("${image}")` } : undefined}>
-                    {image ? null : (
-                      <span className={`w-100 h-100 d-flex-center ${square ? 'b-r-18' : 'b-r-50'} text-light-${toneOfName(plain)}`}>
-                        {icon ? <i className={icon}></i> : initialsOf(plain)}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="person-details">
-            <h5 className="f-w-600 mb-1 text-break">
+        <div className="kb-profile-head">
+          <span className={`kb-profile-avatar ${square ? 'is-square' : ''} ${image ? '' : `text-light-${toneOfName(plain)}`}`}>
+            {image ? <img src={image} alt={plain} /> : icon ? <i className={icon}></i> : initialsOf(plain)}
+          </span>
+          <div className="min-w-0 flex-grow-1">
+            <h5 className="kb-profile-name text-break">
               {name}
-              {verified ? <i className="ti ti-discount-check-filled text-info ms-1 align-middle"></i> : null}
+              {verified ? <i className="ti ti-discount-check-filled text-primary ms-1 align-middle" title="Tasdiqlangan"></i> : null}
             </h5>
-            {subtitle ? <p className="text-secondary mb-2 text-break">{subtitle}</p> : null}
-            {badges ? <div className="d-flex flex-wrap justify-content-center gap-1">{badges}</div> : null}
-            {stats && stats.length ? (
-              <div className="details">
-                {stats.map((stat, index) => (
-                  <div key={index}>
-                    <h4 className="text-primary mb-0 f-s-20">{stat.value}</h4>
-                    <p className="text-secondary mb-0 f-s-13">{stat.label}</p>
-                  </div>
-                ))}
-              </div>
-            ) : null}
-            {actions ? <div className="d-flex flex-wrap justify-content-center gap-2 mt-3">{actions}</div> : null}
+            {subtitle ? <div className="kb-profile-sub text-break">{subtitle}</div> : null}
+            {badges ? <div className="d-flex flex-wrap gap-1 mt-2">{badges}</div> : null}
           </div>
         </div>
+        {stats && stats.length ? (
+          <div className="kb-profile-stats" style={{ gridTemplateColumns: `repeat(${Math.min(stats.length, 4)}, minmax(0, 1fr))` }}>
+            {stats.map((stat, index) => (
+              <div key={index}>
+                <div className="kb-profile-stat-value">{stat.value}</div>
+                <div className="kb-profile-stat-label">{stat.label}</div>
+              </div>
+            ))}
+          </div>
+        ) : null}
+        {actions ? <div className="d-flex flex-wrap gap-2 mt-3">{actions}</div> : null}
       </div>
     </div>
   );

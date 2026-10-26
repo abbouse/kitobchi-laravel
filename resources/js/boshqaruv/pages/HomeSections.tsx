@@ -202,7 +202,7 @@ export default function HomeSections() {
   );
 
   return (
-    <div className="container-fluid py-3">
+    <div>
       <div className="d-flex align-items-end justify-content-between flex-wrap gap-3 mb-3">
         <div>
           <h4 className="main-title mb-0">Ilova bosh sahifasi</h4>

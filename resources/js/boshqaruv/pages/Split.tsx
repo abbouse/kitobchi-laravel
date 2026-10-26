@@ -545,7 +545,7 @@ function PlanSection({ plans, storeUrl, previewUrl }: { plans: SplitPlanRow[]; s
       <div className="card-body">
 
         <div className="table-responsive app-scroll">
-          <table className="table table-bottom-border align-middle">
+          <table className="table table-bottom-border align-middle" style={{ minWidth: 1180 }}>
             <thead>
               <tr>
                 <th>Nomi</th>
@@ -629,7 +629,7 @@ function PlanRow({ plan, storeUrl, onPreview, previewLoading }: { plan: SplitPla
     <tr className={plan ? '' : 'table-light'}>
       <td>
         {plan ? <input form={formId} type="hidden" name="id" value={plan.id} /> : null}
-        <input form={formId} className="form-control form-control-sm" name="name" placeholder="Masalan: 2 oy foizsiz" defaultValue={plan?.name ?? ''} required />
+        <input form={formId} className="form-control form-control-sm" style={{ minWidth: 160 }} name="name" placeholder="Masalan: 2 oy foizsiz" defaultValue={plan?.name ?? ''} required />
       </td>
       <td><input form={formId} className="form-control form-control-sm w-70" name="months" type="number" min={1} max={36} defaultValue={plan?.months ?? 2} /></td>
       <td>
@@ -659,7 +659,7 @@ function PlanRow({ plan, storeUrl, onPreview, previewLoading }: { plan: SplitPla
           {plan ? <span className={`badge ${plan.enabled ? 'text-light-success' : 'text-light-secondary'}`}>{plan.enabled ? 'Faol' : 'O‘chiq'}</span> : <span className="text-muted f-s-13">yoqish</span>}
         </label>
       </td>
-      <td>
+      <td className="text-nowrap">
         <form
           id={formId}
           className="d-inline"

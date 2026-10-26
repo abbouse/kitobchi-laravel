@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { router, Link } from '@inertiajs/react';
 import { PageCrumbs } from '../Layout';
+import { StatWidget } from '../components/Axelit';
 import PaginationControls from '../components/PaginationControls';
 
 const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(Math.round(n || 0));
@@ -102,152 +103,39 @@ export default function DemandAnalytics({
   };
 
   return (
-    <div className="container-fluid py-3">
-      {/* ── Sarlavha & Breadcrumbs ── */}
-      <div className="d-flex flex-wrap justify-content-between align-items-center mb-3">
+    <div>
+      <div className="d-flex align-items-end justify-content-between flex-wrap gap-3 mx-1 mb-3">
         <div>
-          <h4 className="mb-0 text-dark f-w-700">Mijozlar talabi va Xohishlar analitikasi</h4>
+          <h4 className="main-title mb-0">Talab va savat analitikasi</h4>
           <PageCrumbs />
+          <p className="mb-0 text-secondary">Mijozlar xohlagan, savatda saqlagan va kutayotgan kitoblar — jonli talab va zaxira tahlili</p>
         </div>
-        <div className="d-flex align-items-center gap-2">
-          <span className="badge text-light-primary border-0 p-2 f-s-12">
-            <i className="ti ti-chart-bar me-1"></i>Jonli talab va zaxira tahlili
-          </span>
-          <button
-            className="btn btn-sm btn-outline-secondary"
-            onClick={() => router.reload({ preserveScroll: true })}
-            title="Yangilash"
-          >
-            <i className="ti ti-rotate me-1"></i>Yangilash
-          </button>
-        </div>
+        <button className="btn btn-sm btn-light-secondary" onClick={() => router.reload()} title="Yangilash">
+          <i className="ti ti-rotate"></i>Yangilash
+        </button>
       </div>
 
-      {/* ── KPI Widgets (Axelit uslubida) ── */}
-      <div className="row g-3 mb-4">
-        {/* Widget 1: Savatdagi tugagan kitoblar */}
+      <div className="row">
         <div className="col-sm-6 col-xl-3">
-          <div className="card h-100 border-0 shadow-sm bg-surface">
-            <div className="card-body">
-              <div className="d-flex justify-content-between align-items-center">
-                <div>
-                  <span className="text-secondary f-s-12 f-w-600 text-uppercase">
-                    Savatda bor · Omborda tugagan
-                  </span>
-                  <h3 className="mb-0 text-danger f-w-700 mt-2">
-                    {kpi.cartOutOfStockProducts}{' '}
-                    <span className="f-s-14 f-w-500 text-muted">ta kitob</span>
-                  </h3>
-                </div>
-                <div className="h-50 w-50 d-flex-center b-r-50 bg-light-danger text-danger flex-shrink-0">
-                  <i className="ti ti-shopping-cart-x f-s-24"></i>
-                </div>
-              </div>
-              <div className="mt-3 pt-2 border-top d-flex justify-content-between f-s-12">
-                <span className="text-muted">Kutilayotgan dona:</span>
-                <span className="f-w-600 text-danger">{fmt(kpi.cartOutOfStockUnits)} dona</span>
-              </div>
-              <div className="d-flex justify-content-between f-s-12 mt-1">
-                <span className="text-muted">Yo'qotilayotgan savdo:</span>
-                <span className="f-w-700 text-danger">{fmt(kpi.lostRevenueInCarts)} so'm</span>
-              </div>
-            </div>
-          </div>
+          <StatWidget variant="danger" label="Savatda bor, omborda tugagan" value={<>{fmt(kpi.cartOutOfStockProducts)} <span className="kb-res-unit">ta kitob</span></>}
+            sub={<>{fmt(kpi.cartOutOfStockUnits)} dona kutilmoqda · <span className="text-danger f-w-600">{fmt(kpi.lostRevenueInCarts)} so‘m</span> yo‘qotilmoqda</>} />
         </div>
-
-        {/* Widget 2: Sevimlilardagi tugagan kitoblar */}
         <div className="col-sm-6 col-xl-3">
-          <div className="card h-100 border-0 shadow-sm bg-surface">
-            <div className="card-body">
-              <div className="d-flex justify-content-between align-items-center">
-                <div>
-                  <span className="text-secondary f-s-12 f-w-600 text-uppercase">
-                    Xohishlarda bor · Omborda 0
-                  </span>
-                  <h3 className="mb-0 text-warning f-w-700 mt-2">
-                    {kpi.wishlistOutOfStockProducts}{' '}
-                    <span className="f-s-14 f-w-500 text-muted">ta kitob</span>
-                  </h3>
-                </div>
-                <div className="h-50 w-50 d-flex-center b-r-50 bg-light-warning text-warning flex-shrink-0">
-                  <i className="ti ti-ban f-s-24"></i>
-                </div>
-              </div>
-              <div className="mt-3 pt-2 border-top d-flex justify-content-between f-s-12">
-                <span className="text-muted">Potentsial talab hajmi:</span>
-                <span className="f-w-700 text-warning">{fmt(kpi.unrealizedWishlistDemand)} so'm</span>
-              </div>
-              <div className="d-flex justify-content-between f-s-12 mt-1">
-                <span className="text-muted">Tavsiya:</span>
-                <span className="badge text-light-warning border-0">Zaxirani to'ldirish</span>
-              </div>
-            </div>
-          </div>
+          <StatWidget variant="warning" label="Xohishlarda bor, omborda 0" value={<>{fmt(kpi.wishlistOutOfStockProducts)} <span className="kb-res-unit">ta kitob</span></>}
+            sub={<>Potentsial talab: <span className="f-w-600 text-dark">{fmt(kpi.unrealizedWishlistDemand)} so‘m</span> · zaxirani to‘ldiring</>} />
         </div>
-
-        {/* Widget 3: Qayta kelishini kutayotgan so'rovlar (Alertlar) */}
         <div className="col-sm-6 col-xl-3">
-          <div className="card h-100 border-0 shadow-sm bg-surface">
-            <div className="card-body">
-              <div className="d-flex justify-content-between align-items-center">
-                <div>
-                  <span className="text-secondary f-s-12 f-w-600 text-uppercase">
-                    Kutish so'rovlari (Alerts)
-                  </span>
-                  <h3 className="mb-0 text-info f-w-700 mt-2">
-                    {kpi.totalStockAlerts}{' '}
-                    <span className="f-s-14 f-w-500 text-muted">ta so'rov</span>
-                  </h3>
-                </div>
-                <div className="h-50 w-50 d-flex-center b-r-50 bg-light-info text-info flex-shrink-0">
-                  <i className="ti ti-bell-filled f-s-24"></i>
-                </div>
-              </div>
-              <div className="mt-3 pt-2 border-top d-flex justify-content-between f-s-12">
-                <span className="text-muted">Kutilayotgan kitoblar:</span>
-                <span className="f-w-600 text-dark">{fmt(kpi.stockAlertProducts)} xil kitob</span>
-              </div>
-              <div className="d-flex justify-content-between f-s-12 mt-1">
-                <span className="text-muted">Bildirishnoma:</span>
-                <span className="badge text-light-info border-0">Avtomatik Push / SMS</span>
-              </div>
-            </div>
-          </div>
+          <StatWidget variant="primary" label="Kelganda xabar berish so‘rovlari" value={<>{fmt(kpi.totalStockAlerts)} <span className="kb-res-unit">ta so‘rov</span></>}
+            sub={<>{fmt(kpi.stockAlertProducts)} xil kitob · avtomatik push / SMS</>} />
         </div>
-
-        {/* Widget 4: Xohishlar va Savatdagi umumiy talab */}
         <div className="col-sm-6 col-xl-3">
-          <div className="card h-100 border-0 shadow-sm bg-surface">
-            <div className="card-body">
-              <div className="d-flex justify-content-between align-items-center">
-                <div>
-                  <span className="text-secondary f-s-12 f-w-600 text-uppercase">
-                    Jami xohishlar (Wishlist)
-                  </span>
-                  <h3 className="mb-0 text-success f-w-700 mt-2">
-                    {fmt(kpi.totalWishlistItems)}{' '}
-                    <span className="f-s-14 f-w-500 text-muted">saqlangan</span>
-                  </h3>
-                </div>
-                <div className="h-50 w-50 d-flex-center b-r-50 bg-light-success text-success flex-shrink-0">
-                  <i className="ti ti-heart-filled f-s-24"></i>
-                </div>
-              </div>
-              <div className="mt-3 pt-2 border-top d-flex justify-content-between f-s-12">
-                <span className="text-muted">Xohish bildirgan mijozlar:</span>
-                <span className="f-w-600 text-dark">{fmt(kpi.uniqueWishlistUsers)} nafar</span>
-              </div>
-              <div className="d-flex justify-content-between f-s-12 mt-1">
-                <span className="text-muted">Savatdagi umumiy tovar:</span>
-                <span className="f-w-600 text-success">{fmt(kpi.totalCartUnits)} dona</span>
-              </div>
-            </div>
-          </div>
+          <StatWidget variant="success" label="Jami xohishlar (wishlist)" value={<>{fmt(kpi.totalWishlistItems)} <span className="kb-res-unit">saqlangan</span></>}
+            sub={<>{fmt(kpi.uniqueWishlistUsers)} mijoz · savatda {fmt(kpi.totalCartUnits)} dona</>} />
         </div>
       </div>
 
       {/* ── Asosiy Tahlil Doskasi ── */}
-      <div className="card border-0 shadow-sm">
+      <div className="card">
         <div className="card-body">
           {/* Segment tabs — kc-segment (iOS/Axelit uslubi) */}
           <div className="nav kc-segment kc-segment-wrap mb-3" role="tablist" aria-label="Tahlil bo'limlari">
@@ -257,7 +145,7 @@ export default function DemandAnalytics({
                   className={`nav-link${filters.tab === tab.key ? ' active' : ''}`}
                   onClick={() => applyFilters({ tab: tab.key })}
                 >
-                  <i className={`${tab.icon}`}></i>
+                  <i className={`ti ${String(tab.icon || '').replace(/^ti\s+/, '')}`}></i>
                   {tab.label}
                   <span className="badge">{tab.badge}</span>
                 </button>

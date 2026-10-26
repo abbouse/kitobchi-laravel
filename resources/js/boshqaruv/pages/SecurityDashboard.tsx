@@ -191,7 +191,6 @@ export default function SecurityDashboard({
   const isDiskCritical = serverHealth?.disk?.status === 'critical';
 
   // Umumiy tizim holati
-  const systemOk = !hasConfigError && !isDiskCritical && threatAnalysis.threat_level !== 'normal';
   const overallStatus = hasConfigError || isDiskCritical
     ? { tone: 'danger', label: 'Kritik holat', icon: 'ti-alert-triangle' }
     : threatAnalysis.threat_level === 'high'
@@ -205,83 +204,30 @@ export default function SecurityDashboard({
     servicesStatus.queue.failed_jobs === 0,
   ];
   const healthyServices = svcCount.filter(Boolean).length;
+  const diskTone = serverHealth.disk.used_percent >= 90 ? 'danger' : serverHealth.disk.used_percent >= 80 ? 'warning' : 'primary';
 
   return (
     <div>
-      {/* ═══════════════════════════════════════════════════════════════════
-          1-QATOR: Asimetrik hero — chap: status banner, o'ng: tezkor amallar
-         ═══════════════════════════════════════════════════════════════════ */}
-      <div className="row mb-4">
-        {/* Hero status card — keng */}
-        <div className="col-xl-8 mb-3 mb-xl-0">
-          <div className={`card bg-${overallStatus.tone}-300 h-100 overflow-hidden position-relative`}>
-            <div className="card-body py-4 d-flex align-items-center gap-4 flex-wrap">
-              <div className={`h-70 w-70 d-flex-center b-r-20 bg-${overallStatus.tone} flex-shrink-0`}
-                   style={{ boxShadow: `0 8px 24px rgba(var(--bs-${overallStatus.tone}-rgb), .35)` }}>
-                <i className={`ti ${overallStatus.icon} f-s-32 text-white`}></i>
-              </div>
-              <div className="flex-grow-1 min-w-0">
-                <div className="d-flex align-items-center gap-2 mb-1">
-                  <h4 className={`text-${overallStatus.tone}-dark f-w-700 mb-0`}>
-                    Kiberxavfsizlik & Server
-                  </h4>
-                  {firewallActive && (
-                    <span className={`badge bg-white-300 text-${overallStatus.tone}-dark`}>
-                      <span className="d-inline-block h-6 w-6 b-r-50 bg-success me-1" style={{ animation: 'pulse 2s infinite' }}></span>
-                      WAF Faol
-                    </span>
-                  )}
-                </div>
-                <p className={`text-${overallStatus.tone}-dark mb-2 opacity-75`}>
-                  Real-vaqtli server monitoringi · {generatedAt}
-                </p>
-                <div className="d-flex gap-2 align-items-center flex-wrap">
-                  <span className={`badge bg-white-300 text-${overallStatus.tone}-dark`}>
-                    <i className="ti ti-user me-1"></i>IP: <code className="text-inherit">{currentAdminIp}</code>
-                  </span>
-                  <span className={`badge bg-white-300 text-${overallStatus.tone}-dark`}>
-                    <i className="ti ti-database me-1"></i>{serverHealth.system.server_ip}
-                  </span>
-                  <span className={`badge bg-white-300 text-${overallStatus.tone}-dark`}>
-                    <i className="ti ti-clock me-1"></i>Uptime: {serverHealth.system.uptime}
-                  </span>
-                </div>
-              </div>
-              <i className={`ti ${overallStatus.icon} position-absolute end-0 bottom-0 text-${overallStatus.tone} opacity-25`}
-                 style={{ fontSize: '140px', lineHeight: 1, transform: 'translate(15%, 15%)' }}></i>
-            </div>
+      {/* Sarlavha: umumiy holat, server ma'lumoti va tezkor amallar */}
+      <div className="d-flex align-items-end justify-content-between flex-wrap gap-3 mx-1 mb-3">
+        <div className="min-w-0">
+          <div className="d-flex align-items-center gap-2 flex-wrap">
+            <h4 className="main-title mb-0">Kiberxavfsizlik va server</h4>
+            <span className={`badge text-light-${overallStatus.tone}`}><i className={`ti ${overallStatus.icon}`}></i>{overallStatus.label}</span>
+            {firewallActive ? <span className="badge text-light-success"><i className="ti ti-shield-check"></i>WAF faol</span> : <span className="badge text-light-danger">WAF o‘chiq</span>}
           </div>
+          <p className="mb-0 text-secondary f-s-13 mt-1">
+            Real-vaqtli monitoring · {generatedAt}
+            <span className="mx-2">·</span>Sizning IP: <code>{currentAdminIp}</code>
+            <span className="mx-2">·</span>Server: {serverHealth.system.server_ip}
+            <span className="mx-2">·</span>Uptime: {serverHealth.system.uptime}
+          </p>
         </div>
-
-        {/* Tezkor amallar kartasi — ixcham */}
-        <div className="col-xl-4">
-          <div className="card h-100">
-            <div className="card-header">
-              <h6 className="f-w-600 mb-0"><i className="ti ti-bolt me-2 text-warning"></i>Tezkor amallar</h6>
-            </div>
-            <div className="card-body d-flex flex-column gap-2 py-3">
-              <button type="button" className="btn btn-light-secondary btn-sm text-start d-flex align-items-center gap-2"
-                disabled={isProcessing} onClick={() => router.reload()}>
-                <span className="h-28 w-28 d-flex-center b-r-8 bg-light-info flex-shrink-0"><i className="ti ti-rotate text-info"></i></span>
-                <span>Yangilash</span>
-              </button>
-              <button type="button" className="btn btn-light-secondary btn-sm text-start d-flex align-items-center gap-2"
-                disabled={isProcessing} onClick={handleClearCache}>
-                <span className="h-28 w-28 d-flex-center b-r-8 bg-light-primary flex-shrink-0"><i className="ti ti-trash text-primary"></i></span>
-                <span>Keshni tozalash</span>
-              </button>
-              <button type="button" className="btn btn-light-secondary btn-sm text-start d-flex align-items-center gap-2"
-                disabled={isProcessing} onClick={handleFixStorage}>
-                <span className="h-28 w-28 d-flex-center b-r-8 bg-light-success flex-shrink-0"><i className="ti ti-folder text-success"></i></span>
-                <span>Storage tiklash</span>
-              </button>
-              <button type="button" className="btn btn-light-secondary btn-sm text-start d-flex align-items-center gap-2"
-                disabled={isProcessing} onClick={handleTruncateLogs}>
-                <span className="h-28 w-28 d-flex-center b-r-8 bg-light-danger flex-shrink-0"><i className="ti ti-trash text-danger"></i></span>
-                <span>Log tozalash <span className="text-secondary f-s-12">({logFileSize})</span></span>
-              </button>
-            </div>
-          </div>
+        <div className="d-flex gap-2 flex-wrap">
+          <button type="button" className="btn btn-sm btn-light-secondary" disabled={isProcessing} onClick={() => router.reload()}><i className="ti ti-rotate"></i>Yangilash</button>
+          <button type="button" className="btn btn-sm btn-light-secondary" disabled={isProcessing} onClick={handleClearCache}><i className="ti ti-eraser"></i>Keshni tozalash</button>
+          <button type="button" className="btn btn-sm btn-light-secondary" disabled={isProcessing} onClick={handleFixStorage}><i className="ti ti-folder"></i>Storage tiklash</button>
+          <button type="button" className="btn btn-sm btn-light-danger" disabled={isProcessing} onClick={handleTruncateLogs}><i className="ti ti-trash"></i>Log tozalash ({logFileSize})</button>
         </div>
       </div>
 
@@ -323,163 +269,81 @@ export default function SecurityDashboard({
         </div>
       )}
 
-      {/* ═══════════════════════════════════════════════════════════════════
-          2-QATOR: 4 ta resurs vidjet — Axelit product-sold / orders-provided
-                   Har xil pastel fonlar bilan vizual ritm
-         ═══════════════════════════════════════════════════════════════════ */}
-      <div className="row mb-2">
-        {/* Disk — orders-provided-card (oq + pattern) */}
-        <div className="col-sm-6 col-xxl-3 mb-4">
-          <div className="card orders-provided-card h-100">
+      {/* Resurslar: disk, RAM, tahdidlar, xizmatlar */}
+      <div className="row">
+        <div className="col-sm-6 col-xxl-3">
+          <div className="card h-100 kb-res">
             <div className="card-body">
-              <i className="ph-bold ph-circle circle-bg-img"></i>
-              <div className="d-flex align-items-center justify-content-between">
-                <p className="f-s-16 f-w-600 text-dark mb-0">Disk Bandligi</p>
-                <span className={`badge ${serverHealth.disk.used_percent >= 90 ? 'bg-light-danger text-danger' : serverHealth.disk.used_percent >= 80 ? 'bg-light-warning text-warning' : 'bg-light-success text-success'}`}>
-                  {serverHealth.disk.free_formatted} bo'sh
-                </span>
-              </div>
-              <h2 className="text-secondary-dark my-2">{serverHealth.disk.used_percent}%</h2>
-              <div className="progress progress-sm mb-2">
-                <div
-                  className={`progress-bar ${serverHealth.disk.used_percent >= 90 ? 'bg-danger' : serverHealth.disk.used_percent >= 80 ? 'bg-warning' : 'bg-primary'}`}
-                  role="progressbar"
-                  style={{ width: `${Math.min(100, serverHealth.disk.used_percent)}%` }}
-                ></div>
-              </div>
-              <p className="mb-0 text-secondary f-s-13 d-flex justify-content-between">
-                <span>{serverHealth.disk.used_formatted} / {serverHealth.disk.total_formatted}</span>
-                <span>Inodes: {serverHealth.disk.inodes_percent !== null ? `${serverHealth.disk.inodes_percent}%` : 'N/A'}</span>
-              </p>
-              <i className="iconoir-hard-drive icon-bg text-secondary"></i>
+              <div className="kb-res-head"><span>Disk</span><span className={`badge text-light-${diskTone === 'primary' ? 'success' : diskTone}`}>{serverHealth.disk.free_formatted} bo‘sh</span></div>
+              <div className="kb-res-value">{serverHealth.disk.used_percent}%</div>
+              <div className="progress progress-sm my-2"><div className={`progress-bar bg-${diskTone}`} role="progressbar" style={{ width: `${Math.min(100, serverHealth.disk.used_percent)}%` }}></div></div>
+              <div className="kb-res-foot"><span>{serverHealth.disk.used_formatted} / {serverHealth.disk.total_formatted}</span><span>Inodes: {serverHealth.disk.inodes_percent !== null ? `${serverHealth.disk.inodes_percent}%` : 'N/A'}</span></div>
             </div>
           </div>
         </div>
-
-        {/* RAM — product-sold (primary pastel) */}
-        <div className="col-sm-6 col-xxl-3 mb-4">
-          <div className="card bg-primary-300 product-sold-card h-100">
+        <div className="col-sm-6 col-xxl-3">
+          <div className="card h-100 kb-res">
             <div className="card-body">
-              <div className="d-flex align-items-center justify-content-between">
-                <h5 className="text-primary-dark f-w-600 mb-0">RAM Xotira</h5>
-                <span className="badge bg-white-300 text-primary-dark">
-                  {serverHealth.ram.percent !== null ? `${serverHealth.ram.percent}% band` : 'Linux RAM'}
-                </span>
-              </div>
-              <div className="my-2">
-                <h2 className="text-primary-dark mb-0">
-                  {serverHealth.ram.percent !== null ? `${serverHealth.ram.percent}%` : `${serverHealth.system.load_average[0] || 0} load`}
-                </h2>
-              </div>
-              <div className="progress progress-sm mb-2">
-                <div className="progress-bar bg-primary" role="progressbar"
-                  style={{ width: `${Math.min(100, serverHealth.ram.percent ?? 30)}%` }}></div>
-              </div>
-              <p className="mb-0 text-primary-dark f-s-13 d-flex justify-content-between">
-                <span>{serverHealth.ram.used_mb ? `${serverHealth.ram.used_mb} MB` : '0 MB'} / {serverHealth.ram.total_mb ? `${serverHealth.ram.total_mb} MB` : 'N/A'}</span>
-                <span>Load: {serverHealth.system.load_average.join(', ')}</span>
-              </p>
-              <span className="bg-primary h-35 w-35 d-flex-center b-r-50 product-sold-icon">
-                <i className="iconoir-cpu f-w-600 f-s-18"></i>
-              </span>
+              <div className="kb-res-head"><span>RAM</span><span className="badge text-light-secondary">{serverHealth.ram.percent !== null ? `${serverHealth.ram.percent}% band` : 'Linux RAM'}</span></div>
+              <div className="kb-res-value">{serverHealth.ram.percent !== null ? `${serverHealth.ram.percent}%` : `${serverHealth.system.load_average[0] || 0} load`}</div>
+              <div className="progress progress-sm my-2"><div className={`progress-bar bg-${(serverHealth.ram.percent ?? 0) >= 90 ? 'danger' : (serverHealth.ram.percent ?? 0) >= 80 ? 'warning' : 'primary'}`} role="progressbar" style={{ width: `${Math.min(100, serverHealth.ram.percent ?? 30)}%` }}></div></div>
+              <div className="kb-res-foot"><span>{serverHealth.ram.used_mb ? `${serverHealth.ram.used_mb} MB` : '0 MB'} / {serverHealth.ram.total_mb ? `${serverHealth.ram.total_mb} MB` : 'N/A'}</span><span>Load: {serverHealth.system.load_average.join(', ')}</span></div>
             </div>
           </div>
         </div>
-
-        {/* Tahdidlar — product-sold (danger yoki warning pastel) */}
-        <div className="col-sm-6 col-xxl-3 mb-4">
-          <div className={`card ${threatAnalysis.threat_level === 'high' ? 'bg-danger-300' : 'bg-warning-300'} product-sold-card h-100`}>
+        <div className="col-sm-6 col-xxl-3">
+          <div className="card h-100 kb-res">
             <div className="card-body">
-              <div className="d-flex align-items-center justify-content-between">
-                <h5 className={`${threatAnalysis.threat_level === 'high' ? 'text-danger-dark' : 'text-warning-dark'} f-w-600 mb-0`}>
-                  Kiber Tahdidlar
-                </h5>
-                <span className={`badge bg-white-300 ${threatAnalysis.threat_level === 'high' ? 'text-danger-dark' : 'text-warning-dark'}`}>
-                  {threatAnalysis.threat_level === 'high' ? 'Yuqori xavf' : "Me'yorda"}
-                </span>
-              </div>
-              <div className="my-2">
-                <h2 className={`${threatAnalysis.threat_level === 'high' ? 'text-danger-dark' : 'text-warning-dark'} mb-0`}>
-                  {totalThreats} ta xuruj
-                </h2>
-              </div>
-              <div className="progress progress-sm mb-2">
-                <div className={`progress-bar ${threatAnalysis.threat_level === 'high' ? 'bg-danger' : 'bg-warning'}`}
-                  role="progressbar"
-                  style={{ width: `${Math.min(100, totalThreats > 0 ? Math.max(15, totalThreats * 8) : 5)}%` }}></div>
-              </div>
-              <p className={`mb-0 ${threatAnalysis.threat_level === 'high' ? 'text-danger-dark' : 'text-warning-dark'} f-s-13 d-flex justify-content-between`}>
-                <span>SQLi: {threatAnalysis.vectors.sql_injection} · Path: {threatAnalysis.vectors.path_traversal}</span>
-                <span>Probes: {threatAnalysis.vectors.sensitive_files}</span>
-              </p>
-              <span className={`bg-${threatAnalysis.threat_level === 'high' ? 'danger' : 'warning'} h-35 w-35 d-flex-center b-r-50 product-sold-icon`}>
-                <i className="iconoir-shield-alert f-w-600 f-s-18"></i>
-              </span>
+              <div className="kb-res-head"><span>Kiber tahdidlar</span><span className={`badge ${threatAnalysis.threat_level === 'high' ? 'text-light-danger' : 'text-light-success'}`}>{threatAnalysis.threat_level === 'high' ? 'Yuqori xavf' : "Me'yorda"}</span></div>
+              <div className="kb-res-value">{totalThreats} <span className="kb-res-unit">ta urinish</span></div>
+              <div className="progress progress-sm my-2"><div className={`progress-bar ${threatAnalysis.threat_level === 'high' ? 'bg-danger' : 'bg-warning'}`} role="progressbar" style={{ width: `${Math.min(100, totalThreats > 0 ? Math.max(15, totalThreats * 8) : 5)}%` }}></div></div>
+              <div className="kb-res-foot"><span>SQLi: {threatAnalysis.vectors.sql_injection} · Path: {threatAnalysis.vectors.path_traversal}</span><span>Probes: {threatAnalysis.vectors.sensitive_files}</span></div>
             </div>
           </div>
         </div>
-
-        {/* Xizmatlar — product-store-card (oq + success) */}
-        <div className="col-sm-6 col-xxl-3 mb-4">
-          <div className="card product-store-card h-100">
+        <div className="col-sm-6 col-xxl-3">
+          <div className="card h-100 kb-res">
             <div className="card-body">
-              <i className="ph-bold ph-circle circle-bg-img"></i>
-              <div className="d-flex align-items-center justify-content-between">
-                <p className="f-s-16 f-w-600 text-success mb-0">Xizmatlar</p>
-                <span className="badge bg-light-success text-success">
-                  {healthyServices}/{svcCount.length} sog'lom
-                </span>
-              </div>
-              <h2 className="text-success-dark my-2">
-                {servicesStatus.database.latency_ms !== null ? `${servicesStatus.database.latency_ms} ms` : '100% OK'}
-              </h2>
-              <div className="d-flex gap-2 mb-2">
+              <div className="kb-res-head"><span>Xizmatlar</span><span className={`badge ${healthyServices === svcCount.length ? 'text-light-success' : 'text-light-warning'}`}>{healthyServices}/{svcCount.length} sog‘lom</span></div>
+              <div className="kb-res-value">{servicesStatus.database.latency_ms !== null ? <>{servicesStatus.database.latency_ms} <span className="kb-res-unit">ms · DB</span></> : '100% OK'}</div>
+              <div className="d-flex gap-1 flex-wrap my-2">
                 {([
                   { ok: servicesStatus.database.status === 'ok', label: 'MySQL' },
                   { ok: servicesStatus.cache.status === 'ok', label: servicesStatus.cache.driver },
                   { ok: servicesStatus.queue.failed_jobs === 0, label: 'Queue' },
                 ] as const).map((svc) => (
-                  <span key={svc.label} className={`badge ${svc.ok ? 'bg-light-success text-success' : 'bg-light-danger text-danger'} f-s-11`}>
-                    <i className={`ti ${svc.ok ? 'ti-check' : 'ti-x'} me-1`}></i>{svc.label}
-                  </span>
+                  <span key={svc.label} className={`badge ${svc.ok ? 'text-light-success' : 'text-light-danger'}`}><i className={`ti ${svc.ok ? 'ti-check' : 'ti-x'}`}></i>{svc.label}</span>
                 ))}
               </div>
-              <p className="mb-0 text-secondary f-s-13">
-                PHP {serverHealth.system.php_version} · Laravel v{serverHealth.system.laravel_version}
-              </p>
-              <span className="position-absolute top-0 end-0 pa-6 bg-success b-2-white border-light rounded-circle" style={{ animation: 'pulse 2s infinite' }}></span>
+              <div className="kb-res-foot"><span>PHP {serverHealth.system.php_version} · Laravel v{serverHealth.system.laravel_version}</span></div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* ═══════════════════════════════════════════════════════════════════
-          3-QATOR: Tahdid vektorlari — Axelit country-card stilida
-                   5 ta karta, har biri boshqa rangda (pastel fon + icon)
-         ═══════════════════════════════════════════════════════════════════ */}
-      <div className="row mb-2">
-        {([
-          { key: 'sql_injection', label: 'SQL Injection', desc: "Ma'lumotlar bazasiga hujum", icon: 'ti-database', tone: 'danger' },
-          { key: 'path_traversal', label: 'Path Traversal', desc: '/etc/passwd va tizim skani', icon: 'ti-search', tone: 'warning' },
-          { key: 'sensitive_files', label: 'Maxfiy Fayllar', desc: '.env, .git va admin probes', icon: 'ti-file-text', tone: 'info' },
-          { key: 'xss_attempt', label: 'XSS Hujumlar', desc: 'Zararli script kiritish', icon: 'ti-shield-lock', tone: 'primary' },
-          { key: 'auth_bruteforce', label: 'Bruteforce', desc: "Noto'g'ri parol urinishlari", icon: 'ti-lock-access', tone: 'secondary' },
-        ] as const).map((v) => (
-          <div className="col-6 col-md-4 col-xxl mb-3" key={v.key}>
-            <div className={`card country-card-${v.tone} h-100`}>
-              <div className="card-body">
-                <span className={`badge text-light-${v.tone} mb-2`}>
-                  <i className={`ti ${v.icon} me-1`}></i>{v.label}
-                </span>
-                <h4 className={`text-${v.tone === 'secondary' ? 'dark' : `${v.tone}-dark`} f-w-700 mb-1`}>
-                  {(threatAnalysis.vectors as Record<string, number>)[v.key] || 0} ta
-                </h4>
-                <p className="text-secondary f-s-12 mb-0">{v.desc}</p>
-                <i className={`ti ${v.icon} icon-bg text-${v.tone}`}></i>
-              </div>
-            </div>
+      {/* Tahdid vektorlari */}
+      <div className="card">
+        <div className="card-header d-flex align-items-center justify-content-between"><h5 className="mb-0">Tahdid vektorlari</h5><span className="f-s-13 text-secondary">Jami {totalThreats} ta urinish</span></div>
+        <div className="card-body pt-0">
+          <div className="kb-vectors">
+            {([
+              { key: 'sql_injection', label: 'SQL injection', desc: "Ma'lumotlar bazasiga hujum", icon: 'ti-database' },
+              { key: 'path_traversal', label: 'Path traversal', desc: '/etc/passwd va tizim skani', icon: 'ti-search' },
+              { key: 'sensitive_files', label: 'Maxfiy fayllar', desc: '.env, .git va admin probes', icon: 'ti-file-text' },
+              { key: 'xss_attempt', label: 'XSS', desc: 'Zararli script kiritish', icon: 'ti-shield-lock' },
+              { key: 'auth_bruteforce', label: 'Bruteforce', desc: "Noto'g'ri parol urinishlari", icon: 'ti-lock-access' },
+            ] as const).map((v) => {
+              const count = (threatAnalysis.vectors as Record<string, number>)[v.key] || 0;
+              return (
+                <div key={v.key}>
+                  <div className="kb-res-head"><span><i className={`ti ${v.icon} me-1`}></i>{v.label}</span></div>
+                  <div className={`kb-res-value ${count > 0 ? '' : 'text-secondary'}`}>{count}</div>
+                  <div className="f-s-12 text-secondary">{v.desc}</div>
+                </div>
+              );
+            })}
           </div>
-        ))}
+        </div>
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════════

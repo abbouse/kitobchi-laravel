@@ -141,7 +141,7 @@ export default function PrizeGame() {
     <div>
       <div className="d-flex align-items-end justify-content-between flex-wrap gap-3 mx-1 mb-3">
         <div>
-          <h4 className="main-title mb-0">Sovg'alar g'ildiragi</h4>
+          <h4 className="main-title mb-0">Omadli maydon</h4>
           <PageCrumbs />
           <p className="mb-0 text-secondary">Sovg'alar, tushish foizlari, soni va tangalar</p>
         </div>

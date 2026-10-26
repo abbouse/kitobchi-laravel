@@ -31,7 +31,7 @@ export default function PaginationControls({
   total: number;
   onPageChange: (page: number) => void;
 }) {
-  if (totalPages <= 1) {
+  if (!totalPages || totalPages <= 1) {
     return null;
   }
 

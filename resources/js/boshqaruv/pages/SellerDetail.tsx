@@ -102,7 +102,7 @@ export default function SellerDetail() {
       </div>
 
       <div className="row">
-        <div className="col-lg-4 col-xxl-3">
+        <div className="col-lg-4">
           <ProfileCard
             square
             image={seller.photo || null}
@@ -111,15 +111,15 @@ export default function SellerDetail() {
             verified={Boolean(seller.verified)}
             subtitle={<>{seller.ownerName || '—'} · {seller.phone || '—'}<br /><span className="f-s-13">{[seller.region, seller.district].filter(Boolean).join(', ') || 'Hudud kiritilmagan'} · ID #{seller.id}</span></>}
             badges={<>
-              <span className={`badge text-uppercase ${toneBadge(toneOf(sellerChip(seller.status)))}`}>{sellerLabel(seller.status)}</span>
+              <span className={`badge ${toneBadge(toneOf(sellerChip(seller.status)))}`}>{sellerLabel(seller.status)}</span>
               {seller.premium ? <span className="badge text-light-primary"><i className="ti ti-diamond me-1"></i>Premium</span> : null}
             </>}
             stats={[{ label: 'Karma', value: `${Math.round(seller.karma || 0)}%` }, { label: 'Mahsulot', value: String(seller.products || 0) }, { label: 'Buyurtma', value: String(seller.orders || 0) }]}
             actions={<><Link href={seller.actions?.editUrl || '#'} className="btn btn-sm btn-primary"><i className="ti ti-edit me-1"></i>Tahrirlash</Link>
-              <Link href={seller.actions?.booksUrl || '#'} className="btn btn-sm btn-light-primary"><i className="ti ti-book me-1"></i>Kitoblari</Link>
-              {seller.status !== 'approved' && seller.status !== 'blocked' && seller.status !== 'banned' ? <button type="button" className="btn btn-sm btn-outline-success" onClick={() => runPatch(seller.actions?.approveUrl, 'Seller tasdiqlansinmi?')}><i className="ti ti-circle-check me-1"></i>Tasdiqlash</button> : null}
-              {seller.status !== 'rejected' ? <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => runPatch(seller.actions?.rejectUrl, 'Seller bekor qilinsinmi?')}><i className="ti ti-circle-x me-1"></i>Bekor qilish</button> : null}
-              <button type="button" className="btn btn-sm btn-outline-warning" onClick={warnSeller}><i className="ti ti-alert-triangle me-1"></i>Ogohlantirish</button>
+              <Link href={seller.actions?.booksUrl || '#'} className="btn btn-sm btn-light-secondary"><i className="ti ti-book me-1"></i>Kitoblari</Link>
+              {seller.status !== 'approved' && seller.status !== 'blocked' && seller.status !== 'banned' ? <button type="button" className="btn btn-sm btn-light-success" onClick={() => runPatch(seller.actions?.approveUrl, 'Seller tasdiqlansinmi?')}><i className="ti ti-circle-check me-1"></i>Tasdiqlash</button> : null}
+              {seller.status !== 'rejected' ? <button type="button" className="btn btn-sm btn-light-danger" onClick={() => runPatch(seller.actions?.rejectUrl, 'Seller bekor qilinsinmi?')}><i className="ti ti-circle-x me-1"></i>Bekor qilish</button> : null}
+              <button type="button" className="btn btn-sm btn-light-warning" onClick={warnSeller}><i className="ti ti-alert-triangle me-1"></i>Ogohlantirish</button>
               <button type="button" className="btn btn-sm btn-light-secondary" onClick={resetPassword}><i className="ti ti-key me-1"></i>Parol reset</button></>}
           />
           <RestrictionPanel restriction={seller.restriction as Restriction | undefined} subject="seller" />
@@ -135,7 +135,7 @@ export default function SellerDetail() {
             </div>
           </div>
         </div>
-        <div className="col-lg-8 col-xxl-9">
+        <div className="col-lg-8">
           <div className="row g-3 mb-4">
             <div className="col-xl-4 col-sm-6"><MiniStatCard icon="ti-wallet" label="Balans" value={`${fmt(seller.balance || 0)} so'm`} index={1} /></div>
             <div className="col-xl-4 col-sm-6"><MiniStatCard icon="ti-trending-up" label="Tushum" value={`${fmt(seller.totalRevenue || 0)} so'm`} index={2} /></div>

@@ -73,7 +73,7 @@ export default function Sellers() {
   };
 
   return (
-    <div className="container-fluid py-3">
+    <div>
       {/* ── Sarlavha & Breadcrumbs ── */}
       <div className="d-flex align-items-end justify-content-between flex-wrap gap-3 mb-3">
         <div>

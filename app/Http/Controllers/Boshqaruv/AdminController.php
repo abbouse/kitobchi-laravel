@@ -1972,7 +1972,23 @@ class AdminController extends Controller
     {
         $order->load(['user:id,name,lastname,phone_number,email,reputation_score,cash_on_delivery_allowed,cod_return_strikes', 'fulfillment.hub']);
 
-        return response()->json($this->orderPayload($order));
+        $payload = $this->orderPayload($order);
+
+        // Eski buyurtmalarda indeks saqlanmagan — koordinata bo'yicha eng yaqin
+        // pochta bo'limidan aniqlaymiz (label'dagi bilan bir xil manba).
+        $primary = $payload['address'] ?? [];
+        if (is_array($primary) && $primary !== [] && empty($primary['uzpostIndex'])
+            && is_numeric($primary['lat'] ?? null) && is_numeric($primary['lon'] ?? null)) {
+            try {
+                $payload['address']['uzpostIndex'] = $this->sixDigitIndex(
+                    app(\App\Services\PostalCodeService::class)->codeFor((float) $primary['lat'], (float) $primary['lon'])
+                );
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        }
+
+        return response()->json($payload);
     }
 
     public function bookClubData(BookClub $bookClub): JsonResponse
@@ -14352,10 +14368,19 @@ PROMPT;
             'street' => $address['street'] ?? $address['address'] ?? null,
             'home' => $address['home'] ?? null,
             'fullAddress' => $text ?: null,
+            // Pochta indeksi: manzil saqlanganda yozilgan bo'lsa (uzpost_index)
+            'uzpostIndex' => $this->sixDigitIndex($address['uzpost_index'] ?? $address['postal_code'] ?? null),
             'lat' => $lat,
             'lon' => $lon,
             'mapLinks' => $this->mapLinks($lat, $lon, $text),
         ];
+    }
+
+    private function sixDigitIndex(mixed $value): ?string
+    {
+        $code = preg_replace('/\D/', '', (string) $value);
+
+        return strlen($code) === 6 ? $code : null;
     }
 
     private function mapLinks(mixed $lat = null, mixed $lon = null, ?string $address = null): array

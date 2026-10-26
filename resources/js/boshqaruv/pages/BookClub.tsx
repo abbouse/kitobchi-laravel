@@ -202,6 +202,11 @@ export default function BookClub() {
 
       <div className="row">
         <div className="col-xl-8">
+          {bookClubPosts.length === 0 ? (
+            <div className="card"><div className="card-body text-center text-secondary py-5">
+              <i className="ti ti-message-circle d-block f-s-24 mb-2"></i>Hozircha post yo‘q
+            </div></div>
+          ) : null}
           {bookClubPosts.map((post, index) => (
             <div className="card" key={post.id}>
 <div className="card-body">

@@ -30,6 +30,9 @@ full = dict(re.findall(r'\.ti-([a-z0-9-]+):before\s*\{\s*content:\s*"\\([0-9a-f]
 used = set()
 for path in glob.glob(os.path.join(ROOT, 'resources/js/boshqaruv/**/*.ts*'), recursive=True):
     used |= set(re.findall(r'\bti-([a-z0-9]+(?:-[a-z0-9]+)*)', open(path, encoding='utf-8').read()))
+# Server ham ikonka nomini yuboradi (workQueue, menyu belgilari va h.k.)
+for path in glob.glob(os.path.join(ROOT, 'app/**/*.php'), recursive=True):
+    used |= set(re.findall(r'[\'" ]ti-([a-z0-9]+(?:-[a-z0-9]+)*)[\'"]', open(path, encoding='utf-8').read()))
 
 css = open(CSS_PATH, encoding='utf-8').read()
 current = set(re.findall(r'\.ti-([a-z0-9-]+):before\{content:"\\[0-9a-f]+"\}', css))

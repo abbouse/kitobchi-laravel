@@ -170,7 +170,8 @@ function PageBody({ children, className }: { children?: ReactNode; className?: s
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const check = () => setBare(!!el.querySelector(':scope > div > .card, :scope > div > .row > [class*="col"] > .card, :scope > div > .row > [class*="col"] > .row > [class*="col"] > .card'));
+    // data-kb-bare — o'z kartalari bilan qurilgan sahifa (masalan, Foydalanuvchi 360)
+    const check = () => setBare(!!el.querySelector('[data-kb-bare]') || !!el.querySelector(':scope > div > .card, :scope > div > .row > [class*="col"] > .card, :scope > div > .row > [class*="col"] > .row > [class*="col"] > .card'));
     check();
     const mo = new MutationObserver(check);
     mo.observe(el, { childList: true, subtree: true });

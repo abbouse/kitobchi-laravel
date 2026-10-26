@@ -500,6 +500,16 @@ const canCancelOrder = (status?: string) => ![
   'returned',
 ].includes(normalizeStatus(status));
 
+// Karta to'lovi bloki uchun: holatni to'g'ri aytish (avval har qanday
+// karta holati "muvaffaqiyatli" deb ko'rsatilardi).
+const cardPaymentState = (order: Ord) => {
+  const code = String(order.paymentStatus || order.payment || '').toLowerCase();
+  if (code === 'held') return { tone: 'warning', icon: 'ti-lock', title: "Mablag' kartada ushlab turilgan (hold)", text: 'Yakuniy summa buyurtma topshirilganda yechiladi', amountLabel: 'Hold qilingan summa', note: 'Hali yechilmagan — topshirishda yakunlanadi' };
+  if (code === 'card_pending') return { tone: 'warning', icon: 'ti-hourglass', title: "Karta to'lovi kutilmoqda", text: "Mijoz to'lovni hali yakunlamagan yoki shlyuz tasdiqlamagan", amountLabel: "To'lanishi kerak", note: "To'lov hali olinmagan" };
+  if (code === 'cancelled') return { tone: 'danger', icon: 'ti-circle-x', title: "To'lov bekor qilingan", text: "Bu buyurtma bo'yicha mablag' olinmaydi", amountLabel: 'Bekor qilingan summa', note: "To'lov bekor qilingan" };
+  return { tone: 'success', icon: 'ti-circle-check', title: "To'lov muvaffaqiyatli qabul qilingan", text: "Tranzaksiya to'lov shlyuzida tasdiqlangan va qayd etilgan", amountLabel: "Tasdiqlangan to'lov summasi", note: 'Tranzaksiya muvaffaqiyatli yakunlandi' };
+};
+
 const normalizeOrder = (order: Ord): Ord => ({ ...order, status: normalizeStatus(order.status) });
 
 interface PaginationMeta {
@@ -524,34 +534,33 @@ function DeliveryScheduleStrip({ schedule, day, slot, onPick }: { schedule: Deli
   return (
     <div className="mb-3">
       <div className="d-flex align-items-center justify-content-between mb-2">
-        <div className="f-w-600"><i className="ti ti-calendar-event me-1 text-primary"></i>Yetkazish jadvali</div>
-        {day ? <button type="button" className="btn btn-sm btn-light-secondary b-r-10" onClick={() => onPick('')}><i className="ti ti-x me-1"></i>Jadvalni yopish</button> : <span className="f-s-12 text-secondary">Kunni tanlang — shu kunga rejalashtirilgan buyurtmalar chiqadi</span>}
+        <div className="f-w-600 f-s-14 d-flex align-items-center gap-2"><i className="ti ti-calendar-event text-secondary"></i>Yetkazish jadvali</div>
+        {day ? <button type="button" className="btn btn-sm btn-light-secondary" onClick={() => onPick('')}><i className="ti ti-x me-1"></i>Jadvalni yopish</button> : <span className="f-s-12 text-secondary d-none d-md-inline">Kunni tanlang — shu kunga rejalashtirilgan buyurtmalar chiqadi</span>}
       </div>
-      <div className="d-flex gap-2 overflow-auto pb-1">
+      <div className="kb-days app-scroll">
         {schedule.overdue > 0 ? (
-          <button type="button" onClick={() => onPick('overdue')}
-            className={`btn text-start b-r-10 flex-shrink-0 ${day === 'overdue' ? 'btn-danger' : 'btn-light-danger'}`} style={{ minWidth: 112 }}>
-            <span className="d-block f-s-12">Kechikkan</span>
-            <span className="d-block f-w-700 f-s-18">{schedule.overdue}</span>
-            <span className="d-block f-s-11 opacity-75">kechasi ko‘chadi</span>
+          <button type="button" onClick={() => onPick('overdue')} aria-pressed={day === 'overdue'}
+            className={`kb-day is-danger ${day === 'overdue' ? 'is-active' : ''}`}>
+            <span className="kb-day-top"><span>Kechikkan</span><i className="ti ti-clock-exclamation"></i></span>
+            <span className="kb-day-count">{schedule.overdue}</span>
+            <span className="kb-day-meta">Kechasi keyingi kunga ko‘chadi</span>
           </button>
         ) : null}
         {schedule.days.map((d) => {
           const isActive = d.date === day;
+          const slots = schedule.slots.filter((sl) => (d.slots[sl.key] || 0) > 0);
           return (
-            <button key={d.date} type="button" onClick={() => onPick(d.date)}
-              className={`btn text-start b-r-10 flex-shrink-0 ${isActive ? 'btn-primary' : d.count ? 'btn-light-primary' : 'btn-light-secondary'}`} style={{ minWidth: 112 }}>
-              <span className="d-flex align-items-center justify-content-between f-s-12"><span>{d.label}</span><span className="opacity-75">{d.weekday}</span></span>
-              <span className="d-block f-w-700 f-s-18">{d.count}</span>
+            <button key={d.date} type="button" onClick={() => onPick(d.date)} aria-pressed={isActive}
+              className={`kb-day ${isActive ? 'is-active' : ''} ${d.count ? '' : 'is-empty'}`}>
+              <span className="kb-day-top"><span>{d.label}</span><span className="kb-day-wd">{d.weekday}</span></span>
+              <span className="kb-day-count">{d.count}</span>
               {/* Vaqt oraliqlari: faqat buyurtma bor oraliqlar soni bilan */}
-              <span className="d-flex flex-wrap gap-1" style={{ minHeight: 18 }}>
-                {schedule.slots.filter((sl) => (d.slots[sl.key] || 0) > 0).map((sl) => (
-                  <span key={sl.key} className={`badge f-s-11 ${isActive ? 'bg-white text-primary' : 'text-light-primary'}`} title={sl.label}>
-                    {sl.key.replace('-', '–')} <b>{d.slots[sl.key]}</b>
-                  </span>
-                ))}
+              <span className="kb-day-slots">
+                {slots.length ? slots.map((sl) => (
+                  <span key={sl.key} className="kb-day-slot" title={sl.label}>{sl.key.replace('-', '–')} <b>{d.slots[sl.key]}</b></span>
+                )) : <span className="kb-day-meta">{d.count ? 'Vaqt tanlanmagan' : 'Buyurtma yo‘q'}</span>}
               </span>
-              {d.moved > 0 ? <span className="d-block f-s-11 mt-1 opacity-75"><i className="ti ti-arrow-forward-up"></i> {d.moved} ko‘chirilgan</span> : null}
+              {d.moved > 0 ? <span className="kb-day-meta mt-1"><i className="ti ti-arrow-forward-up"></i> {d.moved} ko‘chirilgan</span> : null}
             </button>
           );
         })}
@@ -601,11 +610,18 @@ export default function Orders() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [autoOpenedSearch, setAutoOpenedSearch] = useState('');
   const [reassignOrder, setReassignOrder] = useState<SellerOrder | null>(null);
+  // Keng ekranda (≥1400px) qatorni bosish o'ng tomonda tezkor ko'rinish
+  // panelini ochadi; to'liq sahifa "To'liq ochish" bilan. Torroq ekranda
+  // avvalgidek darhol to'liq sahifa ochiladi.
+  const wide = useMediaQuery('(min-width: 1400px)');
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const preview = wide && previewOpen && !!selectedOrd;
 
   const loadOrders = (page = 1, tab = activeTab, term = search, d = day, sl = slot) => {
     const params: Record<string, string | number> = { orders_page: page, orders_tab: tab, orders_search: term };
     if (d) params.orders_day = d;
     if (d && sl) params.orders_slot = sl;
+    setPreviewOpen(false);
     router.get('/boshqaruv/orders', params, {
       preserveState: true,
       preserveScroll: true,
@@ -630,6 +646,37 @@ export default function Orders() {
     setShowView(true);
     await loadOrderDetail(order);
   };
+
+  const handleRowClick = async (order: Ord) => {
+    if (!wide) { await handleOpenView(order); return; }
+    if (preview && selectedOrd?.id === order.id) return;
+    setSelectedOrd(normalizeOrder(order));
+    setPreviewOpen(true);
+    await loadOrderDetail(order);
+  };
+
+  // Tezkor ko'rinish ochiq bo'lsa: ↑/↓ — keyingi/oldingi buyurtma,
+  // Enter — to'liq ochish, Esc — panelni yopish.
+  useEffect(() => {
+    if (!preview || showView) return undefined;
+    const onKey = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target && (target.closest('input, textarea, select, [contenteditable="true"]') || target.closest('.modal'))) return;
+      if (document.body.classList.contains('kc-show-open')) return;
+      const index = orders.findIndex((row) => row.id === selectedOrd?.id);
+      if (event.key === 'Escape') { setPreviewOpen(false); return; }
+      if (event.key === 'Enter') { event.preventDefault(); setShowView(true); return; }
+      if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+      event.preventDefault();
+      const next = orders[index + (event.key === 'ArrowDown' ? 1 : -1)];
+      if (next) {
+        void handleRowClick(next);
+        document.querySelector(`[data-order-row="${CSS.escape(next.id)}"]`)?.scrollIntoView({ block: 'nearest' });
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [preview, showView, orders, selectedOrd?.id]);
 
   useEffect(() => {
     if (orderFilters.search && orderFilters.search !== autoOpenedSearch && orders.length === 1 && !showView) {
@@ -713,17 +760,18 @@ export default function Orders() {
 
       <div className="row">
         {[
-          { label: 'Jami buyurtmalar', val: orderCounts.all || 0, icon: 'ti-receipt', color: 'rgba(var(--primary), 1)' },
-          { label: 'Yetkazilgan', val: orderCounts.paid || 0, icon: 'ti-circle-check', color: 'rgba(var(--success), 1)' },
-          { label: 'Jarayonda', val: (orderCounts.pending || 0) + (orderCounts.shipped || 0), icon: 'ti-hourglass', color: 'rgba(var(--warning-dark), 1)' },
-          { label: 'Qaytgan', val: orderCounts.returned || 0, icon: 'ti-rotate', color: 'rgba(var(--warning-dark), 1)' },
-          { label: 'Bekor qilingan', val: orderCounts.cancelled || 0, icon: 'ti-circle-x', color: 'rgba(var(--danger), 1)' },
+          { label: 'Jami buyurtmalar', val: orderCounts.all || 0 },
+          { label: 'Yetkazilgan', val: orderCounts.paid || 0 },
+          { label: 'Jarayonda', val: (orderCounts.pending || 0) + (orderCounts.shipped || 0) },
+          { label: 'Qaytgan', val: orderCounts.returned || 0 },
+          { label: 'Bekor qilingan', val: orderCounts.cancelled || 0 },
         ].map((item, kpiIndex) => (<div className="col-xl col-md-6" key={item.label}>
           <StatWidget index={kpiIndex} label={item.label} value={item.val} />
         </div>))}
       </div>
 
-      <div className="card">
+      <div className={`kb-split ${preview ? 'has-preview' : ''}`}>
+      <div className="card kb-split-main">
         <div className="card-body">
           <div className="nav kc-segment mb-3">
             {[
@@ -737,7 +785,7 @@ export default function Orders() {
               <div key={status} className="nav-item"><button
                   className={`nav-link ${activeTab === status && !day ? 'active' : ''}`}
                   onClick={() => { setActiveTab(status); setDay(''); setSlot(''); loadOrders(1, status, search, '', ''); }}>
-                  {label} <span className="badge">{orderCounts[status] || 0}</span>
+                  {label} <span className="badge">{fmt(orderCounts[status] || 0)}</span>
                 </button></div>
             ))}
           </div>
@@ -746,39 +794,47 @@ export default function Orders() {
             onPick={(d, sl = '') => { const next = d === day && sl === slot && !sl ? '' : d; setDay(next); setSlot(next ? sl : ''); loadOrders(1, activeTab, search, next, next ? sl : ''); }} />
 
           <form className="d-flex align-items-center gap-2 flex-wrap mb-3" onSubmit={(event) => { event.preventDefault(); loadOrders(1); }}>
-            <div className="app-form app-icon-form position-relative" style={{ width: 'min(280px, 100%)' }}>
+            <div className="app-form app-icon-form position-relative" style={{ width: 'min(320px, 100%)' }}>
               <i className="ti ti-search"></i>
               <input
                 className="form-control form-control-sm"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="ID, mijoz yoki telefon"
+                aria-label="Buyurtma qidirish"
               />
             </div>
             <button className="btn btn-sm btn-light-secondary" type="submit">Qidirish</button>
             {search ? (
-              <button className="btn btn-sm btn-light-secondary" type="button" onClick={() => { setSearch(''); loadOrders(1); }}>Tozalash</button>
+              <button className="btn btn-sm btn-light-secondary" type="button" onClick={() => { setSearch(''); loadOrders(1, activeTab, ''); }}>Tozalash</button>
             ) : null}
-            <span className="ms-auto f-s-13 text-secondary">{orderPagination.total ? `${fmt(orderPagination.total)} ta buyurtma` : null}</span>
+            <span className="ms-auto f-s-13 text-secondary">
+              {orderPagination.total ? `${fmt(orderPagination.total)} ta buyurtma` : null}
+              {wide && orders.length ? <span className="kb-hint ms-3 d-none d-xxl-inline">Qatorni bosing — o‘ngda tezkor ko‘rinish, <span className="kb-kbd">↑</span><span className="kb-kbd">↓</span> bilan almashtiring</span> : null}
+            </span>
           </form>
 
           <div className="table-responsive app-scroll">
-            <table className="table table-bottom-border align-middle">
+            <table className="table table-bottom-border align-middle kb-orders-table">
               <thead>
                 <tr>
                   <th>Buyurtma</th>
                   <th>Mijoz</th>
-                  <th>Manba</th>
-                  <th className="text-end">Dona</th>
-                  <th className="text-end">Summa</th>
-                  <th>To'lov</th>
-                  <th>Yetkazish</th>
+                  <th className="kb-col-opt">To'lov</th>
+                  <th className="kb-col-opt">Yetkazish</th>
                   <th>Holat</th>
+                  <th className="text-end">Summa</th>
                   <th className="text-end">Sana</th>
-                  <th></th>
+                  <th className="kb-col-opt"><span className="visually-hidden">Amallar</span></th>
                 </tr>
               </thead>
               <tbody>
+                {orders.length === 0 ? (
+                  <tr><td colSpan={8} className="text-center text-secondary py-5">
+                    <i className="ti ti-receipt-off d-block f-s-24 mb-2"></i>
+                    {search || day ? 'Bu filtr bo‘yicha buyurtma topilmadi.' : 'Bu bo‘limda hozircha buyurtma yo‘q.'}
+                  </td></tr>
+                ) : null}
                 {orders.map((order) => {
                   const payment = order.paymentStatus || order.payment;
                   // Bekor qilingan buyurtma diqqat talab qilmaydi — faqat hali
@@ -786,53 +842,66 @@ export default function Orders() {
                   const needsAttention = statusTone(order.status) !== 'danger'
                     && (paymentTone(payment) === 'danger'
                       || (paymentTone(payment) === 'warn' && statusTone(order.status) === 'warn'));
+                  const isSelected = preview && selectedOrd?.id === order.id;
                   return (
                     <tr
                       key={order.id}
                       role="button"
+                      data-order-row={order.id}
                       data-flag={needsAttention ? 'warn' : undefined}
-                      onClick={() => handleOpenView(order)}
+                      className={isSelected ? 'is-selected' : undefined}
+                      aria-selected={isSelected || undefined}
+                      onClick={() => handleRowClick(order)}
+                      onDoubleClick={() => handleOpenView(order)}
                     >
-                      <td className="text-nowrap"><span className={`d-inline-block w-5 h-20 b-r-4 me-2 align-middle ${needsAttention ? 'bg-warning' : ''}`}></span><span className="f-w-600">{order.id}</span></td>
+                      <td className="text-nowrap">
+                        <div className="d-flex align-items-center gap-2">
+                          <span className={`kb-flag ${needsAttention ? 'is-on' : ''}`} title={needsAttention ? "To'lov e'tibor talab qiladi" : undefined}></span>
+                          <div>
+                            <div className="f-w-600">{order.id}</div>
+                            <div className="f-s-12 text-secondary">{order.items} dona · {order.sourceLabel || (order.source === 'web' ? 'Veb-sayt' : 'Ilova')}</div>
+                          </div>
+                        </div>
+                      </td>
                       <td>
                         <div className="d-flex align-items-center gap-2">
                           <PAvatar name={order.customer} size="md" />
                           <div className="min-w-0">
                             <div className="title-text text-nowrap">{order.customer}</div>
-                            {order.user?.phone ? <div className="f-s-13 text-secondary">{order.user.phone}</div> : null}
+                            {order.user?.phone ? <div className="f-s-12 text-secondary text-nowrap">{order.user.phone}</div> : null}
                           </div>
                         </div>
                       </td>
-                      <td className="f-s-13 text-secondary">{order.sourceLabel || (order.source === 'web' ? 'Veb-sayt' : 'Ilova')}</td>
-                      <td className="text-end f-w-600 text-nowrap">{order.items}</td>
-                      <td className="text-end f-w-600 text-nowrap">{fmt(order.total)}</td>
-                      <td>
-                        <span className={`badge text-uppercase ${toneBadge(paymentTone(payment))}`}>{paymentShort(payment)}</span>
+                      <td className="kb-col-opt">
+                        <span className={`badge ${toneBadge(paymentTone(payment))}`}>{paymentShort(payment)}</span>
                         {order.splitStatus ? (
-                          <div className={`f-s-13 text-secondary ${order.splitStatus === 'overdue' ? ' text-danger' : ''}`}>
-                            Nasiya{order.splitStatus === 'overdue' ? ' · muddati o\u2018tgan' : ''}
+                          <div className={`f-s-12 ${order.splitStatus === 'overdue' ? 'text-danger' : 'text-secondary'}`}>
+                            Nasiya{order.splitStatus === 'overdue' ? ' · muddati o‘tgan' : ''}
                           </div>
                         ) : null}
                       </td>
-                      <td className="f-s-13 text-secondary">
-                        {deliveryShort(order.deliveryType)}
+                      <td className="kb-col-opt f-s-13">
+                        <span className="text-dark">{deliveryShort(order.deliveryType)}</span>
                         {order.deliveryWindow ? <div className="f-s-12 text-primary text-nowrap">{order.deliveryWindow}</div> : null}
                         {order.deliveryRescheduled ? (
-                          <div className="f-s-11 text-warning-dark text-nowrap" title="Kechikkani uchun avtomatik keyingi kunga ko‘chirilgan">
+                          <div className="f-s-12 text-warning-dark text-nowrap" title="Kechikkani uchun avtomatik keyingi kunga ko‘chirilgan">
                             <i className="ti ti-arrow-forward-up"></i> {order.deliveryRescheduled} marta ko‘chdi{order.deliveryOriginalDate ? ` (asli ${order.deliveryOriginalDate})` : ''}
                           </div>
                         ) : null}
                       </td>
-                      <td><span className={`badge text-uppercase ${toneBadge(statusTone(order.status))}`}>{statusLabel(order.status)}</span></td>
-                      <td className="text-end f-s-13 text-secondary"><span className="f-w-600 text-nowrap">{order.date}</span></td>
-                      <td className="text-end" onClick={(event) => event.stopPropagation()}>
-                        <span className="d-inline-flex gap-2 justify-content-end">
-                          <button className="btn btn-light-primary icon-btn w-30 h-30 b-r-22 me-2" onClick={() => handleOpenView(order)} title="Ko'rish / boshqarish">
-                            <i className="ti ti-eye"></i>
+                      <td><span className={`badge ${toneBadge(statusTone(order.status))}`}>{statusLabel(order.status)}</span></td>
+                      <td className="text-end f-w-600 text-nowrap kb-num">{fmt(order.total)}</td>
+                      <td className="text-end f-s-13 text-secondary text-nowrap">{order.date}</td>
+                      <td className="text-end kb-col-opt" onClick={(event) => event.stopPropagation()}>
+                        <span className="d-inline-flex gap-1 justify-content-end kb-row-actions">
+                          <button type="button" className="btn btn-light-secondary icon-btn w-30 h-30" onClick={() => handleOpenView(order)} title="To'liq ochish" aria-label="To'liq ochish">
+                            <i className="ti ti-arrows-maximize"></i>
                           </button>
-                          <a className="btn btn-light-secondary icon-btn w-30 h-30 b-r-22" href={order.receiptUrl || '#'} title="Chekni chop etish" target="_blank">
-                            <i className="ti ti-printer"></i>
-                          </a>
+                          {order.receiptUrl ? (
+                            <a className="btn btn-light-secondary icon-btn w-30 h-30" href={order.receiptUrl} title="Chekni chop etish" aria-label="Chekni chop etish" target="_blank" rel="noreferrer">
+                              <i className="ti ti-printer"></i>
+                            </a>
+                          ) : null}
                         </span>
                       </td>
                     </tr>
@@ -843,6 +912,18 @@ export default function Orders() {
           </div>
           <PaginationControls {...orderPagination} onPageChange={(page) => loadOrders(page)} />
         </div>
+      </div>
+
+      {preview && selectedOrd ? (
+        <OrderPreview
+          order={selectedOrd}
+          loading={detailLoading}
+          onClose={() => setPreviewOpen(false)}
+          onOpenFull={() => setShowView(true)}
+          onStatus={handleUpdateStatus}
+          onPush={() => confirm("Mijozga «Operator siz bilan bog'lana olmadi» push xabarnomasi yuborilsinmi?") && postPrompt(selectedOrd.sendUnreachablePushUrl, {})}
+        />
+      ) : null}
       </div>
 
       <Modal show={showView} onHide={() => setShowView(false)} centered size="xl" scrollable>
@@ -874,8 +955,8 @@ export default function Orders() {
                       </div>
                     ) : null}
                     {selectedOrd.canSendUnreachablePush ? (
-                      <div className="alert alert-light-info py-2 px-3 mb-3">
-                        <div className="d-flex justify-content-between align-items-center">
+                      <div className="alert alert-light-primary py-2 px-3 mb-3">
+                        <div className="d-flex justify-content-between align-items-center gap-2">
                           <div>
                             <div className="f-w-600 f-s-13 text-primary">
                               <i className="ti ti-phone-off me-1"></i>Bog'lanish kutilmoqda
@@ -1425,7 +1506,7 @@ export default function Orders() {
                   <div className="card-header bg-transparent d-flex flex-wrap justify-content-between align-items-center gap-2 border-bottom">
                     <div className="d-flex align-items-center gap-3">
                       {(() => {
-                        const isCash = selectedOrd.fulfillment?.isCod || ['cash', 'cod', 'naqd'].includes(String(selectedOrd.payment).toLowerCase());
+                        const isCash = selectedOrd.fulfillment?.isCod || isCashPending(selectedOrd.paymentStatus) || ['cash', 'cod', 'naqd'].includes(String(selectedOrd.payment).toLowerCase());
                         const isSplit = !!selectedOrd.split || ['split', 'nasiya'].includes(String(selectedOrd.payment).toLowerCase());
                         if (isCash) {
                           return (
@@ -1441,15 +1522,16 @@ export default function Orders() {
                             </div>
                           );
                         }
+                        const card = cardPaymentState(selectedOrd);
                         return (
-                          <div className="h-45 w-45 d-flex-center b-r-50 bg-light-success text-success flex-shrink-0">
-                            <i className="ti ti-circle-check f-s-24"></i>
+                          <div className={`h-45 w-45 d-flex-center b-r-50 bg-light-${card.tone} text-${card.tone} flex-shrink-0`}>
+                            <i className={`ti ${card.icon} f-s-24`}></i>
                           </div>
                         );
                       })()}
                       <div>
                         {(() => {
-                          const isCash = selectedOrd.fulfillment?.isCod || ['cash', 'cod', 'naqd'].includes(String(selectedOrd.payment).toLowerCase());
+                          const isCash = selectedOrd.fulfillment?.isCod || isCashPending(selectedOrd.paymentStatus) || ['cash', 'cod', 'naqd'].includes(String(selectedOrd.payment).toLowerCase());
                           const isSplit = !!selectedOrd.split || ['split', 'nasiya'].includes(String(selectedOrd.payment).toLowerCase());
                           if (isCash) {
                             return (
@@ -1467,10 +1549,11 @@ export default function Orders() {
                               </>
                             );
                           }
+                          const card = cardPaymentState(selectedOrd);
                           return (
                             <>
-                              <h5 className="mb-0 text-success f-w-600">To'lov muvaffaqiyatli qabul qilingan</h5>
-                              <p className="mb-0 text-muted f-s-13">Tranzaksiya to'lov shlyuzida tasdiqlangan va qayd etilgan</p>
+                              <h5 className={`mb-0 text-${card.tone === 'success' ? 'success' : 'dark'} f-w-600`}>{card.title}</h5>
+                              <p className="mb-0 text-muted f-s-13">{card.text}</p>
                             </>
                           );
                         })()}
@@ -1483,21 +1566,15 @@ export default function Orders() {
                           <i className="ti ti-building-bank me-1"></i>{selectedOrd.paymentTransaction.provider}
                         </span>
                       )}
-                      <span className={`badge border-0 px-3 py-2 f-s-12 ${
-                        ['PAID', 'paid', 'approved', 'success'].includes(String(selectedOrd.paymentStatus || selectedOrd.payment))
-                          ? 'text-light-success'
-                          : ['cash', 'cod'].includes(String(selectedOrd.payment).toLowerCase())
-                            ? 'text-light-warning'
-                            : 'text-light-secondary'
-                      }`}>
-                        {selectedOrd.paymentStatus || selectedOrd.payment || 'Holat mavjud emas'}
+                      <span className={`badge border-0 px-3 py-2 f-s-12 ${toneBadge(paymentTone(selectedOrd.paymentStatus || selectedOrd.payment))}`} title={selectedOrd.paymentStatus || selectedOrd.payment || undefined}>
+                        {selectedOrd.paymentStatus || selectedOrd.payment ? paymentShort(selectedOrd.paymentStatus || selectedOrd.payment) : 'Holat mavjud emas'}
                       </span>
                     </div>
                   </div>
 
                   <div className="card-body">
                     {(() => {
-                      const isCash = selectedOrd.fulfillment?.isCod || ['cash', 'cod', 'naqd'].includes(String(selectedOrd.payment).toLowerCase());
+                      const isCash = selectedOrd.fulfillment?.isCod || isCashPending(selectedOrd.paymentStatus) || ['cash', 'cod', 'naqd'].includes(String(selectedOrd.payment).toLowerCase());
                       const isSplit = !!selectedOrd.split || ['split', 'nasiya'].includes(String(selectedOrd.payment).toLowerCase());
 
                       if (isCash) {
@@ -1620,22 +1697,23 @@ export default function Orders() {
                         );
                       }
 
-                      // Karta orqali to'lov (Online Payment Success View)
+                      // Karta orqali to'lov — holatga qarab (to'langan / hold / kutilmoqda / bekor)
+                      const card = cardPaymentState(selectedOrd);
                       return (
                         <div className="row g-4 align-items-stretch">
                           <div className="col-lg-5">
-                            <div className="p-3 b-r-12 bg-light-success border border-success border-opacity-25 h-100 d-flex flex-column justify-content-between">
+                            <div className={`p-3 b-r-12 bg-light-${card.tone} border border-${card.tone} border-opacity-25 h-100 d-flex flex-column justify-content-between`}>
                               <div>
-                                <span className="text-secondary f-s-12 text-uppercase f-w-600">Tasdiqlangan to'lov summasi</span>
-                                <div className="f-s-24 f-w-700 text-success mt-1">
+                                <span className="text-secondary f-s-12 f-w-600">{card.amountLabel}</span>
+                                <div className={`f-s-24 f-w-700 mt-1 ${card.tone === 'success' ? 'text-success' : 'text-dark'}`}>
                                   {fmt(selectedOrd.paymentTransaction?.amount || selectedOrd.total)} so'm
                                 </div>
                                 <div className="text-muted f-s-12 mt-2 d-flex align-items-center gap-1">
-                                  <i className="ti ti-check text-success"></i>
-                                  Tranzaksiya muvaffaqiyatli yakunlandi
+                                  <i className={`ti ${card.icon} text-${card.tone}`}></i>
+                                  {card.note}
                                 </div>
                               </div>
-                              <div className="mt-3 pt-3 border-top border-success border-opacity-25">
+                              <div className={`mt-3 pt-3 border-top border-${card.tone} border-opacity-25`}>
                                 <div className="d-flex justify-content-between f-s-13">
                                   <span className="text-muted">Tranzaksiya ID:</span>
                                   <span className="f-w-600 text-dark font-monospace">
@@ -1834,8 +1912,17 @@ function OrderTimeline({ rows }: { rows: Array<{ code: string; title: string; at
   );
 }
 
+const ADDRESS_LABELS: Record<string, string> = {
+  fullName: 'Oluvchi', phone: 'Telefon', region: 'Viloyat', district: 'Tuman', street: "Ko'cha",
+  home: 'Uy', fullAddress: "To'liq manzil", uzpostIndex: 'Pochta indeksi',
+};
+const ADDRESS_ORDER = ['fullName', 'phone', 'region', 'district', 'street', 'home', 'fullAddress', 'uzpostIndex'];
+const addressRank = (key: string) => { const index = ADDRESS_ORDER.indexOf(key); return index === -1 ? ADDRESS_ORDER.length : index; };
+
 function AddressBlock({ address }: { address: Record<string, unknown> }) {
-  const rows = Object.entries(address).filter(([key, value]) => key !== 'mapLinks' && value !== null && value !== undefined && value !== '');
+  const rows = Object.entries(address)
+    .filter(([key, value]) => !['mapLinks', 'lat', 'lon'].includes(key) && value !== null && value !== undefined && value !== '')
+    .sort(([a], [b]) => addressRank(a) - addressRank(b));
   const mapLinks = (address.mapLinks || {}) as Record<string, string>;
 
   if (!rows.length) {
@@ -1846,8 +1933,8 @@ function AddressBlock({ address }: { address: Record<string, unknown> }) {
     <ul className="list-group list-group-flush">
       {rows.map(([key, value]) => (
         <li className="list-group-item d-flex justify-content-between gap-3 px-0" key={key}>
-          <span className="text-secondary">{key}</span>
-          <span className="f-w-600 text-dark text-end">{String(value)}</span>
+          <span className="text-secondary text-nowrap">{ADDRESS_LABELS[key] || key}</span>
+          <span className="f-w-600 text-dark text-end">{key === 'uzpostIndex' ? <span className="kb-zip"><i className="ti ti-mailbox"></i>{String(value)}</span> : String(value)}</span>
         </li>
       ))}
       <li className="list-group-item d-flex justify-content-between align-items-center gap-3 px-0">
@@ -2053,5 +2140,191 @@ function RefundLedgerTable({ rows }: { rows: RefundLedgerRow[] }) {
         </tbody>
       </table>
     </div>
+  );
+}
+
+function useMediaQuery(query: string) {
+  const get = () => typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia(query).matches;
+  const [matches, setMatches] = useState(get);
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return undefined;
+    const media = window.matchMedia(query);
+    const update = () => setMatches(media.matches);
+    update();
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, [query]);
+  return matches;
+}
+
+// Keyingi odatiy qadam: tezkor ko'rinishdagi asosiy tugma. Qolgan barcha
+// holatlar (qaytgan, bekor va h.k.) to'liq sahifadagi "Buyurtma statusi"da.
+const NEXT_STEP: Record<string, { status: string; label: string; icon: string }> = {
+  pending: { status: 'packing', label: "Qadoqlashga o'tkazish", icon: 'ti-package' },
+  packing: { status: 'in_delivery', label: 'Yetkazishga berish', icon: 'ti-truck-delivery' },
+  in_delivery: { status: 'delivered', label: 'Yetib bordi', icon: 'ti-map-pin-check' },
+  delivered: { status: 'customer_received', label: 'Mijoz qabul qildi', icon: 'ti-user-check' },
+};
+
+function OrderPreview({ order, loading, onClose, onOpenFull, onStatus, onPush }: {
+  order: Ord;
+  loading: boolean;
+  onClose: () => void;
+  onOpenFull: () => void;
+  onStatus: (status: string) => void;
+  onPush: () => void;
+}) {
+  const status = normalizeStatus(order.status);
+  const next = NEXT_STEP[status];
+  const payment = order.paymentStatus || order.payment;
+  const address = (order.address || {}) as Record<string, unknown>;
+  const mapLinks = (address.mapLinks || {}) as Record<string, string>;
+  const fullAddress = String(address.fullAddress || [address.region, address.district, address.street, address.home].filter(Boolean).join(', ') || '');
+  const zip = address.uzpostIndex ? String(address.uzpostIndex) : '';
+  const items = (order.itemsList || []).filter((item) => item.type !== 'gift');
+  const shownItems = items.slice(0, 4);
+  const timeline = order.fulfillment?.timeline || [];
+  const detailReady = !!order.itemsList;
+
+  return (
+    <aside className="card kb-preview" aria-label={`Buyurtma ${order.id} — tezkor ko'rinish`}>
+      <div className="kb-preview-head">
+        <div className="d-flex align-items-start justify-content-between gap-2">
+          <div className="min-w-0">
+            <div className="d-flex align-items-center gap-2 flex-wrap">
+              <span className="kb-preview-id">{order.id}</span>
+              <span className={`badge ${toneBadge(statusTone(order.status))}`}>{statusLabel(order.status)}</span>
+            </div>
+            <div className="f-s-12 text-secondary mt-1">{order.date} · {order.sourceLabel || (order.source === 'web' ? 'Veb-sayt' : 'Ilova')}</div>
+          </div>
+          <div className="d-flex gap-1 flex-shrink-0">
+            <button type="button" className="btn btn-light-secondary icon-btn w-30 h-30" onClick={onOpenFull} title="To'liq ochish (Enter)" aria-label="To'liq ochish"><i className="ti ti-arrows-maximize"></i></button>
+            <button type="button" className="btn btn-light-secondary icon-btn w-30 h-30" onClick={onClose} title="Yopish (Esc)" aria-label="Yopish"><i className="ti ti-x"></i></button>
+          </div>
+        </div>
+        <div className="d-flex gap-2 mt-3">
+          {next && order.statusUrl ? (
+            <button type="button" className="btn btn-primary btn-sm flex-grow-1" disabled={loading}
+              onClick={() => confirm(`${order.id}: «${statusLabel(next.status)}» holatiga o'tkazilsinmi?`) && onStatus(next.status)}>
+              <i className={`ti ${next.icon} me-1`}></i>{next.label}
+            </button>
+          ) : (
+            <button type="button" className="btn btn-light-primary btn-sm flex-grow-1" onClick={onOpenFull}>
+              <i className="ti ti-settings me-1"></i>Boshqaruv amallari
+            </button>
+          )}
+          {order.labelUrl ? <a className="btn btn-light-secondary btn-sm" href={order.labelUrl} target="_blank" rel="noreferrer"><i className="ti ti-tag me-1"></i>Label</a> : null}
+          {order.receiptUrl ? <a className="btn btn-light-secondary btn-sm" href={order.receiptUrl} target="_blank" rel="noreferrer"><i className="ti ti-printer me-1"></i>Chek</a> : null}
+        </div>
+      </div>
+
+      <div className="kb-preview-body">
+        {order.canSendUnreachablePush ? (
+          <div className="kb-preview-note">
+            <i className="ti ti-phone-off"></i>
+            <div className="flex-grow-1">
+              <div className="f-w-600">Bog'lanish kutilmoqda</div>
+              <div className="f-s-12 text-secondary">Qo'ng'iroqqa tushmagan bo'lsa, eslatma push yuboring.</div>
+            </div>
+            <button type="button" className="btn btn-sm btn-light-primary flex-shrink-0" disabled={!order.sendUnreachablePushUrl} onClick={onPush}>Push</button>
+          </div>
+        ) : null}
+
+        <section className="kb-preview-sec">
+          <div className="kb-preview-label">Mijoz</div>
+          <div className="d-flex align-items-center gap-2">
+            <PAvatar name={order.customer} size="md" />
+            <div className="min-w-0 flex-grow-1">
+              <div className="f-w-600 text-truncate">{order.customer}</div>
+              <div className="f-s-12 text-secondary">
+                {order.user?.phone ? <a className="text-secondary" href={`tel:${order.user.phone.replace(/\s/g, '')}`}>{order.user.phone}</a> : "Kontakt yo'q"}
+                {order.userReputation ? <> · ishonch {order.userReputation.score}/100</> : null}
+              </div>
+            </div>
+            {order.user?.url ? <a className="btn btn-light-secondary icon-btn w-30 h-30" href={order.user.url} title="Mijoz profili" aria-label="Mijoz profili"><i className="ti ti-user"></i></a> : null}
+          </div>
+          {order.userReputation && !order.userReputation.cashOnDeliveryAllowed ? (
+            <div className="f-s-12 text-danger mt-2"><i className="ti ti-alert-triangle me-1"></i>Naqd buyurtma huquqi yopilgan{order.userReputation.cashOnDeliveryBlockReason ? ` — ${order.userReputation.cashOnDeliveryBlockReason}` : ''}</div>
+          ) : null}
+        </section>
+
+        <section className="kb-preview-sec">
+          <div className="kb-preview-label">Yetkazish</div>
+          <div className="f-s-13 text-dark">{deliveryTypeLabel(order.deliveryType)}{order.deliveryWindow ? <span className="text-primary"> · {order.deliveryWindow}</span> : null}</div>
+          {fullAddress ? <div className="f-s-13 text-secondary mt-1">{fullAddress}</div> : (detailReady ? <div className="f-s-13 text-secondary mt-1">Manzil kiritilmagan</div> : null)}
+          {(zip || mapLinks.google || mapLinks.yandex) ? (
+            <div className="d-flex align-items-center gap-2 flex-wrap mt-2">
+              {zip ? <span className="kb-zip" title="Pochta indeksi"><i className="ti ti-mailbox"></i>{zip}</span> : null}
+              {mapLinks.google ? <a className="f-s-12" href={mapLinks.google} target="_blank" rel="noreferrer">Google xarita</a> : null}
+              {mapLinks.yandex ? <a className="f-s-12" href={mapLinks.yandex} target="_blank" rel="noreferrer">Yandex xarita</a> : null}
+            </div>
+          ) : null}
+          {order.fulfillment?.hub || order.courierName ? (
+            <div className="f-s-12 text-secondary mt-2">
+              {order.fulfillment?.hub ? <><i className="ti ti-building-warehouse me-1"></i>{order.fulfillment.hub}</> : null}
+              {order.fulfillment?.hub && order.courierName ? ' · ' : null}
+              {order.courierName ? <><i className="ti ti-motorbike me-1"></i>{order.courierName}</> : null}
+            </div>
+          ) : null}
+          {order.buyerWish ? <div className="kb-preview-quote mt-2">“{order.buyerWish}”</div> : null}
+        </section>
+
+        <section className="kb-preview-sec">
+          <div className="kb-preview-label">Mahsulotlar{items.length ? ` · ${items.length}` : ''}</div>
+          {loading && !detailReady ? (
+            <div className="kb-skel-list" aria-busy="true"><span></span><span></span><span></span></div>
+          ) : items.length ? (
+            <div className="d-flex flex-column gap-2">
+              {shownItems.map((item, index) => (
+                <div className="d-flex align-items-center gap-2" key={`${item.type}-${item.id || index}`}>
+                  <div className="kb-thumb">{item.image ? <img src={item.image} alt="" /> : <i className="ti ti-book-2"></i>}</div>
+                  <div className="min-w-0 flex-grow-1">
+                    <div className={`f-s-13 f-w-500 text-truncate ${item.isCancelled ? 'text-decoration-line-through text-secondary' : 'text-dark'}`}>{item.name}</div>
+                    <div className="f-s-12 text-secondary text-truncate">{[item.seller, `${item.quantity} dona`].filter(Boolean).join(' · ')}</div>
+                  </div>
+                  <div className="f-s-13 f-w-600 text-nowrap kb-num">{fmt(item.total)}</div>
+                </div>
+              ))}
+              {items.length > shownItems.length ? (
+                <button type="button" className="btn btn-link btn-sm p-0 text-start" onClick={onOpenFull}>Yana {items.length - shownItems.length} ta mahsulot</button>
+              ) : null}
+            </div>
+          ) : <div className="f-s-13 text-secondary">{order.items} dona mahsulot</div>}
+        </section>
+
+        <section className="kb-preview-sec">
+          <div className="kb-preview-label">To'lov</div>
+          <dl className="kb-sum">
+            {order.subtotal !== undefined ? <><dt>Mahsulotlar</dt><dd>{fmt(order.subtotal)}</dd></> : null}
+            {order.deliveryPrice ? <><dt>Yetkazish</dt><dd>{fmt(order.deliveryPrice)}</dd></> : null}
+            {order.discountAmount ? <><dt>Chegirma</dt><dd className="text-success">−{fmt(order.discountAmount)}</dd></> : null}
+            {order.cashbackAmount ? <><dt>Keshbek</dt><dd className="text-success">−{fmt(order.cashbackAmount)}</dd></> : null}
+            {order.giftCertAmount ? <><dt>Sertifikat</dt><dd className="text-success">−{fmt(order.giftCertAmount)}</dd></> : null}
+            <dt className="kb-sum-total">Jami</dt><dd className="kb-sum-total">{fmt(order.total)} so'm</dd>
+          </dl>
+          <div className="d-flex align-items-center gap-2 mt-2 flex-wrap">
+            <span className={`badge ${toneBadge(paymentTone(payment))}`}>{paymentShort(payment)}</span>
+            <span className="f-s-12 text-secondary">{paymentLabel(payment)}</span>
+          </div>
+        </section>
+
+        {timeline.length ? (
+          <section className="kb-preview-sec">
+            <div className="kb-preview-label">Tarix</div>
+            <ol className="kb-tl">
+              {timeline.slice(-5).map((row) => (
+                <li key={`${row.code}-${row.at}`}><span className="f-s-13 text-dark">{row.title}</span><span className="f-s-12 text-secondary">{row.at}</span></li>
+              ))}
+            </ol>
+          </section>
+        ) : null}
+      </div>
+
+      <div className="kb-preview-foot">
+        <button type="button" className="btn btn-light-secondary btn-sm w-100" onClick={onOpenFull}>
+          To'liq ochish — status, hub, refund va barcha amallar<i className="ti ti-arrow-right ms-1"></i>
+        </button>
+      </div>
+    </aside>
   );
 }

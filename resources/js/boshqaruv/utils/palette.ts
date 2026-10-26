@@ -25,18 +25,18 @@ const TOKENS = {
   info: ['--info', 1],
   neutral: ['--secondary', 1],
   indigo: ['--primary', 1],
-  violet: ['--primary', 0.45],
-  dviolet: ['--primary-dark', 1],
-  navy: ['--info', 1],
-  steel: ['--info', 0.45],
-  teal: ['--info-dark', 1],
+  violet: ['--kc-cat-violet', 1],
+  dviolet: ['--kc-cat-dviolet', 1],
+  navy: ['--kc-cat-navy', 1],
+  steel: ['--kc-cat-steel', 1],
+  teal: ['--kc-cat-teal', 1],
   green: ['--success', 1],
-  dgreen: ['--success', 0.5],
+  dgreen: ['--kc-cat-dgreen', 1],
   amber: ['--warning', 1],
-  orange: ['--warning-dark', 1],
-  plum: ['--danger', 1],
-  red: ['--danger', 0.45],
-  dred: ['--danger-dark', 1],
+  orange: ['--kc-cat-orange', 1],
+  plum: ['--kc-cat-plum', 1],
+  red: ['--danger', 0.55],
+  dred: ['--kc-cat-dred', 1],
 } as const;
 
 export type PaletteKey = keyof typeof TOKENS;
@@ -44,12 +44,12 @@ export type Palette = Record<PaletteKey, string>;
 
 /** SSR va birinchi render uchun zaxira qiymatlar (Axelit yorug' mavzusi). */
 const FALLBACK: Palette = {
-  ink: 'rgb(140, 118, 240)', text: '#15264b', soft: 'rgba(40, 38, 50, .75)', muted: 'rgb(100, 100, 100)',
-  line: '#e0dfd6', grid: 'rgba(144, 164, 246, .21)', surface: 'rgb(255, 255, 255)', page: '#f6f6f6',
-  ok: 'rgb(20, 120, 52)', warn: 'rgb(99, 89, 29)', danger: 'rgb(240, 10, 200)', info: 'rgb(46, 94, 231)', neutral: 'rgb(100, 100, 100)',
-  indigo: 'rgb(140, 118, 240)', violet: 'rgba(140, 118, 240, .45)', dviolet: 'rgb(36, 17, 135)', navy: 'rgb(46, 94, 231)',
-  steel: 'rgba(46, 94, 231, .45)', teal: 'rgb(8, 60, 128)', green: 'rgb(20, 120, 52)', dgreen: 'rgba(20, 120, 52, .5)',
-  amber: 'rgb(215, 220, 65)', orange: 'rgb(99, 89, 29)', plum: 'rgb(240, 10, 200)', red: 'rgba(240, 10, 200, .45)', dred: 'rgb(102, 15, 106)',
+  ink: 'rgb(41, 128, 221)', text: '#0F172A', soft: 'rgba(15, 23, 42, .75)', muted: 'rgb(100, 116, 139)',
+  line: '#E6E8EC', grid: '#EEF0F3', surface: 'rgb(255, 255, 255)', page: '#F6F7F9',
+  ok: 'rgb(47, 158, 68)', warn: 'rgb(154, 74, 0)', danger: 'rgb(217, 45, 32)', info: 'rgb(112, 72, 232)', neutral: 'rgb(100, 116, 139)',
+  indigo: 'rgb(41, 128, 221)', violet: '#7048E8', dviolet: '#5B3BB0', navy: '#1D4F91',
+  steel: '#64748B', teal: '#0CA678', green: 'rgb(47, 158, 68)', dgreen: '#146C43',
+  amber: 'rgb(245, 159, 0)', orange: '#F76707', plum: '#AE3EC9', red: 'rgba(217, 45, 32, .55)', dred: '#B42318',
 };
 
 export function readPalette(scope?: Element | null): Palette {

@@ -4,14 +4,30 @@ import InfoHint from './InfoHint';
 
 /**
  * KPI kartasi (yangi dizayn): oq yuza, 1px chegara, yuqorida nom (rangli nuqta
- * bilan), katta qiymat, ostida izoh/trend. `variant` — nuqta rangi; eski
- * Axelit ritmi (index bo'yicha) saqlangan, shuning uchun sahifalar o'zgarmaydi.
+ * bilan), katta qiymat, ostida izoh/trend. `variant` — nuqta rangi; berilmasa
+ * nomdan ma'no bo'yicha aniqlanadi (pastdagi SEMANTIC).
  */
 export type StatVariant = 'provided' | 'primary' | 'danger' | 'store' | 'info' | 'warning' | 'success';
 const RHYTHM: StatVariant[] = ['provided', 'primary', 'danger', 'store'];
 const DOT: Record<StatVariant, string> = {
   provided: 'secondary', primary: 'primary', danger: 'danger', store: 'success', info: 'info', warning: 'warning', success: 'success',
 };
+
+// Nuqta rangi ma'no bildiradi: qizil — muammo, sariq — kutilmoqda/jarayonda,
+// yashil — yakunlangan/ijobiy, kulrang — jami, ko'k — qolgan hammasi.
+// `variant` berilmagan bo'lsa, nomdan aniqlanadi (ritm emas).
+const SEMANTIC: Array<[StatVariant, RegExp]> = [
+  ['danger', /bekor|xato|muammo|kechik|muddati o't|rad etil|rad qil|blok|shikoyat|qarz|failed|nizo|o'chiril|zarar|xavf|tugagan/],
+  ['warning', /magan\b|kutil|jarayon|qayt|ko'rib|navbat|tekshir|hold|pending|moderats|ochiq|kam qol|yo'lda|qadoqla/],
+  ['success', /yetkazil|faol|to'lan|tasdiq|muvaffaq|yakunla|tayyor|daromad|tushum|foyda|qabul qil|sotil|bajaril|onlayn|chek tayyor|yetib bor/],
+  ['provided', /^jami|^umumiy|^barcha/],
+];
+function inferVariant(label: ReactNode): StatVariant | null {
+  if (typeof label !== 'string') return null;
+  const text = label.toLowerCase().replace(/[‘’ʻʼ`]/g, "'");
+  const hit = SEMANTIC.find(([, re]) => re.test(text));
+  return hit ? hit[0] : 'primary';
+}
 
 interface StatWidgetProps {
   label: ReactNode;
@@ -29,7 +45,7 @@ interface StatWidgetProps {
 }
 
 export function StatWidget({ label, value, index = 0, variant, sub, trend, trendTone = 'success', help, href, onClick, selected, className = '' }: StatWidgetProps) {
-  const v = variant || RHYTHM[index % RHYTHM.length];
+  const v = variant || inferVariant(label) || RHYTHM[index % RHYTHM.length];
   const dot = DOT[v];
 
   const cardCls = [

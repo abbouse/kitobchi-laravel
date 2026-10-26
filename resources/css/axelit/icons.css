@@ -48,7 +48,7 @@
 .iconoir-wallet::before{mask-image:url('data:image/svg+xml;charset=utf-8,<svg width="24" height="24" stroke-width="1.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="5" width="20" height="14" rx="2" stroke="currentColor"/><path d="M16 12H18M2 9H22" stroke="currentColor" stroke-linecap="round"/></svg>');-webkit-mask-image:url('data:image/svg+xml;charset=utf-8,<svg width="24" height="24" stroke-width="1.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="5" width="20" height="14" rx="2" stroke="currentColor"/><path d="M16 12H18M2 9H22" stroke="currentColor" stroke-linecap="round"/></svg>');}
 .iconoir-xmark::before{mask-image:url('data:image/svg+xml;charset=utf-8,<svg width="24" height="24" stroke-width="1.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6.75827 17.2426L12.0009 12M17.2435 6.75736L12.0009 12M12.0009 12L6.75827 6.75736M12.0009 12L17.2435 17.2426" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg>');-webkit-mask-image:url('data:image/svg+xml;charset=utf-8,<svg width="24" height="24" stroke-width="1.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6.75827 17.2426L12.0009 12M17.2435 6.75736L12.0009 12M12.0009 12L6.75827 6.75736M12.0009 12L17.2435 17.2426" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg>');}
 
-/* tabler-icons 3.31.0 — 253 glif (scripts/tabler_subset.py) */
+/* tabler-icons 3.31.0 — 263 glif (scripts/tabler_subset.py) */
 @font-face{font-family:"tabler-icons";font-style:normal;font-weight:400;font-display:block;src:url("./fonts/tabler-icons.woff2") format("woff2")}
 .ti{font-family:"tabler-icons"!important;speak:none;font-style:normal;font-weight:normal;font-variant:normal;text-transform:none;line-height:1;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
 .ti-activity:before{content:"\ed23"}
@@ -71,6 +71,7 @@
 .ti-arrows-exchange:before{content:"\f1f4"}
 .ti-arrows-horizontal:before{content:"\eb59"}
 .ti-arrows-left-right:before{content:"\edb0"}
+.ti-arrows-maximize:before{content:"\ea28"}
 .ti-arrows-move:before{content:"\f22f"}
 .ti-at:before{content:"\ea2b"}
 .ti-ban:before{content:"\ea2e"}
@@ -125,6 +126,7 @@
 .ti-clipboard-data:before{content:"\f563"}
 .ti-clock:before{content:"\ea70"}
 .ti-clock-bolt:before{content:"\f844"}
+.ti-clock-exclamation:before{content:"\f847"}
 .ti-clock-hour-4:before{content:"\f319"}
 .ti-cloud-download:before{content:"\ea71"}
 .ti-cloud-search:before{content:"\f859"}
@@ -146,6 +148,7 @@
 .ti-dots-vertical:before{content:"\ea94"}
 .ti-download:before{content:"\ea96"}
 .ti-edit:before{content:"\ea98"}
+.ti-eraser:before{content:"\eb8b"}
 .ti-exclamation-mark:before{content:"\efb4"}
 .ti-external-link:before{content:"\ea99"}
 .ti-eye:before{content:"\ea9a"}
@@ -192,6 +195,7 @@
 .ti-list:before{content:"\eb6b"}
 .ti-list-check:before{content:"\eb6a"}
 .ti-list-details:before{content:"\ef40"}
+.ti-loader-2:before{content:"\f226"}
 .ti-lock:before{content:"\eae2"}
 .ti-lock-access:before{content:"\eeaa"}
 .ti-lock-open:before{content:"\eae1"}
@@ -200,12 +204,15 @@
 .ti-mail-fast:before{content:"\f069"}
 .ti-mail-off:before{content:"\f15a"}
 .ti-mail-opened:before{content:"\eae4"}
+.ti-mailbox:before{content:"\eead"}
 .ti-map:before{content:"\eae9"}
 .ti-map-pin:before{content:"\eae8"}
+.ti-map-pin-check:before{content:"\f94c"}
 .ti-map-pin-filled:before{content:"\f680"}
 .ti-maximize:before{content:"\eaea"}
 .ti-message:before{content:"\eaef"}
 .ti-message-check:before{content:"\f96f"}
+.ti-message-circle:before{content:"\eaed"}
 .ti-message-circle-2-filled:before{content:"\fecf"}
 .ti-message-dots:before{content:"\eaee"}
 .ti-message-plus:before{content:"\ec9a"}
@@ -217,6 +224,7 @@
 .ti-mood-smile:before{content:"\eaf7"}
 .ti-moon:before{content:"\eaf8"}
 .ti-moon-stars:before{content:"\ece7"}
+.ti-motorbike:before{content:"\eeb6"}
 .ti-movie:before{content:"\eafa"}
 .ti-music:before{content:"\eafc"}
 .ti-news:before{content:"\eafd"}
@@ -244,6 +252,7 @@
 .ti-printer:before{content:"\eb0e"}
 .ti-qrcode:before{content:"\eb11"}
 .ti-receipt:before{content:"\edfd"}
+.ti-receipt-off:before{content:"\edfb"}
 .ti-receipt-refund:before{content:"\edfc"}
 .ti-refresh:before{content:"\eb13"}
 .ti-repeat:before{content:"\eb72"}
@@ -273,6 +282,7 @@
 .ti-status-change:before{content:"\f3b0"}
 .ti-sun:before{content:"\eb30"}
 .ti-table:before{content:"\eba1"}
+.ti-tag:before{content:"\10096"}
 .ti-tags:before{content:"\ef86"}
 .ti-target:before{content:"\eb35"}
 .ti-target-arrow:before{content:"\f51a"}
