@@ -16,6 +16,30 @@ use Illuminate\Support\Str;
 
 class HubPrintViewService
 {
+    /**
+     * Pochta indeksi: buyurtmadagi manzil nusxasidan, bo'lmasa (eski buyurtmalar)
+     * koordinata bo'yicha eng yaqin O'zpochta bo'limidan.
+     */
+    private function resolvePostalCode(array $address): ?string
+    {
+        $code = preg_replace('/\D/', '', (string) Arr::get($address, 'postal_code', ''));
+        if (strlen($code) === 6) {
+            return $code;
+        }
+        $lat = Arr::get($address, 'lat');
+        $lon = Arr::get($address, 'lon');
+        if (! is_numeric($lat) || ! is_numeric($lon)) {
+            return null;
+        }
+        try {
+            return app(PostalCodeService::class)->codeFor((float) $lat, (float) $lon);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return null;
+        }
+    }
+
     public function labelData(OrderFulfillment $fulfillment): array
     {
         $order = $fulfillment->order;
@@ -40,6 +64,7 @@ class HubPrintViewService
             ?? $order?->recipient_address
             ?? 'Manzil kiritilmagan'
         ));
+        $postalCode = $this->resolvePostalCode($address);
         $scanCode = trim((string) $fulfillment->label_code);
         if ($scanCode === '') {
             $scanCode = 'ORD-'.$fulfillment->order_id;
@@ -57,6 +82,7 @@ class HubPrintViewService
             'customer_name' => $customerName,
             'customer_phone' => $this->formatPhoneForLabel($phone),
             'address' => $fullAddress,
+            'postal_code' => $postalCode,
             'payment_method' => $fulfillment->is_cod
                 ? $this->text($locale, 'cash_collect')
                 : $this->text($locale, 'card_paid'),

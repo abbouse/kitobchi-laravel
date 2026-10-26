@@ -1759,6 +1759,8 @@ class PurchaseController extends Controller
                 'lat' => $location->lat,
                 'lon' => $location->lon,
                 'country_code' => $location->country_code,
+                // Pochta indeksi (eng yaqin O'zpochta bo'limi) — labelda chiqadi
+                'postal_code' => $location->postal_code ?? null,
                 'phoneNumber' => $customerPhone,
             ];
 

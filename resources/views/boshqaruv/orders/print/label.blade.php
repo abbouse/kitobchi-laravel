@@ -157,6 +157,11 @@
       overflow: hidden;
     }
 
+    .z2-postal {
+      font-weight: 900;
+      letter-spacing: 0.4pt;
+    }
+
     .z2-qr {
       flex-shrink: 0;
       display: flex;
@@ -461,7 +466,8 @@
         <div class="z2-name">{{ $label['customer_name'] }}</div>
         <div class="z2-phone">{{ $label['customer_phone'] }}</div>
         <div class="z2-addr-wrap">
-          <div class="z2-addr">{{ $label['address'] }}</div>
+          {{-- Pochta indeksi manzil boshida qalin — label balandligi o'zgarmaydi --}}
+          <div class="z2-addr">@if(!empty($label['postal_code']))<span class="z2-postal">{{ $label['postal_code'] }}</span>, @endif{{ $label['address'] }}</div>
         </div>
       </div>
       <div class="z2-qr">
