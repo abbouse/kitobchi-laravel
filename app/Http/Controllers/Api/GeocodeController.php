@@ -57,6 +57,21 @@ class GeocodeController extends Controller
         ]);
 
         $results = $this->geocoder->search($data['q'], $this->lang($request), (int) ($data['limit'] ?? 5));
+        if (is_array($results)) {
+            // Har bir natijaga pochta indeksi (eng yaqin O'zpochta bo'limi, bo'lmasa Yandex'niki)
+            $results = array_map(function ($r) {
+                if (! is_array($r) || ! isset($r['lat'], $r['lon'])) {
+                    return $r;
+                }
+                try {
+                    $r['postal_code'] = $this->postal->codeFor((float) $r['lat'], (float) $r['lon'], $r['postal_code'] ?? null);
+                } catch (\Throwable $e) {
+                    report($e);
+                }
+
+                return $r;
+            }, $results);
+        }
 
         return response()->json([
             'success' => $results !== null,
