@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Schema;
 /**
  * Pochta indeksi:
  *  - post_offices — O'zpochta bo'limlari (indeks + koordinata), `postal:sync-uzpost` to'ldiradi;
- *  - locations.postal_code — manzilga eng yaqin bo'lim indeksi (avtomatik).
+ *  - locations.uzpost_index — manzilga eng yaqin O'zpochta bo'limi indeksi (avtomatik).
  */
 return new class extends Migration
 {
@@ -26,18 +26,18 @@ return new class extends Migration
             });
         }
 
-        if (Schema::hasTable('locations') && ! Schema::hasColumn('locations', 'postal_code')) {
+        if (Schema::hasTable('locations') && ! Schema::hasColumn('locations', 'uzpost_index')) {
             Schema::table('locations', function (Blueprint $table) {
-                $table->string('postal_code', 6)->nullable()->index();
+                $table->string('uzpost_index', 6)->nullable()->index();
             });
         }
     }
 
     public function down(): void
     {
-        if (Schema::hasTable('locations') && Schema::hasColumn('locations', 'postal_code')) {
+        if (Schema::hasTable('locations') && Schema::hasColumn('locations', 'uzpost_index')) {
             Schema::table('locations', function (Blueprint $table) {
-                $table->dropColumn('postal_code');
+                $table->dropColumn('uzpost_index');
             });
         }
         Schema::dropIfExists('post_offices');

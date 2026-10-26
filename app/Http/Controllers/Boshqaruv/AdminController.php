@@ -5870,6 +5870,7 @@ PROMPT;
                 'main' => (int) $address->id === (int) $user->mainAddressID,
                 'lat' => $address->lat,
                 'lon' => $address->lon,
+                'uzpostIndex' => $address->uzpost_index ?? null,
                 'mapLinks' => $this->mapLinks($address->lat, $address->lon, $address->fullAddress),
             ])->values(),
             'followers' => $followers,

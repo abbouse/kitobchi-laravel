@@ -563,8 +563,8 @@ class UserController extends Controller
         $location->city_name = $validated['cityName'] ?? null;
         // Pochta indeksi — userdan so'ramaymiz: eng yaqin O'zpochta bo'limi
         try {
-            if (\Illuminate\Support\Facades\Schema::hasColumn('locations', 'postal_code')) {
-                $location->postal_code = app(\App\Services\PostalCodeService::class)->codeFor($lat, $lon);
+            if (\Illuminate\Support\Facades\Schema::hasColumn('locations', 'uzpost_index')) {
+                $location->uzpost_index = app(\App\Services\PostalCodeService::class)->codeFor($lat, $lon);
             }
         } catch (\Throwable $e) {
             report($e);

@@ -25,13 +25,13 @@ class SyncUzpostOffices extends Command
             $filled = 0;
             Locations::query()
                 ->whereNotNull('lat')->whereNotNull('lon')
-                ->when(! $this->option('all'), fn ($q) => $q->whereNull('postal_code'))
+                ->when(! $this->option('all'), fn ($q) => $q->whereNull('uzpost_index'))
                 ->orderBy('id')
                 ->chunkById(500, function ($rows) use ($postal, &$filled) {
                     foreach ($rows as $loc) {
                         $code = $postal->codeFor((float) $loc->lat, (float) $loc->lon);
-                        if ($code !== null && $code !== $loc->postal_code) {
-                            $loc->forceFill(['postal_code' => $code])->saveQuietly();
+                        if ($code !== null && $code !== $loc->uzpost_index) {
+                            $loc->forceFill(['uzpost_index' => $code])->saveQuietly();
                             $filled++;
                         }
                     }

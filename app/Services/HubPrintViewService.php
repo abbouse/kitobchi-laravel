@@ -22,7 +22,7 @@ class HubPrintViewService
      */
     private function resolvePostalCode(array $address): ?string
     {
-        $code = preg_replace('/\D/', '', (string) Arr::get($address, 'postal_code', ''));
+        $code = preg_replace('/\D/', '', (string) (Arr::get($address, 'uzpost_index') ?? Arr::get($address, 'postal_code', '')));
         if (strlen($code) === 6) {
             return $code;
         }

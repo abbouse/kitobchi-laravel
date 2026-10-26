@@ -19,7 +19,7 @@ class Locations extends Model
         'region_name',
         'district_name',
         'city_name',
-        'postal_code',
+        'uzpost_index',
         'phone_number',
         'isDeleted'
     ];

@@ -312,7 +312,7 @@ function ProfileModal({ user, detail, loading, onHide, reload }: { user: UserRow
                   })} />
                   <ListBlock title="Manzillar" icon="ti ti-map-pin" rows={detail.addresses} render={(x) => ({
                     title: String(x.address || 'Manzil kiritilmagan'),
-                    meta: `${x.main ? 'Asosiy manzil' : 'Qo‘shimcha manzil'} · ${[x.lat, x.lon].filter(Boolean).join(', ') || 'koordinata yo‘q'}`,
+                    meta: `${x.main ? 'Asosiy manzil' : 'Qo‘shimcha manzil'} · ${x.uzpostIndex ? `Pochta indeksi: ${String(x.uzpostIndex)} · ` : ''}${[x.lat, x.lon].filter(Boolean).join(', ') || 'koordinata yo‘q'}`,
                     extra: <MapButtons mapLinks={(x.mapLinks || {}) as Record<string, string>} />,
                   })} />
                 </div>
