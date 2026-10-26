@@ -4,11 +4,13 @@ const POSITION_LABELS: Record<string, string> = {
   reader: 'Kitobxon',
   active_reader: 'Faol kitobxon',
   book_lover: 'Kitob muxlisi',
-  reviewer: 'Sharhlovchi',
-  collector: "Kitob yig'uvchi",
-  book_club_star: 'Book Club yulduzi',
-  market_explorer: 'Market kashfiyotchisi',
+  bibliophile: 'Bibliofil',
   literary_mentor: "Adabiy yo'lboshchi",
+  // Eski klub darajalari (endi nishon) — qayta hisoblanguncha
+  reviewer: 'Kitob muxlisi',
+  collector: 'Kitob muxlisi',
+  book_club_star: 'Kitob muxlisi',
+  market_explorer: 'Kitob muxlisi',
 }
 
 export function positionLabel(code?: string | null): string {
