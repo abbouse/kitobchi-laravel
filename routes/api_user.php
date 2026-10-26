@@ -297,4 +297,6 @@ Route::middleware(['auth:user', \App\Http\Middleware\EnsureUserActive::class])->
     });
     // Manzilni aniqlash — Yandex kaliti serverda (kalitlar navbat bilan)
     Route::get('geocode/reverse', [\App\Http\Controllers\Api\GeocodeController::class, 'reverse'])->middleware('throttle:60,1');
+    // Xarita sahifasida manzilni nomi bo'yicha qidirish
+    Route::get('geocode/search', [\App\Http\Controllers\Api\GeocodeController::class, 'search'])->middleware('throttle:40,1');
 });

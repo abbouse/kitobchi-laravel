@@ -89,6 +89,9 @@ class YandexGeocoderService
             'geocode' => $query,
             'lang' => $lang,
             'results' => $limit,
+            // O'zbekiston hududini ustun qo'yamiz (cheklamaydi, faqat tartibga ta'sir qiladi)
+            'll' => '64.585262,41.377491',
+            'spn' => '13.5,7.5',
         ]);
 
         if ($response === null) {

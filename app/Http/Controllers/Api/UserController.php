@@ -536,7 +536,9 @@ class UserController extends Controller
         $countryCode = strtoupper((string) ($validated['countryCode'] ?? ''));
         $isWithinUzbekistan = $countryCode === 'UZ'
             || $this->isUzbekistanAddress($fullAddress)
-            || (!empty($validated['regionName']))
+            // regionName har qanday davlatda keladi (chet el viloyati ham) — faqat
+            // O'zbekiston viloyati slug'i bo'lsa ishonamiz
+            || (!empty($validated['regionSlug']))
             || ($lat !== null && $lon !== null && $this->isWithinUzbekistanBounds($lat, $lon));
 
         $isSupportedCountry = $countryCode !== ''
