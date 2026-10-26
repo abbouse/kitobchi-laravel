@@ -25,6 +25,9 @@ use Illuminate\Support\Str;
  */
 class PrizeGameService
 {
+    /** Yutilgan promokod va bepul kitob kodining amal qilish muddati (kun). */
+    public const REWARD_VALID_DAYS = 30;
+
     public const DEFAULT_SETTINGS = [
         'enabled' => '1',
         'spin_cost' => '10',
@@ -455,7 +458,7 @@ class PrizeGameService
 
     private function issuePromocode(GamePrize $prize, int $userId, array $o, string $rewardType = 'promocode'): GameReward
     {
-        $expires = now()->addDays(max(1, (int) ($prize->valid_days ?: 30)));
+        $expires = now()->addDays(max(1, (int) ($prize->valid_days ?: self::REWARD_VALID_DAYS)));
         do {
             $code = 'KB'.strtoupper(Str::random(8));
         } while (Promocode::where('code', $code)->exists());
@@ -504,7 +507,10 @@ class PrizeGameService
             'id' => $p->id,
             'type' => $p->type,
             'title' => $p->title(),
-            'image' => self::imageUrl($p->image) ?? self::imageUrl($p->edition?->coverPath()),
+            // Kitob — muqovasi; promokod va tanga uchun rasm yuborilmaydi, ilova o'zi chizadi
+            'image' => $p->type === 'fragments'
+                ? (self::imageUrl($p->edition?->coverPath()) ?? self::imageUrl($p->image))
+                : null,
             'coins_amount' => $p->coins_amount,
             'discount_type' => $p->discount_type,
             'discount_value' => $p->discount_value,
@@ -596,7 +602,9 @@ class PrizeGameService
                     'status' => $used ? 'used' : ($r->expires_at && $r->expires_at->isPast() ? 'expired' : 'active'),
                     'scope_type' => $promo?->scope_type,
                     'scope_id' => $promo?->scope_id,
-                    'image' => self::imageUrl($r->prize?->image) ?? self::imageUrl($r->prize?->edition?->coverPath()),
+                    'image' => $r->type === 'book'
+                        ? (self::imageUrl($r->prize?->edition?->coverPath()) ?? self::imageUrl($r->prize?->image))
+                        : null,
                     'discount_type' => $promo?->type,
                     'amount' => $promo ? (int) $promo->amount : null,
                     'won_at' => $r->created_at?->toIso8601String(),

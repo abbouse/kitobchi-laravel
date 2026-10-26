@@ -64,6 +64,7 @@ class PrizeGameController extends Controller
                 'daily_limit' => $p->daily_limit,
                 'stock' => $p->stock,
                 'won_count' => $p->won_count,
+                'left' => $p->stock ? max(0, $p->stock - $p->won_count) : null,
                 'starts_at' => $p->starts_at?->format('Y-m-d\TH:i'),
                 'ends_at' => $p->ends_at?->format('Y-m-d\TH:i'),
                 'actual_rate' => $spins30 > 0 ? round(((int) ($byPrize[$p->id] ?? 0)) * 100 / $spins30, 2) : null,
@@ -211,18 +212,20 @@ class PrizeGameController extends Controller
         return response()->json(['data' => $rows]);
     }
 
+    /**
+     * Sovg'a formasi (soddalashtirilgan): turi, qiymati, tushish foizi, soni va holati.
+     * Rasm, muddat va qo'shimcha shartlar yo'q — promokod/tanga rasmini ilova o'zi chizadi,
+     * kitob uchun muqova olinadi; soni tugagach sovg'a avtomatik g'ildirakdan chiqadi.
+     */
     private function fill(GamePrize $prize, Request $request): void
     {
         $data = $request->validate([
             'type' => ['required', Rule::in(['fragments', 'promocode', 'coins'])],
-            'title_uz' => 'required|string|max:120',
+            'title_uz' => 'nullable|string|max:120',
             'title_ru' => 'nullable|string|max:120',
-            'difficulty' => ['required', Rule::in(['easy', 'medium', 'hard'])],
             'chance' => 'required|numeric|min:0|max:100',
             'is_active' => 'nullable|boolean',
-            'position' => 'nullable|integer|min:0',
-            'image' => 'nullable|image|max:4096',
-            'remove_image' => 'nullable|boolean',
+            'stock' => 'nullable|integer|min:1|max:1000000',
 
             'fragments_total' => 'nullable|required_if:type,fragments|integer|min:2|max:12',
             'edition_id' => 'nullable|required_if:type,fragments|integer|exists:book_editions,id',
@@ -234,72 +237,82 @@ class PrizeGameController extends Controller
             'min_order_amount' => 'nullable|integer|min:0',
             'scope' => ['nullable', Rule::in(['all', 'edition', 'seller'])],
             'scope_id' => 'nullable|integer|min:1',
-            'valid_days' => 'nullable|integer|min:1|max:365',
-
-            'min_orders' => 'nullable|integer|min:0',
-            'min_spins' => 'nullable|integer|min:0',
-            'max_wins_per_user' => 'nullable|integer|min:1',
-            'daily_limit' => 'nullable|integer|min:1',
-            'stock' => 'nullable|integer|min:1',
-            'starts_at' => 'nullable|date',
-            'ends_at' => 'nullable|date|after_or_equal:starts_at',
         ], [
             'edition_id.required_if' => "Bo'laklar uchun kitobni tanlang",
             'discount_value.required_if' => 'Chegirma miqdorini kiriting',
             'coins_amount.required_if' => 'Tanga miqdorini kiriting',
         ]);
 
+        $type = $data['type'];
         if (($data['discount_type'] ?? null) === 'percent' && (int) ($data['discount_value'] ?? 0) > 100) {
             throw \Illuminate\Validation\ValidationException::withMessages(['discount_value' => 'Foiz 100 dan oshmasin']);
         }
-        $scope = $data['type'] === 'promocode' ? ($data['scope'] ?? 'all') : 'all';
+        $scope = $type === 'promocode' ? ($data['scope'] ?? 'all') : 'all';
         if ($scope !== 'all' && empty($data['scope_id'])) {
             throw \Illuminate\Validation\ValidationException::withMessages(['scope_id' => $scope === 'seller' ? "Do'konni tanlang" : 'Kitobni tanlang']);
         }
 
-        $image = $prize->image;
-        if ($request->boolean('remove_image') && $image) {
-            Storage::disk('public')->delete($image);
-            $image = null;
-        }
-        if ($request->hasFile('image')) {
-            if ($image) {
-                Storage::disk('public')->delete($image);
-            }
-            $image = $request->file('image')->store('game-prizes', 'public');
+        // Avvalgi qo'lda yuklangan rasm endi kerak emas
+        if ($prize->image) {
+            Storage::disk('public')->delete($prize->image);
         }
 
         $nullInt = fn ($k) => isset($data[$k]) && $data[$k] !== '' ? (int) $data[$k] : null;
+        $chance = round((float) $data['chance'], 3);
 
         $prize->forceFill([
-            'type' => $data['type'],
-            'title_uz' => $data['title_uz'],
-            'title_ru' => $data['title_ru'] ?? null,
-            'image' => $image,
-            'difficulty' => $data['difficulty'],
-            'chance' => round((float) $data['chance'], 3),
+            'type' => $type,
+            'image' => null,
+            'difficulty' => $chance >= 10 ? 'easy' : ($chance >= 3 ? 'medium' : 'hard'),
+            'chance' => $chance,
             'is_active' => $request->has('is_active') ? $request->boolean('is_active') : ($prize->exists ? $prize->is_active : true),
-            'position' => (int) ($data['position'] ?? $prize->position ?? 0),
-            'fragments_total' => $data['type'] === 'fragments' ? (int) $data['fragments_total'] : null,
-            'edition_id' => $data['type'] === 'fragments' ? (int) $data['edition_id'] : null,
-            'coins_amount' => $data['type'] === 'coins' ? (int) $data['coins_amount'] : null,
-            'discount_type' => $data['type'] === 'promocode' ? $data['discount_type'] : null,
-            'discount_value' => $data['type'] === 'promocode' ? (int) $data['discount_value'] : null,
-            'max_discount' => $data['type'] === 'promocode' ? $nullInt('max_discount') : null,
-            'min_order_amount' => $data['type'] === 'promocode' ? $nullInt('min_order_amount') : null,
+            'position' => (int) ($prize->position ?? 0),
+            'fragments_total' => $type === 'fragments' ? (int) $data['fragments_total'] : null,
+            'edition_id' => $type === 'fragments' ? (int) $data['edition_id'] : null,
+            'coins_amount' => $type === 'coins' ? (int) $data['coins_amount'] : null,
+            'discount_type' => $type === 'promocode' ? $data['discount_type'] : null,
+            'discount_value' => $type === 'promocode' ? (int) $data['discount_value'] : null,
+            'max_discount' => $type === 'promocode' && $data['discount_type'] === 'percent' ? $nullInt('max_discount') : null,
+            'min_order_amount' => $type === 'promocode' ? $nullInt('min_order_amount') : null,
             'scope' => $scope,
             'scope_id' => $scope === 'all' ? null : (int) $data['scope_id'],
-            'valid_days' => (int) ($data['valid_days'] ?? 30),
-            'min_orders' => (int) ($data['min_orders'] ?? 0),
-            'min_spins' => (int) ($data['min_spins'] ?? 0),
-            'max_wins_per_user' => $nullInt('max_wins_per_user'),
-            'daily_limit' => $nullInt('daily_limit'),
             'stock' => $nullInt('stock'),
-            'starts_at' => $data['starts_at'] ?? null,
-            'ends_at' => $data['ends_at'] ?? null,
-        ])->save();
+            // Muddat va qo'shimcha shartlar yo'q
+            'valid_days' => PrizeGameService::REWARD_VALID_DAYS,
+            'min_orders' => 0,
+            'min_spins' => 0,
+            'max_wins_per_user' => null,
+            'daily_limit' => null,
+            'starts_at' => null,
+            'ends_at' => null,
+        ]);
 
+        // Nomi bo'sh bo'lsa — qiymatdan avtomatik ("15% chegirma", "+50 tanga", kitob nomi)
+        [$autoUz, $autoRu] = $this->autoTitle($prize);
+        $prize->title_uz = trim((string) ($data['title_uz'] ?? '')) ?: $autoUz;
+        $prize->title_ru = trim((string) ($data['title_ru'] ?? '')) ?: $autoRu;
+        $prize->save();
+
+        // Soni qisqartirilib, yutilganlar sonidan kam bo'lib qolsa ham sovg'a o'zi chiqadi
         $this->assertTotal();
+    }
+
+    /** @return array{0:string,1:string} */
+    private function autoTitle(GamePrize $p): array
+    {
+        $num = fn (int $n) => number_format($n, 0, '.', ' ');
+        if ($p->type === 'coins') {
+            return ["+{$p->coins_amount} tanga", "+{$p->coins_amount} монет"];
+        }
+        if ($p->type === 'fragments') {
+            $title = BookEdition::whereKey($p->edition_id)->value('title') ?: 'Kitob';
+
+            return [$title, $title];
+        }
+        $v = $p->discount_type === 'percent' ? "{$p->discount_value}%" : $num((int) $p->discount_value)." so'm";
+        $vRu = $p->discount_type === 'percent' ? "{$p->discount_value}%" : $num((int) $p->discount_value).' сум';
+
+        return ["{$v} chegirma", "Скидка {$vRu}"];
     }
 
     /** Faol sovg'alar foizlari yig'indisi 100% dan oshmasin. */

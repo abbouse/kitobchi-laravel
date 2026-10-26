@@ -42,8 +42,7 @@ interface Prize {
   daily_limit: number | null;
   stock: number | null;
   won_count: number;
-  starts_at: string | null;
-  ends_at: string | null;
+  left: number | null;
   actual_rate: number | null;
 }
 
@@ -69,12 +68,6 @@ const BASE = '/boshqaruv/prize-game';
 const fmt = (n: number | null | undefined) => new Intl.NumberFormat('uz-UZ').format(Number(n || 0));
 const pct = (n: number) => `${Number(n.toFixed(2))}%`;
 
-const DIFF: Record<Difficulty, { label: string; tone: string; color: string }> = {
-  easy: { label: 'Oson', tone: 'success', color: 'rgba(var(--success), 1)' },
-  medium: { label: "O'rta", tone: 'warning', color: 'rgba(var(--warning), 1)' },
-  hard: { label: 'Qiyin', tone: 'danger', color: 'rgba(var(--danger), 1)' },
-};
-
 const TYPES: Record<PrizeType, { label: string; icon: string; hint: string }> = {
   fragments: { label: "Kitob bo'laklari", icon: 'ti-book', hint: "Bo'laklar yig'ilsa — kitob bepul (shaxsiy kod)" },
   promocode: { label: 'Promokod', icon: 'ti-ticket', hint: "Har bir g'olibga alohida kod yaratiladi" },
@@ -85,28 +78,37 @@ const RESULT_LABEL: Record<string, string> = {
   fragment: "Bo'lak", completed: 'Kitob yig\'ildi', promocode: 'Promokod', coins: 'Tanga',
 };
 
-function prizeValue(p: Prize): string {
-  if (p.type === 'coins') return `${fmt(p.coins_amount)} tanga`;
-  if (p.type === 'fragments') return `${p.fragments_total ?? 0} bo'lak`;
-  const v = p.discount_type === 'percent' ? `${p.discount_value}%` : `${fmt(p.discount_value)} so'm`;
-  return `${v} · ${p.valid_days} kun`;
+function prizeValue(p: Partial<Prize>): string {
+  if (p.type === 'coins') return `+${fmt(p.coins_amount)} tanga`;
+  if (p.type === 'fragments') return `${p.fragments_total ?? 0} bo'lakdan iborat kitob`;
+  return p.discount_type === 'percent' ? `${p.discount_value ?? 0}% chegirma` : `${fmt(p.discount_value)} so'm chegirma`;
 }
 
-function conditions(p: Prize): string[] {
-  const out: string[] = [];
-  if (p.min_orders > 0) out.push(`${p.min_orders}+ buyurtma`);
-  if (p.min_spins > 0) out.push(`${p.min_spins}+ aylantirish`);
-  if (p.max_wins_per_user) out.push(`1 kishiga ${p.max_wins_per_user} marta`);
-  if (p.daily_limit) out.push(`kuniga ${p.daily_limit} ta`);
-  if (p.stock) out.push(`jami ${p.stock} ta`);
-  if (p.ends_at) out.push(`${p.ends_at.slice(0, 10)} gacha`);
-  if (p.type === 'promocode' && p.scope !== 'all') out.push(p.scope === 'seller' ? `Do'kon: ${p.scope_title ?? p.scope_id}` : `Kitob: ${p.scope_title ?? p.scope_id}`);
-  if (p.type === 'promocode' && p.min_order_amount) out.push(`min ${fmt(p.min_order_amount)} so'm`);
-  return out;
+/** Tushish ehtimoli uchun tayyor variantlar — admin foiz o'ylab o'tirmasin. */
+const CHANCE_PRESETS: { label: string; value: number }[] = [
+  { label: 'Tez-tez', value: 20 },
+  { label: "O'rtacha", value: 7 },
+  { label: 'Kam', value: 2 },
+  { label: 'Juda kam', value: 0.5 },
+];
+
+/** Ilovada qanday ko'rinishi — rasm yuklash shart emas, ilova o'zi chizadi. */
+function PrizeBadge({ p, size = 40 }: { p: Partial<Prize>; size?: number }) {
+  const img = p.type === 'fragments' ? p.cover : null;
+  if (img) return <img src={img} alt="" className="b-r-8 flex-shrink-0" style={{ width: size * 0.72, height: size, objectFit: 'cover' }} />;
+  const text = p.type === 'coins' ? `+${p.coins_amount ?? 0}` : p.type === 'promocode'
+    ? (p.discount_type === 'percent' ? `${p.discount_value ?? 0}%` : `${Math.round((p.discount_value ?? 0) / 1000)}K`)
+    : '';
+  const bg = p.type === 'coins' ? 'linear-gradient(135deg,#FFD43B,#F59F00)' : p.type === 'promocode' ? 'linear-gradient(135deg,#4DABF7,#2980DD)' : 'rgba(var(--primary),.12)';
+  return (
+    <span className="d-flex-center b-r-10 flex-shrink-0 f-w-700 text-white" style={{ width: size, height: size, background: bg, fontSize: size * 0.3 }}>
+      {p.type === 'fragments' ? <i className="ti ti-book text-primary f-s-18"></i> : text}
+    </span>
+  );
 }
 
 export default function PrizeGame() {
-  const { settings, prizes = [], tasks = [], presets, stats, recent = [] } = usePage<PageProps>().props;
+  const { settings, prizes = [], tasks = [], stats, recent = [] } = usePage<PageProps>().props;
   const [editing, setEditing] = useState<Partial<Prize> | null>(null);
   const [chances, setChances] = useState<Record<number, string>>({});
 
@@ -123,7 +125,6 @@ export default function PrizeGame() {
     router.post(`${BASE}/chances`, { chances: Object.fromEntries(Object.entries(chances).map(([k, v]) => [k, Number(v) || 0])) }, { preserveScroll: true });
   };
 
-  const applyPreset = (p: Prize) => setChances((c) => ({ ...c, [p.id]: String(presets[p.difficulty]) }));
 
   const destroy = (p: Prize) => {
     if (!confirm(`"${p.title_uz}" sovg'asini o'chirasizmi? Yig'ilgan bo'laklar ham o'chadi.`)) return;
@@ -136,13 +137,13 @@ export default function PrizeGame() {
         <div>
           <h4 className="main-title mb-0">Sovg'alar g'ildiragi</h4>
           <PageCrumbs />
-          <p className="mb-0 text-secondary">Sovg'alar, tushish foizlari, yutish shartlari va tangalar</p>
+          <p className="mb-0 text-secondary">Sovg'alar, tushish foizlari, soni va tangalar</p>
         </div>
         <div className="d-flex gap-2 align-items-center">
           <span className={`badge ${settings.enabled ? 'text-light-success' : 'text-light-secondary'} f-s-13 px-3 py-2`}>
             <i className={`ti ${settings.enabled ? 'ti-circle-check' : 'ti-power'} me-1`}></i>{settings.enabled ? "O'yin yoqilgan" : "O'yin o'chirilgan"}
           </span>
-          <button className="btn btn-primary" onClick={() => setEditing({ type: 'promocode', difficulty: 'medium', chance: presets.medium, scope: 'all', valid_days: 30, discount_type: 'percent', is_active: true })}>
+          <button className="btn btn-primary" onClick={() => setEditing({ type: 'promocode', chance: 7, scope: 'all', discount_type: 'percent', discount_value: 10, is_active: true })}>
             <i className="ti ti-plus me-1"></i>Sovg'a qo'shish
           </button>
         </div>
@@ -170,48 +171,46 @@ export default function PrizeGame() {
               <div className="d-flex flex-wrap gap-3 f-s-13 text-secondary mt-2 mb-3">
                 <span>Faol sovg'alar: <b className={total > 100 ? 'text-danger' : 'text-dark'}>{pct(total)}</b></span>
                 <span>"Omad keyingi safar": <b className="text-dark">{pct(nothing)}</b></span>
-                {(Object.keys(DIFF) as Difficulty[]).map((d) => (
-                  <span key={d}><span className={`badge text-light-${DIFF[d].tone} me-1`}>{DIFF[d].label}</span>tayyor foiz {presets[d]}%</span>
-                ))}
               </div>
               {total > 100 ? <div className="alert alert-light-danger f-s-13 py-2">Yig'indi 100% dan oshdi — foizlar proporsional kamaytirib ishlatiladi va "hech narsa" tushmaydi.</div> : null}
 
               {prizes.length === 0 ? <EmptyState text="Hali sovg'a qo'shilmagan" /> : (
                 <div className="table-responsive app-scroll">
                   <table className="table table-bottom-border align-middle mb-0">
-                    <thead><tr><th>Sovg'a</th><th>Qiyinlik</th><th style={{ width: 150 }}>Foiz</th><th>Haqiqiy (30 kun)</th><th>Shartlar</th><th>Berildi</th><th></th></tr></thead>
+                    <thead><tr><th>Sovg'a</th><th style={{ width: 130 }}>Tushish foizi</th><th>Haqiqiy (30 kun)</th><th>Qoldiq</th><th>Holati</th><th></th></tr></thead>
                     <tbody>
                       {prizes.map((p) => {
-                        const img = p.image || p.cover;
-                        const conds = conditions(p);
+                        const soldOut = p.left === 0;
                         return (
-                          <tr key={p.id} className={p.is_active ? '' : 'opacity-50'}>
+                          <tr key={p.id} className={p.is_active && !soldOut ? '' : 'opacity-50'}>
                             <td>
                               <div className="d-flex align-items-center gap-2">
-                                <span className="h-40 w-40 b-r-10 overflow-hidden d-flex-center bg-light-primary flex-shrink-0">
-                                  {img ? <img src={img} alt="" className="w-100 h-100" style={{ objectFit: 'cover' }} /> : <i className={`ti ${TYPES[p.type].icon} f-s-18`}></i>}
-                                </span>
+                                <PrizeBadge p={p} />
                                 <div className="min-w-0">
                                   <div className="f-w-600 txt-ellipsis-1">{p.title_uz}</div>
-                                  <div className="f-s-12 text-secondary">{TYPES[p.type].label} · {prizeValue(p)}</div>
+                                  <div className="f-s-12 text-secondary">{TYPES[p.type].label}{p.type === 'promocode' && p.scope !== 'all' ? ` · ${p.scope === 'seller' ? "do'kon" : 'kitob'}: ${p.scope_title ?? p.scope_id}` : ''}{p.type === 'promocode' && p.min_order_amount ? ` · min ${fmt(p.min_order_amount)} so'm` : ''}</div>
                                 </div>
                               </div>
                             </td>
-                            <td><span className={`badge text-light-${DIFF[p.difficulty].tone}`}>{DIFF[p.difficulty].label}</span></td>
                             <td>
                               <div className="input-group input-group-sm">
                                 <input type="number" step="0.001" min={0} max={100} className="form-control" value={chances[p.id] ?? ''} onChange={(e) => setChances((c) => ({ ...c, [p.id]: e.target.value }))} />
                                 <span className="input-group-text">%</span>
-                                <button type="button" className="btn btn-light-secondary" title={`Tayyor foiz: ${presets[p.difficulty]}%`} onClick={() => applyPreset(p)}><i className="ti ti-wand"></i></button>
                               </div>
                             </td>
                             <td className="text-nowrap">{p.actual_rate === null ? <span className="text-muted">—</span> : <span className={Math.abs(p.actual_rate - p.chance) > Math.max(1, p.chance * 0.5) ? 'text-warning-dark f-w-600' : ''}>{pct(p.actual_rate)}</span>}</td>
-                            <td style={{ maxWidth: 220 }}>
-                              {conds.length ? <div className="d-flex flex-wrap gap-1">{conds.map((c) => <span key={c} className="badge text-light-secondary">{c}</span>)}</div> : <span className="text-muted f-s-13">Hamma uchun</span>}
+                            <td className="text-nowrap">
+                              {p.stock ? (
+                                soldOut ? <span className="badge text-light-danger">Tugadi</span> : <span><b>{fmt(p.left)}</b> <span className="text-muted f-s-12">/ {fmt(p.stock)}</span></span>
+                              ) : <span className="text-muted f-s-13">Cheklovsiz</span>}
+                              <div className="f-s-12 text-muted">Yutildi: {fmt(p.won_count)}</div>
                             </td>
-                            <td className="text-nowrap">{fmt(p.won_count)}{p.stock ? ` / ${fmt(p.stock)}` : ''}</td>
+                            <td>
+                              <div className="form-check form-switch ps-0 mb-0">
+                                <input className="form-check-input ms-0" type="checkbox" role="switch" checked={p.is_active} title={p.is_active ? "O'chirish" : 'Yoqish'} onChange={() => router.patch(`${BASE}/prizes/${p.id}/toggle`, {}, { preserveScroll: true })} />
+                              </div>
+                            </td>
                             <td className="text-nowrap text-end">
-                              <button className={`btn ${p.is_active ? 'btn-light-success' : 'btn-light-secondary'} icon-btn w-30 h-30 b-r-22 me-1`} title={p.is_active ? "O'chirish" : 'Yoqish'} onClick={() => router.patch(`${BASE}/prizes/${p.id}/toggle`, {}, { preserveScroll: true })}><i className={`ti ${p.is_active ? 'ti-toggle-right' : 'ti-toggle-left'}`}></i></button>
                               <button className="btn btn-light-primary icon-btn w-30 h-30 b-r-22 me-1" title="Tahrirlash" onClick={() => setEditing(p)}><i className="ti ti-pencil"></i></button>
                               <button className="btn btn-light-danger icon-btn w-30 h-30 b-r-22" title="O'chirish" onClick={() => destroy(p)}><i className="ti ti-trash"></i></button>
                             </td>
@@ -255,7 +254,7 @@ export default function PrizeGame() {
         </div>
       </div>
 
-      <PrizeForm prize={editing} presets={presets} onHide={() => setEditing(null)} />
+      <PrizeForm prize={editing} onHide={() => setEditing(null)} />
     </div>
   );
 }
@@ -380,54 +379,57 @@ function NumField({ name, label, value, suffix, col = 'col-md-6', placeholder, m
   );
 }
 
-function PrizeForm({ prize, presets, onHide }: { prize: Partial<Prize> | null; presets: Record<Difficulty, number>; onHide: () => void }) {
+function PrizeForm({ prize, onHide }: { prize: Partial<Prize> | null; onHide: () => void }) {
   const isEdit = !!prize?.id;
   const [type, setType] = useState<PrizeType>('promocode');
-  const [difficulty, setDifficulty] = useState<Difficulty>('medium');
   const [chance, setChance] = useState('7');
   const [scope, setScope] = useState<'all' | 'edition' | 'seller'>('all');
   const [discountType, setDiscountType] = useState<'percent' | 'fixed'>('percent');
+  const [discountValue, setDiscountValue] = useState('10');
+  const [coins, setCoins] = useState('20');
   const [edition, setEdition] = useState<Picked | null>(null);
   const [scopeItem, setScopeItem] = useState<Picked | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
-  const [removeImage, setRemoveImage] = useState(false);
+  const [active, setActive] = useState(true);
+  const [limited, setLimited] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (!prize) return;
     setType((prize.type as PrizeType) || 'promocode');
-    setDifficulty((prize.difficulty as Difficulty) || 'medium');
-    setChance(String(prize.chance ?? presets[(prize.difficulty as Difficulty) || 'medium']));
+    setChance(String(prize.chance ?? 7));
     setScope(prize.scope || 'all');
     setDiscountType(prize.discount_type || 'percent');
-    setEdition(prize.edition_id ? { id: prize.edition_id, title: prize.edition_title || `#${prize.edition_id}` } : null);
+    setDiscountValue(String(prize.discount_value ?? 10));
+    setCoins(String(prize.coins_amount ?? 20));
+    setEdition(prize.edition_id ? { id: prize.edition_id, title: prize.edition_title || `#${prize.edition_id}`, image: prize.cover } : null);
     setScopeItem(prize.scope_id ? { id: prize.scope_id, title: prize.scope_title || `#${prize.scope_id}` } : null);
-    setPreview(prize.image || null);
-    setRemoveImage(false);
+    setActive(prize.is_active ?? true);
+    setLimited(!!prize.stock);
     setErrors({});
-  }, [prize, presets]);
+  }, [prize]);
 
-  const pickDifficulty = (d: Difficulty) => { setDifficulty(d); setChance(String(presets[d])); };
+  // Ilovada ko'rinadigan nom — admin yozmasa shu ishlatiladi
+  const autoTitle = type === 'fragments'
+    ? (edition?.title?.split(' — ')[0] || 'Kitob')
+    : prizeValue({ type, discount_type: discountType, discount_value: Number(discountValue) || 0, coins_amount: Number(coins) || 0 });
 
   const submit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
     f.set('type', type);
-    f.set('difficulty', difficulty);
     f.set('chance', chance || '0');
+    f.set('is_active', active ? '1' : '0');
     f.set('scope', type === 'promocode' ? scope : 'all');
-    if (type === 'promocode') f.set('discount_type', discountType);
+    if (type === 'promocode') { f.set('discount_type', discountType); f.set('discount_value', discountValue); }
+    if (type === 'coins') f.set('coins_amount', coins);
     if (type === 'fragments' && edition) f.set('edition_id', String(edition.id));
     if (type === 'promocode' && scope !== 'all' && scopeItem) f.set('scope_id', String(scopeItem.id));
-    f.set('remove_image', removeImage ? '1' : '0');
-    const file = f.get('image');
-    if (file instanceof File && file.size === 0) f.delete('image');
+    if (!limited) f.delete('stock');
     // Bo'sh maydonlar null bo'lib ketsin
     for (const [k, v] of Array.from(f.entries())) if (v === '') f.delete(k);
     setBusy(true);
     router.post(isEdit ? `${BASE}/prizes/${prize?.id}` : `${BASE}/prizes`, f, {
-      forceFormData: true,
       preserveScroll: true,
       onSuccess: onHide,
       onError: (err) => setErrors(err as Record<string, string>),
@@ -436,17 +438,18 @@ function PrizeForm({ prize, presets, onHide }: { prize: Partial<Prize> | null; p
   };
 
   const err = (k: string) => (errors[k] ? <div className="text-danger f-s-12 mt-1">{errors[k]}</div> : null);
+  const preview: Partial<Prize> = { type, discount_type: discountType, discount_value: Number(discountValue) || 0, coins_amount: Number(coins) || 0, cover: edition?.image ?? null };
 
   return (
     <Modal show={!!prize} onHide={onHide} size="lg" page={false}>
       <form className="app-form" onSubmit={submit}>
         <Modal.Header closeButton><Modal.Title className="f-s-20 f-w-600">{isEdit ? "Sovg'ani tahrirlash" : "Yangi sovg'a"}</Modal.Title></Modal.Header>
         <Modal.Body>
-          <Section title="Sovg'a turi">
+          <Section title="1. Nima beriladi?">
             <div className="row g-2">
               {(Object.keys(TYPES) as PrizeType[]).map((t) => (
                 <div className="col-md-4" key={t}>
-                  <button type="button" onClick={() => setType(t)} className={`w-100 text-start p-3 b-r-12 border ${type === t ? 'border-primary bg-light-primary' : 'bg-white'}`} style={{ borderWidth: type === t ? 1.5 : 1 }}>
+                  <button type="button" onClick={() => setType(t)} className={`w-100 h-100 text-start p-3 b-r-12 border ${type === t ? 'border-primary bg-light-primary' : 'bg-white'}`} style={{ borderWidth: type === t ? 1.5 : 1 }}>
                     <div className="d-flex align-items-center gap-2 f-w-600 text-dark"><i className={`ti ${TYPES[t].icon} f-s-18 ${type === t ? 'text-primary' : 'text-secondary'}`}></i>{TYPES[t].label}</div>
                     <div className="f-s-12 text-secondary mt-1">{TYPES[t].hint}</div>
                   </button>
@@ -455,94 +458,91 @@ function PrizeForm({ prize, presets, onHide }: { prize: Partial<Prize> | null; p
             </div>
           </Section>
 
-          <Section title="Asosiy">
-            <div className="row g-3">
-              <div className="col-md-6"><label className="form-label f-s-13">Nomi (uz)</label><input name="title_uz" defaultValue={prize?.title_uz ?? ''} required className="form-control" placeholder="Masalan: 15% chegirma" />{err('title_uz')}</div>
-              <div className="col-md-6"><label className="form-label f-s-13">Nomi (ru)</label><input name="title_ru" defaultValue={prize?.title_ru ?? ''} className="form-control" /></div>
-              <div className="col-md-8">
-                <label className="form-label f-s-13">Rasm {type === 'fragments' ? <span className="text-muted">(bo'sh bo'lsa kitob muqovasi)</span> : null}</label>
-                <div className="d-flex align-items-center gap-2">
-                  <span className="h-45 w-45 b-r-10 overflow-hidden bg-light-secondary d-flex-center flex-shrink-0">
-                    {preview && !removeImage ? <img src={preview} alt="" className="w-100 h-100" style={{ objectFit: 'cover' }} /> : <i className="ti ti-photo text-secondary"></i>}
-                  </span>
-                  <input name="image" type="file" accept="image/*" className="form-control" onChange={(e) => { const file = e.target.files?.[0]; if (file) { setPreview(URL.createObjectURL(file)); setRemoveImage(false); } }} />
-                  {preview && !removeImage ? <button type="button" className="btn btn-light-danger icon-btn w-35 h-35 b-r-22 flex-shrink-0" onClick={() => setRemoveImage(true)}><i className="ti ti-trash"></i></button> : null}
-                </div>
-                {err('image')}
-              </div>
-              <NumField name="position" label="Tartib" value={prize?.position ?? 0} col="col-md-4" />
-            </div>
-          </Section>
-
-          {type === 'fragments' ? (
-            <Section title="Kitob bo'laklari">
+          <Section title="2. Qiymati">
+            {type === 'promocode' ? (
               <div className="row g-3">
-                <div className="col-md-8"><label className="form-label f-s-13">Kitob (global katalog)</label><Picker type="edition" value={edition} onChange={setEdition} />{err('edition_id')}</div>
-                <NumField name="fragments_total" label="Bo'laklar soni" value={prize?.fragments_total ?? 4} col="col-md-4" min={2} />
-                <div className="col-12"><Hint>Mijoz har aylantirishda bitta yangi bo'lak oladi. Hamma bo'lak yig'ilganda unga shu kitobga <b>1 dona bepul</b> shaxsiy promokod yaratiladi.</Hint></div>
-              </div>
-            </Section>
-          ) : null}
-
-          {type === 'coins' ? (
-            <Section title="Tangalar">
-              <div className="row g-3"><NumField name="coins_amount" label="Miqdori" suffix="tanga" value={prize?.coins_amount ?? 20} col="col-md-6" min={1} />{err('coins_amount')}</div>
-            </Section>
-          ) : null}
-
-          {type === 'promocode' ? (
-            <Section title="Promokod">
-              <div className="row g-3">
-                <div className="col-md-4">
-                  <label className="form-label f-s-13">Turi</label>
-                  <select className="form-select" value={discountType} onChange={(e) => setDiscountType(e.target.value as 'percent' | 'fixed')}><option value="percent">Foiz</option><option value="fixed">Summa</option></select>
-                </div>
-                <NumField name="discount_value" label="Chegirma" suffix={discountType === 'percent' ? '%' : "so'm"} value={prize?.discount_value ?? 10} col="col-md-4" min={1} />
-                <NumField name="valid_days" label="Amal qilish muddati" suffix="kun" value={prize?.valid_days ?? 30} col="col-md-4" min={1} />
-                {discountType === 'percent' ? <NumField name="max_discount" label="Maks. chegirma" suffix="so'm" value={prize?.max_discount} col="col-md-6" placeholder="Cheklovsiz" /> : null}
-                <NumField name="min_order_amount" label="Min. buyurtma" suffix="so'm" value={prize?.min_order_amount} col="col-md-6" placeholder="Cheklovsiz" />
-                <div className="col-12">
-                  <label className="form-label f-s-13">Qamrovi</label>
-                  <div className="btn-group w-100">
-                    {([['all', 'Barcha mahsulotlar'], ['edition', 'Bitta kitob'], ['seller', "Bitta do'kon"]] as const).map(([k, l]) => (
-                      <button type="button" key={k} className={`btn ${scope === k ? 'btn-primary' : 'btn-light-secondary'}`} onClick={() => { setScope(k); setScopeItem(null); }}>{l}</button>
-                    ))}
+                <div className="col-md-6">
+                  <label className="form-label f-s-13">Chegirma</label>
+                  <div className="input-group">
+                    <input type="number" min={1} max={discountType === 'percent' ? 100 : undefined} value={discountValue} onChange={(e) => setDiscountValue(e.target.value)} className="form-control" />
+                    <button type="button" className={`btn ${discountType === 'percent' ? 'btn-primary' : 'btn-light-secondary'}`} onClick={() => setDiscountType('percent')}>%</button>
+                    <button type="button" className={`btn ${discountType === 'fixed' ? 'btn-primary' : 'btn-light-secondary'}`} onClick={() => setDiscountType('fixed')}>so'm</button>
                   </div>
+                  {err('discount_value')}
+                </div>
+                {discountType === 'percent' ? <NumField name="max_discount" label="Eng ko'p chegirma" suffix="so'm" value={prize?.max_discount} col="col-md-6" placeholder="Cheklovsiz" /> : <div className="col-md-6" />}
+                <NumField name="min_order_amount" label="Minimal buyurtma" suffix="so'm" value={prize?.min_order_amount} col="col-md-6" placeholder="Cheklovsiz" />
+                <div className="col-md-6">
+                  <label className="form-label f-s-13">Qayerda ishlaydi</label>
+                  <select className="form-select" value={scope} onChange={(e) => { setScope(e.target.value as 'all' | 'edition' | 'seller'); setScopeItem(null); }}>
+                    <option value="all">Barcha mahsulotlar</option>
+                    <option value="edition">Bitta kitob</option>
+                    <option value="seller">Bitta do'kon</option>
+                  </select>
                 </div>
                 {scope !== 'all' ? <div className="col-12"><Picker type={scope} value={scopeItem} onChange={setScopeItem} />{err('scope_id')}</div> : null}
-                {err('discount_value')}
-                <div className="col-12"><Hint>Har bir g'olibga alohida kod yaratiladi: faqat o'zi, 1 marta ishlata oladi.</Hint></div>
               </div>
-            </Section>
-          ) : null}
+            ) : null}
+            {type === 'coins' ? (
+              <div className="row g-3">
+                <div className="col-md-6">
+                  <label className="form-label f-s-13">Miqdori</label>
+                  <div className="input-group"><input type="number" min={1} value={coins} onChange={(e) => setCoins(e.target.value)} className="form-control" /><span className="input-group-text">tanga</span></div>
+                  {err('coins_amount')}
+                </div>
+              </div>
+            ) : null}
+            {type === 'fragments' ? (
+              <div className="row g-3">
+                <div className="col-md-8"><label className="form-label f-s-13">Kitob</label><Picker type="edition" value={edition} onChange={setEdition} />{err('edition_id')}</div>
+                <NumField name="fragments_total" label="Necha bo'lak" value={prize?.fragments_total ?? 4} col="col-md-4" min={2} />
+              </div>
+            ) : null}
+            <div className="mt-3 d-flex align-items-center gap-3 p-3 b-r-12 bg-light-secondary">
+              <PrizeBadge p={preview} size={46} />
+              <div className="flex-grow-1 min-w-0">
+                <label className="form-label f-s-12 text-secondary mb-1">Ilovadagi nomi <span className="text-muted">(bo'sh qolsa avtomatik)</span></label>
+                <input key={`${prize?.id ?? 'new'}-uz`} name="title_uz" defaultValue={prize?.id ? prize.title_uz ?? '' : ''} placeholder={autoTitle} className="form-control form-control-sm" />
+                <input key={`${prize?.id ?? 'new'}-ru`} name="title_ru" defaultValue={prize?.id ? prize.title_ru ?? '' : ''} placeholder="Ruscha nomi (ixtiyoriy)" className="form-control form-control-sm mt-1" />
+              </div>
+            </div>
+            <div className="f-s-12 text-secondary mt-2"><i className="ti ti-photo me-1"></i>Rasm kerak emas: promokod va tanga kartasini ilova o'zi chizadi, kitobga muqovasi olinadi.</div>
+          </Section>
 
-          <Section title="Tushish foizi">
+          <Section title="3. Qanchalik tez-tez tushadi?">
             <div className="d-flex flex-wrap gap-2 mb-2">
-              {(Object.keys(DIFF) as Difficulty[]).map((d) => (
-                <button type="button" key={d} onClick={() => pickDifficulty(d)} className={`btn btn-sm ${difficulty === d ? `btn-${DIFF[d].tone}` : `btn-light-${DIFF[d].tone}`}`}>{DIFF[d].label} · {presets[d]}%</button>
+              {CHANCE_PRESETS.map((c) => (
+                <button type="button" key={c.value} onClick={() => setChance(String(c.value))} className={`btn btn-sm ${Number(chance) === c.value ? 'btn-primary' : 'btn-light-secondary'}`}>{c.label} · {c.value}%</button>
               ))}
             </div>
-            <div className="row g-3">
-              <div className="col-md-6">
-                <label className="form-label f-s-13">Har bir aylantirishda</label>
+            <div className="row g-3 align-items-end">
+              <div className="col-md-5">
                 <div className="input-group"><input type="number" step="0.001" min={0} max={100} value={chance} onChange={(e) => setChance(e.target.value)} className="form-control" /><span className="input-group-text">%</span></div>
                 {err('chance')}
               </div>
-              <div className="col-md-6 d-flex align-items-end"><div className="f-s-13 text-secondary">≈ har {Number(chance) > 0 ? fmt(Math.round(100 / Number(chance))) : '∞'} aylantirishdan biri</div></div>
+              <div className="col-md-7 f-s-13 text-secondary">≈ har {Number(chance) > 0 ? fmt(Math.round(100 / Number(chance))) : '∞'} aylantirishdan biri</div>
             </div>
           </Section>
 
-          <Section title="Yutish shartlari" last>
-            <div className="row g-3">
-              <NumField name="min_orders" label="Kamida yetkazilgan buyurtma" value={prize?.min_orders || ''} placeholder="0" col="col-md-4" />
-              <NumField name="min_spins" label="Kamida aylantirgan bo'lsin" value={prize?.min_spins || ''} placeholder="0" col="col-md-4" />
-              <NumField name="max_wins_per_user" label="1 kishi necha marta yutadi" value={prize?.max_wins_per_user} placeholder="Cheklovsiz" col="col-md-4" min={1} />
-              <NumField name="daily_limit" label="Kuniga jami" value={prize?.daily_limit} placeholder="Cheklovsiz" col="col-md-4" min={1} />
-              <NumField name="stock" label="Jami zaxira" value={prize?.stock} placeholder="Cheklovsiz" col="col-md-4" min={1} />
-              <div className="col-md-4" />
-              <div className="col-md-6"><label className="form-label f-s-13">Boshlanishi</label><input name="starts_at" type="datetime-local" defaultValue={prize?.starts_at ?? ''} className="form-control" /></div>
-              <div className="col-md-6"><label className="form-label f-s-13">Tugashi</label><input name="ends_at" type="datetime-local" defaultValue={prize?.ends_at ?? ''} className="form-control" />{err('ends_at')}</div>
-              <div className="col-12"><Hint>Shart bajarilmagan mijozga bu sovg'a tushmaydi — o'rniga "omad keyingi safar" chiqadi.</Hint></div>
+          <Section title="4. Soni va holati" last>
+            <div className="row g-3 align-items-center">
+              <div className="col-md-7">
+                <div className="btn-group w-100 mb-2">
+                  <button type="button" className={`btn ${!limited ? 'btn-primary' : 'btn-light-secondary'}`} onClick={() => setLimited(false)}>Cheklovsiz</button>
+                  <button type="button" className={`btn ${limited ? 'btn-primary' : 'btn-light-secondary'}`} onClick={() => setLimited(true)}>Belgilangan soni</button>
+                </div>
+                {limited ? (
+                  <div className="input-group"><input name="stock" type="number" min={1} defaultValue={prize?.stock ?? 10} className="form-control" /><span className="input-group-text">ta</span></div>
+                ) : null}
+                {err('stock')}
+              </div>
+              <div className="col-md-5">
+                <div className="form-check form-switch d-flex align-items-center gap-2 ps-0 mb-0">
+                  <input className="form-check-input ms-0" type="checkbox" role="switch" id="pg-prize-active" checked={active} onChange={(e) => setActive(e.target.checked)} />
+                  <label className="form-check-label f-w-600" htmlFor="pg-prize-active">{active ? 'Yoqilgan' : "O'chirilgan"}</label>
+                </div>
+              </div>
+              <div className="col-12"><Hint>{type === 'fragments' ? "Soni — nechta kitob to'liq yig'ilishi mumkin. " : 'Soni — necha marta yutib olinishi mumkin. '}Soni tugagach sovg'a g'ildirakdan o'zi chiqadi. Yutilgan kodlar {30} kun amal qiladi.</Hint></div>
             </div>
           </Section>
         </Modal.Body>

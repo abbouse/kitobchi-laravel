@@ -193,10 +193,20 @@ class PrizeGameTest extends TestCase
 
         $prize = GamePrize::firstOrFail();
         $this->assertSame('seller', $prize->scope);
-        $this->assertSame(2, $prize->min_orders);
+        // Soddalashtirilgan forma: qo'shimcha shartlar e'tiborga olinmaydi
+        $this->assertSame(0, $prize->min_orders);
+        $this->assertNull($prize->max_wins_per_user);
+
+        // Nomi bo'sh — qiymatdan avtomatik; soni bilan
+        $panel->post('/boshqaruv/prize-game/prizes', [
+            'type' => 'coins', 'chance' => 5, 'coins_amount' => 50, 'stock' => 3,
+        ])->assertSessionHasNoErrors();
+        $coins = GamePrize::where('type', 'coins')->firstOrFail();
+        $this->assertSame('+50 tanga', $coins->title_uz);
+        $this->assertSame(3, $coins->stock);
 
         // Bo'laklar uchun kitob majburiy
-        $panel->post('/boshqaruv/prize-game/prizes', ['type' => 'fragments', 'title_uz' => 'Kitob', 'difficulty' => 'easy', 'chance' => 5])
+        $panel->post('/boshqaruv/prize-game/prizes', ['type' => 'fragments', 'title_uz' => 'Kitob', 'chance' => 5])
             ->assertSessionHasErrors('edition_id');
 
         $panel->post('/boshqaruv/prize-game/chances', ['chances' => [$prize->id => 2.5]])->assertRedirect();
