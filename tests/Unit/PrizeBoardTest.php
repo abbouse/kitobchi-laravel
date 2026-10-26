@@ -72,17 +72,16 @@ class PrizeBoardTest extends TestCase
         }
     }
 
-    public function test_all_collecting_books_stay_on_board(): void
+    public function test_two_collecting_books_stay_and_books_never_exceed_two(): void
     {
         $p = $this->prizes(['fragments' => 8, 'promocode' => 4, 'coins' => 3, 'surprise' => 1]);
         $t = $this->types($p);
         foreach (range(1, 10) as $day) {
-            $board = PrizeBoard::build($p, [2 => 0.5, 5 => 0.25, 7 => 0.75], "9|d$day", $day, 9);
-            foreach ([2, 5, 7] as $id) {
-                $this->assertContains($id, $board, "Yig'ilayotgan kitob #$id yo'qolmasligi kerak");
-            }
+            $board = PrizeBoard::build($p, [2 => 0.5, 7 => 0.75], "9|d$day", $day, 9);
+            $this->assertContains(2, $board);
+            $this->assertContains(7, $board);
+            $this->assertSame(2, $this->countType($board, $t, 'fragments'));
             $this->assertCount(8, $board);
-            $this->assertGreaterThanOrEqual(1, $this->countType($board, $t, null));
         }
     }
 

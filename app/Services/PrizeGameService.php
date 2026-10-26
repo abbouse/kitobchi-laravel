@@ -357,9 +357,40 @@ class PrizeGameService
         $orders = $this->deliveredOrders($userId);
         $spins = GameSpin::where('user_id', $userId)->count();
 
-        return $this->livePrizes()
+        $live = $this->livePrizes();
+        $candidates = $live
             ->filter(fn (GamePrize $p) => $p->chance > 0 && $this->eligible($p, $userId, $orders, $spins))
             ->values();
+
+        // Kitob — eng oliy sovg'a: bir vaqtda ko'pi bilan 2 ta kitob yig'iladi.
+        // 2 ta kitob yig'ilayotgan bo'lsa, yangi kitob tushmaydi — avval shularni tugatadi.
+        $collecting = $this->collectingBooks($userId, $live);
+        if (count($collecting) >= PrizeBoard::QUOTA['fragments']) {
+            $candidates = $candidates
+                ->filter(fn (GamePrize $p) => $p->type !== 'fragments' || in_array($p->id, $collecting, true))
+                ->values();
+        }
+
+        return $candidates;
+    }
+
+    /** Hozir yig'ilayotgan (boshlangan, tugallanmagan, sovg'asi jonli) kitoblar ID lari. */
+    public function collectingBooks(int $userId, $live = null): array
+    {
+        $have = GameFragment::where('user_id', $userId)
+            ->selectRaw('prize_id, count(*) as n')->groupBy('prize_id')->pluck('n', 'prize_id');
+        if ($have->isEmpty()) {
+            return [];
+        }
+        $won = GameReward::where('user_id', $userId)->where('type', 'book')
+            ->whereIn('prize_id', $have->keys())->pluck('prize_id')->all();
+
+        return ($live ?? $this->livePrizes())
+            ->filter(fn (GamePrize $p) => $p->type === 'fragments'
+                && isset($have[$p->id])
+                && (int) $have[$p->id] < max(2, (int) $p->fragments_total)
+                && ! in_array($p->id, $won, true))
+            ->pluck('id')->map(fn ($id) => (int) $id)->values()->all();
     }
 
     /**

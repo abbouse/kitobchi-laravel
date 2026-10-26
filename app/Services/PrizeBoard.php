@@ -12,9 +12,10 @@ namespace App\Services;
  * Qoidalar:
  *  - kitob (fragments) ko'pi bilan 2 katak, promokod 3, tanga 2, sovg'a qutisi 1,
  *    kamida 1 ta "Keyingi safar";
+ *  - kitob — eng oliy sovg'a: maydonda ko'pi bilan 2 ta;
  *  - yig'ilayotgan kitob (bo'laklari bor) doim maydonda — to'liq yig'ilguncha yoki
- *    sovg'a o'chirilguncha / zaxirasi tugaguncha; bir nechta yig'ilayotgan bo'lsa,
- *    kitoblar uchun 4 tagacha burchak beriladi;
+ *    sovg'a o'chirilguncha / zaxirasi tugaguncha (bir vaqtda ko'pi bilan 2 ta kitob
+ *    yig'iladi — buni PrizeGameService::candidates ta'minlaydi);
  *  - qolgan kitoblar kuniga bir marta almashadi: har kuni bo'sh kitob kataklari to'liq
  *    yangilanadi, har bir user o'z navbatidan boshlaydi (hamma bir xil kitobni ko'rmaydi);
  *  - HAR KATAKDA BOSHQA SOVG'A — takror yo'q. Sovg'a kam bo'lsa, qolgan kataklar
@@ -53,9 +54,8 @@ class PrizeBoard
         // Yig'ilayotgan kitoblar (bo'laklari bor) — doim maydonda, eng ko'p yig'ilgani oldinda
         $collecting = array_values(array_filter($groups['fragments'], fn ($id) => ($progress[$id] ?? 0) > 0));
         usort($collecting, fn ($a, $b) => ($progress[$b] <=> $progress[$a]) ?: $a <=> $b);
-        $collecting = array_slice($collecting, 0, 4); // 4 ta burchakdan ko'p emas
         $quota = self::QUOTA;
-        $quota['fragments'] = max($quota['fragments'], count($collecting));
+        $collecting = array_slice($collecting, 0, $quota['fragments']);
 
         // Kunlik aylanma: qolgan sovg'alar kuniga bir marta almashadi. Har kuni bo'sh
         // kataklar soniga teng qadam tashlanadi — kecha ko'ringanlar o'rniga yangilari chiqadi.
