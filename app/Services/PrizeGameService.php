@@ -692,9 +692,9 @@ class PrizeGameService
                 ->leftJoin('game_prizes', 'game_prizes.id', '=', 'game_spins.prize_id')
                 ->whereIn('game_spins.result', ['fragment', 'completed', 'promocode', 'coins', 'surprise'])
                 ->orderByDesc('game_spins.id')->limit($limit)
-                ->get(['users.name', 'game_prizes.title_uz', 'game_prizes.title_ru', 'game_prizes.type', 'game_spins.result', 'game_spins.created_at'])
+                ->get(['users.name', 'users.lastname', 'game_prizes.title_uz', 'game_prizes.title_ru', 'game_prizes.type', 'game_spins.result', 'game_spins.created_at'])
                 ->map(fn ($r) => [
-                    'name' => self::maskName((string) $r->name),
+                    'name' => self::maskName((string) $r->name, (string) ($r->lastname ?? '')),
                     // fragment — kitob bo'lagi, completed — butun kitob, promocode, coins, surprise
                     'kind' => $r->result,
                     'type' => $r->type,
@@ -704,12 +704,16 @@ class PrizeGameService
         });
     }
 
-    public static function maskName(string $name): string
+    /** "Abbos T." — ism va familiyaning bosh harfi. */
+    public static function maskName(string $name, string $lastname = ''): string
     {
-        $name = trim($name) ?: 'Foydalanuvchi';
-        $parts = preg_split('/\s+/u', $name);
-        $first = $parts[0];
-        $initial = isset($parts[1]) ? ' '.mb_substr($parts[1], 0, 1).'.' : '';
+        $parts = preg_split('/\s+/u', trim($name)) ?: [];
+        $first = $parts[0] ?? '';
+        $last = trim($lastname) !== '' ? trim($lastname) : ($parts[1] ?? '');
+        if ($first === '') {
+            $first = 'Foydalanuvchi';
+        }
+        $initial = $last !== '' ? ' '.mb_strtoupper(mb_substr($last, 0, 1)).'.' : '';
 
         return $first.$initial;
     }

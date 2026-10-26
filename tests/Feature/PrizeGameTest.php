@@ -204,6 +204,8 @@ class PrizeGameTest extends TestCase
         $b = new GamePrize(['chance' => 100]);
         $this->assertSame($b, $svc->roll(collect([$b])));
         $this->assertSame('Ali V.', PrizeGameService::maskName('Ali Valiyev'));
+        $this->assertSame('Abbos T.', PrizeGameService::maskName('Abbos', 'toordaliev'));
+        $this->assertSame('Abbos', PrizeGameService::maskName('Abbos', ''));
         $this->assertSame(20, GameWallet::count() ? 0 : 20);
     }
 
