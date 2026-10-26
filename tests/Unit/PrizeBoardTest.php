@@ -72,6 +72,64 @@ class PrizeBoardTest extends TestCase
         }
     }
 
+    public function test_all_collecting_books_stay_on_board(): void
+    {
+        $p = $this->prizes(['fragments' => 8, 'promocode' => 4, 'coins' => 3, 'surprise' => 1]);
+        $t = $this->types($p);
+        foreach (range(1, 10) as $day) {
+            $board = PrizeBoard::build($p, [2 => 0.5, 5 => 0.25, 7 => 0.75], "9|d$day", $day, 9);
+            foreach ([2, 5, 7] as $id) {
+                $this->assertContains($id, $board, "Yig'ilayotgan kitob #$id yo'qolmasligi kerak");
+            }
+            $this->assertCount(8, $board);
+            $this->assertGreaterThanOrEqual(1, $this->countType($board, $t, null));
+        }
+    }
+
+    public function test_other_books_fully_change_once_a_day(): void
+    {
+        $p = $this->prizes(['fragments' => 6, 'coins' => 2]);
+        $t = $this->types($p);
+        $books = fn (array $b) => array_values(array_filter($b, fn ($id) => $id !== null && $t[$id] === 'fragments'));
+        $today = $books(PrizeBoard::build($p, [], '3|a', 100, 3));
+        $same = $books(PrizeBoard::build($p, [], '3|a', 100, 3));
+        $tomorrow = $books(PrizeBoard::build($p, [], '3|b', 101, 3));
+        sort($today);
+        sort($same);
+        $this->assertSame($today, $same, 'Kun davomida o\'zgarmaydi');
+        $this->assertCount(2, $tomorrow);
+        $this->assertEmpty(array_intersect($today, $tomorrow), 'Ertasiga boshqa kitoblar chiqadi');
+    }
+
+    public function test_users_start_rotation_from_different_books(): void
+    {
+        $p = $this->prizes(['fragments' => 6]);
+        $t = $this->types($p);
+        $first = [];
+        foreach (range(1, 6) as $user) {
+            $b = PrizeBoard::build($p, [], "$user|a", 100, $user);
+            $ids = array_values(array_filter($b, fn ($id) => $id !== null));
+            sort($ids);
+            $first[implode(',', $ids)] = true;
+        }
+        $this->assertGreaterThan(1, count($first));
+    }
+
+    public function test_won_book_never_replaces_collecting_book_cell(): void
+    {
+        $p = $this->prizes(['fragments' => 6, 'coins' => 2]);
+        $t = $this->types($p);
+        $board = PrizeBoard::build($p, [1 => 0.5], 's', 0, 0);
+        $hidden = current(array_diff([2, 3, 4, 5, 6], $board));
+        $types = $t;
+        $types[1] = 'collecting';
+        foreach (range(1, 20) as $n) {
+            $res = PrizeBoard::place($board, $hidden, 'fragments', $types, "s|$n");
+            $this->assertContains(1, $res['board']);
+            $this->assertSame($hidden, $res['board'][$res['cell']]);
+        }
+    }
+
     public function test_same_seed_same_board(): void
     {
         $p = $this->prizes(['fragments' => 4, 'promocode' => 4, 'coins' => 3]);

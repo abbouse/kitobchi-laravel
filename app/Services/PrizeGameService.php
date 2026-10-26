@@ -328,8 +328,16 @@ class PrizeGameService
             $payload = $prize ? $this->award($prize, $user, $spin) : ['result' => 'nothing'];
             $spin->forceFill(['result' => $payload['result'], 'payload' => $payload])->save();
 
+            // Yig'ilayotgan kitoblar katagi boshqa yutuq uchun almashtirilmaydi
+            $types = $candidates->pluck('type', 'id')->all();
+            $collecting = GameFragment::where('user_id', $user->id)->distinct()->pluck('prize_id')->all();
+            foreach ($collecting as $id) {
+                if (isset($types[$id]) && $id !== $prize?->id) {
+                    $types[$id] = 'collecting';
+                }
+            }
             $placed = PrizeBoard::place($board, $prize?->id, $prize?->type,
-                $candidates->pluck('type', 'id')->all(), $user->id.'|'.$spin->id);
+                $types, $user->id.'|'.$spin->id);
 
             return [
                 'ok' => true,
@@ -356,20 +364,33 @@ class PrizeGameService
 
     /**
      * "Omadli maydon"ning 8 katagi (sovg'a ID si yoki null — "Keyingi safar").
-     * Kun davomida o'zgarmaydi; kvotadan ortiq kitoblar kunma-kun almashadi.
+     * Kun davomida o'zgarmaydi; boshqa kitoblar kuniga bir marta almashadi.
+     * Yig'ilayotgan kitob — sovg'a faol va zaxirasi bor ekan — doim maydonda turadi,
+     * hatto bugun kunlik limit yoki boshqa shart tufayli tushmasa ham.
      */
     public function boardFor(int $userId, $candidates): array
     {
-        $books = $candidates->where('type', 'fragments');
+        $collecting = GameFragment::where('user_id', $userId)
+            ->selectRaw('prize_id, count(*) as n')->groupBy('prize_id')->pluck('n', 'prize_id');
+
+        // Tushish shartidan o'tmagan, lekin yig'ilayotgan va hali ham "jonli" kitoblar
+        if ($collecting->isNotEmpty()) {
+            $have = $candidates->pluck('id')->all();
+            $won = GameReward::where('user_id', $userId)->where('type', 'book')
+                ->whereIn('prize_id', $collecting->keys())->pluck('prize_id')->all();
+            $extra = $this->livePrizes()
+                ->filter(fn (GamePrize $p) => $p->type === 'fragments'
+                    && isset($collecting[$p->id])
+                    && ! in_array($p->id, $have, true)
+                    && ! in_array($p->id, $won, true));
+            $candidates = $candidates->concat($extra)->values();
+        }
+
         $progress = [];
-        if ($books->isNotEmpty()) {
-            $have = GameFragment::where('user_id', $userId)->whereIn('prize_id', $books->pluck('id'))
-                ->selectRaw('prize_id, count(*) as n')->groupBy('prize_id')->pluck('n', 'prize_id');
-            foreach ($books as $b) {
-                $n = (int) ($have[$b->id] ?? 0);
-                if ($n > 0) {
-                    $progress[$b->id] = $n / max(2, (int) $b->fragments_total);
-                }
+        foreach ($candidates->where('type', 'fragments') as $b) {
+            $n = (int) ($collecting[$b->id] ?? 0);
+            if ($n > 0 && $n < max(2, (int) $b->fragments_total)) {
+                $progress[$b->id] = $n / max(2, (int) $b->fragments_total);
             }
         }
 
@@ -378,6 +399,7 @@ class PrizeGameService
             $progress,
             $userId.'|'.today()->toDateString(),
             intdiv(today()->getTimestamp(), 86400),
+            $userId,
         );
     }
 

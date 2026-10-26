@@ -12,7 +12,11 @@ namespace App\Services;
  * Qoidalar:
  *  - kitob (fragments) ko'pi bilan 2 katak, promokod 3, tanga 2, sovg'a qutisi 1,
  *    kamida 1 ta "Keyingi safar";
- *  - yig'ilayotgan kitob (bo'laklari bor) birinchi o'rinda, qolgan kitoblar kunma-kun almashadi;
+ *  - yig'ilayotgan kitob (bo'laklari bor) doim maydonda — to'liq yig'ilguncha yoki
+ *    sovg'a o'chirilguncha / zaxirasi tugaguncha; bir nechta yig'ilayotgan bo'lsa,
+ *    kitoblar uchun 4 tagacha burchak beriladi;
+ *  - qolgan kitoblar kuniga bir marta almashadi: har kuni bo'sh kitob kataklari to'liq
+ *    yangilanadi, har bir user o'z navbatidan boshlaydi (hamma bir xil kitobni ko'rmaydi);
  *  - HAR KATAKDA BOSHQA SOVG'A — takror yo'q. Sovg'a kam bo'lsa, qolgan kataklar
  *    "Keyingi safar". (Katak soni tushish ehtimoliga ta'sir qilmaydi — ehtimolni
  *    boshqaruvdagi foiz belgilaydi; takrorlar userga noto'g'ri tasavvur berardi.)
@@ -30,9 +34,10 @@ class PrizeBoard
      * @param  array<int, float>  $progress  prize_id => yig'ilgan bo'laklar ulushi (0..1)
      * @param  string  $seed  masalan "userId|2026-10-20" — kun davomida maydon o'zgarmaydi
      * @param  int  $rotation  kun raqami — kvotadan ortiq sovg'alar navbat bilan almashadi
+     * @param  int  $offset  user bo'yicha siljish (masalan user ID) — navbat har userda boshqa joydan
      * @return array<int, int|null> 8 ta katak; sovg'a bo'lmasa — bo'sh massiv
      */
-    public static function build(array $prizes, array $progress, string $seed, int $rotation = 0): array
+    public static function build(array $prizes, array $progress, string $seed, int $rotation = 0, int $offset = 0): array
     {
         $prizes = array_values(array_filter($prizes, fn ($p) => isset($p['id'], $p['type'])));
         if (! $prizes) {
@@ -45,18 +50,22 @@ class PrizeBoard
             $groups[$type][] = (int) $p['id'];
         }
 
-        // Kunlik aylanma: kvotadan ortiq sovg'alar navbat bilan chiqadi.
-        // Kitoblarda yig'ilayotgani (bo'laklari bor) doim oldinda.
+        // Yig'ilayotgan kitoblar (bo'laklari bor) — doim maydonda, eng ko'p yig'ilgani oldinda
+        $collecting = array_values(array_filter($groups['fragments'], fn ($id) => ($progress[$id] ?? 0) > 0));
+        usort($collecting, fn ($a, $b) => ($progress[$b] <=> $progress[$a]) ?: $a <=> $b);
+        $collecting = array_slice($collecting, 0, 4); // 4 ta burchakdan ko'p emas
+        $quota = self::QUOTA;
+        $quota['fragments'] = max($quota['fragments'], count($collecting));
+
+        // Kunlik aylanma: qolgan sovg'alar kuniga bir marta almashadi. Har kuni bo'sh
+        // kataklar soniga teng qadam tashlanadi — kecha ko'ringanlar o'rniga yangilari chiqadi.
         foreach ($groups as $t => $ids) {
-            $fixed = [];
-            if ($t === 'fragments') {
-                $fixed = array_values(array_filter($ids, fn ($id) => ($progress[$id] ?? 0) > 0));
-                usort($fixed, fn ($a, $b) => ($progress[$b] <=> $progress[$a]) ?: $a <=> $b);
-            }
+            $fixed = $t === 'fragments' ? $collecting : [];
             $free = array_values(array_diff($ids, $fixed));
             sort($free);
-            if ($free) {
-                $shift = $rotation % count($free);
+            $slots = max(1, $quota[$t] - count($fixed));
+            if (count($free) > $slots) {
+                $shift = (($rotation * $slots) + $offset) % count($free);
                 $free = array_merge(array_slice($free, $shift), array_slice($free, 0, $shift));
             }
             $groups[$t] = array_merge($fixed, $free);
@@ -64,16 +73,24 @@ class PrizeBoard
 
         $type = [];
         $picked = [];
-        foreach (self::QUOTA as $t => $max) {
+        foreach ($quota as $t => $max) {
             $picked[$t] = array_slice($groups[$t], 0, $max);
         }
-        // Kamida bitta "Keyingi safar" uchun joy: ortiqchasi eng ko'p turdan (avval promokod) olinadi
+        // Kamida bitta "Keyingi safar" uchun joy: ortiqchasi eng ko'p turdan (avval promokod) olinadi.
+        // Yig'ilayotgan kitoblarga tegilmaydi.
+        $protected = ['fragments' => count($collecting)];
         while (array_sum(array_map('count', $picked)) > self::SIZE - 1) {
             $drop = null;
             foreach (['promocode', 'coins', 'fragments', 'surprise'] as $t) {
+                if (count($picked[$t]) <= ($protected[$t] ?? 0)) {
+                    continue;
+                }
                 if ($drop === null || count($picked[$t]) > count($picked[$drop])) {
                     $drop = $t;
                 }
+            }
+            if ($drop === null) {
+                break;
             }
             $picked[$drop] = array_slice($picked[$drop], 0, -1);
         }
@@ -129,6 +146,9 @@ class PrizeBoard
                 if ($id !== null) {
                     $score += 1; // "Keyingi safar" katagini oxirgi navbatda olamiz
                 }
+            }
+            if ($id !== null && ($types[$id] ?? null) === 'collecting') {
+                $score = -10; // yig'ilayotgan kitob katagiga tegilmaydi
             }
             $candidates[$cell] = $score;
         }
