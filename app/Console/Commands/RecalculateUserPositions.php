@@ -10,7 +10,7 @@ class RecalculateUserPositions extends Command
 {
     protected $signature = 'users:recalculate-positions {--chunk=200}';
 
-    protected $description = 'Mavjud foydalanuvchilar uchun position progressionni qayta hisoblaydi';
+    protected $description = 'Kitobxon darajalari va klub nishonlarini qayta hisoblaydi';
 
     public function handle(UserPositionService $positionService): int
     {
@@ -21,9 +21,9 @@ class RecalculateUserPositions extends Command
             ->orderBy('id')
             ->chunk($chunk, function ($users) use ($positionService, &$upgraded) {
                 foreach ($users as $user) {
-                    while ($positionService->evaluateAndPromote($user, 'backfill_recalculation')) {
+                    // Daraja bir chaqiruvda aniq qiymatga o'rnatiladi, nishonlar ham beriladi
+                    if ($positionService->evaluateAndPromote($user, 'backfill_recalculation')) {
                         $upgraded++;
-                        $user->refresh();
                     }
                 }
             });

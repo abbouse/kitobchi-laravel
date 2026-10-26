@@ -436,6 +436,10 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
 
             Route::get('/sovgalar', fn (AdminController $controller) => $controller->page('Sovgalar'))->name('sovgalar');
 
+            // Kitobxon darajalari va nishonlar
+            Route::get('/darajalar', [\App\Http\Controllers\Boshqaruv\LoyaltyController::class, 'index'])->name('darajalar');
+            Route::put('/darajalar/{level}', [\App\Http\Controllers\Boshqaruv\LoyaltyController::class, 'update'])->whereNumber('level')->name('darajalar.update');
+
             // Sovg'alar g'ildiragi (o'yin)
             Route::get('/prize-game', [\App\Http\Controllers\Boshqaruv\PrizeGameController::class, 'index'])->name('prize-game');
             Route::get('/prize-game/lookup', [\App\Http\Controllers\Boshqaruv\PrizeGameController::class, 'lookup'])->name('prize-game.lookup');

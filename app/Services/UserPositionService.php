@@ -2,111 +2,89 @@
 
 namespace App\Services;
 
-use App\Models\BookClub;
-use App\Models\BookClubComment;
-use App\Models\FavouriteProducts;
-use App\Models\SellerOrder;
+use App\Enums\OrderStatusCode;
+use App\Enums\PaymentStatusCode;
+use App\Models\LoyaltyLevel;
 use App\Models\Sold;
 use App\Models\User;
 use App\Models\UserPositionHistory;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 
+/**
+ * Kitobxon darajasi (users.position) — FAQAT xarid bo'yicha, oxirgi 12 oy:
+ * yetkazilgan va to'langan buyurtmalar soni hamda mahsulotlar summasi
+ * (yetkazishsiz). Chegaralar boshqaruvda (loyalty_levels). Kelgusidagi
+ * chegirma va imtiyozlar shu darajaga bog'lanadi.
+ *
+ * Daraja birdan tushmaydi: shart bajarilmay qolsa, oxirgi o'zgarishdan
+ * 90 kun o'tgach bir pog'ona pastga tushadi (birinchi qayta hisoblashda —
+ * `users:recalculate-positions` — darhol aniq darajaga o'rnatiladi).
+ *
+ * Klub faolligi (post, izoh, layk, obunachi) endi darajaga emas, nishonlarga
+ * ta'sir qiladi — qarang BadgeService.
+ */
 class UserPositionService
 {
-    public const POSITIONS = [
-        'reader',
-        'active_reader',
-        'book_lover',
-        'reviewer',
-        'collector',
-        'book_club_star',
-        'market_explorer',
-        'literary_mentor',
-    ];
+    public const DEFAULT_POSITIONS = ['reader', 'active_reader', 'book_lover', 'bibliophile', 'literary_mentor'];
 
-    private const RULES = [
-        'active_reader' => [
-            'account_age_days' => 3,
-            'min_days_in_current' => 0,
-            'completed_orders' => 1,
-        ],
-        'book_lover' => [
-            'account_age_days' => 7,
-            'min_days_in_current' => 5,
-            'completed_orders' => 3,
-            'favourites_count' => 5,
-        ],
-        'reviewer' => [
-            'account_age_days' => 14,
-            'min_days_in_current' => 7,
-            'completed_orders' => 5,
-            'posts_count' => 2,
-            'comments_count' => 8,
-        ],
-        'collector' => [
-            'account_age_days' => 21,
-            'min_days_in_current' => 10,
-            'completed_orders' => 10,
-            'favourites_count' => 12,
-            'unique_sellers_purchased' => 3,
-        ],
-        'book_club_star' => [
-            'account_age_days' => 30,
-            'min_days_in_current' => 10,
-            'posts_count' => 5,
-            'comments_count' => 20,
-            'likes_received' => 25,
-            'followers_count' => 10,
-        ],
-        'market_explorer' => [
-            'account_age_days' => 45,
-            'min_days_in_current' => 14,
-            'completed_orders' => 15,
-            'unique_sellers_purchased' => 5,
-            'favourites_count' => 20,
-        ],
-        'literary_mentor' => [
-            'account_age_days' => 90,
-            'min_days_in_current' => 21,
-            'completed_orders' => 25,
-            'posts_count' => 10,
-            'comments_count' => 35,
-            'likes_received' => 60,
-            'followers_count' => 30,
-            'unique_sellers_purchased' => 6,
-        ],
-    ];
+    public const DEMOTION_AFTER_DAYS = 90;
 
+    public function __construct(private readonly BadgeService $badges) {}
+
+    /** @return array<int, string> pastdan yuqoriga */
+    public function positions(): array
+    {
+        try {
+            $keys = LoyaltyLevel::ordered()->pluck('key')->all();
+        } catch (\Throwable) {
+            $keys = [];
+        }
+
+        return $keys ?: self::DEFAULT_POSITIONS;
+    }
+
+    /**
+     * Darajani qayta hisoblaydi va nishonlarni beradi.
+     * Qaytaradi: yangi daraja kaliti (o'zgargan bo'lsa) yoki null.
+     */
     public function evaluateAndPromote(User $user, ?string $reason = null): ?string
     {
+        // Layk/izoh kabi tez-tez hodisalarda har safar og'ir hisob-kitob qilmaslik uchun
+        $force = in_array($reason, ['order_completed', 'backfill_recalculation', 'manual'], true);
+        if (! $force && ! Cache::add("progress:eval:{$user->id}", 1, 30)) {
+            return null;
+        }
+
         $user->refresh();
+        try {
+            $this->badges->evaluate($user);
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
         if ($user->isBlocked()) {
             return null;
         }
 
-        $current = $this->normalizePosition($user->position);
-        $currentIndex = array_search($current, self::POSITIONS, true);
-        if ($currentIndex === false) {
-            $current = 'reader';
-            $currentIndex = 0;
-        }
-
-        if ($currentIndex >= count(self::POSITIONS) - 1) {
-            return null;
-        }
-
-        $next = self::POSITIONS[$currentIndex + 1];
+        $positions = $this->positions();
+        $current = in_array($user->position, $positions, true) ? $user->position : $positions[0];
+        $currentIndex = array_search($current, $positions, true);
         $metrics = $this->metrics($user);
+        $targetIndex = array_search($this->levelFor($metrics)->key ?? $positions[0], $positions, true) ?: 0;
 
-        if (!$this->qualifies($next, $metrics)) {
+        if ($targetIndex === $currentIndex && $user->position === $current) {
             return null;
         }
+        if ($targetIndex < $currentIndex && $reason !== 'backfill_recalculation') {
+            $since = $user->position_earned_at ?? $user->created_at;
+            if ($since && $since->diffInDays(now()) < self::DEMOTION_AFTER_DAYS) {
+                return null;
+            }
+            $targetIndex = $currentIndex - 1; // birdan emas — bir pog'ona
+        }
 
-        $user->forceFill([
-            'position' => $next,
-            'position_earned_at' => now(),
-        ])->save();
+        $next = $positions[$targetIndex];
+        $user->forceFill(['position' => $next, 'position_earned_at' => now()])->save();
 
         UserPositionHistory::create([
             'user_id' => $user->id,
@@ -120,83 +98,74 @@ class UserPositionService
         return $next;
     }
 
-    public function metrics(User $user): array
+    /** Shartlari bajarilgan eng yuqori daraja. */
+    public function levelFor(array $metrics): ?LoyaltyLevel
     {
-        $accountAgeDays = (int) $user->created_at?->diffInDays(now()) ?: 0;
-        $daysInCurrent = (int) ($user->position_earned_at?->diffInDays(now()) ?? $accountAgeDays);
-
-        $completedOrders = Sold::query()
-            ->where('user_id', $user->id)
-            ->where('status', 'C')
-            ->count();
-
-        $uniqueSellersPurchased = SellerOrder::query()
-            ->where('client_id', $user->id)
-            ->where('status', 3)
-            ->distinct('seller_id')
-            ->count('seller_id');
-
-        $postsCount = BookClub::query()
-            ->where('user_id', $user->id)
-            ->where('is_deleted', false)
-            ->count();
-
-        $commentsCount = BookClubComment::query()
-            ->where('user_id', $user->id)
-            ->count();
-
-        $favouritesCount = FavouriteProducts::query()
-            ->where('user_id', $user->id)
-            ->count();
-
-        $followersCount = DB::table('user_follows')
-            ->where('following_id', $user->id)
-            ->count();
-
-        $postLikesReceived = DB::table('book_club_likes')
-            ->join('book_club', 'book_club.id', '=', 'book_club_likes.post_id')
-            ->where('book_club.user_id', $user->id)
-            ->count();
-
-        $commentLikesReceived = DB::table('book_club_comment_likes')
-            ->join('book_club_comments', 'book_club_comments.id', '=', 'book_club_comment_likes.comment_id')
-            ->where('book_club_comments.user_id', $user->id)
-            ->count();
-
-        return [
-            'account_age_days' => $accountAgeDays,
-            'days_in_current_position' => $daysInCurrent,
-            'completed_orders' => $completedOrders,
-            'unique_sellers_purchased' => $uniqueSellersPurchased,
-            'posts_count' => $postsCount,
-            'comments_count' => $commentsCount,
-            'favourites_count' => $favouritesCount,
-            'followers_count' => $followersCount,
-            'likes_received' => $postLikesReceived + $commentLikesReceived,
-        ];
-    }
-
-    private function qualifies(string $position, array $metrics): bool
-    {
-        $rules = self::RULES[$position] ?? [];
-
-        foreach ($rules as $key => $required) {
-            $metricKey = $key === 'min_days_in_current'
-                ? 'days_in_current_position'
-                : $key;
-
-            if (($metrics[$metricKey] ?? 0) < $required) {
-                return false;
+        $best = null;
+        foreach (LoyaltyLevel::ordered() as $level) {
+            if ($metrics['orders_12m'] >= $level->min_orders && $metrics['spent_12m'] >= $level->min_spent) {
+                $best = $level;
             }
         }
 
-        return true;
+        return $best;
     }
 
-    private function normalizePosition(?string $position): string
+    /** Oxirgi 12 oydagi yetkazilgan va to'langan buyurtmalar. */
+    public function metrics(User $user): array
     {
-        $normalized = trim((string) $position);
+        $query = Sold::query()
+            ->where('user_id', $user->id)
+            ->whereNotNull('completed_at')
+            ->where('completed_at', '>=', now()->subYear())
+            ->where(fn ($q) => $q->whereNull('status_code')->orWhereIn('status_code', [
+                OrderStatusCode::DELIVERED->value, OrderStatusCode::CUSTOMER_RECEIVED->value,
+            ]))
+            ->where(function ($q) {
+                $q->where('payment_status_code', PaymentStatusCode::PAID->value)
+                    ->orWhere(fn ($f) => $f->whereNull('payment_status_code')->where('paymentStatus', PaymentStatusCode::PAID->legacy()));
+            });
+        // Sovg'a qilib yuborilgan buyurtma ham xarid — hisobga olinadi (faqat javonga kirmaydi)
+        $orders = 0;
+        $spent = 0;
+        foreach ($query->get(['amount', 'deliveryPrice']) as $o) {
+            $orders++;
+            $spent += max(0, (int) $o->amount - (int) ($o->deliveryPrice ?? 0));
+        }
 
-        return in_array($normalized, self::POSITIONS, true) ? $normalized : 'reader';
+        return ['orders_12m' => $orders, 'spent_12m' => $spent];
+    }
+
+    /**
+     * Ilova uchun: joriy daraja, keyingisigacha qolgani va barcha darajalar.
+     */
+    public function summary(User $user): array
+    {
+        $metrics = $this->metrics($user);
+        $levels = LoyaltyLevel::ordered()->values();
+        $positions = $levels->pluck('key')->all() ?: self::DEFAULT_POSITIONS;
+        $currentKey = in_array($user->position, $positions, true) ? $user->position : ($positions[0] ?? 'reader');
+        $idx = (int) array_search($currentKey, $positions, true);
+        $next = $levels[$idx + 1] ?? null;
+
+        $level = fn (LoyaltyLevel $l) => [
+            'key' => $l->key,
+            'name' => $l->name(),
+            'color' => $l->color,
+            'min_orders' => $l->min_orders,
+            'min_spent' => $l->min_spent,
+            'perks' => $l->perks(),
+        ];
+
+        return [
+            'current' => $levels->firstWhere('key', $currentKey) ? $level($levels->firstWhere('key', $currentKey)) : null,
+            'next' => $next ? $level($next) : null,
+            'metrics' => $metrics,
+            'to_next' => $next ? [
+                'orders' => max(0, $next->min_orders - $metrics['orders_12m']),
+                'spent' => max(0, $next->min_spent - $metrics['spent_12m']),
+            ] : null,
+            'levels' => $levels->map($level)->values()->all(),
+        ];
     }
 }

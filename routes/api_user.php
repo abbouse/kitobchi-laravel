@@ -96,6 +96,7 @@ Route::get('book_club/posts/{id}', [BookClubController::class, 'show']);
 Route::get('book_club/comments/{post_id}', [BookClubCommentController::class, 'index']);
 Route::get('book_club/comments/{post_id}/replies', [BookClubCommentController::class, 'replies']);
 Route::get('book_club/get-profile', [BookClubController::class, 'get_profile']);
+Route::get('book_club/badges', [\App\Http\Controllers\Api\UserProgressController::class, 'badges'])->middleware('throttle:60,1');
 Route::get('book_club/profile-posts', [BookClubController::class, 'getProfilePosts']);
 Route::get('cart_user', [CartController::class, 'index']);
 Route::get('cart_user/count', [CartController::class, 'count']);
@@ -173,6 +174,7 @@ Route::middleware(['auth:user', \App\Http\Middleware\EnsureUserActive::class])->
 
     // Book Club yo'llari
     Route::post('book_club/shelf/visibility', [ProductsController::class, 'setShelfVisibility']);
+    Route::get('user/level', [\App\Http\Controllers\Api\UserProgressController::class, 'level']);
     Route::prefix('book_club')->group(function () {
         Route::get('repost/{id}', [BookClubController::class, 'repost']);
         Route::get('delete/{id}', [BookClubController::class, 'deleteClubPost']);

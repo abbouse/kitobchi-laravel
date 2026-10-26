@@ -747,6 +747,9 @@ class BookClubController extends Controller
                         'role_emoji'      => $user->role_emoji,
                         'role_title'      => $user->role_title,
                         'role_place'      => $user->role_place,
+                        // Avatar ustidagi eng oxirgi nishon va jami soni
+                        'latest_badge'    => app(\App\Services\BadgeService::class)->latest((int) $user->id),
+                        'badges_count'    => app(\App\Services\BadgeService::class)->count((int) $user->id),
                     ],
                     'posts'   => $formattedOriginal,
                     'reposts' => $formattedReposts,
