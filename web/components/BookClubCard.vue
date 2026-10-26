@@ -65,7 +65,7 @@
             </div>
             <div class="flex items-center gap-2 text-xs text-neutral-400">
               <span v-if="post.user?.role_title || post.user?.position">
-                {{ post.user?.role_title || post.user?.position }}
+                {{ userRoleLabel(post.user) }}
               </span>
               <span v-if="post.user?.role_title || post.user?.position">•</span>
               <time :datetime="post.created_at">{{ relativeTime }}</time>

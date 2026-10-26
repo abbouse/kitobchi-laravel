@@ -94,7 +94,7 @@
                   </div>
                   <div class="flex items-center gap-2 text-xs text-neutral-400 mt-0.5 truncate">
                     <span v-if="post?.user?.role_title || post?.user?.position">
-                      {{ post.user?.role_title || post.user?.position }}
+                      {{ userRoleLabel(post.user) }}
                     </span>
                     <span v-if="post?.user?.role_title || post?.user?.position">•</span>
                     <time :datetime="post?.created_at">{{ formattedDate }}</time>
@@ -561,7 +561,7 @@
                   </div>
                   <div class="flex items-center gap-2 text-xs text-neutral-400 mt-0.5 truncate">
                     <span v-if="post?.user?.role_title || post?.user?.position">
-                      {{ post.user?.role_title || post.user?.position }}
+                      {{ userRoleLabel(post.user) }}
                     </span>
                     <span v-if="post?.user?.role_title || post?.user?.position">•</span>
                     <time :datetime="post?.created_at">{{ formattedDate }}</time>
@@ -935,11 +935,7 @@ function formatCommentTime(dateStr: string) {
 }
 
 function getRoleTitle(user: any) {
-  if (!user) return 'Kitobxon'
-  if (user.role_title) return user.role_title
-  if (user.position) return user.position
-  if (user.staff_role) return 'Основатель • Kitobchi'
-  return 'Kitobxon'
+  return userRoleLabel(user)
 }
 
 // Post Likes

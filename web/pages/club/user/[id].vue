@@ -270,11 +270,7 @@ const userName = computed(() => {
 
 const userRoleTitle = computed(() => {
   const u = profileUser.value
-  if (!u) return 'Kitobxon'
-  if (u.role_title) return u.role_title
-  if (u.position) return u.position
-  if (u.staff_role) return 'Основатель • Kitobchi'
-  return 'Kitobxon'
+  return userRoleLabel(u)
 })
 
 // Follow state

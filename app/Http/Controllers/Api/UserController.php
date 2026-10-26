@@ -415,7 +415,7 @@ class UserController extends Controller
             $displayRole = trim(
                 ($user->role_emoji ? $user->role_emoji . ' ' : '') .
                 $user->role_title .
-                ($user->role_place ? ' at ' . $user->role_place : '')
+                ($user->role_place ? ' · ' . $user->role_place : '')
             );
         }
 

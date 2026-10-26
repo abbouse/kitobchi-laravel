@@ -356,7 +356,7 @@
                       </svg>
                     </div>
                     <div class="text-[11px] text-neutral-400 truncate">
-                      {{ member.role_title || member.position || (member.posts_count ? `${member.posts_count} ta fikr` : 'Kitobxon') }}
+                      {{ member.role_title || (member.position ? positionLabel(member.position) : (member.posts_count ? `${member.posts_count} ta fikr` : 'Kitobxon')) }}
                     </div>
                   </div>
                 </NuxtLink>

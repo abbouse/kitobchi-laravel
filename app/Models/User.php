@@ -228,6 +228,16 @@ class User extends Authenticatable
             return $price * $item->count_item;
         });
     }
+    /** Tayyor (preset) rol nomi o'quvchining tilida qaytadi — qarang RolePreset::localizeTitle. */
+    public function getRoleTitleAttribute($value): ?string
+    {
+        try {
+            return RolePreset::localizeTitle($value);
+        } catch (\Throwable) {
+            return $value;
+        }
+    }
+
     public function getFullNameAttribute(): string
 {
     $name = trim($this->name ?? '');
