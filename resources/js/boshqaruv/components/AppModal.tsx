@@ -86,7 +86,10 @@ function ShowPage({ show, onHide, onExited, children }: { show: boolean; onHide:
 }
 
 function AppModal({ show, onHide, size, onExited, page, className, children, scrollable }: Props) {
-  const asPage = page ?? (size === 'lg' || size === 'xl');
+  // Panel karkasisiz sahifalarda (masalan, Support inbox) "show sahifa" ildizi
+  // yo'q — u yerda katta oyna oddiy modal bo'lib ochiladi.
+  const hasShowRoot = typeof document !== 'undefined' && !!document.getElementById('kc-show-root');
+  const asPage = (page ?? (size === 'lg' || size === 'xl')) && hasShowRoot;
   if (asPage) return <ShowPage show={show} onHide={onHide} onExited={onExited}>{children}</ShowPage>;
   return (
     <BsModal show={show} onHide={onHide} size={size} centered scrollable={scrollable} onExited={onExited} className={`app-modal ${className || ''}`}>

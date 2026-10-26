@@ -2,6 +2,7 @@ import { Head, Link, usePage } from '@inertiajs/react';
 import React, { Component, ErrorInfo, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Dropdown } from 'react-bootstrap';
 import Modal from '../components/AppModal';
+import CustomerOrders from '../components/CustomerOrders';
 import { apiJson, getEcho, RealtimeConfig, RealtimeState, watchState } from '../utils/realtime';
 import {
   TbMessages,
@@ -172,7 +173,7 @@ type InboxProps = {
   templates: Template[];
   realtime: RealtimeConfig | null;
   initial: { segment: Segment; filter: Filter; key: string; list: ListPayload };
-  urls: Record<'threads' | 'thread' | 'older' | 'reply' | 'assign' | 'close' | 'read' | 'templates' | 'kpi' | 'broadcastAuth' | 'chatMonitor' | 'chatData', string>;
+  urls: Record<'threads' | 'thread' | 'older' | 'reply' | 'assign' | 'close' | 'read' | 'templates' | 'kpi' | 'broadcastAuth' | 'chatMonitor' | 'chatData', string> & { customerOrders?: string };
 };
 
 type ThreadData = { thread: Thread; messages: Message[]; has_more: boolean; context: Context };
@@ -1364,7 +1365,7 @@ export default function SupportInbox() {
                 <div className="d-flex d-xxl-none justify-content-end mb-2">
                   <button type="button" className="btn btn-sm btn-light-secondary icon-btn b-r-10" onClick={toggleInfo} aria-label="Yopish"><i className="ti ti-x"></i></button>
                 </div>
-                <InfoPanel data={data} />
+                <InfoPanel data={data} ordersUrl={urls.customerOrders} />
                 <TemplatesPanel templates={visibleTemplates} onUse={applyTemplate} onEdit={(t) => { setTemplateTpl(t); setTemplateModal(true); }} onAdd={() => { setTemplateTpl(null); setTemplateModal(true); }} readOnly={me.readOnly} />
               </div>
             </InboxErrorBoundary>
@@ -1441,7 +1442,7 @@ function ChatMonitorInfoPanel({ detail }: { detail: ChatDetailPayload }) {
 
 // ─── O'ng panel ─────────────────────────────────────────────────────────────
 
-function InfoPanel({ data }: { data: ThreadData }) {
+function InfoPanel({ data, ordersUrl }: { data: ThreadData; ordersUrl?: string }) {
   const c = data?.context;
   const thread = data?.thread;
   if (!c || !thread) return null;
@@ -1523,7 +1524,10 @@ function InfoPanel({ data }: { data: ThreadData }) {
         )}
       </div>
 
-      {orders.length > 0 ? (
+      {c.kind !== 'shop' && p.user_id && ordersUrl ? (
+        // Operator qidirmasin: mijozning buyurtmalari shu yerda, ichiga kirib amal bajarsa bo'ladi
+        <CustomerOrders userId={Number(p.user_id)} total={c.stats?.orders_count ?? orders.length} listUrl={ordersUrl} />
+      ) : orders.length > 0 ? (
         <div className="b-1-light b-r-15 p-3 mb-3">
           <div className="f-w-600 mb-2">So‘nggi buyurtmalar</div>
           {orders.map((o) => (

@@ -110,8 +110,10 @@ interface SettlementOverview {
   latestReversalAt?: string | null;
 }
 
-interface Ord {
+export interface Ord {
   id: string;
+  /** Support chatidan ochilganda: amallar ruxsati (false — faqat ko'rish). */
+  canManage?: boolean;
   rawId?: number;
   source?: string;
   sourceLabel?: string;
@@ -361,7 +363,7 @@ const deliveryShort = (value?: string) => {
 
 // Holat rangi butun panelda bitta ma'noda: yashil — yakunlangan,
 // ko'k — jarayonda, sariq — kutilmoqda, qizil — muammo.
-const statusTone = (status?: string) => {
+export const statusTone = (status?: string) => {
   const normalized = String(status || '').toLowerCase();
   if (['delivered', 'customer_received', 'c', 'completed'].includes(normalized)) return 'ok';
   if (['in_delivery', 'shipping', 'b'].includes(normalized)) return 'info';
@@ -370,7 +372,7 @@ const statusTone = (status?: string) => {
   return 'neutral';
 };
 
-const statusLabel = (status?: string) => {
+export const statusLabel = (status?: string) => {
   const normalized = normalizeStatus(status);
   if (normalized === 'returned') return 'Qaytgan';
   return statusOptions.find((option) => option.code === normalized)?.label || status || '—';
@@ -510,7 +512,7 @@ const cardPaymentState = (order: Ord) => {
   return { tone: 'success', icon: 'ti-circle-check', title: "To'lov muvaffaqiyatli qabul qilingan", text: "Tranzaksiya to'lov shlyuzida tasdiqlangan va qayd etilgan", amountLabel: "Tasdiqlangan to'lov summasi", note: 'Tranzaksiya muvaffaqiyatli yakunlandi' };
 };
 
-const normalizeOrder = (order: Ord): Ord => ({ ...order, status: normalizeStatus(order.status) });
+export const normalizeOrder = (order: Ord): Ord => ({ ...order, status: normalizeStatus(order.status) });
 
 interface PaginationMeta {
   page: number;
@@ -609,7 +611,6 @@ export default function Orders() {
   const [selectedOrd, setSelectedOrd] = useState<Ord | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [autoOpenedSearch, setAutoOpenedSearch] = useState('');
-  const [reassignOrder, setReassignOrder] = useState<SellerOrder | null>(null);
   // Keng ekranda (≥1400px) qatorni bosish o'ng tomonda tezkor ko'rinish
   // panelini ochadi; to'liq sahifa "To'liq ochish" bilan. Torroq ekranda
   // avvalgidek darhol to'liq sahifa ochiladi.
@@ -685,69 +686,7 @@ export default function Orders() {
     }
   }, [orderFilters.search, autoOpenedSearch, orders, showView]);
 
-  const handleUpdateStatus = (status: string) => {
-    if (!selectedOrd?.statusUrl) return;
-    const nextStatus = normalizeStatus(status);
-    if (nextStatus === 'cancelled' && !confirm('Buyurtma bekor qilinsinmi?')) return;
-    if (nextStatus === 'returned' && selectedOrd.deliveryType === 'postal' && selectedOrd.postalReturnUrl) {
-      alert("Pochta buyurtmasiga jarima belgilash va qayta yuborish oqimini ochish uchun pastdagi 'Pochta qaytimi / qayta yuborish' blokidan foydalaning.");
-      return;
-    }
-    if (
-      nextStatus === 'returned'
-      && !confirm("Buyurtma qaytgan deb belgilansinmi?\n\nAgar bu naqd buyurtma bo'lsa, mijozga naqd to'lov yopiladi — keyingi buyurtmalarni faqat karta orqali to'lay oladi.")
-    ) return;
-    const currentOrder = selectedOrd;
-    setSelectedOrd({ ...currentOrder, status: nextStatus });
-    router.patch(currentOrder.statusUrl, { status: nextStatus }, {
-      preserveScroll: true,
-      onSuccess: () => loadOrderDetail(currentOrder),
-      onError: () => setSelectedOrd(currentOrder),
-    });
-  };
-
-  const postPrompt = (url: string | undefined, data: Record<string, string | number>, method: 'post' | 'patch' = 'post') => {
-    if (!url) return;
-    const currentOrder = selectedOrd;
-    router[method](url, data, {
-      preserveScroll: true,
-      onSuccess: () => currentOrder && loadOrderDetail(currentOrder),
-    });
-  };
-
-  const submitForm = (event: FormEvent<HTMLFormElement>, url: string | undefined, method: 'post' | 'patch' = 'post') => {
-    event.preventDefault();
-    if (!url) return;
-    const data = Object.fromEntries(new FormData(event.currentTarget).entries()) as Record<string, string>;
-    const currentOrder = selectedOrd;
-    router[method](url, data, {
-      preserveScroll: true,
-      onSuccess: () => currentOrder && loadOrderDetail(currentOrder),
-    });
-  };
-
-  const showItemRefundColumn = (selectedOrd?.itemsList || []).some((item) => item.canRefund && item.refundUrl);
-  const showSellerOrderRefundColumn = (selectedOrd?.sellerOrders || []).some((row) => row.canRefund && row.refundUrl);
-  // Naqd buyurtmada mijoz hali to'lamagan — "refund" emas, "bekor qilish".
-  // Amal bir xil (qism bekor qilinadi), faqat so'z va tushuntirish boshqa.
-  const money = selectedOrd?.moneyCaptured === true;
-  const refundWord = money ? 'Qaytarish' : 'Bekor qilish';
-
-  // Do'kon-egalik almashtirish (2026-09) — SellerOrders.tsx dagi bilan bir
-  // xil pattern: tanlangan do'kon o'zgargandan keyin buyurtma tafsilotini
-  // qayta yuklaymiz, shunda "Seller orderlar" jadvali yangilangan egalikni
-  // darhol ko'rsatadi.
-  const submitReassign = (sellerId: number) => {
-    if (!reassignOrder?.reassignUrl) return;
-    const currentOrder = selectedOrd;
-    router.post(reassignOrder.reassignUrl, { seller_id: sellerId }, {
-      preserveScroll: true,
-      onSuccess: () => {
-        setReassignOrder(null);
-        if (currentOrder) loadOrderDetail(currentOrder);
-      },
-    });
-  };
+  const { handleUpdateStatus, postPrompt } = useOrderActions(selectedOrd, setSelectedOrd, loadOrderDetail);
 
   return (
     <div>
@@ -926,11 +865,124 @@ export default function Orders() {
       ) : null}
       </div>
 
-      <Modal show={showView} onHide={() => setShowView(false)} centered size="xl" scrollable>
+      <OrderDetailModal show={showView} onHide={() => setShowView(false)} order={selectedOrd} setOrder={setSelectedOrd} loading={detailLoading} reload={loadOrderDetail} isSuperAdmin={isSuperAdmin} reassignSellers={reassignSellers} />
+    </div>
+  );
+}
+
+
+/**
+ * Buyurtma amallari (status, push, formalar) — Buyurtmalar sahifasi va
+ * Support chatidagi buyurtma oynasi uchun umumiy. `keepState` — sahifa
+ * holatini saqlab qolish (chatda ochiq suhbat yo'qolmasligi uchun).
+ */
+export function useOrderActions(
+  selectedOrd: Ord | null,
+  setSelectedOrd: (order: Ord | null) => void,
+  loadOrderDetail: (order: Ord) => Promise<void> | void,
+  keepState = false,
+) {
+  const handleUpdateStatus = (status: string) => {
+    if (!selectedOrd?.statusUrl) return;
+    const nextStatus = normalizeStatus(status);
+    if (nextStatus === 'cancelled' && !confirm('Buyurtma bekor qilinsinmi?')) return;
+    if (nextStatus === 'returned' && selectedOrd.deliveryType === 'postal' && selectedOrd.postalReturnUrl) {
+      alert("Pochta buyurtmasiga jarima belgilash va qayta yuborish oqimini ochish uchun pastdagi 'Pochta qaytimi / qayta yuborish' blokidan foydalaning.");
+      return;
+    }
+    if (
+      nextStatus === 'returned'
+      && !confirm("Buyurtma qaytgan deb belgilansinmi?\n\nAgar bu naqd buyurtma bo'lsa, mijozga naqd to'lov yopiladi — keyingi buyurtmalarni faqat karta orqali to'lay oladi.")
+    ) return;
+    const currentOrder = selectedOrd;
+    setSelectedOrd({ ...currentOrder, status: nextStatus });
+    router.patch(currentOrder.statusUrl, { status: nextStatus }, {
+      preserveScroll: true,
+      preserveState: keepState,
+      onSuccess: () => loadOrderDetail(currentOrder),
+      onError: () => setSelectedOrd(currentOrder),
+    });
+  };
+
+  const postPrompt = (url: string | undefined, data: Record<string, string | number>, method: 'post' | 'patch' = 'post') => {
+    if (!url) return;
+    const currentOrder = selectedOrd;
+    router[method](url, data, {
+      preserveScroll: true,
+      preserveState: keepState,
+      onSuccess: () => currentOrder && loadOrderDetail(currentOrder),
+    });
+  };
+
+  const submitForm = (event: FormEvent<HTMLFormElement>, url: string | undefined, method: 'post' | 'patch' = 'post') => {
+    event.preventDefault();
+    if (!url) return;
+    const data = Object.fromEntries(new FormData(event.currentTarget).entries()) as Record<string, string>;
+    const currentOrder = selectedOrd;
+    router[method](url, data, {
+      preserveScroll: true,
+      preserveState: keepState,
+      onSuccess: () => currentOrder && loadOrderDetail(currentOrder),
+    });
+  };
+
+  return { handleUpdateStatus, postPrompt, submitForm };
+}
+
+/** Buyurtmaning to'liq ko'rinishi (barcha amallar bilan). */
+export function OrderDetailModal({
+  show, onHide, order: selectedOrd, setOrder: setSelectedOrd, loading: detailLoading, reload: loadOrderDetail,
+  isSuperAdmin = false, reassignSellers = [], keepState = false,
+}: {
+  show: boolean;
+  onHide: () => void;
+  order: Ord | null;
+  setOrder: (order: Ord | null) => void;
+  loading: boolean;
+  reload: (order: Ord) => Promise<void> | void;
+  isSuperAdmin?: boolean;
+  reassignSellers?: ReassignSellerOption[];
+  keepState?: boolean;
+}) {
+  const [reassignOrder, setReassignOrder] = useState<SellerOrder | null>(null);
+  const { handleUpdateStatus, postPrompt, submitForm } = useOrderActions(selectedOrd, setSelectedOrd, loadOrderDetail, keepState);
+
+  const showItemRefundColumn = (selectedOrd?.itemsList || []).some((item) => item.canRefund && item.refundUrl);
+  const showSellerOrderRefundColumn = (selectedOrd?.sellerOrders || []).some((row) => row.canRefund && row.refundUrl);
+  // Naqd buyurtmada mijoz hali to'lamagan — "refund" emas, "bekor qilish".
+  // Amal bir xil (qism bekor qilinadi), faqat so'z va tushuntirish boshqa.
+  const money = selectedOrd?.moneyCaptured === true;
+  const refundWord = money ? 'Qaytarish' : 'Bekor qilish';
+
+  // Do'kon-egalik almashtirish (2026-09) — SellerOrders.tsx dagi bilan bir
+  // xil pattern: tanlangan do'kon o'zgargandan keyin buyurtma tafsilotini
+  // qayta yuklaymiz, shunda "Seller orderlar" jadvali yangilangan egalikni
+  // darhol ko'rsatadi.
+  const submitReassign = (sellerId: number) => {
+    if (!reassignOrder?.reassignUrl) return;
+    const currentOrder = selectedOrd;
+    router.post(reassignOrder.reassignUrl, { seller_id: sellerId }, {
+      preserveScroll: true,
+      preserveState: keepState,
+      onSuccess: () => {
+        setReassignOrder(null);
+        if (currentOrder) loadOrderDetail(currentOrder);
+      },
+    });
+  };
+
+  return (
+    <>
+      <Modal show={show} onHide={onHide} centered size="xl" scrollable>
         <Modal.Header closeButton>
           <Modal.Title className="f-s-20 f-w-600">Buyurtma: {selectedOrd?.id}</Modal.Title>
         </Modal.Header>
-        <Modal.Body>
+        <Modal.Body className={selectedOrd?.canManage === false ? 'kb-ro' : undefined}>
+          {selectedOrd?.canManage === false ? (
+            <div className="alert alert-light-secondary d-flex align-items-center gap-2 py-2 f-s-13">
+              <i className="ti ti-eye"></i>Sizda bu buyurtma uchun faqat ko‘rish huquqi bor — amallar (status, bekor qilish, refund) buyurtmalar huquqi berilgan xodimlarda.
+            </div>
+          ) : null}
           {detailLoading ? <div className="py-5 text-center text-muted">Buyurtma tafsilotlari yuklanmoqda...</div> : selectedOrd ? (
             <div className="row">
               <div className="col-lg-4">
@@ -1152,7 +1204,7 @@ export default function Orders() {
                         value={[selectedOrd.postalInfo.providers.find((provider) => provider.code === selectedOrd.postalInfo?.provider)?.name || selectedOrd.postalInfo.provider, selectedOrd.postalInfo.tracking].filter(Boolean).join(' · ') || 'Kiritilmagan'}
                         meta={selectedOrd.postalInfo.currentStatus?.title ? `${selectedOrd.postalInfo.currentStatus.providerName || 'Pochta'}: ${selectedOrd.postalInfo.currentStatus.title}${selectedOrd.postalInfo.currentStatus.location ? ` • ${selectedOrd.postalInfo.currentStatus.location}` : ''}` : (selectedOrd.postalInfo.address || "Trek va manzil «yetib keldi» SMS'ida mijozga boradi")}
                         action={
-                          <FormAction label="Tahrirlash" icon="ti ti-edit" title="Pochta ma'lumotlari" description="Trek va manzil «yetib keldi» SMS'ida mijozga boradi." onSubmit={(event) => submitForm(event, selectedOrd.postalInfo!.saveUrl, 'patch')}>
+                          <FormAction label="Tahrirlash" icon="ti ti-edit" title="Pochta ma'lumotlari" description="Trek va manzil «yetib keldi» SMS'ida mijozga boradi." disabled={!selectedOrd.postalInfo.saveUrl} onSubmit={(event) => submitForm(event, selectedOrd.postalInfo!.saveUrl, 'patch')}>
                             <label className="form-label">Pochta xizmati</label>
                             <select name="postal_provider" className="form-select mb-3" defaultValue={selectedOrd.postalInfo.provider || 'uzpost'}>
                               {selectedOrd.postalInfo.providers.map((provider) => <option key={provider.code} value={provider.code}>{provider.name}</option>)}
@@ -1825,7 +1877,7 @@ export default function Orders() {
                                       {selectedOrd.fiscalReceipt.syncUrl ? (
                                         <button
                                           className="btn btn-sm btn-light-secondary"
-                                          onClick={() => router.post(selectedOrd.fiscalReceipt!.syncUrl!, {}, { preserveScroll: true })}
+                                          onClick={() => router.post(selectedOrd.fiscalReceipt!.syncUrl!, {}, { preserveScroll: true, preserveState: keepState })}
                                         >
                                           <i className="ti ti-cloud-download me-1"></i>Tekshirish
                                         </button>
@@ -1833,7 +1885,7 @@ export default function Orders() {
                                       {selectedOrd.fiscalReceipt.registerUrl ? (
                                         <button
                                           className="btn btn-sm btn-outline-primary"
-                                          onClick={() => router.post(selectedOrd.fiscalReceipt!.registerUrl!, {}, { preserveScroll: true })}
+                                          onClick={() => router.post(selectedOrd.fiscalReceipt!.registerUrl!, {}, { preserveScroll: true, preserveState: keepState })}
                                         >
                                           <i className="ti ti-send me-1"></i>Qayta yuborish
                                         </button>
@@ -1865,12 +1917,12 @@ export default function Orders() {
           ) : null}
           {selectedOrd?.labelUrl ? <a className="btn btn-outline-secondary" href={selectedOrd.labelUrl} target="_blank">Label</a> : null}
           {selectedOrd?.receiptUrl ? <a className="btn btn-outline-secondary" href={selectedOrd.receiptUrl} target="_blank">Chek</a> : null}
-          <Button variant="light-secondary" onClick={() => setShowView(false)}>Yopish</Button>
+          <Button variant="light-secondary" onClick={onHide}>Yopish</Button>
         </Modal.Footer>
       </Modal>
 
       <ReassignSellerModal order={reassignOrder} sellers={reassignSellers} onHide={() => setReassignOrder(null)} onSubmit={submitReassign} />
-    </div>
+    </>
   );
 }
 

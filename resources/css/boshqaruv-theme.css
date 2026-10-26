@@ -1194,3 +1194,15 @@ td > [class*="iconoir-"].text-primary, td > .ti.text-primary.f-s-30, .text-cente
   .kb-stat .card-body { padding: 12px 14px; }
   .kb-stat-value { font-size: 18px; }
 }
+
+/* Support chati: mijoz buyurtmalari (o'ng panel) */
+.kb-co-toggle { display: flex; align-items: center; gap: 8px; width: 100%; padding: 12px 14px; border: 0; background: transparent; color: var(--kb-text); font-weight: 600; font-size: 14px; border-radius: 15px; }
+.kb-co-toggle:hover { background: var(--kb-hover); }
+.kb-co-toggle > .ti:first-child { font-size: 17px; color: rgb(var(--primary)); }
+.kb-co-body { padding: 0 10px 10px; border-top: 1px solid var(--kb-line-soft); padding-top: 8px; }
+.kb-co-row { display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 6px; border: 0; background: transparent; border-radius: 10px; text-align: left; color: var(--kb-text); }
+.kb-co-row:hover { background: var(--kb-hover); }
+.kb-co-row + .kb-co-row { border-top: 1px solid var(--kb-line-soft); border-radius: 0; }
+.kb-co-row:focus-visible { outline: none; box-shadow: var(--kb-focus); }
+/* Faqat ko'rish rejimida amal tugmalari ko'rinmaydi (server ham ruxsat bermaydi) */
+.kb-ro .kc-action-row > .ms-auto { display: none !important; }

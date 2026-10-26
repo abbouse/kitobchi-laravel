@@ -375,6 +375,8 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
                 Route::put('/templates/{template}', 'templateUpdate')->name('templates.update');
                 Route::delete('/templates/{template}', 'templateDestroy')->name('templates.destroy');
                 Route::get('/media/{attachment}', 'media')->name('media');
+                Route::get('/customer-orders', 'customerOrders')->name('customer-orders');
+                Route::get('/customer-orders/{order}', 'customerOrder')->name('customer-order');
             });
             Route::redirect('/tickets', '/boshqaruv/support/inbox')->name('tickets');
             Route::get('/shikoyatlar', fn (AdminController $controller) => $controller->page('Shikoyatlar'))->name('shikoyatlar');

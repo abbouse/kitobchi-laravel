@@ -2,12 +2,16 @@
 
 namespace App\Http\Controllers\Boshqaruv;
 
+use App\Enums\OrderStatusCode;
+use App\Enums\PaymentStatusCode;
 use App\Http\Controllers\Controller;
 use App\Models\Admin;
 use App\Models\BotTicketAttachment;
+use App\Models\Sold;
 use App\Models\SupportTemplate;
 use App\Services\Support\SupportInboxService;
 use App\Services\TelegramSupportService;
+use App\Support\AdminOrderStatusPresenter;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -76,6 +80,7 @@ class SupportInboxController extends Controller
                     'kpi' => route('boshqaruv.support.kpi'),
                     'chatMonitor' => route('boshqaruv.support.inbox.chat.monitor'),
                     'chatData' => url('/boshqaruv/chat'),
+                    'customerOrders' => route('boshqaruv.support.inbox.customer-orders'),
                     'broadcastAuth' => route('boshqaruv.broadcasting.auth'),
                 ],
             ],
@@ -396,6 +401,99 @@ class SupportInboxController extends Controller
     }
 
     // ─── REAL-VAQT AVTORIZATSIYASI ───────────────────────────────────────────
+
+    // ─── MIJOZ BUYURTMALARI (o'ng panel) ─────────────────────────────────────
+    // Operator suhbatdan chiqmasdan mijozning buyurtmalarini ko'radi. Amallar
+    // (status, bekor qilish, refund...) faqat "Buyurtmalar" huquqi bor va
+    // faqat-ko'rish rejimida bo'lmagan xodimga ochiq; qolganlarga — ko'rish.
+
+    public function customerOrders(Request $request): JsonResponse
+    {
+        $me = $this->me();
+        $data = $request->validate([
+            'user_id' => ['required', 'integer', 'min:1'],
+            'page' => ['nullable', 'integer', 'min:1'],
+        ]);
+
+        $paginator = Sold::query()
+            ->where('user_id', (int) $data['user_id'])
+            ->latest('id')
+            ->paginate(15, ['*'], 'page', (int) ($data['page'] ?? 1));
+
+        return response()->json([
+            'items' => collect($paginator->items())->map(function (Sold $order) {
+                $payment = PaymentStatusCode::fromLegacy($order->payment_status_code ?? $order->paymentStatus);
+
+                return [
+                    'id' => (int) $order->id,
+                    'amount' => (float) ($order->amount ?? 0),
+                    'status' => OrderStatusCode::fromLegacy($order->status_code ?? $order->status)->value,
+                    'statusLabel' => AdminOrderStatusPresenter::mainOrder($order->status_code ?? $order->status),
+                    'paymentCode' => $payment->value,
+                    'payment' => AdminOrderStatusPresenter::payment($payment->value),
+                    'items' => (int) collect($order->items ?? [])->sum(fn ($item) => max(1, (int) ($item['count_item'] ?? $item['count'] ?? $item['quantity'] ?? 1))),
+                    'date' => optional($order->created_at)->format('d.m.Y H:i'),
+                    'deliveryDate' => $order->delivery_date ? Carbon::parse($order->delivery_date)->format('d.m.Y') : null,
+                    'dataUrl' => route('boshqaruv.support.inbox.customer-order', $order),
+                ];
+            })->values()->all(),
+            'page' => $paginator->currentPage(),
+            'totalPages' => $paginator->lastPage(),
+            'total' => $paginator->total(),
+            'canManage' => $this->canManageOrders($me),
+        ]);
+    }
+
+    public function customerOrder(Sold $order): JsonResponse
+    {
+        $me = $this->me();
+        $payload = app(AdminController::class)->orderData($order)->getData(true);
+        $canManage = $this->canManageOrders($me);
+        if (! $canManage) {
+            $payload = $this->stripOrderActions($payload);
+        }
+        $payload['canManage'] = $canManage;
+
+        return response()->json($payload);
+    }
+
+    private function canManageOrders(Admin $me): bool
+    {
+        if ($me->is_read_only ?? false) {
+            return false;
+        }
+
+        return $me->isSuperAdmin() || $me->hasPermission('orders');
+    }
+
+    /**
+     * Faqat-ko'rish: amal URL'lari va "can*" bayroqlari olib tashlanadi —
+     * tugmalar ko'rinmaydi, server esa baribir panel.permission:orders bilan
+     * himoyalangan (ikki qavatli himoya).
+     */
+    private function stripOrderActions(array $data, ?string $parent = null): array
+    {
+        foreach ($data as $key => $value) {
+            if (is_array($value)) {
+                $data[$key] = $this->stripOrderActions($value, is_string($key) ? $key : $parent);
+                continue;
+            }
+            if (! is_string($key)) {
+                continue;
+            }
+            // Fiskal chek kvitansiyasi (soliq saytidagi) va mahsulot havolasi — amal emas
+            $keep = $key === 'productUrl'
+                || ($parent === 'fiscalReceipt' && in_array($key, ['receiptUrl', 'refundReceiptUrl'], true));
+            if (! $keep && str_ends_with($key, 'Url')) {
+                $data[$key] = null;
+            }
+            if (in_array($key, ['canRefundPayment', 'canPayPendingCard', 'canSendUnreachablePush', 'canRefund', 'canReassign'], true)) {
+                $data[$key] = false;
+            }
+        }
+
+        return $data;
+    }
 
     public function broadcastingAuth(Request $request)
     {
