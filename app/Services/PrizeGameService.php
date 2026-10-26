@@ -161,6 +161,27 @@ class PrizeGameService
         }
     }
 
+    /**
+     * Yetkazilgan buyurtma qaytarilsa (yoki bekor qilinsa) — u uchun berilgan tangalar
+     * hisobdan yechiladi. Balans yetmasa, 0 gacha. Bir buyurtma uchun bir marta.
+     */
+    public function revokeOrderCoins(int $userId, int $orderId): int
+    {
+        $given = (int) GameCoinTransaction::where('user_id', $userId)
+            ->where('reason', 'order')->where('ref', (string) $orderId)->sum('amount');
+        if ($given <= 0) {
+            return 0;
+        }
+        $balance = (int) GameWallet::where('user_id', $userId)->value('coins');
+        $take = min($given, max(0, $balance));
+        if ($take <= 0) {
+            return 0;
+        }
+
+        return $this->credit($userId, -$take, 'order_revoke', (string) $orderId, "Buyurtma #{$orderId} qaytarildi")
+            ? $take : 0;
+    }
+
     public function deliveredOrders(int $userId): int
     {
         return DB::table('solds')->where('user_id', $userId)
@@ -209,8 +230,16 @@ class PrizeGameService
                 ->whereNull('product_id')
                 ->where(fn ($q) => $q->where('is_deleted', 0)->orWhereNull('is_deleted'))
                 ->whereBetween('created_at', $today)->exists(),
+            // Do'kon qabul qilib, qadoqlashni boshlagan buyurtma hisoblanadi.
+            // Shunchaki yaratib, keyin bekor qilingan buyurtma vazifani bajarmaydi.
             'order' => DB::table('solds')->where('user_id', $userId)
-                ->whereBetween('created_at', $today)->exists(),
+                ->whereBetween('created_at', $today)
+                ->whereIn('status_code', [
+                    OrderStatusCode::PACKING->value,
+                    OrderStatusCode::IN_DELIVERY->value,
+                    OrderStatusCode::DELIVERED->value,
+                    OrderStatusCode::CUSTOMER_RECEIVED->value,
+                ])->exists(),
             default => false,
         };
     }

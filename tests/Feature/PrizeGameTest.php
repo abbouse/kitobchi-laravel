@@ -79,6 +79,25 @@ class PrizeGameTest extends TestCase
         $this->assertSame('surprise', $svc->winners()[0]['kind']);
     }
 
+    public function test_returned_order_coins_are_revoked_once_and_not_below_zero(): void
+    {
+        $svc = app(\App\Services\PrizeGameService::class);
+        $this->getJson('/api/v1/kitobchi/game/state')->assertOk(); // hamyon: 20 tanga
+        $svc->credit($this->user->id, 10, 'order', '777', 'Buyurtma #777');
+        $this->assertSame(30, (int) GameWallet::where('user_id', $this->user->id)->value('coins'));
+
+        $this->assertSame(10, $svc->revokeOrderCoins($this->user->id, 777));
+        $this->assertSame(0, $svc->revokeOrderCoins($this->user->id, 777), 'Ikkinchi marta yechilmaydi');
+        $this->assertSame(20, (int) GameWallet::where('user_id', $this->user->id)->value('coins'));
+
+        // Tanga sarflangan bo'lsa — 0 gacha
+        $svc->credit($this->user->id, 10, 'order', '778', 'Buyurtma #778');
+        GameWallet::where('user_id', $this->user->id)->update(['coins' => 4]);
+        $this->assertSame(4, $svc->revokeOrderCoins($this->user->id, 778));
+        $this->assertSame(0, (int) GameWallet::where('user_id', $this->user->id)->value('coins'));
+        $this->assertSame(0, $svc->revokeOrderCoins($this->user->id, 999), 'Tanga berilmagan buyurtma');
+    }
+
     public function test_coins_prize_and_max_wins(): void
     {
         $p = $this->prize(['coins_amount' => 7, 'max_wins_per_user' => 1]);

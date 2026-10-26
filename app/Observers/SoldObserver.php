@@ -58,7 +58,10 @@ class SoldObserver
         // Bekor qilingan buyurtmadagi "Sovg'a qutisi" keyingi buyurtmaga qaytadi
         if ($order->wasChanged('status_code') && in_array($order->status_code, [OrderStatusCode::CANCELLED->value, OrderStatusCode::RETURNED->value], true)) {
             try {
-                app(\App\Services\PrizeGameService::class)->releaseSurpriseForOrder((int) $order->id);
+                $game = app(\App\Services\PrizeGameService::class);
+                $game->releaseSurpriseForOrder((int) $order->id);
+                // Shu buyurtma uchun berilgan tangalar qaytarib olinadi
+                $game->revokeOrderCoins((int) $order->user_id, (int) $order->id);
             } catch (\Throwable $e) {
                 report($e);
             }
