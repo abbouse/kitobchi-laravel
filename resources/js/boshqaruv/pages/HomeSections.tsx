@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { PageCrumbs } from '../Layout';
+import { EmptyState } from '../components/Axelit';
 import FormAction from '../components/FormAction';
 
 type Section = {
@@ -285,14 +286,15 @@ export default function HomeSections() {
             <div className="card-body pt-0">
               {order.map((s, i) => row(s, i))}
               {shops ? row(shops, null) : null}
+              {!order.length && !shops ? <EmptyState text="Hali bo‘lim qo‘shilmagan — «Bo‘lim qo‘shish» tugmasi orqali boshlang." /> : null}
             </div>
           </div>
         </div>
         <div className="col-xl-4">
           <div className="card">
+            <div className="card-header"><h5 className="mb-0">Qanday ishlaydi</h5></div>
             <div className="card-body f-s-13 text-secondary">
-              <h6 className="f-w-600 text-dark">Qanday ishlaydi</h6>
-              <ul className="ps-3 mb-0">
+              <ul className="kb-bullets mb-0">
                 <li>Tepada doim bannerlar va faol buyurtmalar turadi, keyin shu ro'yxat tartibida bo'limlar.</li>
                 <li>Har kitob bitta kartochkada chiqadi (bir nechta do'konda bo'lsa — eng yaxshi taklif).</li>
                 <li>Bo'sh bo'lim (masalan predzakaz yo'q bo'lsa "Tez orada") ilovada ko'rinmaydi.</li>

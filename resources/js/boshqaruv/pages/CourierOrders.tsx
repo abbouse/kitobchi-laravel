@@ -160,24 +160,28 @@ export default function CourierOrders() {
 
       {/* Main Order List Card */}
       <div className="card">
-        <div className="card-header d-flex align-items-center justify-content-between gap-2 flex-wrap pb-0">
+        <div className="card-header d-flex align-items-center justify-content-between gap-3 flex-wrap">
           <div>
-            <h5 className="f-w-600 mb-1">Kuryer yetkazib berish topshiriqlari</h5>
+            <h5 className="f-w-600 mb-0">Kuryer yetkazib berish topshiriqlari</h5>
             <p className="text-muted f-s-13 mb-0">
               {courierOrderPagination.total} ta yetkazma yozuvi mavjud
             </p>
           </div>
-          <div className="d-flex align-items-center gap-2">
-            <input
-              className="form-control form-control-sm"
-              style={{ minWidth: 260, maxWidth: 360 }}
-              value={orderSearch}
-              onChange={(e) => setOrderSearch(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && load({ courier_orders_page: 1 })}
-              placeholder="Topshiriq ID, Order ID, mijoz yoki kuryer..."
-            />
-            {orderSearch && (
+          <div className="kb-toolbar">
+            <div className="app-form app-icon-form position-relative">
+              <i className="ti ti-search"></i>
+              <input
+                className="form-control form-control-sm"
+                value={orderSearch}
+                onChange={(e) => setOrderSearch(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && load({ courier_orders_page: 1 })}
+                placeholder="Topshiriq, buyurtma ID, mijoz yoki kuryer"
+                aria-label="Topshiriq qidirish"
+              />
+            </div>
+            {orderSearch ? (
               <button
+                type="button"
                 className="btn btn-sm btn-light-secondary"
                 onClick={() => {
                   setOrderSearch('');
@@ -186,13 +190,7 @@ export default function CourierOrders() {
               >
                 Tozalash
               </button>
-            )}
-            <button
-              className="btn btn-sm btn-primary"
-              onClick={() => load({ courier_orders_page: 1 })}
-            >
-              <i className="ti ti-search me-1"></i>Qidirish
-            </button>
+            ) : null}
           </div>
         </div>
 
@@ -226,7 +224,7 @@ export default function CourierOrders() {
                   <th>Kuryer</th>
                   <th>Mijoz</th>
                   <th>Yetkazish manzili</th>
-                  <th>Summa & Ulush</th>
+                  <th>Summa va ulush</th>
                   <th>To'lov</th>
                   <th>Holat</th>
                   <th>Sana</th>

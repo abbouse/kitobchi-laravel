@@ -219,19 +219,19 @@ export default function BookVideos() {
 
   return (
     <div>
-      <div className="d-flex align-items-end justify-content-between flex-wrap gap-3 mx-1 mb-3">
+      <div className="kb-page-head">
         <div>
           <h4 className="main-title mb-0">Kitob videolari</h4><PageCrumbs />
-          <p className="mb-0 text-secondary">
-            Haftalik va oylik e'lon videolari. Tizim eng ko'p sotilgan kitoblarni o'zi tanlaydi — tarkib, tartib, sarlavha va shablonni o'zgartirishingiz mumkin. Video musiqasiz yuklab olinadi.
-          </p>
+          <p className="mb-0 text-secondary">Eng ko‘p sotilgan kitoblardan haftalik va oylik e’lon videosi — tarkib, tartib va shablonni o‘zgartirsa bo‘ladi</p>
         </div>
-        <div className="btn-group">
+        <div className="nav kc-segment">
           {(['weekly', 'monthly'] as const).map((p) => (
-            <button key={p} type="button" className={`btn btn-sm ${period === p ? 'btn-primary' : 'btn-light-secondary'}`}
-              onClick={() => router.get('/boshqaruv/book-videos', { period: p }, { preserveScroll: true })}>
-              {p === 'weekly' ? 'Haftalik' : 'Oylik'}
-            </button>
+            <div className="nav-item" key={p}>
+              <button type="button" className={`nav-link ${period === p ? 'active' : ''}`}
+                onClick={() => router.get('/boshqaruv/book-videos', { period: p }, { preserveScroll: true })}>
+                {p === 'weekly' ? 'Haftalik' : 'Oylik'}
+              </button>
+            </div>
           ))}
         </div>
       </div>
@@ -263,10 +263,10 @@ export default function BookVideos() {
               <div className="row g-2 mb-3">
                 {templates.map((tpl) => (
                   <div key={tpl} className="col-md-4">
-                    <button type="button" onClick={() => setTemplate(tpl)}
-                      className={`w-100 text-start p-3 rounded-3 border ${template === tpl ? 'border-primary bg-light-primary' : 'bg-white'}`}>
-                      <div className="fw-semibold"><i className={`ti ${TEMPLATE_INFO[tpl].icon} me-1`}></i>{TEMPLATE_INFO[tpl].name}</div>
-                      <small className="text-secondary">{TEMPLATE_INFO[tpl].desc}</small>
+                    <button type="button" onClick={() => setTemplate(tpl)} aria-pressed={template === tpl}
+                      className={`kb-choice ${template === tpl ? 'is-active' : ''}`}>
+                      <span className="kb-choice-title"><i className={`ti ${TEMPLATE_INFO[tpl].icon}`}></i>{TEMPLATE_INFO[tpl].name}</span>
+                      <small>{TEMPLATE_INFO[tpl].desc}</small>
                     </button>
                   </div>
                 ))}
@@ -359,7 +359,7 @@ export default function BookVideos() {
               </div>
               <div className="d-flex justify-content-center gap-2 mt-3">
                 <button type="button" className={`btn btn-sm ${showCover ? 'btn-light-primary' : 'btn-light-secondary'}`} disabled={recording !== null} onClick={() => setShowCover((v) => !v)}>
-                  <i className="ti ti-photo me-1"></i>{showCover ? 'Video' : 'Cover'}
+                  <i className="ti ti-photo me-1"></i>{showCover ? 'Video' : 'Muqova'}
                 </button>
                 <button type="button" className="btn btn-light-secondary btn-sm" disabled={recording !== null || showCover} onClick={() => setPlaying((p) => !p)}>
                   <i className={`ti ${playing ? 'ti-player-pause' : 'ti-player-play'} me-1`}></i>{playing ? "To'xtatish" : "Ko'rish"}
@@ -370,7 +370,7 @@ export default function BookVideos() {
                 </button>
               </div>
               <button type="button" className="btn btn-light-primary btn-sm mt-2" disabled={recording !== null || !books.length} onClick={downloadCover}>
-                <i className="ti ti-photo-down me-1"></i>Coverni yuklab olish (JPG)
+                <i className="ti ti-photo-down me-1"></i>Muqovani yuklab olish (JPG)
               </button>
               {recording !== null && (
                 <div className="progress mt-2" style={{ height: 6 }}><div className="progress-bar" style={{ width: `${recording * 100}%` }}></div></div>

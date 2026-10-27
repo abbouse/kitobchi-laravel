@@ -3,7 +3,7 @@ import { Link, router, usePage } from '@inertiajs/react';
 import { PageCrumbs } from '../Layout';
 import PaginationControls from '../components/PaginationControls';
 import ModerationRejectModal from '../components/ModerationRejectModal';
-import { EmptyState, StatWidget } from '../components/Axelit';
+import { EmptyState } from '../components/Axelit';
 import { EditionFields, isbnCheckChip, type OptionItem, type PickedEdition } from '../components/CatalogFields';
 import FormAction from '../components/FormAction';
 
@@ -81,34 +81,37 @@ export default function CatalogSubmissions() {
             ? "Do'konlar kartadagi xato haqida yuborgan tuzatish takliflari"
             : "Do'konlar katalogda topmagan kitoblar: old va orqa muqova, ISBN tekshiruvi"}</p>
         </div>
-        <Link href="/boshqaruv/catalog" className="btn btn-light-secondary btn-sm"><i className="ti ti-book me-1"></i>Global katalog</Link>
+        <Link href="/boshqaruv/catalog" className="btn btn-light-secondary"><i className="ti ti-stack-2"></i>Global katalog</Link>
       </div>
 
-      <ul className="nav nav-pills mb-3 gap-2">
-        {[
-          { key: 'new_book', label: 'Yangi kitob', icon: 'ti-upload' },
-          { key: 'correction', label: 'Tuzatish takliflari', icon: 'ti-edit' },
-        ].map((item) => (
-          <li className="nav-item" key={item.key}>
-            <button type="button" className={`nav-link ${type === item.key ? 'active' : ''}`} onClick={() => load({ type: item.key, tab: 'pending', page: 1 })}>
-              <i className={`ti ${item.icon} me-1`}></i>{item.label}
-              {typeCounts[item.key] ? <span className="badge bg-danger ms-2">{typeCounts[item.key]}</span> : null}
-            </button>
-          </li>
-        ))}
-      </ul>
-
-      <div className="row">
-        {[
-          { key: 'pending', label: 'Kutilmoqda', sub: "Ko'rib chiqilishi kerak" },
-          { key: 'approved', label: 'Tasdiqlangan', sub: 'Katalogga qo\'shildi' },
-          { key: 'merged', label: 'Birlashtirilgan', sub: 'Mavjud kartaga ulandi' },
-          { key: 'rejected', label: 'Rad etilgan', sub: "Do'konga sabab bilan qaytdi" },
-        ].filter((item) => !(corrections && item.key === 'merged')).map((item, index) => (
-          <div className="col-xl-3 col-md-6" key={item.key}>
-            <StatWidget index={index} label={item.label} value={counts[item.key] || 0} sub={item.sub} selected={tab === item.key} onClick={() => load({ tab: item.key, page: 1 })} />
-          </div>
-        ))}
+      <div className="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+        <div className="nav kc-segment" aria-label="Ariza turi">
+          {[
+            { key: 'new_book', label: 'Yangi kitoblar', icon: 'ti-upload' },
+            { key: 'correction', label: 'Tuzatish takliflari', icon: 'ti-edit' },
+          ].map((item) => (
+            <div className="nav-item" key={item.key}>
+              <button type="button" className={`nav-link ${type === item.key ? 'active' : ''}`} onClick={() => load({ type: item.key, tab: 'pending', page: 1 })}>
+                <i className={`ti ${item.icon}`}></i>{item.label}
+                {typeCounts[item.key] ? <span className="badge bg-danger rounded-pill">{typeCounts[item.key]}</span> : null}
+              </button>
+            </div>
+          ))}
+        </div>
+        <div className="nav kc-segment" aria-label="Holat">
+          {[
+            { key: 'pending', label: 'Kutilmoqda' },
+            { key: 'approved', label: 'Tasdiqlangan' },
+            { key: 'merged', label: 'Birlashtirilgan' },
+            { key: 'rejected', label: 'Rad etilgan' },
+          ].filter((item) => !(corrections && item.key === 'merged')).map((item) => (
+            <div className="nav-item" key={item.key}>
+              <button type="button" className={`nav-link ${tab === item.key ? 'active' : ''}`} onClick={() => load({ tab: item.key, page: 1 })}>
+                {item.label}<span className="kb-tab-count">{counts[item.key] || 0}</span>
+              </button>
+            </div>
+          ))}
+        </div>
       </div>
 
       {submissions.map((item) => {

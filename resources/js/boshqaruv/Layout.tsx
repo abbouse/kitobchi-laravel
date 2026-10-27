@@ -37,19 +37,19 @@ const nav = [
     { to: '/boshqaruv/search-history', match: '/boshqaruv/search-history', label: 'Qidiruv tarixi', icon: 'ti-history', perm: 'search-history' },
   ] },
   { group: 'Katalog', section: 'Savdo', icon: 'ti-book', ax: 'ti ti-book', items: [
-    { to: '/boshqaruv/books', match: '/boshqaruv/books', label: 'Kitoblar', icon: 'ti-book', perm: 'catalog' },
     { to: '/boshqaruv/catalog', match: '/boshqaruv/catalog', label: 'Global katalog', icon: 'ti-stack-2', perm: 'catalog' },
+    { to: '/boshqaruv/books', match: '/boshqaruv/books', label: 'Do‘kon kitoblari', icon: 'ti-book', perm: 'catalog' },
     { to: '/boshqaruv/catalog/submissions', match: '/boshqaruv/catalog/submissions', label: 'Kitob arizalari', icon: 'ti-inbox', perm: 'catalog' },
     { to: '/boshqaruv/catalog-slots', match: '/boshqaruv/catalog-slots', label: 'Katalog joylari', icon: 'ti-crown', perm: 'catalog' },
     { to: '/boshqaruv/book-categories', match: '/boshqaruv/book-categories', label: 'Kitob kategoriyalari', icon: 'ti-bookmarks', perm: 'catalog' },
-    { to: '/boshqaruv/stationeries', match: '/boshqaruv/stationeries', label: 'Kanselyariya', icon: 'ti-edit', perm: 'catalog' },
-    { to: '/boshqaruv/stationery-categories', match: '/boshqaruv/stationery-categories', label: 'Kanstovar kategoriyalari', icon: 'ti-tags', perm: 'catalog' },
     { to: '/boshqaruv/authors', match: '/boshqaruv/authors', label: 'Mualliflar', icon: 'ti-id', perm: 'catalog' },
     { to: '/boshqaruv/publishers', match: '/boshqaruv/publishers', label: 'Nashriyotlar', icon: 'ti-building', perm: 'catalog' },
+    { to: '/boshqaruv/stationeries', match: '/boshqaruv/stationeries', label: 'Kanselyariya', icon: 'ti-edit', perm: 'catalog' },
+    { to: '/boshqaruv/stationery-categories', match: '/boshqaruv/stationery-categories', label: 'Kanselyariya kategoriyalari', icon: 'ti-tags', perm: 'catalog' },
   ] },
   { group: 'Hamkorlar', section: 'Hamkorlar va logistika', icon: 'ti-building-store', ax: 'ti ti-building-store', items: [
     { to: '/boshqaruv/sellers', match: '/boshqaruv/sellers', label: 'Sotuvchilar va mualliflar', icon: 'ti-building-store', perm: 'sellers' },
-    { to: '/boshqaruv/seller-ai-actions', match: '/boshqaruv/seller-ai-actions', label: 'Seller AI audit', icon: 'ti-robot', perm: 'seller-ai' },
+    { to: '/boshqaruv/seller-ai-actions', match: '/boshqaruv/seller-ai-actions', label: 'Do‘kon AI amallari', icon: 'ti-robot', perm: 'seller-ai' },
   ] },
   { group: 'Logistika', section: 'Hamkorlar va logistika', icon: 'ti-truck', ax: 'ti ti-truck', items: [
     { to: '/boshqaruv/couriers', match: '/boshqaruv/couriers', label: 'Kuryerlar floti', icon: 'ti-bike', perm: 'couriers' },

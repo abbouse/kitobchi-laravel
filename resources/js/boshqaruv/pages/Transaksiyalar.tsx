@@ -136,7 +136,12 @@ export default function Transaksiyalar() {
               className={`nav-link ${owner === key ? 'active' : ''}`}
               onClick={() => { setOwner(key); router.get('/boshqaruv/transactions', { transaction_owner: key, transactions_page: 1 }, { preserveState: true, preserveScroll: true, replace: true }); }}>{label}</button></div>)}
         </div>
-        <input className="form-control form-control-sm" style={{ maxWidth: 360 }} value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && go({ transactions_page: 1 })} placeholder={`${ownerLabel}, telefon, order ID yoki summa`} />
+        <div className="kb-toolbar">
+          <div className="app-form app-icon-form position-relative">
+            <i className="ti ti-search"></i>
+            <input className="form-control form-control-sm" value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && go({ transactions_page: 1 })} placeholder={`${ownerLabel}, telefon, buyurtma ID yoki summa`} aria-label="Tranzaksiya qidirish" />
+          </div>
+        </div>
       </div>
 
       <div className="row">

@@ -1500,7 +1500,7 @@ function SellerScorecard({ rows }: { rows: DashboardPayload['sellerScorecard'] }
                 <tr>
                   <th>#</th>
                   <th>Sotuvchi</th>
-                  <th className="text-end">Order</th>
+                  <th className="text-end">Buyurtma</th>
                   <th className="text-end">Tushum</th>
                   <th className="text-end">Bekor %</th>
                   <th className="text-end">Qabul</th>

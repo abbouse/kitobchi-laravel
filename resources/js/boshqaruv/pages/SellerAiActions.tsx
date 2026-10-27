@@ -28,9 +28,9 @@ interface AiAction {
 
 const statusLabel = (status: string) => ({
   all: 'Barchasi',
-  preview: 'Preview',
+  preview: 'Kutilmoqda',
   applied: 'Bajarilgan',
-  rolled_back: 'Rollback',
+  rolled_back: 'Qaytarilgan',
   failed: 'Xato',
   cancelled: 'Bekor',
 }[status] || status);
@@ -72,16 +72,16 @@ export default function SellerAiActions() {
     <div>
       <div className="d-flex align-items-end justify-content-between flex-wrap gap-3 mx-1 mb-3">
         <div>
-          <h4 className="main-title mb-0">Seller AI Audit</h4><PageCrumbs />
+          <h4 className="main-title mb-0">Do‘kon AI amallari</h4><PageCrumbs />
           <p className="mb-0 text-secondary">AI preview, tasdiqlangan stock amallari va rollback tarixi</p>
         </div>
       </div>
 
       <div className="row">
         {[
-          { key: 'preview', label: 'Preview', icon: 'ti-eye', color: 'rgba(var(--warning-dark), 1)' },
+          { key: 'preview', label: 'Kutilmoqda', icon: 'ti-eye', color: 'rgba(var(--warning-dark), 1)' },
           { key: 'applied', label: 'Bajarilgan', icon: 'ti-circle-check', color: 'rgba(var(--success), 1)' },
-          { key: 'rolled_back', label: 'Rollback', icon: 'ti-rotate', color: 'rgba(var(--info), 1)' },
+          { key: 'rolled_back', label: 'Qaytarilgan', icon: 'ti-rotate', color: 'rgba(var(--info), 1)' },
           { key: 'all', label: 'Jami', icon: 'ti-robot', color: 'rgba(var(--primary), 1)' },
         ].map((item, kpiIndex) => (<div className="col-xl-3 col-md-6" key={item.key}>
           <StatWidget
@@ -111,7 +111,7 @@ export default function SellerAiActions() {
 
           <div className="table-responsive app-scroll">
             <table className="table table-bottom-border align-middle">
-              <thead><tr><th>Token</th><th>Seller</th><th>Fayl</th><th>Action</th><th>Items</th><th>Status</th><th>Sana</th><th>Amal</th></tr></thead>
+              <thead><tr><th>Token</th><th>Do‘kon</th><th>Fayl</th><th>Amal</th><th>Mahsulotlar</th><th>Holat</th><th>Sana</th><th>Amal</th></tr></thead>
               <tbody>
                 {sellerAiActions.map((action) => (
                   <tr key={action.token}>

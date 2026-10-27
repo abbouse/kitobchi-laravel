@@ -224,11 +224,11 @@ export function ApiClients() {
   return (
     <div>
       <div className="d-flex align-items-end justify-content-between flex-wrap gap-3 mx-1 mb-3">
-        <div><h4 className="main-title mb-0">API mijozlar</h4><PageCrumbs /><p className="mb-0 text-secondary">Jami {apiClients.length} ta client</p></div>
+        <div><h4 className="main-title mb-0">API mijozlar</h4><PageCrumbs /><p className="mb-0 text-secondary">Jami {apiClients.length} ta API mijoz</p></div>
         <div className="d-flex gap-2">
-          <a className="btn btn-outline-secondary" href="/developers/api"><i className="ti ti-file-code me-1"></i>Docs</a>
-          <button className="btn btn-outline-secondary" onClick={() => setShowLogs(true)}><i className="ti ti-file-code me-1"></i>API Logs</button>
-          <button className="btn btn-primary" onClick={() => { setEditing(null); setShowForm(true); }}><i className="ti ti-plus me-1"></i>Client qo'shish</button>
+          <a className="btn btn-light-secondary" href="/developers/api"><i className="ti ti-book-2"></i>Hujjatlar</a>
+          <button className="btn btn-light-secondary" onClick={() => setShowLogs(true)}><i className="ti ti-list-details"></i>So‘rovlar jurnali</button>
+          <button className="btn btn-primary" onClick={() => { setEditing(null); setShowForm(true); }}><i className="ti ti-plus"></i>Mijoz qo‘shish</button>
         </div>
       </div>
       {(apiClientsMeta?.warnings || []).length ? (
@@ -242,7 +242,7 @@ export function ApiClients() {
       <div className="card">
 <div className="card-body">
           <div className="table-responsive app-scroll"><table className="table table-bottom-border align-middle">
-            <thead><tr><th>ID</th><th>Nomi</th><th>Credentials (App ID & Secret)</th><th>So'rovlar</th><th>Limit</th><th>Holat</th><th>Amallar</th></tr></thead>
+            <thead><tr><th>ID</th><th>Nomi</th><th>Kalitlar (App ID va Secret)</th><th>So'rovlar</th><th>Limit</th><th>Holat</th><th>Amallar</th></tr></thead>
             <tbody>{apiClients.map(client => (
               <tr key={client.id}>
                 <td className="f-w-600 text-primary">#{client.id}</td>
@@ -308,7 +308,7 @@ export function ApiClients() {
         <Modal.Header closeButton><Modal.Title className="f-s-20 f-w-600">API Logs (oxirgi 50 ta)</Modal.Title></Modal.Header>
         <Modal.Body>
           <div className="table-responsive app-scroll"><table className="table table-bottom-border align-middle">
-            <thead><tr><th>Method</th><th>Path</th><th>Status</th><th>Vaqt</th><th>Client</th></tr></thead>
+            <thead><tr><th>Usul</th><th>Yo‘l</th><th>Holat</th><th>Vaqt</th><th>Client</th></tr></thead>
             <tbody>{apiLogs.map((log) => (
               <tr key={log.id}>
                 <td><span className={`badge ${log.method === 'GET' ? 'text-light-success' : log.method === 'POST' ? 'text-light-info' : 'text-light-danger'} f-s-9 font-monospace`}>{log.method}</span></td>

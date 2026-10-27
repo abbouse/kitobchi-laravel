@@ -65,7 +65,7 @@ export default function Reklamalar() {
           { label: 'Jami reklama', value: ads.length, icon: 'ti-speakerphone', color: 'rgba(var(--primary), 1)' },
           { label: 'Moderatsiyada', value: pending, icon: 'ti-hourglass', color: 'rgba(var(--warning-dark), 1)' },
           { label: 'Tasdiqlangan', value: ads.filter((ad) => chip(ad.status) === 'text-light-success').length, icon: 'ti-circle-check', color: 'rgba(var(--success), 1)' },
-          { label: 'Budget', value: `${fmt(totalBudget)} so'm`, icon: 'ti-cash', color: 'rgba(var(--primary), 1)' },
+          { label: 'Byudjet', value: `${fmt(totalBudget)} so'm`, icon: 'ti-cash', color: 'rgba(var(--primary), 1)' },
         ].map((item, kpiIndex) => (<div className="col-xl-3 col-md-6" key={item.label}>
           <StatWidget index={kpiIndex} label={item.label} value={item.value} />
         </div>))}
@@ -88,7 +88,7 @@ export default function Reklamalar() {
 
                 <div className="row g-2 text-center mb-3">
                   <div className="col-4"><div className="f-w-600">{fmt(ad.clicks)}</div><small className="text-muted">Klik</small></div>
-                  <div className="col-4"><div className="f-w-600 text-success">{fmt(ad.budget)}</div><small className="text-muted">Budget</small></div>
+                  <div className="col-4"><div className="f-w-600 text-success">{fmt(ad.budget)}</div><small className="text-muted">Byudjet</small></div>
                   <div className="col-4"><div className="f-w-600 text-primary">{ad.days || 0}</div><small className="text-muted">Kun</small></div>
                 </div>
 

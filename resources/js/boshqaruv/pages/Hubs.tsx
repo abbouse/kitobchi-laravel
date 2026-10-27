@@ -112,6 +112,7 @@ interface HubsPayload {
 const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n || 0);
 
 const STAGE_ORDER = ['inbound', 'qc', 'packing', 'dispatch', 'delivery'] as const;
+const STAGE_FALLBACK: Record<string, string> = { inbound: 'Qabul', qc: 'Tekshiruv', packing: 'Qadoqlash', dispatch: 'Jo‘natish', delivery: 'Yetkazish' };
 
 // Hub kartasidagi kichik pipeline chizig'i
 function PipelineBar({ pipeline, stages }: { pipeline?: HubPipeline; stages: FulfillmentStage[] }) {
@@ -253,7 +254,7 @@ function HubForm({ hub, action, onDone }: { hub?: Hub | null; action?: string; o
         <div className="col-md-6"><Toggle name="is_primary" label="Asosiy hub" defaultChecked={hub?.primary ?? false} /></div>
         <div className="col-md-4"><Toggle name="supports_first_mile" label="First mile" defaultChecked={hub?.supportsFirstMile ?? true} /></div>
         <div className="col-md-4"><Toggle name="supports_last_mile" label="Last mile" defaultChecked={hub?.supportsLastMile ?? true} /></div>
-        <div className="col-md-4"><Toggle name="supports_postal_dispatch" label="Pochta dispatch" defaultChecked={hub?.supportsPostal ?? false} /></div>
+        <div className="col-md-4"><Toggle name="supports_postal_dispatch" label="Pochta orqali jo‘natish" defaultChecked={hub?.supportsPostal ?? false} /></div>
         <div className="col-12">
           <label className="form-label f-s-13 text-muted f-w-600">Izoh</label>
           <textarea className="form-control" name="meta" rows={3} defaultValue={hub?.notes ?? ''} />
@@ -384,7 +385,7 @@ export default function Hubs() {
           <div className="row g-2">
             {/* Quvur bosqichlari: raqam har doim asosiy matn rangida (qorong'i rejimda
                 ham o'qiladi), bosqich ulushi esa ostidagi ingichka chiziqda ko'rinadi */}
-            {(stages.length ? stages : STAGE_ORDER.map((k) => ({ key: k, label: k, icon: 'ti-point-filled', color: '' }))).map((stage, index) => {
+            {(stages.length ? stages : STAGE_ORDER.map((k) => ({ key: k, label: STAGE_FALLBACK[k], icon: 'ti-point-filled', color: '' }))).map((stage, index) => {
               const value = totals[stage.key] || 0;
               const share = openTotal > 0 ? Math.round((value / openTotal) * 100) : 0;
               return (
@@ -399,7 +400,7 @@ export default function Hubs() {
             })}
             <div className="col-6 col-xl">
               <div className={`b-r-15 p-3 h-100 ${(totals.exceptions || 0) > 0 ? 'bg-light-danger' : 'bg-light-secondary'}`}>
-                <p className="f-w-600 mb-1 f-s-13">Exception</p>
+                <p className="f-w-600 mb-1 f-s-13">Muammoli</p>
                 <h4 className="mb-0">{fmt(totals.exceptions || 0)}</h4>
                 <div className="custom-progress-container mt-2 mb-0"><div className={`progress-bar ${(totals.exceptions || 0) > 0 ? 'bg-danger' : 'idle'}`} style={{ width: (totals.exceptions || 0) > 0 ? '100%' : '0%' }}></div></div>
               </div>
@@ -444,7 +445,7 @@ export default function Hubs() {
                       <div className="text-muted f-s-12">{item.updatedAt || ''}</div>
                     </div>
                     <div className="text-end">
-                      {item.hasException ? <span className="badge text-danger" style={{ background: 'rgba(var(--danger), .3)' }}>Exception</span> : <span className="badge text-light-secondary">{item.stageLabel}</span>}
+                      {item.hasException ? <span className="badge text-danger" style={{ background: 'rgba(var(--danger), .3)' }}>Muammoli</span> : <span className="badge text-light-secondary">{item.stageLabel}</span>}
                     </div>
                   </div>
                 ))}
@@ -510,7 +511,7 @@ export default function Hubs() {
 <div className="card-header d-flex align-items-center justify-content-between gap-2 flex-wrap">
               <div>
                 <h5 className="f-w-600">Hub xodimlari</h5>
-                <p className="mb-0 text-secondary">A122 dagi rollar va permission katalogi asosida</p>
+                <p className="mb-0 text-secondary">Rollar va ruxsatlar katalogi asosida</p>
               </div>
               <button className="btn btn-sm btn-primary" onClick={() => setEditingStaff(null)}><i className="ti ti-user-plus me-1"></i>Xodim</button>
             </div>
@@ -549,7 +550,7 @@ export default function Hubs() {
                 <h5 className="f-w-600">Rollar va vakolatlar</h5>
                 <p className="mb-0 text-secondary">Hub operatsion rollari uchun default ruxsatlar</p>
               </div>
-              <span className="badge text-light-info">{hubPermissions.length} permission</span>
+              <span className="badge text-light-info">{hubPermissions.length} ta ruxsat</span>
             </div>
 <div className="card-body">
 
@@ -585,7 +586,7 @@ export default function Hubs() {
 
           <div className="table-responsive app-scroll">
             <table className="table table-bottom-border align-middle">
-              <thead><tr><th>Hub</th><th>Kod</th><th>Hudud</th><th className="text-end text-nowrap">Xodim</th><th className="text-end text-nowrap">Fulfillment</th><th className="text-end text-nowrap">Kuryer task</th><th>Qo'llab-quvvatlaydi</th><th>Amallar</th></tr></thead>
+              <thead><tr><th>Hub</th><th>Kod</th><th>Hudud</th><th className="text-end text-nowrap">Xodim</th><th className="text-end text-nowrap">Fulfillment</th><th className="text-end text-nowrap">Kuryer vazifasi</th><th>Xizmatlar</th><th>Amallar</th></tr></thead>
               <tbody>
                 {hubs.map((hub) => (
                   <tr key={hub.id}>

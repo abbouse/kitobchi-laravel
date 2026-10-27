@@ -262,7 +262,7 @@ function BranchesTab({ seller, pagination, onPage, onRotateQr }: { seller: Detai
             <div className="d-flex gap-2 justify-content-center mt-3 flex-wrap">
               {seller.qr?.imageUrl ? <a className="btn btn-sm btn-light-secondary" href={String(seller.qr.imageUrl)} target="_blank" rel="noreferrer">Ochish</a> : null}
               {seller.qr?.imageUrl ? <a className="btn btn-sm btn-light-secondary" href={String(seller.qr.imageUrl)} download={`kitobchi-seller-${seller.id}-qr.png`}>Yuklab olish</a> : null}
-              <button type="button" className="btn btn-sm btn-outline-primary" onClick={onRotateQr}><i className="ti ti-rotate-clockwise me-1"></i>Yangilash</button>
+              <button type="button" className="btn btn-sm btn-light-primary" onClick={onRotateQr}><i className="ti ti-rotate-clockwise me-1"></i>Yangilash</button>
             </div>
           </div></div>
       </div>
@@ -284,7 +284,7 @@ function BranchesTab({ seller, pagination, onPage, onRotateQr }: { seller: Detai
                       <MapButtons mapLinks={(item.mapLinks || {}) as Record<string, string>} />
                       <div className="d-flex gap-2 flex-wrap mt-2">
                         {item.qrImageUrl ? <a href={String(item.qrImageUrl)} className="btn btn-sm btn-light-secondary" target="_blank" rel="noreferrer">QR ochish</a> : null}
-                        {item.rotateUrl ? <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => confirm("Eski filial QR ishlamay qoladi. Yangilansinmi?") && router.post(String(item.rotateUrl), {}, { preserveScroll: true })}>QR yangilash</button> : null}
+                        {item.rotateUrl ? <button type="button" className="btn btn-sm btn-light-primary" onClick={() => confirm("Eski filial QR ishlamay qoladi. Yangilansinmi?") && router.post(String(item.rotateUrl), {}, { preserveScroll: true })}>QR yangilash</button> : null}
                       </div>
                     </div>
                   </div>

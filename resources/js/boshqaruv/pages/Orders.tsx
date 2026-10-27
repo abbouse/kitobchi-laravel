@@ -1321,7 +1321,7 @@ export function OrderDetailModal({
                         <thead>
                           <tr>
                             <th>Mahsulot</th>
-                            <th>Seller</th>
+                            <th>Do‘kon</th>
                             <th>Turi</th>
                             <th>Soni</th>
                             <th>Narx</th>
@@ -1884,7 +1884,7 @@ export function OrderDetailModal({
                                       ) : null}
                                       {selectedOrd.fiscalReceipt.registerUrl ? (
                                         <button
-                                          className="btn btn-sm btn-outline-primary"
+                                          className="btn btn-sm btn-light-primary"
                                           onClick={() => router.post(selectedOrd.fiscalReceipt!.registerUrl!, {}, { preserveScroll: true, preserveState: keepState })}
                                         >
                                           <i className="ti ti-send me-1"></i>Qayta yuborish
@@ -1915,8 +1915,8 @@ export function OrderDetailModal({
               <i className="ti ti-phone-off me-1"></i>Bog'lana olmadik (Push)
             </Button>
           ) : null}
-          {selectedOrd?.labelUrl ? <a className="btn btn-outline-secondary" href={selectedOrd.labelUrl} target="_blank">Label</a> : null}
-          {selectedOrd?.receiptUrl ? <a className="btn btn-outline-secondary" href={selectedOrd.receiptUrl} target="_blank">Chek</a> : null}
+          {selectedOrd?.labelUrl ? <a className="btn btn-light-secondary" href={selectedOrd.labelUrl} target="_blank">Label</a> : null}
+          {selectedOrd?.receiptUrl ? <a className="btn btn-light-secondary" href={selectedOrd.receiptUrl} target="_blank">Chek</a> : null}
           <Button variant="light-secondary" onClick={onHide}>Yopish</Button>
         </Modal.Footer>
       </Modal>
@@ -2072,11 +2072,11 @@ function SellerOrdersTable({
         <thead>
           <tr>
             <th>ID</th>
-            <th>Seller</th>
+            <th>Do‘kon</th>
             <th>Kuryer</th>
             <th>Summa</th>
             <th>Hisob-kitob</th>
-            <th>Status</th>
+            <th>Holat</th>
             <th>Qabul</th>
             {showRefundColumn ? <th>Refund</th> : null}
             <th>Amallar</th>

@@ -79,7 +79,7 @@ export default function SellerOrders() {
       {/* ── Sarlavha & Breadcrumbs ── */}
       <div className="d-flex align-items-end justify-content-between flex-wrap gap-3 mb-3">
         <div>
-          <h4 className="main-title mb-0">Seller Buyurtmalari</h4>
+          <h4 className="main-title mb-0">Do‘kon buyurtmalari</h4>
           <PageCrumbs />
           <p className="mb-0 text-secondary">
             Do'konlarga taqsimlangan sub-buyurtmalar, yig'ish jarayoni va seller hisob-kitoblari
@@ -87,10 +87,11 @@ export default function SellerOrders() {
         </div>
         <div className="d-flex align-items-center gap-2">
           <button
-            className="btn btn-sm btn-outline-secondary"
+            type="button"
+            className="btn btn-light-secondary"
             onClick={() => router.reload({ preserveScroll: true })}
           >
-            <i className="ti ti-rotate me-1"></i>Yangilash
+            <i className="ti ti-refresh"></i>Yangilash
           </button>
         </div>
       </div>
@@ -111,21 +112,24 @@ export default function SellerOrders() {
       </div>
 
       {/* ── Asosiy Jadval Card ── */}
-      <div className="card border-0 shadow-sm">
-        <div className="card-header bg-transparent border-bottom d-flex align-items-center justify-content-between gap-2 flex-wrap py-3">
+      <div className="card">
+        <div className="card-header d-flex align-items-center justify-content-between gap-3 flex-wrap">
           <div>
             <h5 className="f-w-600 mb-0">Buyurtmalar ro'yxati</h5>
-            <p className="mb-0 text-secondary f-s-13">{sellerOrderPagination.total} ta seller buyurtmasi topildi</p>
+            <p className="mb-0 text-secondary f-s-13">{sellerOrderPagination.total} ta do'kon buyurtmasi topildi</p>
           </div>
-          <div className="d-flex gap-2">
-            <input
-              className="form-control form-control-sm"
-              style={{ maxWidth: 280 }}
-              value={orderSearch}
-              onChange={(e) => setOrderSearch(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && load({ seller_orders_page: 1 })}
-              placeholder="ID, seller yoki mijoz qidirish..."
-            />
+          <div className="kb-toolbar">
+            <div className="app-form app-icon-form position-relative">
+              <i className="ti ti-search"></i>
+              <input
+                className="form-control form-control-sm"
+                value={orderSearch}
+                onChange={(e) => setOrderSearch(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && load({ seller_orders_page: 1 })}
+                placeholder="ID, do'kon yoki mijoz"
+                aria-label="Buyurtma qidirish"
+              />
+            </div>
           </div>
         </div>
 
@@ -153,10 +157,10 @@ export default function SellerOrders() {
           {/* Table */}
           <div className="table-responsive app-scroll">
             <table className="table table-bottom-border align-middle mb-0">
-              <thead className="bg-light">
+              <thead>
                 <tr>
                   <th className="ps-3">ID</th>
-                  <th>Seller (Do'kon / Muallif)</th>
+                  <th>Do'kon / muallif</th>
                   <th>Mijoz</th>
                   <th className="text-end">Summa</th>
                   <th className="text-end">Mahsulot</th>

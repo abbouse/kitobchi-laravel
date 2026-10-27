@@ -85,10 +85,11 @@ export default function Sellers() {
         </div>
         <div className="d-flex align-items-center gap-2">
           <button
-            className="btn btn-sm btn-outline-secondary"
+            type="button"
+            className="btn btn-light-secondary"
             onClick={() => router.reload({ preserveScroll: true })}
           >
-            <i className="ti ti-rotate me-1"></i>Yangilash
+            <i className="ti ti-refresh"></i>Yangilash
           </button>
         </div>
       </div>
@@ -109,84 +110,77 @@ export default function Sellers() {
       </div>
 
       {/* ── Jadval Card ── */}
-      <div className="card border-0 shadow-sm">
-        <div className="card-header bg-transparent border-bottom d-flex align-items-center justify-content-between gap-3 flex-wrap py-3">
+      <div className="card">
+        <div className="card-header d-flex align-items-center justify-content-between gap-3 flex-wrap">
           <div>
             <h5 className="f-w-600 mb-0">Hamkorlar ro'yxati</h5>
             <p className="mb-0 text-secondary f-s-13">Jami {sellerPagination.total} ta hamkor topildi</p>
           </div>
-
-          <div className="d-flex flex-wrap align-items-center gap-2">
-            {/* Hamkor turi filtri (Do'kon vs Muallif) */}
-            <div className="btn-group btn-group-sm" role="group">
-              <button
-                type="button"
-                className={`btn ${roleFilter === 'all' ? 'btn-primary' : 'btn-outline-secondary'}`}
-                onClick={() => {
-                  setRoleFilter('all');
-                  load({ sellers_page: 1, sellers_role: 'all' });
-                }}
-              >
-                Barchasi ({partnerRoleCounts.all})
-              </button>
-              <button
-                type="button"
-                className={`btn ${roleFilter === 'seller' ? 'btn-primary' : 'btn-outline-secondary'}`}
-                onClick={() => {
-                  setRoleFilter('seller');
-                  load({ sellers_page: 1, sellers_role: 'seller' });
-                }}
-              >
-                <i className="ti ti-building-store me-1"></i>Do'konlar ({partnerRoleCounts.seller})
-              </button>
-              <button
-                type="button"
-                className={`btn ${roleFilter === 'author' ? 'btn-primary' : 'btn-outline-secondary'}`}
-                onClick={() => {
-                  setRoleFilter('author');
-                  load({ sellers_page: 1, sellers_role: 'author' });
-                }}
-              >
-                <i className="ti ti-pencil me-1"></i>Mualliflar ({partnerRoleCounts.author})
-              </button>
+          <div className="kb-toolbar">
+            <div className="app-form app-icon-form position-relative">
+              <i className="ti ti-search"></i>
+              <input
+                className="form-control form-control-sm"
+                value={sellerSearch}
+                onChange={(e) => setSellerSearch(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && load({ sellers_page: 1 })}
+                placeholder="Do'kon, muallif, telefon yoki hudud"
+                aria-label="Hamkor qidirish"
+              />
             </div>
-
-            {/* Qidiruv */}
-            <input
-              className="form-control form-control-sm"
-              style={{ maxWidth: 260 }}
-              value={sellerSearch}
-              onChange={(e) => setSellerSearch(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && load({ sellers_page: 1 })}
-              placeholder="Do'kon/muallif, tel yoki hudud..."
-            />
           </div>
         </div>
 
         <div className="card-body">
-          {/* Status Tabs */}
-          <div className="nav kc-segment mb-3">
-            {sellerTabs.map((item) => (
-              <div key={item.key} className="nav-item">
-                <button
-                  className={`nav-link ${sellerTab === item.key ? 'active' : ''}`}
-                  onClick={() => {
-                    setSellerTab(item.key);
-                    load({ sellers_page: 1, sellers_tab: item.key });
-                  }}
-                >
-                  <i className={`${tiIcon(item.icon)} me-1`}></i>
-                  {item.label}
-                  <span className="badge text-light-secondary ms-2">{fmt(sellerCounts[item.key] || 0)}</span>
-                </button>
-              </div>
-            ))}
+          <div className="d-flex align-items-center justify-content-between gap-2 flex-wrap mb-3">
+            {/* Holat bo'yicha */}
+            <div className="nav kc-segment">
+              {sellerTabs.map((item) => (
+                <div key={item.key} className="nav-item">
+                  <button
+                    type="button"
+                    className={`nav-link ${sellerTab === item.key ? 'active' : ''}`}
+                    onClick={() => {
+                      setSellerTab(item.key);
+                      load({ sellers_page: 1, sellers_tab: item.key });
+                    }}
+                  >
+                    <i className={tiIcon(item.icon)}></i>
+                    {item.label}
+                    <span className="kb-tab-count">{fmt(sellerCounts[item.key] || 0)}</span>
+                  </button>
+                </div>
+              ))}
+            </div>
+            {/* Hamkor turi: do'kon yoki muallif */}
+            <div className="nav kc-segment" role="group" aria-label="Hamkor turi">
+              {([
+                { key: 'all', label: 'Hammasi', icon: '', count: partnerRoleCounts.all },
+                { key: 'seller', label: "Do'konlar", icon: 'ti ti-building-store', count: partnerRoleCounts.seller },
+                { key: 'author', label: 'Mualliflar', icon: 'ti ti-pencil', count: partnerRoleCounts.author },
+              ] as const).map((r) => (
+                <div key={r.key} className="nav-item">
+                  <button
+                    type="button"
+                    className={`nav-link ${roleFilter === r.key ? 'active' : ''}`}
+                    onClick={() => {
+                      setRoleFilter(r.key);
+                      load({ sellers_page: 1, sellers_role: r.key });
+                    }}
+                  >
+                    {r.icon ? <i className={r.icon}></i> : null}
+                    {r.label}
+                    <span className="kb-tab-count">{fmt(r.count || 0)}</span>
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Table */}
           <div className="table-responsive app-scroll">
             <table className="table table-bottom-border align-middle mb-0">
-              <thead className="bg-light">
+              <thead>
                 <tr>
                   <th className="ps-3">ID</th>
                   <th>Hamkor (Do'kon / Muallif)</th>
@@ -258,14 +252,14 @@ export default function Sellers() {
                         <div className="d-inline-flex gap-1">
                           <Link
                             href={seller.actions?.detailUrl || `/boshqaruv/sellers/${seller.id}`}
-                            className="btn btn-xs btn-outline-primary"
+                            className="btn btn-xs btn-light-primary"
                             title="Batafsil"
                           >
                             <i className="ti ti-eye"></i>
                           </Link>
                           <Link
                             href={seller.actions?.editUrl || `/boshqaruv/sellers/${seller.id}/edit`}
-                            className="btn btn-xs btn-outline-secondary"
+                            className="btn btn-xs btn-light-secondary"
                             title="Tahrirlash"
                           >
                             <i className="ti ti-edit"></i>

@@ -1017,7 +1017,7 @@ function CatalogParserSection({
             </div>
 
             <div className="d-flex justify-content-between align-items-center">
-              <button type="button" className="btn btn-outline-secondary btn-sm" onClick={refreshStats} disabled={loading}>
+              <button type="button" className="btn btn-light-secondary btn-sm" onClick={refreshStats} disabled={loading}>
                 <i className="ti ti-refresh me-1"></i>Statistikani yangilash
               </button>
               <button type="submit" className="btn btn-primary" disabled={loading}>
@@ -1105,7 +1105,7 @@ function CatalogParserSection({
               </div>
 
               <div className="d-flex justify-content-between align-items-center">
-                <button type="button" className="btn btn-outline-secondary btn-sm" onClick={refreshStats} disabled={stockLoading}>
+                <button type="button" className="btn btn-light-secondary btn-sm" onClick={refreshStats} disabled={stockLoading}>
                   <i className="ti ti-refresh me-1"></i>Tekshirish
                 </button>
                 <button type="submit" className="btn btn-warning text-dark" disabled={stockLoading || stockProgress?.running}>
@@ -1161,7 +1161,7 @@ function CatalogParserSection({
               </div>
 
               <div className="d-flex justify-content-between align-items-center">
-                <button type="button" className="btn btn-outline-secondary btn-sm" onClick={refreshStats} disabled={enrichLoading}>
+                <button type="button" className="btn btn-light-secondary btn-sm" onClick={refreshStats} disabled={enrichLoading}>
                   <i className="ti ti-refresh me-1"></i>Tekshirish
                 </button>
                 <button

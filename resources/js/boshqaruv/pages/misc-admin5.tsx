@@ -64,7 +64,7 @@ export function MysteryBox() {
 <div className="card-body">
 
           <div className="table-responsive app-scroll"><table className="table table-bottom-border align-middle">
-            <thead><tr><th>ID</th><th>Foydalanuvchi</th><th>Plan</th><th>Status</th><th>Keyingi yetkazish</th><th>Amallar</th></tr></thead>
+            <thead><tr><th>ID</th><th>Foydalanuvchi</th><th>Plan</th><th>Holat</th><th>Keyingi yetkazish</th><th>Amallar</th></tr></thead>
             <tbody>{mysteryBox.subscriptions.map(s => (
               <tr key={s.id}>
                 <td className="f-w-600 text-primary">#{s.id}</td>
@@ -177,7 +177,7 @@ export function SovgAlar() {
       <div className="card">
 <div className="card-body">
           <div className="table-responsive app-scroll"><table className="table table-bottom-border align-middle">
-            <thead><tr><th></th><th>Nomi</th><th>Seller</th><th>Narx</th><th>Ombor</th><th>Sotilgan</th><th>Status</th><th>Amallar</th></tr></thead>
+            <thead><tr><th></th><th>Nomi</th><th>Do‘kon</th><th>Narx</th><th>Ombor</th><th>Sotilgan</th><th>Holat</th><th>Amallar</th></tr></thead>
             <tbody>{gifts.map(gift => (
               <tr key={gift.id}>
                 <td><div className="w-40 h-55 b-r-10 overflow-hidden d-flex-center bg-light-primary flex-shrink-0">{gift.image ? <img className="w-100 h-100 object-fit-cover" src={gift.image} alt={gift.name} /> : <i className="ti ti-gift"></i>}</div></td>
@@ -867,7 +867,7 @@ export function Logistika() {
                 <table className="table table-bottom-border align-middle">
                   <thead><tr>
                     <th>Zona</th>
-                    <th>Scope</th>
+                    <th>Qamrov</th>
                     <th>Xizmat</th>
                     <th className="cursor-pointer" style={{ userSelect: 'none' }} onClick={() => toggleSort('basePrice')}>Narx{sortCaret('basePrice')}</th>
                     <th className="cursor-pointer" style={{ userSelect: 'none' }} onClick={() => toggleSort('priority')}>Priority{sortCaret('priority')}</th>

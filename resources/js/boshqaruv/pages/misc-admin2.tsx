@@ -148,7 +148,7 @@ export function Shikoyatlar() {
       <div className="card">
         <div className="card-body">
           <div className="table-responsive app-scroll"><table className="table table-bottom-border align-middle">
-            <thead><tr><th>ID</th><th>Foydalanuvchi</th><th>Sabab</th><th>Turi</th><th>Sana</th><th>Status</th><th>Amallar</th></tr></thead>
+            <thead><tr><th>ID</th><th>Foydalanuvchi</th><th>Sabab</th><th>Turi</th><th>Sana</th><th>Holat</th><th>Amallar</th></tr></thead>
             <tbody>{complaints.map(complaint => (
               <tr key={complaint.id}>
                 <td className="f-w-600 text-primary">#{complaint.id}</td>
@@ -294,7 +294,7 @@ export function GiftSertifikatlar() {
       <div className="card">
 <div className="card-body">
           <div className="table-responsive app-scroll"><table className="table table-bottom-border align-middle">
-            <thead><tr><th>ID</th><th>Kod</th><th>Summa</th><th>Xaridor</th><th>Qabul qiluvchi</th><th>Muddati</th><th>Status</th><th>Amallar</th></tr></thead>
+            <thead><tr><th>ID</th><th>Kod</th><th>Summa</th><th>Xaridor</th><th>Qabul qiluvchi</th><th>Muddati</th><th>Holat</th><th>Amallar</th></tr></thead>
             <tbody>{giftCertificates.map(certificate => (
               <tr key={certificate.id}>
                 <td className="f-w-600 text-primary">#{certificate.id}</td>

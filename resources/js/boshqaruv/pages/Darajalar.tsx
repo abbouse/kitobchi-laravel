@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { PageCrumbs } from '../Layout';
+import { EmptyState } from '../components/Axelit';
 
 /**
  * Kitobxon darajalari — xarid bo'yicha (oxirgi 12 oy). Kelgusidagi chegirma va
@@ -44,14 +45,21 @@ export default function Darajalar() {
   const { levels = [], badges = [] } = usePage<PageProps>().props;
   return (
     <div>
-      <div className="mx-1 mb-3">
-        <h4 className="main-title mb-0">Darajalar va nishonlar</h4>
-        <PageCrumbs />
-        <p className="mb-0 text-secondary">Daraja — oxirgi 12 oydagi yetkazilgan va to'langan buyurtmalar soni hamda mahsulotlar summasi (yetkazishsiz) bo'yicha. Ikkala shart ham bajarilishi kerak. Daraja birdan tushmaydi: 90 kunda bir pog'ona.</p>
+      <div className="kb-page-head">
+        <div>
+          <h4 className="main-title mb-0">Darajalar va nishonlar</h4>
+          <PageCrumbs />
+          <p className="mb-0 text-secondary">Daraja oxirgi 12 oydagi buyurtmalar soni va summasiga qarab beriladi</p>
+        </div>
+      </div>
+      <div className="alert alert-light-primary f-s-13 d-flex gap-2 align-items-start mb-3">
+        <i className="ti ti-info-circle f-s-18 flex-shrink-0"></i>
+        <span>Faqat yetkazilgan va to‘langan buyurtmalar hisoblanadi, summa yetkazishsiz. Ikkala shart ham bajarilishi kerak. Daraja birdan tushmaydi — 90 kunda bir pog‘ona.</span>
       </div>
       <div className="row g-3">
         <div className="col-xl-8">
           {levels.map((l, i) => <LevelCard key={l.id} level={l} first={i === 0} />)}
+          {!levels.length ? <div className="card"><div className="card-body"><EmptyState text="Darajalar hali sozlanmagan" /></div></div> : null}
         </div>
         <div className="col-xl-4">
           <div className="card">
@@ -67,6 +75,7 @@ export default function Darajalar() {
                   <span className="badge text-light-secondary" title="Olganlar soni">{fmt(b.users)}</span>
                 </div>
               ))}
+              {!badges.length ? <EmptyState text="Nishonlar yo‘q" /> : null}
             </div>
           </div>
         </div>

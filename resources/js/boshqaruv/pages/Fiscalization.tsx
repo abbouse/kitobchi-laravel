@@ -99,11 +99,10 @@ export default function Fiscalization() {
 
   return (
     <div>
-      <div className="d-flex align-items-end justify-content-between flex-wrap gap-3 mx-1 mb-3">
+      <div className="kb-page-head">
         <div>
-          <span className="badge text-light-primary mb-2"><i className="ti ti-shield-check me-1"></i>Paylov OFD nazorati</span>
           <h4 className="main-title mb-0">Fiskalizatsiya</h4><PageCrumbs />
-          <p className="mb-0 text-secondary">Cheklar, katalog kodlari va integratsiya xatolari yagona nazorat markazida.</p>
+          <p className="mb-0 text-secondary">Paylov OFD: cheklar, katalog kodlari va integratsiya xatolari bir joyda</p>
         </div>
         <button type="button" className="btn btn-primary" disabled={Boolean(busy) || !retryPendingUrl} onClick={() => post(retryPendingUrl, 'batch', { limit: 100 })}>
           {busy === 'batch' ? <span className="spinner-border spinner-border-sm me-2"></span> : <i className="ti ti-rotate-clockwise me-2"></i>}
@@ -181,7 +180,7 @@ export default function Fiscalization() {
               </div>
               <div className="row g-2">
                 <ConfigItem label="Oddiy chek" value="Avtomatik" state="ready" />
-                <ConfigItem label="Nasiya cheki" value={`Kredit · Type ${fiscalConfig.splitReceiptType}`} />
+                <ConfigItem label="Nasiya cheki" value={`Kredit · tur ${fiscalConfig.splitReceiptType}`} />
                 <ConfigItem label="Shartnoma ID" value="Har bir shartnomaga alohida" state="ready" />
                 <ConfigItem label="Hisob birligi" value={`×${fiscalConfig.amountMultiplier}`} />
                 <ConfigItem label="QQS" value={`${fiscalConfig.vatPercent}%`} />
@@ -227,7 +226,7 @@ export default function Fiscalization() {
         <div className="card-body">
           <div className="table-responsive app-scroll">
             <table className="table table-bottom-border align-middle mb-0">
-              <thead><tr><th>Order</th><th>Mijoz</th><th className="text-end">Summa</th><th>Holat</th><th>Urinish</th><th>Paylov / xato</th><th>Sana</th><th>Amallar</th></tr></thead>
+              <thead><tr><th>Buyurtma</th><th>Mijoz</th><th className="text-end">Summa</th><th>Holat</th><th>Urinish</th><th>Paylov / xato</th><th>Sana</th><th>Amallar</th></tr></thead>
               <tbody>
                 {fiscalTransactions.map((row) => (
                   <tr key={row.id}>
@@ -272,7 +271,7 @@ function ConfigItem({ label, value, state = 'neutral' }: { label: string; value:
 
 function CoverageRow({ label, icon, coverage, href }: { label: string; icon: string; coverage?: Coverage; href: string }) {
   const data = coverage || { total: 0, ready: 0, missing: 0, direct: 0, categoryFallback: 0, globalFallback: 0, percent: 100 };
-  const percent = Math.max(0, Math.min(100, Number(data.percent || 0)));
+  const percent = Number(data.total || 0) > 0 ? Math.max(0, Math.min(100, Number(data.percent || 0))) : 0;
   return (
     <a className="list-group-item list-group-item-action d-flex align-items-center gap-3 px-0" href={href}>
       <span className="h-35 w-35 d-flex-center b-r-50 text-light-primary flex-shrink-0"><i className={`${tiIcon(icon)}`}></i></span>
@@ -284,7 +283,7 @@ function CoverageRow({ label, icon, coverage, href }: { label: string; icon: str
         <div className="progress my-1" role="progressbar" aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100}>
           <div className={`progress-bar ${data.missing ? 'bg-warning' : 'bg-success'}`} style={{ width: `${percent}%` }}></div>
         </div>
-        <p className="mb-0 f-s-12 text-secondary">Product {data.direct} · Kategoriya {data.categoryFallback} · Global {data.globalFallback}{data.missing ? ` · Yetishmaydi ${data.missing}` : ''}</p>
+        <p className="mb-0 f-s-12 text-secondary">Mahsulotda {data.direct} · Kategoriya {data.categoryFallback} · Global {data.globalFallback}{data.missing ? ` · Yetishmaydi ${data.missing}` : ''}</p>
       </div>
       <i className="ti ti-chevron-right text-secondary"></i>
     </a>

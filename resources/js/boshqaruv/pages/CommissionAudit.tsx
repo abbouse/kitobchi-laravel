@@ -66,13 +66,13 @@ export default function CommissionAudit() {
       <div className="d-flex align-items-end justify-content-between flex-wrap gap-3 mx-1 mb-3">
         <div>
           <h4 className="main-title mb-0">Komissiya audit</h4><PageCrumbs />
-          <p className="mb-0 text-secondary">{isCourier ? 'Kuryer payout, km formula, bonus va withdrawal komissiyasi real tranzaksiyalar bilan solishtiriladi.' : 'Seller-specific va global komissiya qoidalari real tranzaksiyalar bilan solishtiriladi.'}</p>
+          <p className="mb-0 text-secondary">{isCourier ? 'Kuryer to‘lovlari, km formulasi, bonus va yechib olish komissiyasi haqiqiy tranzaksiyalar bilan solishtiriladi.' : 'Do‘konga xos va umumiy komissiya qoidalari haqiqiy tranzaksiyalar bilan solishtiriladi.'}</p>
         </div>
       </div>
 
       <div className="nav kc-segment mb-3">
-        <div className="nav-item"><button className={`nav-link ${owner === 'seller' ? 'active' : ''}`} onClick={() => goOwner('seller')}>Seller audit</button></div>
-        <div className="nav-item"><button className={`nav-link ${owner === 'courier' ? 'active' : ''}`} onClick={() => goOwner('courier')}>Kuryer audit</button></div>
+        <div className="nav-item"><button className={`nav-link ${owner === 'seller' ? 'active' : ''}`} onClick={() => goOwner('seller')}>Do‘konlar</button></div>
+        <div className="nav-item"><button className={`nav-link ${owner === 'courier' ? 'active' : ''}`} onClick={() => goOwner('courier')}>Kuryerlar</button></div>
       </div>
 
       <div className="row">
@@ -109,7 +109,7 @@ export default function CommissionAudit() {
 
           <div className="table-responsive app-scroll">
             <table className="table table-bottom-border align-middle">
-              <thead><tr><th>ID</th><th>{isCourier ? 'Kuryer' : 'Seller'}</th><th>Order</th><th>Summa</th><th>Balansga</th><th>Qoida</th><th>Amalda</th><th>Kutilgan</th><th>Farq</th><th>Status</th></tr></thead>
+              <thead><tr><th>ID</th><th>{isCourier ? 'Kuryer' : 'Seller'}</th><th>Buyurtma</th><th>Summa</th><th>Balansga</th><th>Qoida</th><th>Amalda</th><th>Kutilgan</th><th>Farq</th><th>Holat</th></tr></thead>
               <tbody>
                 {commissionAuditRows.map((row) => (
                   <tr key={row.id}>

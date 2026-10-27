@@ -76,7 +76,7 @@ export default function HubApplications() {
                   <th>Telefon</th>
                   <th>Viloyat</th>
                   <th>Lavozim</th>
-                  <th>Toshkent</th>
+                  <th>Toshkentda ishlay oladimi</th>
                   <th>Holat</th>
                   <th>Sana</th>
                   <th></th>

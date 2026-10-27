@@ -3,6 +3,7 @@ import { PageCrumbs } from '../Layout';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { Button, Form } from 'react-bootstrap';
 import Modal from '../components/AppModal';
+import { StatWidget } from '../components/Axelit';
 import { splitPolicyPreset } from './policyPresets';
 
 type TranslateLocale = 'ru' | 'en' | 'ja';
@@ -278,79 +279,46 @@ export default function Siyosatlar() {
       <div className="d-flex align-items-end justify-content-between flex-wrap gap-3 mx-1 mb-3">
         <div>
           <h4 className="main-title mb-0">Siyosatlar va qoidalar</h4><PageCrumbs />
-          <p className="mb-0 text-secondary">Legal sahifalar va appda ko‘rinadigan siyosatlarni boshqarish</p>
+          <p className="mb-0 text-secondary">Huquqiy sahifalar va ilovada ko‘rinadigan siyosatlar</p>
         </div>
         <button className="btn btn-primary" onClick={openCreate}>
           <i className="ti ti-plus me-1"></i>Siyosat qo‘shish
         </button>
       </div>
 
-      <div className="row">
-        <div className="col-md-3">
-          <div className="card h-100">
-            <div className="card-body">
-              <div className="f-s-13 text-muted">Jami siyosat</div>
-              <div className="f-s-24 f-w-600 mt-2">{counts.all}</div>
-            </div>
+      <div className="row g-3 mb-3">
+        {[
+          { key: 'all', label: 'Jami siyosat', value: counts.all, variant: 'provided' as const },
+          { key: 'active', label: 'Faol', value: counts.active, variant: 'success' as const },
+          { key: 'in_app', label: 'Ilovada ko‘rinadi', value: counts.inApp, variant: 'primary' as const },
+          { key: 'needs_translation', label: 'Tarjima kerak', value: counts.needsTranslation, variant: 'warning' as const },
+        ].map((item) => (
+          <div className="col-sm-6 col-xl-3" key={item.key}>
+            <StatWidget label={item.label} value={item.value} variant={item.variant} selected={item.key !== 'all' && statusFilter === item.key} onClick={() => setStatusFilter((statusFilter === item.key ? 'all' : item.key) as StatusFilter)} />
           </div>
-        </div>
-        <div className="col-md-3">
-          <div className="card h-100">
-            <div className="card-body">
-              <div className="f-s-13 text-muted">Faol</div>
-              <div className="f-s-24 f-w-600 mt-2 text-success">{counts.active}</div>
-            </div>
-          </div>
-        </div>
-        <div className="col-md-3">
-          <div className="card h-100">
-            <div className="card-body">
-              <div className="f-s-13 text-muted">Appda ko‘rinadi</div>
-              <div className="f-s-24 f-w-600 mt-2 text-primary">{counts.inApp}</div>
-            </div>
-          </div>
-        </div>
-        <div className="col-md-3">
-          <div className="card h-100">
-            <div className="card-body">
-              <div className="f-s-13 text-muted">Tarjima kerak</div>
-              <div className="f-s-24 f-w-600 mt-2 text-warning">{counts.needsTranslation}</div>
-            </div>
-          </div>
-        </div>
+        ))}
       </div>
 
       <div className="card">
-<div className="card-body">
-          <div className="row g-3 align-items-end">
-            <div className="col-lg-6">
-              <Form.Label>Qidiruv</Form.Label>
-              <Form.Control
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Sarlavha, slug yoki matn bo‘yicha qidiring"
-              />
+        <div className="card-header d-flex align-items-center justify-content-between gap-3 flex-wrap">
+          <div>
+            <h5 className="f-w-600 mb-0">Siyosatlar</h5>
+            <p className="mb-0 text-secondary f-s-13">{filteredPolicies.length} ta ko‘rsatilmoqda</p>
+          </div>
+          <div className="kb-toolbar">
+            <div className="app-form app-icon-form position-relative">
+              <i className="ti ti-search"></i>
+              <input className="form-control form-control-sm" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Sarlavha, slug yoki matn" aria-label="Siyosat qidirish" />
             </div>
-            <div className="col-lg-3">
-              <Form.Label>Filter</Form.Label>
-              <Form.Select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}>
-                <option value="all">Barchasi</option>
-                <option value="active">Faqat faol</option>
-                <option value="inactive">Faqat yashirin</option>
-                <option value="in_app">Appda ko‘rinadi</option>
-                <option value="needs_translation">Tarjima kerak</option>
-              </Form.Select>
-            </div>
-            <div className="col-lg-3">
-              <button type="button" className="btn btn-light-secondary w-100" onClick={() => { setQuery(''); setStatusFilter('all'); }}>
-                Filterlarni tozalash
-              </button>
-            </div>
+            <select className="form-select form-select-sm" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as StatusFilter)} aria-label="Holat filtri">
+              <option value="all">Hammasi</option>
+              <option value="active">Faqat faol</option>
+              <option value="inactive">Faqat yashirin</option>
+              <option value="in_app">Ilovada ko‘rinadi</option>
+              <option value="needs_translation">Tarjima kerak</option>
+            </select>
           </div>
         </div>
-</div>
-
-      <div className="card">
 <div className="card-body">
           <div className="table-responsive app-scroll">
             <table className="table table-bottom-border align-middle">

@@ -3,7 +3,7 @@ import { PageCrumbs } from '../Layout';
 import { router, usePage } from '@inertiajs/react';
 import PaginationControls from '../components/PaginationControls';
 import { Avatar as PAvatar } from '../components/Profile';
-import { EmptyState } from '../components/Axelit';
+import { EmptyState, StatWidget } from '../components/Axelit';
 
 const fmt = (n?: number) => new Intl.NumberFormat('uz-UZ').format(Number(n || 0));
 
@@ -66,26 +66,17 @@ export default function SearchHistory() {
         </div>
       </div>
 
-      <div className="row">
+      <div className="row g-3 mb-3">
         {stats.map((stat) => (
           <div className="col-sm-6 col-xl-3" key={stat.label}>
-            <div className="card api-eshop-card">
-              <div className="card-body">
-                <div className="d-flex justify-content-between align-items-center">
-                  <h6 className="mb-0">{stat.label}</h6>
-                  <span className={`bg-light-${stat.tone} h-40 w-40 d-flex-center b-r-15`}><i className={`${stat.icon} f-s-20`}></i></span>
-                </div>
-                <h3 className="mt-2 mb-0">{stat.value}</h3>
-                <p className="mt-2 f-s-14 mb-0">{stat.note}</p>
-              </div>
-            </div>
+            <StatWidget label={stat.label} value={stat.value} sub={stat.note} variant={stat.tone === 'danger' ? 'danger' : stat.tone === 'success' ? 'success' : stat.tone === 'info' ? 'info' : 'provided'} />
           </div>
         ))}
       </div>
 
-      <div className="row">
+      <div className="row g-3 mb-3">
         <div className="col-xl-6">
-          <div className="card h-100">
+          <div className="card h-100 mb-0">
             <div className="card-header">
               <h5 className="mb-0">Top so‘rovlar</h5>
               <p className="mb-0 text-secondary f-s-13">Eng ko‘p qidirilgan so‘zlar va topilish darajasi</p>
@@ -119,7 +110,7 @@ export default function SearchHistory() {
         </div>
 
         <div className="col-xl-6">
-          <div className="card h-100">
+          <div className="card h-100 mb-0">
             <div className="card-header">
               <h5 className="mb-0">Katalogga qo‘shish kerak bo‘lishi mumkin</h5>
               <p className="mb-0 text-secondary f-s-13">Ko‘p qidirilgan, lekin natija bermagan so‘rovlar</p>
@@ -149,12 +140,12 @@ export default function SearchHistory() {
             <h5 className="mb-0">Barcha qidiruvlar</h5>
             <p className="mb-0 text-secondary f-s-13">{fmt(searchHistoryPagination.total)} ta yozuv</p>
           </div>
-          <div className="d-flex flex-wrap align-items-center gap-2">
-            <form className="app-form app-icon-form position-relative" style={{ width: 'min(300px, 100%)' }} onSubmit={(event) => { event.preventDefault(); load(); }}>
-              <input type="search" className="form-control form-control-sm" placeholder="Qidiruv so'zi yoki foydalanuvchi..." value={search} onChange={e => setSearch(e.target.value)} />
+          <div className="kb-toolbar">
+            <form className="app-form app-icon-form position-relative" onSubmit={(event) => { event.preventDefault(); load(); }}>
+              <input type="search" className="form-control form-control-sm" placeholder="Qidiruv so'zi yoki foydalanuvchi" value={search} onChange={e => setSearch(e.target.value)} aria-label="Qidiruv tarixidan izlash" />
               <i className="ti ti-search"></i>
             </form>
-            <select className="form-select form-select-sm w-auto" value={filter} onChange={e => { setFilter(e.target.value); load(1, e.target.value); }}>
+            <select className="form-select form-select-sm" value={filter} onChange={e => { setFilter(e.target.value); load(1, e.target.value); }}>
               {types.map((type) => <option key={type} value={type}>{type === 'all' ? 'Barcha turlar' : type}</option>)}
             </select>
           </div>
@@ -162,7 +153,7 @@ export default function SearchHistory() {
         <div className="card-body">
           <div className="table-responsive app-scroll">
             <table className="table table-bottom-border align-middle mb-0">
-              <thead><tr><th>So'z</th><th>Foydalanuvchi</th><th>Natija</th><th>Turi</th><th className="text-end">Topilgan</th><th className="text-end">Qidirilgan</th><th>Draft</th><th>Oxirgi</th></tr></thead>
+              <thead><tr><th>So'z</th><th>Foydalanuvchi</th><th>Natija</th><th>Turi</th><th className="text-end">Topilgan</th><th className="text-end">Qidirilgan</th><th>Qoralama</th><th>Oxirgi</th></tr></thead>
               <tbody>
                 {searchHistory.map((item) => (
                   <tr key={item.id}>

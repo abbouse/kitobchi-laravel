@@ -209,7 +209,7 @@ export default function SecurityDashboard({
   return (
     <div>
       {/* Sarlavha: umumiy holat, server ma'lumoti va tezkor amallar */}
-      <div className="d-flex align-items-end justify-content-between flex-wrap gap-3 mx-1 mb-3">
+      <div className="kb-page-head">
         <div className="min-w-0">
           <div className="d-flex align-items-center gap-2 flex-wrap">
             <h4 className="main-title mb-0">Kiberxavfsizlik va server</h4>
@@ -217,16 +217,16 @@ export default function SecurityDashboard({
             {firewallActive ? <span className="badge text-light-success"><i className="ti ti-shield-check"></i>WAF faol</span> : <span className="badge text-light-danger">WAF o‘chiq</span>}
           </div>
           <p className="mb-0 text-secondary f-s-13 mt-1">
-            Real-vaqtli monitoring · {generatedAt}
+            Jonli monitoring · {generatedAt}
             <span className="mx-2">·</span>Sizning IP: <code>{currentAdminIp}</code>
             <span className="mx-2">·</span>Server: {serverHealth.system.server_ip}
-            <span className="mx-2">·</span>Uptime: {serverHealth.system.uptime}
+            <span className="mx-2">·</span>Ishlash vaqti: {serverHealth.system.uptime}
           </p>
         </div>
-        <div className="d-flex gap-2 flex-wrap">
-          <button type="button" className="btn btn-sm btn-light-secondary" disabled={isProcessing} onClick={() => router.reload()}><i className="ti ti-rotate"></i>Yangilash</button>
+        <div className="kb-page-actions">
+          <button type="button" className="btn btn-sm btn-light-secondary" disabled={isProcessing} onClick={() => router.reload()}><i className="ti ti-refresh"></i>Yangilash</button>
           <button type="button" className="btn btn-sm btn-light-secondary" disabled={isProcessing} onClick={handleClearCache}><i className="ti ti-eraser"></i>Keshni tozalash</button>
-          <button type="button" className="btn btn-sm btn-light-secondary" disabled={isProcessing} onClick={handleFixStorage}><i className="ti ti-folder"></i>Storage tiklash</button>
+          <button type="button" className="btn btn-sm btn-light-secondary" disabled={isProcessing} onClick={handleFixStorage}><i className="ti ti-folder"></i>Storage’ni tiklash</button>
           <button type="button" className="btn btn-sm btn-light-danger" disabled={isProcessing} onClick={handleTruncateLogs}><i className="ti ti-trash"></i>Log tozalash ({logFileSize})</button>
         </div>
       </div>
@@ -350,13 +350,13 @@ export default function SecurityDashboard({
           4-QATOR: Chap — Server detallari + himoya bannerlari
                    O'ng — Tabli IP/Tahdid paneli (zamonaviy tab layout)
          ═══════════════════════════════════════════════════════════════════ */}
-      <div className="row mb-2">
+      <div className="row">
         {/* CHAP: Server va Fayl tizimi (kattaroq karta — vizual ağırlık) */}
-        <div className="col-xxl-5 col-xl-6 mb-4">
+        <div className="col-xxl-5 col-xl-6">
           <div className="card h-100">
             <div className="card-header d-flex justify-content-between align-items-center">
               <h5 className="f-w-600 mb-0">
-                <i className="ti ti-database me-2 text-primary"></i>Server Holati
+                <i className="ti ti-database me-2 text-primary"></i>Server holati
               </h5>
               <span className="badge bg-light-primary text-primary">
                 PHP {serverHealth.system.php_version}
@@ -433,7 +433,7 @@ export default function SecurityDashboard({
         </div>
 
         {/* O'NG: Tabli karta — IP manzillar / Shubhali xurujlar */}
-        <div className="col-xxl-7 col-xl-6 mb-4">
+        <div className="col-xxl-7 col-xl-6">
           <div className="card h-100">
             <div className="card-header d-flex justify-content-between align-items-center">
               <div className="nav kc-segment" role="tablist">
@@ -441,7 +441,7 @@ export default function SecurityDashboard({
                   <button type="button" role="tab" aria-selected={activeTab === 'ips'}
                     className={`nav-link ${activeTab === 'ips' ? 'active' : ''}`}
                     onClick={() => setActiveTab('ips')}>
-                    <i className="ti ti-ban me-1"></i>Shubhali IPlar
+                    <i className="ti ti-ban me-1"></i>Shubhali IP’lar
                     <span className="badge bg-light-danger text-danger ms-2">{threatAnalysis.top_ips.length}</span>
                   </button>
                 </div>
@@ -546,13 +546,13 @@ export default function SecurityDashboard({
       {/* ═══════════════════════════════════════════════════════════════════
           5-QATOR: Papkalar holati + Error loglar — asimetrik layout
          ═══════════════════════════════════════════════════════════════════ */}
-      <div className="row mb-2">
+      <div className="row">
         {/* Papkalar — ixcham karta */}
-        <div className="col-xxl-4 col-xl-5 mb-4">
+        <div className="col-xxl-4 col-xl-5">
           <div className="card h-100">
             <div className="card-header d-flex justify-content-between align-items-center">
               <h5 className="f-w-600 mb-0">
-                <i className="ti ti-folder me-2 text-success"></i>Fayl Tizimi
+                <i className="ti ti-folder me-2 text-success"></i>Fayl tizimi
               </h5>
               <span className={`badge ${hasConfigError ? 'bg-light-danger text-danger' : 'bg-light-success text-success'}`}>
                 {Object.keys(servicesStatus.storage || {}).length} papka
@@ -582,11 +582,11 @@ export default function SecurityDashboard({
         </div>
 
         {/* Error loglar — keng karta */}
-        <div className="col-xxl-8 col-xl-7 mb-4">
+        <div className="col-xxl-8 col-xl-7">
           <div className="card h-100">
             <div className="card-header d-flex justify-content-between align-items-center">
               <h5 className="f-w-600 mb-0">
-                <i className="ti ti-alert-triangle me-2 text-danger"></i>So'nggi Jiddiy Xatoliklar
+                <i className="ti ti-alert-triangle me-2 text-danger"></i>So'nggi jiddiy xatoliklar
               </h5>
               <span className="badge bg-light-secondary text-secondary">
                 {systemLogs.length} ta log
@@ -600,7 +600,7 @@ export default function SecurityDashboard({
                       <tr className="text-secondary f-s-13">
                         <th className="ps-3" style={{ width: '15%' }}>Vaqt</th>
                         <th style={{ width: '10%' }}>Daraja</th>
-                        <th>Xatolik Xabari</th>
+                        <th>Xatolik matni</th>
                         <th className="pe-3" style={{ width: '22%' }}>Fayl</th>
                       </tr>
                     </thead>

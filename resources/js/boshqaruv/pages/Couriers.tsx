@@ -159,10 +159,11 @@ export default function Couriers() {
         </div>
         <div className="d-flex align-items-center gap-2">
           <button
-            className="btn btn-sm btn-outline-secondary"
+            type="button"
+            className="btn btn-light-secondary"
             onClick={() => router.reload({ preserveScroll: true })}
           >
-            <i className="ti ti-rotate me-1"></i>Yangilash
+            <i className="ti ti-refresh"></i>Yangilash
           </button>
         </div>
       </div>
@@ -182,20 +183,25 @@ export default function Couriers() {
       </div>
 
       {/* ── Jadval Card ── */}
-      <div className="card border-0 shadow-sm">
-        <div className="card-header bg-transparent border-bottom d-flex align-items-center justify-content-between gap-2 flex-wrap py-3">
+      <div className="card">
+        <div className="card-header d-flex align-items-center justify-content-between gap-3 flex-wrap">
           <div>
             <h5 className="f-w-600 mb-0">Kuryerlar floti</h5>
-            <small className="text-muted">{courierPagination.total} ta kuryer ro'yxatda mavjud</small>
+            <p className="mb-0 text-secondary f-s-13">{courierPagination.total} ta kuryer ro'yxatda mavjud</p>
           </div>
-          <input
-            className="form-control form-control-sm"
-            style={{ maxWidth: 300 }}
-            value={courierSearch}
-            onChange={(e) => setCourierSearch(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && load({ couriers_page: 1 })}
-            placeholder="Ism, telefon, viloyat yoki davlat raqami..."
-          />
+          <div className="kb-toolbar">
+            <div className="app-form app-icon-form position-relative">
+              <i className="ti ti-search"></i>
+              <input
+                className="form-control form-control-sm"
+                value={courierSearch}
+                onChange={(e) => setCourierSearch(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && load({ couriers_page: 1 })}
+                placeholder="Ism, telefon, viloyat yoki davlat raqami"
+                aria-label="Kuryer qidirish"
+              />
+            </div>
+          </div>
         </div>
 
         <div className="card-body">
@@ -219,7 +225,7 @@ export default function Couriers() {
 
           <div className="table-responsive app-scroll">
             <table className="table table-bottom-border align-middle mb-0">
-              <thead className="bg-light">
+              <thead>
                 <tr>
                   <th className="ps-3">ID</th>
                   <th>Kuryer</th>

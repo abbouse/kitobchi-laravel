@@ -1,14 +1,12 @@
 import { useEffect, useState } from 'react';
 import { PageCrumbs } from '../Layout';
 import type { FormEvent, ReactNode } from 'react';
-import { Link, router, usePage } from '@inertiajs/react';
+import { router, usePage } from '@inertiajs/react';
 import { Button } from 'react-bootstrap';
 import Modal from '../components/AppModal';
 import PaginationControls from '../components/PaginationControls';
 import ImageGalleryEditor from '../components/ImageGalleryEditor';
 import ModerationRejectModal from '../components/ModerationRejectModal';
-import { EmptyState, MiniStat, StatWidget } from '../components/Axelit';
-import { tiIcon } from '../utils/icons';
 import FormAction from '../components/FormAction';
 import { CoverInputs, EditionFields, EditionPicker, type PickedEdition } from '../components/CatalogFields';
 
@@ -99,9 +97,9 @@ interface Book {
 interface OptionItem { id: number; name: string }
 
 const SpecItem = ({ label, value }: { label: string; value?: ReactNode }) => (
-  <div className="col-sm-6 col-md-4">
-    <p className="mb-1 f-s-12 text-secondary">{label}</p>
-    <div className="f-w-600 f-s-14 text-dark text-break">{value || '—'}</div>
+  <div>
+    <dt>{label}</dt>
+    <dd>{value || '—'}</dd>
   </div>
 );
 
@@ -204,60 +202,30 @@ export default function Books() {
     });
   };
 
+  const BOOK_TABS: Array<[string, string]> = [
+    ['pending', 'Moderatsiya'],
+    ['active', 'Faol'],
+    ['rejected', 'Rad etilgan'],
+    ['archived', "O'chirilgan"],
+    ['all', 'Barchasi'],
+  ];
+
   return (
     <div>
-      {/* ── Page Header ── */}
-      <div className="d-flex align-items-end justify-content-between flex-wrap gap-3 mx-1 mb-3">
+      {/* ── Sarlavha ── */}
+      <div className="kb-page-head">
         <div>
-          <div className="d-flex align-items-center gap-2">
-            <h4 className="main-title mb-0">Do'kon takliflari va mahsulotlar</h4>
-            <span className="badge bg-light-primary text-primary f-s-12 b-r-8">Offers & Products</span>
-          </div>
+          <h4 className="main-title mb-0">Do‘kon kitoblari</h4>
           <PageCrumbs />
-          <p className="mb-0 text-secondary f-s-13">Do'konlar katalogi, narxlar, qoldiqlar va moderatsiya nazorati</p>
-          {bookFilters.sellerId ? (
-            <span className="badge bg-light-primary text-primary mt-2 d-inline-flex align-items-center gap-2 f-s-12">
-              <i className="ti ti-building-store"></i>
-              Do'kon: <b>{bookFilters.sellerName}</b>
-              <button
-                type="button"
-                className="btn-close f-s-10"
-                aria-label="Filtrni olib tashlash"
-                onClick={() => loadBooks(1, activeTab, search, null)}
-              ></button>
-            </span>
-          ) : null}
+          <p className="mb-0 text-secondary">Do‘konlar sotayotgan kitoblar — narx, qoldiq va moderatsiya. Kitob ma’lumotlari «Global katalog»da</p>
         </div>
-
-        <div className="d-flex gap-2 flex-wrap align-items-center">
-          <form className="d-flex gap-2" onSubmit={(event) => { event.preventDefault(); loadBooks(1); }}>
-            <div className="position-relative" style={{ minWidth: 290 }}>
-              <input
-                className="form-control form-control-sm pe-4"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="ID, Kitob nomi, ISBN, Muallif yoki Seller..."
-              />
-              {search ? (
-                <button
-                  type="button"
-                  className="btn btn-link btn-sm position-absolute top-50 end-0 translate-middle-y text-secondary text-decoration-none p-1 me-1"
-                  onClick={() => { setSearch(''); loadBooks(1, activeTab, '', bookFilters.sellerId ?? null); }}
-                >
-                  <i className="ti ti-x"></i>
-                </button>
-              ) : null}
-            </div>
-            <button className="btn btn-sm btn-outline-secondary" type="submit" title="Qidirish">
-              <i className="ti ti-search"></i>
-            </button>
-          </form>
-
+        <div className="kb-page-actions">
           {bookUrls?.store ? (
             <FormAction
               label="Kitob qo'shish"
               icon="ti ti-plus"
               variant="primary"
+              size="md"
               modalSize="lg"
               title="Do'konga kitob qo'shish"
               description="Avval katalogdan qidiring — topilsa faqat narx va qoldiq kiritiladi. Topilmasa, yangi kitob kartasi ochiladi."
@@ -270,7 +238,7 @@ export default function Books() {
                   <EditionPicker searchUrl={bookUrls.catalogSearch} value={picked} onPick={setPicked} />
                 </div>
                 <div className="col-md-6">
-                  <label className="form-label f-w-600">Do'kon (Seller)</label>
+                  <label className="form-label f-w-600">Do'kon</label>
                   <select name="seller_id" className="form-select" required defaultValue="">
                     <option value="" disabled>Do'konni tanlang</option>
                     {bookFormOptions.sellers.map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}
@@ -305,70 +273,65 @@ export default function Books() {
         </div>
       </div>
 
-      {/* ── Top KPI StatWidgets ── */}
-      <div className="row">
-        {[
-          { key: 'pending', label: 'Moderatsiyada', val: bookCounts.pending || 0, hint: 'Ko‘rib chiqilishi kerak', color: 'rgba(var(--warning-dark), 1)' },
-          { key: 'active', label: 'Faol kitoblar', val: bookCounts.active || 0, hint: 'Xaridorga ko‘rinayotganlar', color: 'rgba(var(--success), 1)' },
-          { key: 'rejected', label: 'Rad etilgan', val: bookCounts.rejected || 0, hint: 'Xatolik yoki qoidalarga zid', color: 'rgba(var(--danger), 1)' },
-          { key: 'all', label: 'Jami takliflar', val: bookCounts.all || 0, hint: 'Barcha seller takliflari', color: 'rgba(var(--primary), 1)' },
-        ].map((item, kpiIndex) => (
-          <div className="col-xl-3 col-md-6" key={item.key}>
-            <StatWidget
-              index={kpiIndex}
-              label={item.label}
-              value={item.val}
-              sub={item.hint}
-              selected={activeTab === item.key}
-              onClick={() => { setActiveTab(item.key); loadBooks(1, item.key); }}
-            />
-          </div>
-        ))}
-      </div>
-
-      {/* ── Main Products / Offers Table Card ── */}
       <div className="card">
-        <div className="card-header d-flex align-items-center justify-content-between gap-2 flex-wrap">
+        <div className="card-header d-flex align-items-center justify-content-between gap-3 flex-wrap">
           <div>
-            <h5 className="f-w-600 mb-0">Do'kon takliflari</h5>
-            <p className="mb-0 text-secondary f-s-13">{fmt(bookPagination.total)} ta kitob taklifi</p>
+            <h5 className="f-w-600 mb-0">Takliflar</h5>
+            <p className="mb-0 text-secondary f-s-13">{fmt(bookPagination.total)} ta topildi</p>
           </div>
-          <div className="nav kc-segment">
-            {[
-              ['pending', 'Moderatsiya'],
-              ['active', 'Faol'],
-              ['rejected', 'Rad etilgan'],
-              ['all', 'Barchasi'],
-              ['archived', "O'chirilgan"],
-            ].map(([key, label]) => (
-              <div key={key} className="nav-item">
-                <button
-                  type="button"
-                  className={`nav-link ${activeTab === key ? 'active' : ''}`}
-                  onClick={() => { setActiveTab(key); loadBooks(1, key); }}
-                >
-                  {label}
-                  <span className="badge text-light-secondary ms-2">{bookCounts[key] || 0}</span>
-                </button>
-              </div>
-            ))}
-          </div>
+          <form className="kb-toolbar" onSubmit={(event) => { event.preventDefault(); loadBooks(1); }}>
+            <div className="app-form app-icon-form position-relative">
+              <i className="ti ti-search"></i>
+              <input
+                className="form-control form-control-sm"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Nomi, ISBN, muallif, do'kon yoki ID"
+                aria-label="Taklif qidirish"
+              />
+            </div>
+            {search ? (
+              <button type="button" className="btn btn-sm btn-light-secondary" onClick={() => { setSearch(''); loadBooks(1, activeTab, '', bookFilters.sellerId ?? null); }}>Tozalash</button>
+            ) : null}
+          </form>
         </div>
 
         <div className="card-body">
+          <div className="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+            <div className="nav kc-segment">
+              {BOOK_TABS.map(([key, text]) => (
+                <div key={key} className="nav-item">
+                  <button
+                    type="button"
+                    className={`nav-link ${activeTab === key ? 'active' : ''}`}
+                    onClick={() => { setActiveTab(key); loadBooks(1, key); }}
+                  >
+                    {text}
+                    <span className="kb-tab-count">{fmt(bookCounts[key] || 0)}</span>
+                  </button>
+                </div>
+              ))}
+            </div>
+            {bookFilters.sellerId ? (
+              <span className="kb-filter-chip">
+                <i className="ti ti-building-store"></i>
+                {bookFilters.sellerName}
+                <button type="button" aria-label="Do'kon filtrini olib tashlash" onClick={() => loadBooks(1, activeTab, search, null)}><i className="ti ti-x"></i></button>
+              </span>
+            ) : null}
+          </div>
+
           <div className="table-responsive app-scroll">
-            <table className="table table-bottom-border align-middle">
+            <table className="table table-bottom-border align-middle mb-0 kb-catalog-table">
               <thead>
                 <tr>
-                  <th style={{ width: 60 }}>Muqova</th>
-                  <th>Mahsulot va Karta</th>
-                  <th>Muallif va ISBN</th>
-                  <th>Do'kon (Seller)</th>
-                  <th>Narx va Chegirma</th>
-                  <th>Ombor</th>
-                  <th>Sotilgan</th>
+                  <th>Kitob</th>
+                  <th>Do‘kon</th>
+                  <th className="text-end">Narx</th>
+                  <th className="text-end">Qoldiq</th>
+                  <th className="text-end">Sotilgan</th>
                   <th>Holat</th>
-                  <th className="text-end" style={{ width: 120 }}>Amallar</th>
+                  <th className="text-end" style={{ width: 130 }}></th>
                 </tr>
               </thead>
               <tbody>
@@ -381,213 +344,76 @@ export default function Books() {
 
                   return (
                     <tr key={book.id}>
-                      {/* Muqova */}
                       <td>
-                        <div
-                          className="b-r-8 overflow-hidden d-flex-center bg-light-primary flex-shrink-0 cursor-pointer shadow-sm"
-                          style={{ width: 48, height: 66, border: '1px solid rgba(0,0,0,0.06)' }}
-                          onClick={() => handleOpenView(book)}
-                          title="Tafsilotlarni ko'rish"
-                        >
-                          {book.cover && String(book.cover).startsWith('http') ? (
-                            <img className="w-100 h-100 object-fit-cover" src={book.cover} alt={book.title} loading="lazy" />
-                          ) : (
-                            <i className="ti ti-book text-primary f-s-20"></i>
-                          )}
-                        </div>
-                      </td>
-
-                      {/* Mahsulot va Karta */}
-                      <td>
-                        <div
-                          className="f-w-600 text-dark d-block text-truncate cursor-pointer hover-primary"
-                          style={{ maxWidth: 280 }}
-                          onClick={() => handleOpenView(book)}
-                          title={book.title}
-                        >
-                          {book.title}
-                        </div>
-                        <div className="d-flex align-items-center gap-1 mt-1 flex-wrap">
-                          <span className="badge bg-light-secondary text-dark f-s-11 b-r-6 font-monospace">#{book.id}</span>
-                          {book.editionId ? (
-                            <a
-                              href={book.catalogUrl || `/boshqaruv/catalog/${book.editionId}`}
-                              className="badge bg-light-primary text-primary f-s-11 b-r-6 text-decoration-none"
-                              title="Global katalog kartasi"
-                            >
-                              <i className="ti ti-bookmarks me-1"></i>Karta #{book.editionId}
-                            </a>
-                          ) : null}
-                          {book.featured ? (
-                            <span className="badge bg-warning-subtle text-warning-emphasis f-s-11 b-r-6">
-                              <i className="ti ti-crown me-1"></i>BuyBox
-                            </span>
-                          ) : null}
-                          {book.hidden ? (
-                            <span className="badge bg-light-secondary text-secondary f-s-11 b-r-6">Yashirin</span>
-                          ) : null}
-                          {book.category ? (
-                            <span className="badge bg-light-secondary text-secondary f-s-11 b-r-6">{book.category}</span>
-                          ) : null}
-                        </div>
-                      </td>
-
-                      {/* Muallif va ISBN */}
-                      <td>
-                        <div className="text-dark f-s-13 f-w-500">{book.author || '—'}</div>
-                        {book.isbn ? (
-                          <div className="d-flex align-items-center gap-1 mt-1">
-                            <span
-                              className="badge bg-light-secondary text-dark font-monospace cursor-pointer d-inline-flex align-items-center gap-1 f-s-11"
-                              onClick={() => copyToClipboard(book.isbn!)}
-                              title="Nusxalash uchun bosing"
-                            >
-                              <i className={`ti ${copiedIsbn === book.isbn ? 'ti-check text-success' : 'ti-copy'} f-s-10`}></i>
-                              {book.isbn}
-                            </span>
-                          </div>
-                        ) : null}
-                      </td>
-
-                      {/* Do'kon (Seller) */}
-                      <td>
-                        <div className="d-flex align-items-center gap-2">
-                          <div
-                            className="b-r-22 d-flex-center bg-light-primary text-primary f-w-600 f-s-12 flex-shrink-0"
-                            style={{ width: 32, height: 32 }}
-                          >
-                            {(book.seller?.name || 'S').charAt(0).toUpperCase()}
-                          </div>
+                        <div className="d-flex align-items-center gap-3 min-w-0">
+                          <button type="button" className="kb-cover-mini p-0" onClick={() => handleOpenView(book)} title="Tafsilotlar" aria-label="Tafsilotlar">
+                            {book.cover && String(book.cover).startsWith('http') ? <img src={book.cover} alt="" loading="lazy" /> : <i className="ti ti-book"></i>}
+                          </button>
                           <div className="min-w-0">
-                            {book.seller?.booksUrl ? (
-                              <a
-                                href={book.seller.booksUrl}
-                                className="text-dark f-w-600 f-s-13 d-block text-truncate text-decoration-none hover-primary"
-                                title="Do'konning barcha kitoblari"
-                                style={{ maxWidth: 140 }}
-                              >
-                                {book.seller.name}
-                              </a>
-                            ) : (
-                              <span className="text-dark f-w-600 f-s-13 d-block text-truncate" style={{ maxWidth: 140 }}>
-                                {book.seller?.name || 'Ichki katalog'}
-                              </span>
-                            )}
-                            {book.seller?.verified ? (
-                              <small className="text-success d-inline-flex align-items-center gap-1 f-s-11">
-                                <i className="ti ti-discount-check-filled"></i>Verified
-                              </small>
-                            ) : null}
+                            <button type="button" className="btn btn-link p-0 f-w-600 text-dark d-block text-truncate text-start kb-catalog-title" onClick={() => handleOpenView(book)} title={book.title}>
+                              {book.title}
+                            </button>
+                            <div className="f-s-12 text-secondary d-flex align-items-center gap-1 flex-wrap">
+                              <span className="text-truncate" style={{ maxWidth: 220 }}>{book.author || 'Muallif noma’lum'}</span>
+                              {book.isbn ? <>·<button type="button" className="kb-isbn f-s-12" onClick={() => copyToClipboard(book.isbn!)} title="ISBN nusxalash">{book.isbn}<i className={`ti ${copiedIsbn === book.isbn ? 'ti-check text-success' : 'ti-copy'}`}></i></button></> : null}
+                            </div>
+                            <div className="d-flex align-items-center gap-1 mt-1 flex-wrap">
+                              {book.editionId ? (
+                                <a href={book.catalogUrl || `/boshqaruv/catalog/${book.editionId}`} className="kb-mini-chip" title="Global katalog kartasi">Karta #{book.editionId}</a>
+                              ) : <span className="kb-mini-chip is-warn">Kartasiz</span>}
+                              {book.featured ? <span className="kb-mini-chip is-gold"><i className="ti ti-crown"></i>BuyBox</span> : null}
+                              {book.hidden ? <span className="kb-mini-chip">Yashirin</span> : null}
+                            </div>
                           </div>
                         </div>
                       </td>
-
-                      {/* Narx va Chegirma */}
                       <td>
-                        <div>
-                          <strong className="text-dark f-s-14">{fmt(effectivePrice)} so'm</strong>
-                          {discountPercent ? (
-                            <div className="d-flex align-items-center gap-1 mt-1">
-                              <span className="text-muted text-decoration-line-through f-s-12">{fmt(book.price)}</span>
-                              <span className="badge bg-light-danger text-danger f-s-10 b-r-6">-{discountPercent}%</span>
-                            </div>
-                          ) : null}
-                        </div>
-                      </td>
-
-                      {/* Ombor */}
-                      <td>
-                        {book.stock > 15 ? (
-                          <span className="badge bg-light-success text-success f-s-12 b-r-6">
-                            <i className="ti ti-check me-1"></i>{fmt(book.stock)} dona
-                          </span>
-                        ) : book.stock > 0 ? (
-                          <span className="badge bg-light-warning text-warning f-s-12 b-r-6">
-                            <i className="ti ti-alert-triangle me-1"></i>{fmt(book.stock)} dona
-                          </span>
+                        {book.seller?.booksUrl ? (
+                          <a href={book.seller.booksUrl} className="text-dark f-w-500 d-inline-block text-truncate" style={{ maxWidth: 160 }} title="Do'konning barcha kitoblari">{book.seller.name}</a>
                         ) : (
-                          <span className="badge bg-light-danger text-danger f-s-12 b-r-6">
-                            <i className="ti ti-x me-1"></i>Tugagan
-                          </span>
+                          <span className="text-dark f-w-500 d-inline-block text-truncate" style={{ maxWidth: 160 }}>{book.seller?.name || 'Ichki katalog'}</span>
                         )}
+                        {book.seller?.verified ? <i className="ti ti-discount-check-filled text-primary ms-1" title="Tasdiqlangan do'kon"></i> : null}
                       </td>
-
-                      {/* Sotilgan */}
-                      <td>
-                        <span className="f-w-600 text-dark f-s-13">{fmt(book.sold)}</span>
-                        <small className="d-block text-secondary f-s-11">{fmt(book.views || 0)} ko'rish</small>
+                      <td className="text-end text-nowrap">
+                        <div className="f-w-600 text-dark">{fmt(effectivePrice)} so‘m</div>
+                        {discountPercent ? <div className="f-s-12"><span className="text-muted text-decoration-line-through">{fmt(book.price)}</span> <span className="text-danger">−{discountPercent}%</span></div> : null}
                       </td>
-
-                      {/* Holat */}
+                      <td className="text-end text-nowrap">
+                        <span className={book.stock === 0 ? 'text-danger f-w-600' : book.stock <= 15 ? 'text-warning-dark f-w-600' : 'text-dark'}>
+                          {book.stock === 0 ? 'Tugagan' : `${fmt(book.stock)} dona`}
+                        </span>
+                      </td>
+                      <td className="text-end text-nowrap">
+                        <div className="text-dark">{fmt(book.sold)}</div>
+                        <div className="f-s-12 text-muted">{fmt(book.views || 0)} ko‘rish</div>
+                      </td>
                       <td>
-                        <span className={`badge ${statusChip} d-inline-flex align-items-center gap-1 f-s-12 b-r-6`}>
-                          <i className={`ti ${statusIcon} f-s-11`}></i>
-                          {statusText}
+                        <span className={`badge ${statusChip} d-inline-flex align-items-center gap-1`}>
+                          <i className={`ti ${statusIcon}`}></i>{statusText}
                         </span>
                         {book.editionStatus === 'pending' ? (
-                          <a href={book.submissionsUrl} className="badge bg-light-warning text-warning d-block mt-1 text-decoration-none f-s-11" title="Karta tekshiruvda">
-                            <i className="ti ti-inbox me-1"></i>Ariza
-                          </a>
+                          <a href={book.submissionsUrl} className="d-block f-s-12 text-warning-dark mt-1" title="Karta tekshiruvda">Karta tekshiruvda</a>
                         ) : null}
                       </td>
-
-                      {/* Amallar */}
-                      <td className="text-end">
-                        <div className="d-flex gap-1 justify-content-end">
-                          <button
-                            className="btn btn-light-primary icon-btn w-32 h-32 b-r-22"
-                            onClick={() => handleOpenView(book)}
-                            title="Tafsilotlar va tahrirlash"
-                          >
-                            <i className="ti ti-eye"></i>
-                          </button>
-                          {book.moderateUrl && book.status !== 1 && !book.archived ? (
-                            <button
-                              className="btn btn-light-success icon-btn w-32 h-32 b-r-22"
-                              onClick={() => handleModerate(book, 1)}
-                              title="Tasdiqlash"
-                            >
-                              <i className="ti ti-check"></i>
-                            </button>
-                          ) : null}
-                          {book.moderateUrl && book.status !== 2 && !book.archived ? (
-                            <button
-                              className="btn btn-light-danger icon-btn w-32 h-32 b-r-22"
-                              onClick={() => setRejectTarget(book)}
-                              title="Rad etish"
-                            >
-                              <i className="ti ti-x"></i>
-                            </button>
-                          ) : null}
-                          {book.archived ? (
-                            <button
-                              className="btn btn-light-success icon-btn w-32 h-32 b-r-22"
-                              onClick={() => restoreBook(book)}
-                              title="Arxivdan qaytarish"
-                            >
-                              <i className="ti ti-rotate"></i>
-                            </button>
-                          ) : (
-                            <button
-                              className="btn btn-light-secondary icon-btn w-32 h-32 b-r-22"
-                              onClick={() => archiveBook(book)}
-                              title="Sotuvdan olish (arxivlash)"
-                            >
-                              <i className="ti ti-trash"></i>
-                            </button>
-                          )}
-                        </div>
+                      <td className="text-end text-nowrap">
+                        {book.moderateUrl && book.status !== 1 && !book.archived ? (
+                          <button type="button" className="btn btn-light-success icon-btn w-30 h-30 b-r-8 me-1" onClick={() => handleModerate(book, 1)} title="Tasdiqlash" aria-label="Tasdiqlash"><i className="ti ti-check"></i></button>
+                        ) : null}
+                        {book.moderateUrl && !book.status && !book.archived ? (
+                          <button type="button" className="btn btn-light-danger icon-btn w-30 h-30 b-r-8 me-1" onClick={() => setRejectTarget(book)} title="Rad etish" aria-label="Rad etish"><i className="ti ti-x"></i></button>
+                        ) : null}
+                        {book.archived ? (
+                          <button type="button" className="btn btn-light-success icon-btn w-30 h-30 b-r-8 me-1" onClick={() => restoreBook(book)} title="Arxivdan qaytarish" aria-label="Arxivdan qaytarish"><i className="ti ti-rotate"></i></button>
+                        ) : null}
+                        <button type="button" className="btn btn-light-primary icon-btn w-30 h-30 b-r-8" onClick={() => handleOpenView(book)} title="Tafsilotlar" aria-label="Tafsilotlar"><i className="ti ti-chevron-right"></i></button>
                       </td>
                     </tr>
                   );
                 })}
 
                 {bookPagination.total === 0 ? (
-                  <tr>
-                    <td className="py-5" colSpan={9}>
-                      <EmptyState text="Ushbu bo'limda birorta mahsulot taklifi topilmadi" />
-                    </td>
-                  </tr>
+                  <tr><td className="text-center py-5" colSpan={7}>Bu bo‘limda taklif topilmadi</td></tr>
                 ) : null}
               </tbody>
             </table>
@@ -606,193 +432,92 @@ export default function Books() {
       />
 
       {/* ── Product Inspector Modal ── */}
-      <Modal show={showView} onHide={() => setShowView(false)} centered size="xl" scrollable>
-        <Modal.Header closeButton className="pb-2">
-          <div className="d-flex align-items-center gap-2 flex-wrap min-w-0">
-            <Modal.Title className="f-s-18 f-w-700 text-truncate mb-0">
-              <span className="d-inline-block text-truncate" style={{ maxWidth: 650 }}>
-                {selectedBook?.title}
-              </span>
-            </Modal.Title>
-            <span className="badge bg-light-secondary text-dark font-monospace">#{selectedBook?.id}</span>
-            {selectedBook?.featured ? (
-              <span className="badge bg-warning-subtle text-warning-emphasis"><i className="ti ti-crown me-1"></i>BuyBox g'olibi</span>
-            ) : null}
-          </div>
+      <Modal show={showView} onHide={() => setShowView(false)} centered size="lg" scrollable>
+        <Modal.Header closeButton>
+          <Modal.Title className="f-s-18 f-w-600 text-truncate">Taklif #{selectedBook?.id}</Modal.Title>
         </Modal.Header>
 
 
-        <Modal.Body className="p-4">
+        <Modal.Body>
           {selectedBook ? (
             <div>
-              {/* Hero Banner: Cover + Core Info + Connection */}
-              <div className="card bg-light-primary border-0 p-3 mb-4 b-r-12">
-                <div className="d-flex gap-4 flex-wrap align-items-center">
-                  <div
-                    className="b-r-10 overflow-hidden bg-white shadow-sm flex-shrink-0 d-flex-center position-relative"
-                    style={{ width: 90, height: 125, border: '1px solid rgba(0,0,0,0.08)' }}
-                  >
-                    {selectedBook.cover && String(selectedBook.cover).startsWith('http') ? (
-                      <img className="w-100 h-100 object-fit-cover" src={selectedBook.cover} alt={selectedBook.title} />
-                    ) : (
-                      <i className="ti ti-book text-primary f-s-30"></i>
-                    )}
+              {/* Kitob va do'kon — bir qatorda */}
+              <div className="d-flex gap-3 align-items-start mb-3">
+                <span className="kb-cover-mini" style={{ width: 64, height: 90 }}>
+                  {selectedBook.cover && String(selectedBook.cover).startsWith('http') ? <img src={selectedBook.cover} alt="" /> : <i className="ti ti-book f-s-24"></i>}
+                </span>
+                <div className="min-w-0 flex-grow-1">
+                  <h5 className="f-w-600 text-dark mb-1 text-break">{selectedBook.title}</h5>
+                  <div className="f-s-13 text-secondary mb-2">
+                    {selectedBook.author || 'Muallif noma’lum'}
+                    {selectedBook.publisher ? ` · ${selectedBook.publisher}` : ''}
+                    {' · '}<span className="text-dark f-w-500">{selectedBook.seller?.name || 'Ichki katalog'}</span>
+                    {selectedBook.seller?.phone ? ` · ${selectedBook.seller.phone}` : ''}
                   </div>
-
-                  <div className="flex-grow-1 min-w-0">
-                    <h5 className="f-w-700 text-dark mb-1">{selectedBook.title}</h5>
-                    <p className="text-secondary mb-2 f-s-14">
-                      Muallif: <b className="text-dark">{selectedBook.author || 'Noma\'lum'}</b>
-                      {selectedBook.category ? ` · Kategoriya: ${selectedBook.category}` : ''}
-                      {selectedBook.publisher ? ` · Nashriyot: ${selectedBook.publisher}` : ''}
-                    </p>
-
-                    <div className="d-flex gap-2 flex-wrap align-items-center">
-                      {selectedBook.catalogUrl ? (
-                        <a
-                          href={selectedBook.catalogUrl}
-                          className="badge bg-primary text-white text-decoration-none d-inline-flex align-items-center gap-1 p-2 b-r-6"
-                        >
-                          <i className="ti ti-bookmarks"></i>
-                          Katalog kartasi #{selectedBook.editionId}
-                          <i className="ti ti-arrow-right ms-1"></i>
-                        </a>
-                      ) : (
-                        <span className="badge bg-warning-subtle text-warning-emphasis p-2 b-r-6">
-                          <i className="ti ti-alert-triangle me-1"></i>Katalogga ulanmagan
-                        </span>
-                      )}
-
-                      <span className={`badge ${selectedBook.active ? 'bg-light-success text-success' : 'bg-light-secondary text-secondary'} p-2 b-r-6`}>
-                        {selectedBook.active ? 'Do\'konda faol' : 'Nofaol'}
-                      </span>
-
-                      {selectedBook.hidden ? (
-                        <span className="badge bg-light-secondary text-secondary p-2 b-r-6">Yashirilgan</span>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  {/* Seller Mini Cardlet */}
-                  <div className="bg-white p-3 b-r-10 shadow-sm" style={{ minWidth: 220 }}>
-                    <div className="text-secondary f-s-12 mb-1">Sotuvchi do'kon</div>
-                    <div className="d-flex align-items-center gap-2">
-                      <div className="b-r-22 d-flex-center bg-light-primary text-primary f-w-600 f-s-14" style={{ width: 36, height: 36 }}>
-                        {(selectedBook.seller?.name || 'S').charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <div className="f-w-600 f-s-14 text-dark">{selectedBook.seller?.name || 'Ichki katalog'}</div>
-                        <small className="text-secondary">{selectedBook.seller?.phone || 'Telefon yo\'q'}</small>
-                      </div>
-                    </div>
+                  <div className="d-flex gap-1 flex-wrap align-items-center">
+                    {(() => { const [t, c, i] = statusBadge(selectedBook.status, selectedBook.archived); return <span className={`badge ${c}`}><i className={`ti ${i}`}></i> {t}</span>; })()}
+                    {selectedBook.catalogUrl
+                      ? <a href={selectedBook.catalogUrl} className="kb-mini-chip">Karta #{selectedBook.editionId} <i className="ti ti-arrow-up-right"></i></a>
+                      : <span className="kb-mini-chip is-warn">Katalogga ulanmagan</span>}
+                    {selectedBook.featured ? <span className="kb-mini-chip is-gold"><i className="ti ti-crown"></i>BuyBox</span> : null}
+                    {!selectedBook.active ? <span className="kb-mini-chip">Do‘konda nofaol</span> : null}
+                    {selectedBook.hidden ? <span className="kb-mini-chip">Yashirin</span> : null}
                   </div>
                 </div>
               </div>
 
-              {/* 4 Core Metrics */}
-              <div className="row g-3 mb-4">
-                <div className="col-sm-6 col-xl-3">
-                  <MiniStat
-                    icon={tiIcon('ti-cash')}
-                    label="Amaldagi narx"
-                    value={`${fmt(selectedBook.discountPrice || selectedBook.price)} so'm`}
-                  />
-                </div>
-                <div className="col-sm-6 col-xl-3">
-                  <MiniStat
-                    icon={tiIcon('ti-package')}
-                    label="Ombor zaxirasi"
-                    value={`${fmt(selectedBook.stock)} dona`}
-                  />
-                </div>
-                <div className="col-sm-6 col-xl-3">
-                  <MiniStat
-                    icon={tiIcon('ti-shopping-bag')}
-                    label="Jami sotilgan"
-                    value={`${fmt(selectedBook.sold)} dona`}
-                  />
-                </div>
-                <div className="col-sm-6 col-xl-3">
-                  <MiniStat
-                    icon={tiIcon('ti-trending-up')}
-                    label="Jami tushum"
-                    value={`${fmt(selectedBook.totalRevenue || 0)} so'm`}
-                  />
-                </div>
+              <div className="kb-metrics kb-metrics-boxed mb-3">
+                <div><span>Narx</span><b>{fmt(selectedBook.discountPrice || selectedBook.price)} so‘m</b>{selectedBook.discountPrice ? <small className="text-decoration-line-through">{fmt(selectedBook.price)} so‘m</small> : <small>chegirmasiz</small>}</div>
+                <div><span>Qoldiq</span><b>{fmt(selectedBook.stock)} dona</b><small>{fmt(selectedBook.views || 0)} ko‘rish</small></div>
+                <div><span>Sotilgan</span><b>{fmt(selectedBook.sold)} dona</b><small>umumiy</small></div>
+                <div><span>Tushum</span><b>{fmt(selectedBook.totalRevenue || 0)} so‘m</b><small>umumiy</small></div>
               </div>
 
-              {/* Inspector Tabs */}
               <div className="nav kc-segment mb-3">
-                <div className="nav-item">
-                  <button
-                    type="button"
-                    className={`nav-link ${inspectorTab === 'info' ? 'active' : ''}`}
-                    onClick={() => setInspectorTab('info')}
-                  >
-                    <i className="ti ti-list-details me-1"></i>Xususiyatlar va Tavsif
-                  </button>
-                </div>
-                <div className="nav-item">
-                  <button
-                    type="button"
-                    className={`nav-link ${inspectorTab === 'orders' ? 'active' : ''}`}
-                    onClick={() => setInspectorTab('orders')}
-                  >
-                    <i className="ti ti-receipt me-1"></i>Buyurtmalar tarixi ({selectedBook.recentOrders?.length || 0})
-                  </button>
-                </div>
-                <div className="nav-item">
-                  <button
-                    type="button"
-                    className={`nav-link ${inspectorTab === 'ai' ? 'active' : ''}`}
-                    onClick={() => setInspectorTab('ai')}
-                  >
-                    <i className="ti ti-sparkles me-1"></i>AI moderatsiya auditi
-                  </button>
-                </div>
+                {([
+                  ['info', 'Ma’lumot', null],
+                  ['orders', 'Buyurtmalar', selectedBook.recentOrders?.length || 0],
+                  ['ai', 'AI tekshiruvi', null],
+                ] as const).map(([key, text, count]) => (
+                  <div className="nav-item" key={key}>
+                    <button type="button" className={`nav-link ${inspectorTab === key ? 'active' : ''}`} onClick={() => setInspectorTab(key)}>
+                      {text}{count !== null ? <span className="kb-tab-count">{count}</span> : null}
+                    </button>
+                  </div>
+                ))}
               </div>
 
-              {/* Tab 1: Info & Specifications */}
               {inspectorTab === 'info' ? (
-                <div className="card border">
-                  <div className="card-body">
-                    <h6 className="f-w-600 mb-3 text-dark">Kitob xususiyatlari</h6>
-                    <div className="row g-3">
-                      <SpecItem label="ISBN-13" value={selectedBook.isbn} />
-                      <SpecItem label="Kategoriya" value={selectedBook.category} />
-                      <SpecItem label="Nashriyot" value={selectedBook.publisher} />
-                      <SpecItem label="Tarjimon" value={selectedBook.translator} />
-                      <SpecItem label="Til va yozuv" value={[selectedBook.lang, selectedBook.langType].filter(Boolean).join(' / ')} />
-                      <SpecItem label="Muqova turi" value={selectedBook.coverType} />
-                      <SpecItem label="Sahifalar soni" value={selectedBook.pages ? `${selectedBook.pages} bet` : undefined} />
-                      <SpecItem label="Chop etilgan yili" value={selectedBook.year} />
-                      <SpecItem label="Asl narxi" value={`${fmt(selectedBook.price)} so'm`} />
-                      <SpecItem label="Chegirma narxi" value={selectedBook.discountPrice ? `${fmt(selectedBook.discountPrice)} so'm` : 'Yo\'q'} />
-                      <SpecItem label="Chegirma muddati" value={selectedBook.discountExpiresAt} />
-                      <SpecItem label="Ko'rishlar soni" value={fmt(selectedBook.views || 0)} />
+                <div>
+                  <dl className="kb-specs kb-specs-2 mb-0">
+                    <SpecItem label="ISBN-13" value={selectedBook.isbn ? <span className="font-monospace">{selectedBook.isbn}</span> : null} />
+                    <SpecItem label="Kategoriya" value={selectedBook.category} />
+                    <SpecItem label="Nashriyot" value={selectedBook.publisher} />
+                    <SpecItem label="Tarjimon" value={selectedBook.translator} />
+                    <SpecItem label="Til / yozuv" value={[selectedBook.lang, selectedBook.langType].filter(Boolean).join(' / ')} />
+                    <SpecItem label="Muqova" value={selectedBook.coverType} />
+                    <SpecItem label="Sahifalar" value={selectedBook.pages ? `${selectedBook.pages} bet` : undefined} />
+                    <SpecItem label="Nashr yili" value={selectedBook.year} />
+                    <SpecItem label="Chegirma muddati" value={selectedBook.discountExpiresAt} />
+                  </dl>
+                  {selectedBook.description ? (
+                    <div className="mt-3 pt-3 border-top">
+                      <div className="f-s-12 text-secondary mb-1">Annotatsiya</div>
+                      <div className="text-dark f-s-13 text-break" style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>{selectedBook.description}</div>
                     </div>
-
-                    {selectedBook.description ? (
-                      <div className="mt-4 pt-3 border-top">
-                        <h6 className="f-w-600 mb-2 text-dark">Kitob annotatsiyasi (Tavsifi)</h6>
-                        <div className="bg-light p-3 b-r-8 text-secondary f-s-13 text-break" style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
-                          {selectedBook.description}
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
+                  ) : null}
                 </div>
               ) : null}
 
               {/* Tab 2: Orders */}
               {inspectorTab === 'orders' ? (
-                <div className="card border">
-                  <div className="card-body">
-                    <h6 className="f-w-600 mb-3 text-dark">Oxirgi buyurtmalar</h6>
+                <div>
+                  <div>
+                    <div className="f-s-12 text-secondary mb-2">Oxirgi buyurtmalar</div>
                     <MiniOrdersTable rows={selectedBook.recentOrders || []} empty="Ushbu mahsulot bo'yicha buyurtmalar topilmadi" />
                     {selectedBook.sellerOrders && selectedBook.sellerOrders.length ? (
                       <div className="mt-4 pt-3 border-top">
-                        <h6 className="f-w-600 mb-3 text-dark">Do'kon buyurtmalari (Seller orders)</h6>
+                        <div className="f-s-12 text-secondary mb-2">Do'kon buyurtmalari</div>
                         <MiniOrdersTable rows={selectedBook.sellerOrders} empty="Seller order topilmadi" />
                       </div>
                     ) : null}
@@ -802,15 +527,14 @@ export default function Books() {
 
               {/* Tab 3: AI Audit */}
               {inspectorTab === 'ai' ? (
-                <div className="card border">
-                  <div className="card-body">
-                    <h6 className="f-w-600 mb-3 text-dark">Sun'iy intellekt (AI) moderatsiya tekshiruvi</h6>
-                    <div className="row g-3">
+                <div>
+                  <div>
+                    <dl className="kb-specs kb-specs-2 mb-0">
                       <SpecItem label="AI xulosasi" value={aiStatusLabel(selectedBook.aiModerationStatus)} />
                       <SpecItem label="Tekshirgan model" value={selectedBook.aiModerationModel} />
                       <SpecItem label="Tekshirilgan vaqti" value={selectedBook.aiModerationCheckedAt} />
                       <SpecItem label="Moderatsiya qarori" value={selectedBook.statusLabel} />
-                    </div>
+                    </dl>
                     {selectedBook.aiModerationNote ? (
                       <div className="alert alert-light-primary mt-3 mb-0 f-s-13">
                         <p className="f-w-600 mb-1"><i className="ti ti-notes me-1"></i>AI izohi:</p>
@@ -828,11 +552,11 @@ export default function Books() {
           <div>
             {selectedBook?.archived ? (
               <Button variant="light-success" onClick={() => restoreBook(selectedBook)}>
-                <i className="ti ti-rotate me-1"></i>Arxivdan qaytarish
+                <i className="ti ti-rotate"></i>Arxivdan qaytarish
               </Button>
             ) : (
               <Button variant="light-danger" onClick={() => selectedBook && archiveBook(selectedBook)}>
-                <i className="ti ti-trash me-1"></i>Sotuvdan olish
+                <i className="ti ti-archive"></i>Sotuvdan olish
               </Button>
             )}
           </div>
@@ -878,7 +602,7 @@ export default function Books() {
                   )}
 
                   <div className="col-md-4">
-                    <label className="form-label f-w-600">Seller</label>
+                    <label className="form-label f-w-600">Do'kon</label>
                     <select name="seller_id" className="form-select" defaultValue={selectedBook.sellerId || ''}>
                       <option value="">Ichki katalog</option>
                       {bookFormOptions.sellers.map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}
@@ -984,7 +708,7 @@ function MiniOrdersTable({ rows, empty }: { rows: MiniOrder[]; empty: string }) 
             <th>ID</th>
             <th>Mijoz</th>
             <th>Summa</th>
-            <th>Status</th>
+            <th>Holat</th>
             <th>Sana</th>
             <th className="text-end">Amal</th>
           </tr>

@@ -70,7 +70,7 @@ export default function Products() {
           <p className="mb-0 text-secondary f-s-13">Kitob, kanselyariya va sovg'alar umumiy tovar katalogi</p>
         </div>
         <div className="d-flex gap-2 align-items-center flex-wrap">
-          <a className="btn btn-sm btn-outline-secondary" href="/boshqaruv/books">
+          <a className="btn btn-sm btn-light-secondary" href="/boshqaruv/books">
             <i className="ti ti-book me-1"></i>Kitoblar bo'limi
           </a>
           <a className="btn btn-sm btn-primary" href="/boshqaruv/stationeries">

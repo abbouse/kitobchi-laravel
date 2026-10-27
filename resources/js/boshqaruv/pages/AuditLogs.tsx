@@ -71,7 +71,7 @@ export default function AuditLogs() {
 
           <div className="table-responsive app-scroll">
             <table className="table table-bottom-border align-middle">
-              <thead><tr><th>ID</th><th>Admin</th><th>Method</th><th>Action</th><th>Target</th><th>Path</th><th>Status</th><th>Sana</th><th></th></tr></thead>
+              <thead><tr><th>ID</th><th>Admin</th><th>Usul</th><th>Amal</th><th>Kimga</th><th>Yo‘l</th><th>Holat</th><th>Sana</th><th></th></tr></thead>
               <tbody>
                 {auditLogs.map((log) => (
                   <tr key={log.id}>

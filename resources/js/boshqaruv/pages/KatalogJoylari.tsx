@@ -72,12 +72,12 @@ export default function KatalogJoylari() {
             Do'kon pul to'lab kitob kartasida birinchi va tanlangan taklif bo'lib turadi. Bitta kartada bitta joy.
           </p>
         </div>
-        <div className="d-flex gap-2">
-          <Link href="/boshqaruv/catalog" className="btn btn-light-secondary btn-sm"><i className="ti ti-book me-1"></i>Global katalog</Link>
+        <div className="kb-page-actions">
           <FormAction
             label="Narx sozlamasi"
             icon="ti ti-settings"
-            variant="primary"
+            variant="light-secondary"
+            size="md"
             title="Katalog joyi narxi"
             description="Oylik narx kiritiladi, do'kon tanlagan kunga proporsional hisoblanadi (narx / 30 × kun)."
             onSubmit={(event) => {
@@ -123,40 +123,38 @@ export default function KatalogJoylari() {
         </div>
       ) : null}
 
-      <div className="row">
-        {[
-          { key: 'pending', label: 'Kutilmoqda', sub: "Ko'rib chiqilishi kerak" },
-          { key: 'active', label: 'Faol', sub: 'Hozir kartada turibdi' },
-          { key: 'expired', label: 'Muddati tugagan', sub: 'Yakunlangan' },
-          { key: 'rejected', label: 'Rad etilgan', sub: 'Pul qaytarilgan' },
-        ].map((item, index) => (
-          <div className="col-xl-3 col-md-6" key={item.key}>
-            <StatWidget index={index} label={item.label} value={counts[item.key] || 0} sub={item.sub} selected={tab === item.key} onClick={() => load({ tab: item.key, page: 1 })} />
-          </div>
-        ))}
-      </div>
-
-      <div className="row">
-        <div className="col-md-6">
-          <div className="card"><div className="card-body">
-            <p className="mb-1 f-s-12 text-secondary">Jami tushum</p>
-            <h4 className="mb-0 f-w-600">{money(revenue.total)} so'm</h4>
-          </div></div>
-        </div>
-        <div className="col-md-6">
-          <div className="card"><div className="card-body">
-            <p className="mb-1 f-s-12 text-secondary">Faol joylardan</p>
-            <h4 className="mb-0 f-w-600">{money(revenue.active)} so'm</h4>
-          </div></div>
-        </div>
+      <div className="row g-3 mb-3">
+        <div className="col-md-4"><StatWidget label="Jami tushum" value={`${money(revenue.total)} so'm`} variant="success" /></div>
+        <div className="col-md-4"><StatWidget label="Faol joylardan" value={`${money(revenue.active)} so'm`} variant="primary" /></div>
+        <div className="col-md-4"><StatWidget label="Narx" value={settings.price_per_month ? `${money(settings.price_per_month)} so'm / oy` : 'Belgilanmagan'} sub={settings.is_active ? `${settings.min_days}–${settings.max_days} kun` : 'Sotuvda emas'} variant={settings.is_active ? 'info' : 'warning'} /></div>
       </div>
 
       <div className="card">
+        <div className="card-header d-flex align-items-center justify-content-between gap-3 flex-wrap">
+          <div>
+            <h5 className="f-w-600 mb-0">Joylar</h5>
+            <p className="mb-0 text-secondary f-s-13">{pagination.total} ta topildi</p>
+          </div>
+          <div className="nav kc-segment">
+            {[
+              { key: 'pending', label: 'Kutilmoqda' },
+              { key: 'active', label: 'Faol' },
+              { key: 'expired', label: 'Muddati tugagan' },
+              { key: 'rejected', label: 'Rad etilgan' },
+            ].map((item) => (
+              <div className="nav-item" key={item.key}>
+                <button type="button" className={`nav-link ${tab === item.key ? 'active' : ''}`} onClick={() => load({ tab: item.key, page: 1 })}>
+                  {item.label}<span className="kb-tab-count">{counts[item.key] || 0}</span>
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
         <div className="card-body">
           <div className="table-responsive app-scroll">
             <table className="table table-bottom-border align-middle mb-0">
               <thead><tr>
-                <th>Do'kon</th><th>Kitob</th><th>Kartada</th><th>Muddat</th><th>Narx</th><th>Status</th><th></th>
+                <th>Do'kon</th><th>Kitob</th><th>Kartada</th><th>Muddat</th><th>Narx</th><th>Holat</th><th></th>
               </tr></thead>
               <tbody>
                 {items.map((item) => {
@@ -220,10 +218,9 @@ export default function KatalogJoylari() {
             </table>
           </div>
           {!items.length ? <EmptyState text="Bu bo'limda joy yo'q" /> : null}
+          <PaginationControls page={pagination.page} totalPages={pagination.totalPages} from={pagination.from} to={pagination.to} total={pagination.total} onPageChange={(page) => load({ page })} />
         </div>
       </div>
-
-      <PaginationControls page={pagination.page} totalPages={pagination.totalPages} from={pagination.from} to={pagination.to} total={pagination.total} onPageChange={(page) => load({ page })} />
 
       <ModerationRejectModal
         show={!!rejectTarget}

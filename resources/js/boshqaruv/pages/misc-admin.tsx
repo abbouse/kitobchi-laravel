@@ -29,7 +29,7 @@ export function Vakansiyalar() {
   return (
     <div>
       <div className="d-flex align-items-end justify-content-between flex-wrap gap-3 mx-1 mb-3"><div><h4 className="main-title mb-0">Vakansiyalar</h4><PageCrumbs /><p className="mb-0 text-secondary">Jami {vacancies.length} ta vakansiya</p></div>
-        <button className="btn btn-primary" onClick={() => { setEditing(null); setShowForm(true); }}><i className="ti ti-plus me-1"></i>Qo'shish</button>
+        <button className="btn btn-primary" onClick={() => { setEditing(null); setShowForm(true); }}><i className="ti ti-plus"></i>Vakansiya qo‘shish</button>
         </div>
       <div className="card">
 <div className="card-body">
@@ -156,7 +156,7 @@ export function KaryeraArizalari() {
       <div className="card">
 <div className="card-body">
           <div className="table-responsive app-scroll"><table className="table table-bottom-border align-middle">
-            <thead><tr><th>ID</th><th>Nomzod</th><th>Vakansiya</th><th>Kontakt</th><th>Sana</th><th>Status</th><th>Amallar</th></tr></thead>
+            <thead><tr><th>ID</th><th>Nomzod</th><th>Vakansiya</th><th>Kontakt</th><th>Sana</th><th>Holat</th><th>Amallar</th></tr></thead>
             <tbody>{applications.map(application => (
               <tr key={application.id}>
                 <td className="f-w-600 text-primary">#{application.id}</td>

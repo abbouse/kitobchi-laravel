@@ -188,7 +188,7 @@ function AuthorDetailModal({ author, detail, loading, onHide, onEdit, onDelete, 
 function BooksTable({ rows }: { rows: BookRow[] }) {
   if (!rows.length) return <div className="text-muted f-s-13">Ulangan kitob topilmadi.</div>;
 
-  return <div className="table-responsive app-scroll"><table className="table table-bottom-border align-middle mb-0"><thead><tr><th>ID</th><th>Kitob</th><th>Kategoriya</th><th>Seller</th><th>Narx</th><th>Qoldiq</th><th>Sotildi</th><th>Holat</th></tr></thead><tbody>{rows.map((book) => <tr key={book.id}><td>#{book.id}</td><td className="f-w-600">{book.name}</td><td>{book.category || '—'}</td><td>{book.seller || '—'}</td><td>{fmt(book.price)}</td><td>{book.stock}</td><td>{book.sold}</td><td><span className={`badge ${book.hidden || !book.approved ? 'text-light-warning' : 'text-light-success'}`}>{book.hidden ? 'Yashirin' : book.status}</span></td></tr>)}</tbody></table></div>;
+  return <div className="table-responsive app-scroll"><table className="table table-bottom-border align-middle mb-0"><thead><tr><th>ID</th><th>Kitob</th><th>Kategoriya</th><th>Do‘kon</th><th>Narx</th><th>Qoldiq</th><th>Sotildi</th><th>Holat</th></tr></thead><tbody>{rows.map((book) => <tr key={book.id}><td>#{book.id}</td><td className="f-w-600">{book.name}</td><td>{book.category || '—'}</td><td>{book.seller || '—'}</td><td>{fmt(book.price)}</td><td>{book.stock}</td><td>{book.sold}</td><td><span className={`badge ${book.hidden || !book.approved ? 'text-light-warning' : 'text-light-success'}`}>{book.hidden ? 'Yashirin' : book.status}</span></td></tr>)}</tbody></table></div>;
 }
 
 function Field({ name, label, defaultValue, required, wide }: { name: string; label: string; defaultValue?: string | null; required?: boolean; wide?: boolean }) {

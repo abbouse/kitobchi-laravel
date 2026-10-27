@@ -362,12 +362,12 @@ export function MarketNews() {
   return (
     <div>
       <div className="d-flex align-items-end justify-content-between flex-wrap gap-3 mx-1 mb-3"><div><h4 className="main-title mb-0">Market yangiliklari</h4><PageCrumbs /><p className="mb-0 text-secondary">Jami {news.length} ta yangilik</p></div>
-        <button className="btn btn-primary" onClick={() => { setEditing(null); setShowForm(true); }}><i className="ti ti-plus me-1"></i>Qo'shish</button>
+        <button className="btn btn-primary" onClick={() => { setEditing(null); setShowForm(true); }}><i className="ti ti-plus"></i>Yangilik qo‘shish</button>
         </div>
       <div className="card">
 <div className="card-body">
           <div className="table-responsive app-scroll"><table className="table table-bottom-border align-middle">
-            <thead><tr><th>ID</th><th>Sarlavha</th><th>Action</th><th>Sana</th><th>Holat</th><th>Amallar</th></tr></thead>
+            <thead><tr><th>ID</th><th>Sarlavha</th><th>Amal</th><th>Sana</th><th>Holat</th><th>Amallar</th></tr></thead>
             <tbody>{news.map(item => (
               <tr key={item.id}>
                 <td className="f-w-600 text-primary">#{item.id}</td>
@@ -599,7 +599,7 @@ export function PushNotifications() {
       <div className="card">
 <div className="card-body">
           <div className="table-responsive app-scroll"><table className="table table-bottom-border align-middle">
-            <thead><tr><th>ID</th><th>Sarlavha</th><th>Matn</th><th>Target</th><th>Status</th><th>Sana</th><th>Amallar</th></tr></thead>
+            <thead><tr><th>ID</th><th>Sarlavha</th><th>Matn</th><th>Kimga</th><th>Holat</th><th>Sana</th><th>Amallar</th></tr></thead>
             <tbody>{notifications.map(notification => (
               <tr key={notification.id}>
                 <td className="f-w-600 text-primary">#{notification.id}</td>

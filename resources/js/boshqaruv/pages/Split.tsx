@@ -351,7 +351,7 @@ export default function Split() {
                   <option value="blocked">Admin bloklaganlar</option>
                 </select>
                 <input className="form-control form-control-sm w-260" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="ID, ism, telefon, email" />
-                <button className="btn btn-sm btn-outline-secondary"><i className="ti ti-search"></i></button>
+                <button className="btn btn-sm btn-light-secondary"><i className="ti ti-search"></i></button>
               </form>
             </div>
             <div className="card-body">
@@ -647,8 +647,8 @@ function PlanRow({ plan, storeUrl, onPreview, previewLoading }: { plan: SplitPla
       <td>{plan ? <span className="badge text-light-info">{plan.installmentsCount} ta · {plan.frequencyLabel}</span> : <span className="text-muted f-s-13">—</span>}</td>
       <td>
         <div className="d-flex gap-1">
-          <input form={formId} className="form-control form-control-sm w-100" name="min_order_sum" type="number" min={0} placeholder="min (0 = yo'q)" title="0 yoki bo'sh qiymat minimal buyurtma cheklovini o'chiradi" defaultValue={plan?.minOrderSum ?? ''} />
-          <input form={formId} className="form-control form-control-sm w-100" name="max_order_sum" type="number" min={1000} placeholder="max" defaultValue={plan?.maxOrderSum ?? ''} />
+          <input form={formId} className="form-control form-control-sm" style={{ width: 110 }} name="min_order_sum" type="number" min={0} placeholder="min" title="0 yoki bo'sh qiymat minimal buyurtma cheklovini o'chiradi" defaultValue={plan?.minOrderSum ?? ''} />
+          <input form={formId} className="form-control form-control-sm" style={{ width: 110 }} name="max_order_sum" type="number" min={1000} placeholder="max" defaultValue={plan?.maxOrderSum ?? ''} />
         </div>
       </td>
       <td><input form={formId} className="form-control form-control-sm w-70" name="min_confidence_score" type="number" min={0} max={100} step="0.01" placeholder="—" defaultValue={plan?.minConfidenceScore ?? ''} /></td>
@@ -745,8 +745,8 @@ function ContractSection({
             router.post(contractStoreUrl, Object.fromEntries(new FormData(event.currentTarget).entries()), { preserveScroll: true });
           }}
         >
-          <input className="form-control form-control-sm w-110" name="user_id" type="number" min={1} placeholder="User ID" required />
-          <input className="form-control form-control-sm w-110" name="order_id" type="number" min={1} placeholder="Order ID" required />
+          <input className="form-control form-control-sm w-110" name="user_id" type="number" min={1} placeholder="Mijoz ID" required />
+          <input className="form-control form-control-sm w-110" name="order_id" type="number" min={1} placeholder="Buyurtma ID" required />
           <select className="form-select form-select-sm w-200" name="plan_id" required defaultValue="">
             <option value="" disabled>Tarif tanlang</option>
             {enabledPlans.map((plan) => (

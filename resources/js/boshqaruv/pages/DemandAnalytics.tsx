@@ -110,8 +110,8 @@ export default function DemandAnalytics({
           <PageCrumbs />
           <p className="mb-0 text-secondary">Mijozlar xohlagan, savatda saqlagan va kutayotgan kitoblar — jonli talab va zaxira tahlili</p>
         </div>
-        <button className="btn btn-sm btn-light-secondary" onClick={() => router.reload()} title="Yangilash">
-          <i className="ti ti-rotate"></i>Yangilash
+        <button type="button" className="btn btn-light-secondary" onClick={() => router.reload()} title="Yangilash">
+          <i className="ti ti-refresh"></i>Yangilash
         </button>
       </div>
 
@@ -361,7 +361,7 @@ export default function DemandAnalytics({
                           <div className="d-flex align-items-center justify-content-end gap-1">
                             <Link
                               href={`/boshqaruv/books?search=${encodeURIComponent(item.isbn || item.name)}`}
-                              className="btn btn-sm btn-outline-primary"
+                              className="btn btn-sm btn-light-primary"
                               title="Kitob ma'lumotlarini ko'rish va zaxirani boshqarish"
                             >
                               <i className="ti ti-package me-1"></i>

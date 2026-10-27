@@ -101,12 +101,14 @@ export default function Stationeries() {
       <div className="card">
         <div className="card-header d-flex align-items-center justify-content-between gap-2 flex-wrap">
           <div>
-            <h5 className="f-w-600">Mahsulotlar</h5>
-            <p className="mb-0 text-secondary">{stationeryPagination.total} ta mahsulot topildi</p>
+            <h5 className="f-w-600 mb-0">Mahsulotlar</h5>
+            <p className="mb-0 text-secondary f-s-13">{stationeryPagination.total} ta topildi</p>
           </div>
-          <form className="d-flex gap-2" onSubmit={(event) => { event.preventDefault(); loadItems(); }}>
-            <input className="form-control form-control-sm" style={{ maxWidth: 300 }} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Nomi, kategoriya, barcode yoki seller" />
-            <button className="btn btn-sm btn-outline-secondary"><i className="ti ti-search"></i></button>
+          <form className="kb-toolbar" onSubmit={(event) => { event.preventDefault(); loadItems(); }}>
+            <div className="app-form app-icon-form position-relative">
+              <i className="ti ti-search"></i>
+              <input className="form-control form-control-sm" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Nomi, kategoriya, barcode yoki do'kon" aria-label="Mahsulot qidirish" />
+            </div>
           </form>
         </div>
         <div className="card-body">
@@ -133,12 +135,12 @@ export default function Stationeries() {
                 <tr>
                   <th></th>
                   <th>Mahsulot</th>
-                  <th>Seller</th>
+                  <th>Do‘kon</th>
                   <th>Narx</th>
                   <th>Ombor</th>
                   <th>Sotilgan</th>
                   <th>Ko'rish</th>
-                  <th>Status</th>
+                  <th>Holat</th>
                   <th>Amallar</th>
                 </tr>
               </thead>
@@ -214,11 +216,11 @@ export default function Stationeries() {
               <div className="col-lg-8 col-xxl-9"><div className="row">
               <Info title="Asosiy ma'lumotlar" rows={[
                 ['Kategoriya', selected.category],
-                ['Seller', selected.seller || 'Ichki katalog'],
+                ["Do'kon", selected.seller || 'Ichki katalog'],
                 ['Barcode', selected.barcode || '—'],
                 ['Material', selected.material || '—'],
-                ['Marketplace', selected.active ? 'Faol' : 'Nofaol'],
-                ['Visibility', selected.hidden ? 'Yashirin' : 'Ochiq'],
+                ['Holat', selected.active ? 'Faol' : 'Nofaol'],
+                ["Ko'rinish", selected.hidden ? 'Yashirin' : 'Ochiq'],
               ]} />
 
               <Info title="KPI va narx" rows={[
@@ -301,7 +303,7 @@ export default function Stationeries() {
                       <div className="col-12">
                         <div className="d-flex align-items-center justify-content-between mb-2">
                           <h6 className="f-w-600 mb-0">Variantlar</h6>
-                          <button type="button" className="btn btn-sm btn-outline-secondary" onClick={addVariantRow}>
+                          <button type="button" className="btn btn-sm btn-light-secondary" onClick={addVariantRow}>
                             <i className="ti ti-plus me-1"></i>Variant qo'shish
                           </button>
                         </div>
@@ -374,7 +376,7 @@ function MiniOrdersTable({ rows, empty }: { rows: MiniOrder[]; empty: string }) 
             <th>ID</th>
             <th>Mijoz</th>
             <th>Summa</th>
-            <th>Status</th>
+            <th>Holat</th>
             <th>Sana</th>
             <th></th>
           </tr>
