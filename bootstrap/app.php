@@ -59,6 +59,8 @@ return Application::configure(basePath: dirname(__DIR__))
         // Jamoa boti: ertalabki xulosa va kutib qolgan buyurtma/vazifa eslatmalari
         $schedule->command('team-bot:digest')->dailyAt('09:00')->timezone($tz)->withoutOverlapping();
         $schedule->command('team-bot:remind')->everyFifteenMinutes()->between('08:00', '22:00')->timezone($tz)->withoutOverlapping();
+        // Guruhdagi buyurtma xabarlari boshqaruv bilan tengmi — 5 daqiqada bir tekshiriladi
+        $schedule->command('team-bot:resync')->everyFiveMinutes()->withoutOverlapping();
 
         // O'zpochta bo'limlari (pochta indeksi uchun) — haftada bir yangilanadi
         $schedule->command('postal:sync-uzpost --backfill')

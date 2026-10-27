@@ -716,6 +716,12 @@ class OrderService
             return ['ok' => false, 'message' => 'Buyurtma allaqachon bekor qilingan.'];
         }
 
+        // Holat DB::table() bilan yozildi — observer ishlamaydi, shuning uchun
+        // jamoa guruhidagi buyurtma xabarini shu yerda yangilaymiz
+        if (config('services.team_bot.token')) {
+            \App\Jobs\TeamBotSyncOrderJob::dispatch((int) $order->id, false)->afterCommit();
+        }
+
         if ($previousCompletedPaid) {
             $this->reverseCompletedOrderSideEffects($order, "order_cancelled_after_paid: order={$order->id}");
         }

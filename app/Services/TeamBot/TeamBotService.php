@@ -13,8 +13,11 @@ use App\Models\Stationery;
 use App\Models\TeamBotPost;
 use App\Models\TeamTask;
 use App\Services\AdminOrderStatusSyncService;
+use App\Services\OrderService;
+use App\Services\OrderStatusPushService;
 use App\Support\AdminOrderStatusPresenter;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -137,31 +140,86 @@ class TeamBotService
     }
 
     // ─── BUYURTMA XABARI ─────────────────────────────────────────────────────
+    //
+    // Qoida:
+    //  • Karta — guruhga faqat to'lov o'tgach (held/paid) yuboriladi. To'lanmagan
+    //    karta buyurtmasi jamoani chalg'itmaydi.
+    //  • Naqd — darhol yuboriladi: jamoadan kimdir mijozga qo'ng'iroq qilib
+    //    tasdiqlaydi (yoki mijoz rad etsa — bekor qiladi). Tasdiqlanmaguncha
+    //    "Qadoqlashga" tugmasi chiqmaydi.
+    //  • Xabar buyurtma bilan sinxron: holat/to'lov qayerda o'zgarsa ham
+    //    (panel, ilova, kuryer, avtomatik bekor qilish) xabar yangilanadi.
 
-    /** @return array{0:string,1:array} [matn, inline klaviatura] */
-    public function renderOrder(Sold $order, ?TeamBotPost $post = null): array
+    /** Guruhga chiqariladigan buyurtmalar faqat so'nggi 2 kundagilar (eski buyurtma o'zgarsa post ochilmaydi) */
+    public const POST_MAX_AGE_HOURS = 48;
+
+    public static function paymentCode(Sold $order): PaymentStatusCode
     {
-        $order->loadMissing('user:id,name,lastname,phone_number');
-        $status = OrderStatusCode::fromLegacy($order->status_code ?? $order->status)->value;
-        $payment = PaymentStatusCode::fromLegacy($order->payment_status_code ?? $order->paymentStatus);
-        $final = in_array($status, ['delivered', 'customer_received', 'cancelled', 'returned'], true);
+        return PaymentStatusCode::fromLegacy($order->payment_status_code ?? $order->paymentStatus);
+    }
 
-        $head = match ($status) {
-            'pending' => '🆕 <b>Yangi buyurtma</b>',
-            'cancelled' => '❌ <b>Bekor qilingan</b>',
-            'returned' => '↩️ <b>Qaytgan</b>',
-            'delivered', 'customer_received' => '✅ <b>Yetkazilgan</b>',
-            default => '📦 <b>Buyurtma</b>',
+    public static function statusCode(Sold $order): string
+    {
+        return OrderStatusCode::fromLegacy($order->status_code ?? $order->status)->value;
+    }
+
+    /** Hali post ochilmagan buyurtma guruhga chiqishi kerakmi */
+    public function shouldPost(Sold $order): bool
+    {
+        if ($order->is_instore) {
+            return false;
+        }
+        if ($order->created_at && $order->created_at->lt(now()->subHours(self::POST_MAX_AGE_HOURS))) {
+            return false;
+        }
+        if (in_array(self::statusCode($order), ['cancelled', 'returned', 'delivered', 'customer_received'], true)) {
+            return false;
+        }
+
+        return match (self::paymentCode($order)) {
+            PaymentStatusCode::CASH_PENDING, PaymentStatusCode::HELD, PaymentStatusCode::PAID => true,
+            default => false, // karta kutilmoqda yoki bekor — chiqmaydi
         };
+    }
 
-        $name = trim((string) ($order->user?->name ?? ''));
-        $last = trim((string) ($order->user?->lastname ?? ''));
-        $customer = $name !== '' ? $name.($last !== '' ? ' '.mb_substr($last, 0, 1).'.' : '') : 'Mijoz';
-        $phone = (string) ($order->user?->phone_number ?? '');
+    /** Buyurtma oqimi: post ochilganda qayd etiladi (naqd keyin "paid" bo'lib ketadi) */
+    private function flowOf(Sold $order, ?TeamBotPost $post): string
+    {
+        $saved = $post?->metaValue('flow');
+        if ($saved) {
+            return (string) $saved;
+        }
+
+        return self::paymentCode($order) === PaymentStatusCode::CASH_PENDING ? 'cash' : 'card';
+    }
+
+    /** Qo'ng'iroq uchun: qabul qiluvchi (manzildagi) va akkaunt egasi */
+    private function contactOf(Sold $order): array
+    {
+        $address = (array) (collect($order->address ?? [])->first() ?? []);
+        $recipientName = trim((string) ($address['fullName'] ?? $address['full_name'] ?? ''));
+        $recipientPhone = trim((string) ($address['phoneNumber'] ?? $address['phone'] ?? ''));
+        $accountName = trim(((string) ($order->user?->name ?? '')).' '.((string) ($order->user?->lastname ?? '')));
+        $accountPhone = trim((string) ($order->user?->phone_number ?? ''));
+
+        return [
+            'name' => $recipientName !== '' ? $recipientName : ($accountName !== '' ? $accountName : 'Mijoz'),
+            'phone' => $recipientPhone !== '' ? $recipientPhone : $accountPhone,
+            'accountPhone' => $accountPhone !== '' && $accountPhone !== $recipientPhone ? $accountPhone : null,
+            'address' => $address,
+        ];
+    }
+
+    private static function maskPhone(string $phone): ?string
+    {
         $digits = preg_replace('/\D/', '', $phone);
-        $phoneMasked = strlen($digits) >= 4 ? '••• '.substr($digits, -4, 2).' '.substr($digits, -2) : null;
 
-        $items = collect($order->items ?? [])->map(function ($item) {
+        return strlen($digits) >= 4 ? '••• '.substr($digits, -4, 2).' '.substr($digits, -2) : null;
+    }
+
+    private function itemsOf(Sold $order): \Illuminate\Support\Collection
+    {
+        return collect($order->items ?? [])->map(function ($item) {
             $item = (array) $item;
             $type = $item['type'] ?? 'book';
             $id = (int) ($item['item_id'] ?? $item['product_id'] ?? $item['productId'] ?? $item['id'] ?? 0);
@@ -183,9 +241,44 @@ class TeamBotService
                 'qty' => max(1, (int) ($item['count_item'] ?? $item['count'] ?? $item['quantity'] ?? 1)),
             ];
         });
-        $units = $items->sum('qty');
+    }
 
-        $address = (array) (collect($order->address ?? [])->first() ?? []);
+    private static function hm(?string $iso): string
+    {
+        return $iso ? Carbon::parse($iso)->timezone('Asia/Tashkent')->format('H:i') : '';
+    }
+
+    /** @return array{0:string,1:array} [matn, inline klaviatura] */
+    public function renderOrder(Sold $order, ?TeamBotPost $post = null): array
+    {
+        $order->loadMissing('user:id,name,lastname,phone_number');
+        $status = self::statusCode($order);
+        $payment = self::paymentCode($order);
+        $flow = $this->flowOf($order, $post);
+        $final = in_array($status, ['delivered', 'customer_received', 'cancelled', 'returned'], true);
+        $cancelled = in_array($status, ['cancelled', 'returned'], true) || $payment === PaymentStatusCode::CANCELLED;
+
+        $callStatus = (string) $post?->metaValue('call_status', '');
+        $confirmed = $flow !== 'cash' || $callStatus === 'confirmed' || ! in_array($status, ['pending'], true);
+        $callerId = $post?->metaValue('caller');
+        $caller = $callerId ? Admin::find($callerId) : null;
+        $claimedId = $post?->metaValue('claimed_by');
+        $claimed = $claimedId ? Admin::find($claimedId) : null;
+
+        $head = match (true) {
+            $cancelled => '❌ <b>Bekor qilingan</b>',
+            in_array($status, ['delivered', 'customer_received'], true) => '✅ <b>Yetkazilgan</b>',
+            $flow === 'cash' && ! $confirmed => '💵 <b>Yangi buyurtma · naqd</b> — mijozga qo‘ng‘iroq qilib tasdiqlang',
+            $flow === 'cash' => '💵 <b>Buyurtma · naqd</b>',
+            $payment === PaymentStatusCode::HELD => '💳 <b>Yangi buyurtma · karta</b> (summa ushlab turilgan)',
+            $status === 'pending' => '💳 <b>Yangi buyurtma · to‘langan</b>',
+            default => '💳 <b>Buyurtma · to‘langan</b>',
+        };
+
+        $contact = $this->contactOf($order);
+        $items = $this->itemsOf($order);
+        $units = $items->sum('qty');
+        $address = $contact['address'];
         $place = collect([$address['region'] ?? $address['province'] ?? null, $address['district'] ?? null])->filter()->implode(', ');
         $delivery = match (Sold::normalizeDeliveryTypeValue($order->deliveryType)) {
             'pickup' => "🏬 Do'kondan olib ketadi",
@@ -193,14 +286,12 @@ class TeamBotService
             default => '🛵 Kuryer',
         };
         $window = class_exists(\App\Support\DeliverySchedule::class) ? \App\Support\DeliverySchedule::windowLabel($order) : null;
-
-        $claimedId = $post?->metaValue('claimed_by');
-        $claimed = $claimedId ? Admin::find($claimedId) : null;
+        $masked = self::maskPhone((string) $contact['phone']);
 
         $lines = [];
-        $lines[] = "{$head} #{$order->id}";
+        $lines[] = "{$head}\n#{$order->id}";
         $lines[] = '';
-        $lines[] = '👤 '.e($customer).($phoneMasked ? ' · <code>'.e($phoneMasked).'</code>' : '');
+        $lines[] = '👤 '.e($contact['name']).($masked ? ' · <code>'.e($masked).'</code>' : '');
         foreach ($items->take(5) as $it) {
             $lines[] = '   • '.e(Str::limit($it['name'], 48)).($it['qty'] > 1 ? " × {$it['qty']}" : '');
         }
@@ -214,21 +305,57 @@ class TeamBotService
         }
         $lines[] = '';
         $lines[] = '🏷 Holat: <b>'.e(AdminOrderStatusPresenter::mainOrder($order->status_code ?? $order->status)).'</b>';
-        $lines[] = "🙋 Mas'ul: ".($claimed ? self::mention($claimed) : '<i>hali hech kim</i>');
+
+        if ($flow === 'cash') {
+            $attempts = (int) $post?->metaValue('call_attempts', 0);
+            if ($callStatus === 'confirmed') {
+                $by = Admin::find($post?->metaValue('confirmed_by'));
+                $lines[] = '📞 Tasdiqlandi: '.self::mention($by).' · '.self::hm($post?->metaValue('confirmed_at'));
+            } elseif ($callStatus === 'refused') {
+                $by = Admin::find($post?->metaValue('cancelled_by'));
+                $lines[] = '📞 Mijoz rad etdi: '.self::mention($by).' · '.self::hm($post?->metaValue('cancelled_at'));
+            } elseif (! $cancelled) {
+                $lines[] = '📞 Qo‘ng‘iroq: '.($caller ? self::mention($caller).' qo‘ng‘iroq qilyapti' : '<i>hali hech kim</i>')
+                    .($attempts ? " · 📵 {$attempts} marta javob bermadi (".self::hm($post?->metaValue('last_attempt_at')).')' : '');
+            }
+        }
+        if (! $cancelled) {
+            $lines[] = "🙋 Mas'ul: ".($claimed ? self::mention($claimed) : '<i>hali hech kim</i>');
+        }
         $lines[] = '🕒 '.optional($order->created_at)->timezone('Asia/Tashkent')?->format('d.m H:i');
 
         $rows = [];
-        if (! $final) {
-            $row = [];
-            if (! $claimed) {
-                $row[] = ['text' => '🙋 Men olaman', 'callback_data' => "o:{$order->id}:claim"];
-            }
-            if (isset(self::NEXT[$status])) {
-                [$next, $label] = self::NEXT[$status];
-                $row[] = ['text' => $label, 'callback_data' => "o:{$order->id}:st:{$next}"];
-            }
-            if ($row) {
-                $rows[] = $row;
+        if (! $final && ! $cancelled) {
+            if ($flow === 'cash' && ! $confirmed) {
+                if ($post?->metaValue('reject_pending')) {
+                    $rows[] = [
+                        ['text' => '❗ Ha, bekor qilinsin', 'callback_data' => "o:{$order->id}:rejyes"],
+                        ['text' => '↩️ Yo‘q', 'callback_data' => "o:{$order->id}:rejno"],
+                    ];
+                } elseif (! $caller) {
+                    $rows[] = [['text' => '📞 Men qo‘ng‘iroq qilaman', 'callback_data' => "o:{$order->id}:call"]];
+                } else {
+                    $rows[] = [
+                        ['text' => '✅ Tasdiqladi', 'callback_data' => "o:{$order->id}:ok"],
+                        ['text' => '📵 Javob bermadi', 'callback_data' => "o:{$order->id}:noans"],
+                    ];
+                    $rows[] = [
+                        ['text' => '📞 Raqam', 'callback_data' => "o:{$order->id}:phone"],
+                        ['text' => '🚫 Mijoz rad etdi', 'callback_data' => "o:{$order->id}:rej"],
+                    ];
+                }
+            } else {
+                $row = [];
+                if (! $claimed) {
+                    $row[] = ['text' => '🙋 Men olaman', 'callback_data' => "o:{$order->id}:claim"];
+                }
+                if (isset(self::NEXT[$status])) {
+                    [$next, $label] = self::NEXT[$status];
+                    $row[] = ['text' => $label, 'callback_data' => "o:{$order->id}:st:{$next}"];
+                }
+                if ($row) {
+                    $rows[] = $row;
+                }
             }
             $rows[] = [['text' => '📝 Vazifa qilish', 'callback_data' => "o:{$order->id}:task"]];
         }
@@ -242,23 +369,63 @@ class TeamBotService
 
     /**
      * Buyurtma xabarini yuboradi yoki tahrirlaydi.
-     * $create=false bo'lsa — faqat oldin yuborilgan xabar yangilanadi.
+     * $create=true — post hali yo'q bo'lsa va qoida ruxsat bersa ochiladi
+     * (karta: to'langach; naqd: darhol). Aks holda faqat mavjud post yangilanadi.
      */
     public function syncOrder(int $orderId, bool $create): void
     {
         if (! $this->enabled()) {
             return;
         }
-        $order = Sold::query()->find($orderId);
-        if (! $order) {
+        // Bir buyurtma uchun parallel ishlar ikki marta post ochmasin
+        $lock = Cache::lock("team_bot:order:{$orderId}", 30);
+        if (! $lock->block(15)) {
             return;
         }
-        $post = TeamBotPost::for('order', $orderId);
-        if (! $post && ! $create) {
-            return;
+        try {
+            $order = Sold::query()->find($orderId);
+            if (! $order) {
+                return;
+            }
+            $post = TeamBotPost::for('order', $orderId);
+            if (! $post) {
+                if (! $create || ! $this->shouldPost($order)) {
+                    return;
+                }
+            }
+            [$text, $rows] = $this->renderOrder($order, $post);
+            $created = $this->upsertPost('order', $orderId, $post, $text, $rows, $this->threadId('orders'));
+            if ($created) {
+                $created->putMeta('flow', self::paymentCode($order) === PaymentStatusCode::CASH_PENDING ? 'cash' : 'card');
+            }
+        } finally {
+            $lock->release();
         }
-        [$text, $rows] = $this->renderOrder($order, $post);
-        $this->upsertPost('order', $orderId, $post, $text, $rows, $this->threadId('orders'));
+    }
+
+    /**
+     * Xavfsizlik to'ri: buyurtma jadvali to'g'ridan-to'g'ri (observer'siz)
+     * o'zgargan bo'lsa ham guruhdagi xabar eskirib qolmasin — oxirgi 7 kunlik
+     * postlardan buyurtmasi keyin o'zgarganlari qayta chiziladi.
+     */
+    public function resyncRecent(bool $all = false): int
+    {
+        if (! $this->enabled()) {
+            return 0;
+        }
+        $ids = DB::table('team_bot_posts as p')
+            ->join('solds as s', 's.id', '=', 'p.ref_id')
+            ->where('p.kind', 'order')
+            ->where('p.created_at', '>', now()->subDays(7))
+            ->when(! $all, fn ($q) => $q->whereColumn('s.updated_at', '>', 'p.updated_at'))
+            ->limit($all ? 1000 : 100)
+            ->pluck('p.ref_id');
+        foreach ($ids as $id) {
+            $this->syncOrder((int) $id, false);
+            TeamBotPost::query()->where('kind', 'order')->where('ref_id', $id)->update(['updated_at' => now()]);
+        }
+
+        return $ids->count();
     }
 
     // ─── VAZIFA XABARI ───────────────────────────────────────────────────────
@@ -327,13 +494,14 @@ class TeamBotService
         $this->upsertPost('task', $taskId, TeamBotPost::for('task', $taskId), $text, $rows, $this->threadId('tasks'));
     }
 
-    private function upsertPost(string $kind, int $refId, ?TeamBotPost $post, string $text, array $rows, ?int $thread): void
+    /** @return TeamBotPost|null yangi ochilgan post (tahrirlashda null) */
+    private function upsertPost(string $kind, int $refId, ?TeamBotPost $post, string $text, array $rows, ?int $thread): ?TeamBotPost
     {
         $hash = hash('sha256', $text.json_encode($rows));
         $markup = ['inline_keyboard' => $rows];
         if ($post) {
             if ($post->content_hash === $hash) {
-                return;
+                return null;
             }
             $ok = $this->tg->call('editMessageText', [
                 'chat_id' => $post->chat_id,
@@ -347,7 +515,7 @@ class TeamBotService
                 $post->forceFill(['content_hash' => $hash])->save();
             }
 
-            return;
+            return null;
         }
 
         $chatId = $this->chatId();
@@ -360,11 +528,13 @@ class TeamBotService
             'reply_markup' => $markup,
         ]);
         if (is_array($sent) && isset($sent['message_id'])) {
-            TeamBotPost::query()->updateOrCreate(
+            return TeamBotPost::query()->updateOrCreate(
                 ['kind' => $kind, 'ref_id' => $refId],
                 ['chat_id' => $chatId, 'thread_id' => $thread, 'message_id' => (int) $sent['message_id'], 'content_hash' => $hash],
             );
         }
+
+        return null;
     }
 
     // ─── TUGMALAR (callback_query) ───────────────────────────────────────────
@@ -436,48 +606,220 @@ class TeamBotService
             return;
         }
 
-        if ($action === 'claim') {
-            $current = $post->metaValue('claimed_by');
-            if ($current && (int) $current !== $admin->id) {
-                $answer('Bu buyurtmani '.(Admin::find($current)?->name ?? 'boshqa xodim').' olgan', true);
-
-                return;
-            }
-            $post->putMeta('claimed_by', $admin->id);
-            $this->audit($admin, 'Telegram: buyurtmani o‘ziga oldi', 'order', $order->id, []);
+        $status = self::statusCode($order);
+        $open = ! in_array($status, ['delivered', 'customer_received', 'cancelled', 'returned'], true);
+        if (! $open && $action !== 'phone') {
             $this->syncOrder($order->id, false);
-            $answer('Buyurtma sizga biriktirildi');
+            $answer('Buyurtma allaqachon yakunlangan yoki bekor qilingan', true);
 
             return;
         }
 
-        if ($action === 'st' && $arg !== null) {
-            $allowed = array_column(self::NEXT, 0);
-            if (! in_array($arg, $allowed, true)) {
-                $answer('Bu holatni botdan o‘rnatib bo‘lmaydi', true);
+        $contact = $this->contactOf($order->loadMissing('user:id,name,lastname,phone_number'));
+        $phoneAlert = fn () => Str::limit('📞 '.$contact['name'].': '.($contact['phone'] ?: 'raqam yo‘q')
+            .($contact['accountPhone'] ? "\nAkkaunt: ".$contact['accountPhone'] : ''), 195);
+
+        switch ($action) {
+            // ── Naqd: qo'ng'iroq oqimi ─────────────────────────────────────
+            case 'call':
+                $current = $post->metaValue('caller');
+                $startedAt = $post->metaValue('call_started_at');
+                $fresh = $startedAt && Carbon::parse($startedAt)->gt(now()->subMinutes(20));
+                if ($current && (int) $current !== $admin->id && $fresh) {
+                    $answer((Admin::find($current)?->name ?? 'Boshqa xodim').' qo‘ng‘iroq qilyapti', true);
+
+                    return;
+                }
+                $post->putMeta('caller', $admin->id);
+                $post->putMeta('call_started_at', now()->toIso8601String());
+                if (! $post->metaValue('claimed_by')) {
+                    $post->putMeta('claimed_by', $admin->id);
+                }
+                $this->audit($admin, 'Telegram: mijozga qo‘ng‘iroq qilishni oldi', 'order', $order->id, []);
+                $this->sendCallCard($admin, $order, $contact);
+                $this->syncOrder($order->id, false);
+                $answer($phoneAlert(), true);
 
                 return;
-            }
-            try {
-                // forward_only: eski tugma qayta bosilsa holat orqaga ketmaydi
-                app(AdminOrderStatusSyncService::class)->updateMainOrder($order, $arg, ['forward_only' => true]);
-            } catch (\Throwable $e) {
-                report($e);
-                $answer('Holatni o‘zgartirib bo‘lmadi: '.Str::limit($e->getMessage(), 150), true);
+
+            case 'phone':
+                $this->audit($admin, 'Telegram: mijoz raqamini ko‘rdi', 'order', $order->id, []);
+                $answer($phoneAlert(), true);
 
                 return;
-            }
-            if (! $post->metaValue('claimed_by')) {
+
+            case 'ok':
+                $post->putMeta('call_status', 'confirmed');
+                $post->putMeta('confirmed_by', $admin->id);
+                $post->putMeta('confirmed_at', now()->toIso8601String());
+                $post->putMeta('reject_pending', null);
+                if (! $post->metaValue('claimed_by')) {
+                    $post->putMeta('claimed_by', $admin->id);
+                }
+                $this->audit($admin, 'Telegram: naqd buyurtma mijoz bilan tasdiqlandi', 'order', $order->id, []);
+                $this->syncOrder($order->id, false);
+                $answer('Tasdiqlandi. Endi qadoqlashga o‘tkazish mumkin');
+
+                return;
+
+            case 'noans':
+                $attempts = (int) $post->metaValue('call_attempts', 0) + 1;
+                $post->putMeta('call_attempts', $attempts);
+                $post->putMeta('last_attempt_at', now()->toIso8601String());
+                $this->audit($admin, 'Telegram: mijoz javob bermadi', 'order', $order->id, ['attempt' => $attempts]);
+                $this->syncOrder($order->id, false);
+                $answer("Belgilandi ({$attempts}-urinish). Birozdan keyin qayta qo‘ng‘iroq qiling");
+
+                return;
+
+            case 'rej':
+                if (self::paymentCode($order) !== PaymentStatusCode::CASH_PENDING || ! in_array($status, ['pending', 'packing'], true)) {
+                    $answer('Bu buyurtmani botdan bekor qilib bo‘lmaydi — boshqaruvdan bajaring', true);
+
+                    return;
+                }
+                $post->putMeta('reject_pending', $admin->id);
+                $this->syncOrder($order->id, false);
+                $answer('Tasdiqlang: buyurtma bekor qilinadi');
+
+                return;
+
+            case 'rejno':
+                $post->putMeta('reject_pending', null);
+                $this->syncOrder($order->id, false);
+                $answer('Bekor qilinmadi');
+
+                return;
+
+            case 'rejyes':
+                if (! $post->metaValue('reject_pending')) {
+                    $answer('Avval «Mijoz rad etdi» ni bosing', true);
+
+                    return;
+                }
+                if (self::paymentCode($order) !== PaymentStatusCode::CASH_PENDING || ! in_array($status, ['pending', 'packing'], true)) {
+                    $post->putMeta('reject_pending', null);
+                    $this->syncOrder($order->id, false);
+                    $answer('Holat o‘zgargan — boshqaruvdan tekshiring', true);
+
+                    return;
+                }
+                $previousStatus = (string) $order->status;
+                try {
+                    $result = app(OrderService::class)->cancelOrder($order, strict: false);
+                } catch (\Throwable $e) {
+                    report($e);
+                    $answer('Bekor qilib bo‘lmadi: '.Str::limit($e->getMessage(), 150), true);
+
+                    return;
+                }
+                if (! ($result['ok'] ?? false)) {
+                    $answer((string) ($result['message'] ?? 'Bekor qilib bo‘lmadi'), true);
+
+                    return;
+                }
+                try {
+                    app(OrderStatusPushService::class)->sendForTransition($order->fresh(), $previousStatus, 'F');
+                } catch (\Throwable $e) {
+                    report($e);
+                }
+                $post->putMeta('reject_pending', null);
+                $post->putMeta('call_status', 'refused');
+                $post->putMeta('cancelled_by', $admin->id);
+                $post->putMeta('cancelled_at', now()->toIso8601String());
+                $this->audit($admin, 'Telegram: mijoz rad etdi — buyurtma bekor qilindi', 'order', $order->id, []);
+                $this->syncOrder($order->id, false);
+                $answer('Buyurtma bekor qilindi');
+
+                return;
+
+            // ── Umumiy: mas'ul va keyingi bosqich ──────────────────────────
+            case 'claim':
+                $current = $post->metaValue('claimed_by');
+                if ($current && (int) $current !== $admin->id) {
+                    $answer('Bu buyurtmani '.(Admin::find($current)?->name ?? 'boshqa xodim').' olgan', true);
+
+                    return;
+                }
                 $post->putMeta('claimed_by', $admin->id);
-            }
-            $this->audit($admin, 'Telegram: buyurtma holati', 'order', $order->id, ['status' => $arg]);
-            $this->syncOrder($order->id, false);
-            $answer('Holat yangilandi');
+                $this->audit($admin, 'Telegram: buyurtmani o‘ziga oldi', 'order', $order->id, []);
+                $this->syncOrder($order->id, false);
+                $answer('Buyurtma sizga biriktirildi');
 
-            return;
+                return;
+
+            case 'st':
+                $allowed = array_column(self::NEXT, 0);
+                if ($arg === null || ! in_array($arg, $allowed, true)) {
+                    $answer('Bu holatni botdan o‘rnatib bo‘lmaydi', true);
+
+                    return;
+                }
+                if ($this->flowOf($order, $post) === 'cash' && $status === 'pending' && $post->metaValue('call_status') !== 'confirmed') {
+                    $answer('Avval mijozga qo‘ng‘iroq qilib tasdiqlang', true);
+
+                    return;
+                }
+                try {
+                    // forward_only: eski tugma qayta bosilsa holat orqaga ketmaydi
+                    app(AdminOrderStatusSyncService::class)->updateMainOrder($order, $arg, ['forward_only' => true]);
+                } catch (\Throwable $e) {
+                    report($e);
+                    $answer('Holatni o‘zgartirib bo‘lmadi: '.Str::limit($e->getMessage(), 150), true);
+
+                    return;
+                }
+                if (! $post->metaValue('claimed_by')) {
+                    $post->putMeta('claimed_by', $admin->id);
+                }
+                $this->audit($admin, 'Telegram: buyurtma holati', 'order', $order->id, ['status' => $arg]);
+                $this->syncOrder($order->id, false);
+                $answer('Holat yangilandi');
+
+                return;
         }
 
         $answer('Noma’lum amal');
+    }
+
+    /** Qo'ng'iroq qiluvchiga shaxsiy xabar: to'liq raqam (bosib qo'ng'iroq qilinadi), manzil va tarkib */
+    private function sendCallCard(Admin $admin, Sold $order, array $contact): void
+    {
+        if (! $admin->telegram_user_id) {
+            return;
+        }
+        $address = $contact['address'];
+        $fullAddress = $address['fullAddress'] ?? $address['full_address'] ?? $address['address']
+            ?? collect([$address['region'] ?? null, $address['district'] ?? null, $address['street'] ?? null, $address['home'] ?? null])->filter()->implode(', ');
+        $items = $this->itemsOf($order);
+        $lines = [
+            "📞 <b>#{$order->id} — mijozga qo'ng'iroq</b>",
+            '',
+            '👤 '.e($contact['name']),
+            '☎️ '.e($contact['phone'] ?: 'raqam yo‘q'),
+        ];
+        if ($contact['accountPhone']) {
+            $lines[] = '☎️ Akkaunt: '.e($contact['accountPhone']);
+        }
+        if ($fullAddress) {
+            $lines[] = '📍 '.e(Str::limit((string) $fullAddress, 200));
+        }
+        $lines[] = '💰 '.number_format((float) ($order->amount ?? 0), 0, '.', ' ')." so'm · naqd";
+        foreach ($items->take(8) as $it) {
+            $lines[] = '   • '.e(Str::limit($it['name'], 60)).($it['qty'] > 1 ? " × {$it['qty']}" : '');
+        }
+        if (trim((string) $order->buyerWish) !== '') {
+            $lines[] = '💬 '.e(Str::limit(trim((string) $order->buyerWish), 300));
+        }
+        $lines[] = '';
+        $lines[] = "Gaplashib bo'lgach guruhdagi xabarda «✅ Tasdiqladi», «📵 Javob bermadi» yoki «🚫 Mijoz rad etdi» ni bosing.";
+
+        $this->tg->call('sendMessage', [
+            'chat_id' => $admin->telegram_user_id,
+            'text' => implode("\n", $lines),
+            'parse_mode' => 'HTML',
+            'link_preview_options' => ['is_disabled' => true],
+        ]);
     }
 
     private function taskAction(int $taskId, string $action, Admin $admin, callable $answer): void
@@ -744,34 +1086,46 @@ class TeamBotService
         ]);
     }
 
-    /** Uzoq kutib qolgan buyurtmalar va muddati o'tgan vazifalar haqida bir martalik eslatma */
-    public function remindStale(int $orderMinutes = 120): void
+    /**
+     * Bir martalik eslatmalar:
+     *  • naqd buyurtma 30 daqiqadan beri tasdiqlanmagan (hech kim qo'ng'iroq qilmagan yoki natija yo'q);
+     *  • buyurtma $orderMinutes dan beri «Kutilmoqda» holatida;
+     *  • muddati o'tgan vazifalar.
+     */
+    public function remindStale(int $orderMinutes = 120, int $callMinutes = 30): void
     {
         if (! $this->enabled()) {
             return;
         }
         $posts = TeamBotPost::query()->where('kind', 'order')->where('created_at', '>', now()->subDays(3))->get()->keyBy('ref_id');
         if ($posts->isNotEmpty()) {
-            $stale = Sold::query()
+            $pending = Sold::query()
                 ->whereIn('id', $posts->keys())
                 ->where('status_code', OrderStatusCode::PENDING->value)
-                ->where('created_at', '<', now()->subMinutes($orderMinutes))
                 ->get();
-            foreach ($stale as $order) {
+            foreach ($pending as $order) {
                 $post = $posts[$order->id];
-                if ($post->metaValue('sla_sent')) {
+                $isCash = $this->flowOf($order, $post) === 'cash';
+                $unconfirmed = $isCash && $post->metaValue('call_status') !== 'confirmed';
+
+                if ($unconfirmed && ! $post->metaValue('call_sla_sent') && $post->created_at->lt(now()->subMinutes($callMinutes))) {
+                    $caller = $post->metaValue('caller') ? Admin::find($post->metaValue('caller')) : null;
+                    $attempts = (int) $post->metaValue('call_attempts', 0);
+                    $text = $caller
+                        ? "📞 #{$order->id} naqd buyurtma hali tasdiqlanmagan — ".self::mention($caller).($attempts ? ", {$attempts} marta javob bermadi" : ', natijani belgilang')
+                        : "📞 #{$order->id} naqd buyurtma {$callMinutes} daqiqadan beri kutyapti — kim qo‘ng‘iroq qiladi?";
+                    $this->replyToPost($post, $text);
+                    $post->putMeta('call_sla_sent', now()->toIso8601String());
+
                     continue;
                 }
-                $who = $post->metaValue('claimed_by') ? self::mention(Admin::find($post->metaValue('claimed_by'))) : 'kim oladi?';
-                $hours = max(1, (int) floor($order->created_at->diffInMinutes(now()) / 60));
-                $this->tg->call('sendMessage', [
-                    'chat_id' => $post->chat_id,
-                    'message_thread_id' => $post->thread_id,
-                    'text' => "⏰ #{$order->id} {$hours} soatdan beri «Kutilmoqda» holatida — {$who}",
-                    'parse_mode' => 'HTML',
-                    'reply_parameters' => ['message_id' => $post->message_id, 'allow_sending_without_reply' => true],
-                ]);
-                $post->putMeta('sla_sent', now()->toIso8601String());
+
+                if (! $unconfirmed && ! $post->metaValue('sla_sent') && $order->created_at->lt(now()->subMinutes($orderMinutes))) {
+                    $who = $post->metaValue('claimed_by') ? self::mention(Admin::find($post->metaValue('claimed_by'))) : 'kim oladi?';
+                    $hours = max(1, (int) floor($order->created_at->diffInMinutes(now()) / 60));
+                    $this->replyToPost($post, "⏰ #{$order->id} {$hours} soatdan beri «Kutilmoqda» holatida — {$who}");
+                    $post->putMeta('sla_sent', now()->toIso8601String());
+                }
             }
         }
 
@@ -790,6 +1144,17 @@ class TeamBotService
             $task->forceFill(['reminded_at' => now()])->save();
             $this->syncTask($task->id);
         }
+    }
+
+    private function replyToPost(TeamBotPost $post, string $text): void
+    {
+        $this->tg->call('sendMessage', [
+            'chat_id' => $post->chat_id,
+            'message_thread_id' => $post->thread_id,
+            'text' => $text,
+            'parse_mode' => 'HTML',
+            'reply_parameters' => ['message_id' => $post->message_id, 'allow_sending_without_reply' => true],
+        ]);
     }
 
     // ─── YORDAMCHILAR ────────────────────────────────────────────────────────

@@ -43,7 +43,8 @@ class SoldObserver
      */
     public function created(Sold $order): void
     {
-        // Jamoa Telegram guruhiga "yangi buyurtma" xabari (tranzaksiya tugagach, mahsulotlar yozilib bo'lgach)
+        // Jamoa Telegram guruhiga "yangi buyurtma" xabari (tranzaksiya tugagach, mahsulotlar yozilib bo'lgach).
+        // Naqd — darhol chiqadi; karta — to'lov o'tmaguncha chiqmaydi (updated() da chiqadi).
         if (config('services.team_bot.token')) {
             \App\Jobs\TeamBotSyncOrderJob::dispatch((int) $order->id, true)->afterCommit()->delay(now()->addSeconds(8));
         }
@@ -60,9 +61,11 @@ class SoldObserver
      */
     public function updated(Sold $order): void
     {
-        // Guruhdagi buyurtma xabarini yangilaymiz (holat yoki to'lov o'zgarganda)
+        // Guruhdagi buyurtma xabari: holat yoki to'lov o'zgarganda yangilanadi.
+        // create=true — karta buyurtmasi aynan to'lov o'tganda guruhga chiqadi
+        // (qaysi buyurtma chiqishini TeamBotService::shouldPost hal qiladi).
         if (config('services.team_bot.token') && $order->wasChanged(['status', 'status_code', 'paymentStatus', 'payment_status_code'])) {
-            \App\Jobs\TeamBotSyncOrderJob::dispatch((int) $order->id, false)->afterCommit();
+            \App\Jobs\TeamBotSyncOrderJob::dispatch((int) $order->id, true)->afterCommit();
         }
 
         // Bekor qilingan buyurtmadagi "Sovg'a qutisi" keyingi buyurtmaga qaytadi
