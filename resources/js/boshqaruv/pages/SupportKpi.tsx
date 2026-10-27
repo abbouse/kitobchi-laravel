@@ -43,7 +43,7 @@ const RANGES = [
 
 function duration(seconds: number | null) {
   if (seconds === null || seconds === undefined) return '—';
-  if (seconds < 60) return `${seconds} son`;
+  if (seconds < 60) return `${seconds} soniya`;
   const m = Math.round(seconds / 60);
   if (m < 60) return `${m} daq`;
   const h = Math.floor(m / 60);
@@ -84,11 +84,12 @@ export default function SupportKpi() {
   return (
     <>
       <Head title="Support KPI" />
-      <div className="row m-1">
-        <div className="col-12 d-flex flex-wrap align-items-end justify-content-between gap-3 mb-3">
+      <div>
+        <div className="d-flex flex-wrap align-items-end justify-content-between gap-3 mx-1 mb-3">
           <div>
-            <h4 className="main-title">Support KPI</h4>
+            <h4 className="main-title mb-0">Support KPI</h4>
             <PageCrumbs />
+            <p className="mb-0 text-secondary">Operatorlar tezligi, yopilgan murojaatlar va mijoz baholari</p>
           </div>
           <div className="d-flex flex-wrap align-items-center gap-2 kc-page-tools">
             <div className="nav kc-segment">
@@ -152,9 +153,7 @@ export default function SupportKpi() {
                         <tr key={a.id}>
                           <td>
                             <div className="f-w-600">{a.name}</div>
-                            <div className="progress mt-1" style={{ height: 4, maxWidth: 160 }}>
-                              <div className="progress-bar bg-primary" style={{ width: `${Math.round((a.handled / maxHandled) * 100)}%` }}></div>
-                            </div>
+                            <div className="kb-meter mt-1" title={`${a.handled} ta murojaat`}><span style={{ width: `${Math.round((a.handled / maxHandled) * 100)}%` }}></span></div>
                           </td>
                           <td className="text-end f-w-600">{a.handled}</td>
                           <td className="text-end">{a.closed}</td>

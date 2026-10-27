@@ -102,7 +102,7 @@ export function MiniStat({ label, value, icon, meta, help, tone = 'primary', val
           <span className="kc-stat-label" title={typeof label === 'string' ? label : undefined}>{label}</span>{help ? <InfoHint text={help} /> : null}
         </p>
         <h6 className={`mb-0 f-w-600 f-s-16 text-break ${valueTone ? `text-${valueTone}${valueTone === 'warning' ? '-dark' : ''}` : 'text-dark'}`}>{value}</h6>
-        {meta ? <p className="mb-0 text-muted f-s-12 txt-ellipsis-1">{meta}</p> : null}
+        {meta ? <p className="mb-0 text-muted f-s-12 kb-clamp-2" title={typeof meta === 'string' ? meta : undefined}>{meta}</p> : null}
       </div>
     </div>
   );

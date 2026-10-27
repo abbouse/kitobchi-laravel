@@ -55,6 +55,8 @@ Route::post('hook', WebhookController::class);
 Route::get('instagram/webhook', [\App\Http\Controllers\Api\InstagramWebhookController::class, 'verify']);
 Route::post('instagram/webhook', [\App\Http\Controllers\Api\InstagramWebhookController::class, 'handle'])->middleware('throttle:300,1');
 Route::post('telegram/webhook', \App\Http\Controllers\TelegramWebhookController::class);
+// Jamoa boti (buyurtma xabarlari + vazifalar) — X-Telegram-Bot-Api-Secret-Token bilan himoyalangan
+Route::post('telegram/team-webhook', \App\Http\Controllers\TeamBotWebhookController::class)->middleware('throttle:300,1')->name('telegram.team-webhook');
 Route::get('instagram/test', [\App\Http\Controllers\Api\InstagramWebhookController::class, 'test'])->middleware('throttle:30,1');
 Route::get('update_locale', [UserController::class, 'updateLocale']);
 Route::get('counts', [UserController::class, 'getGlobalCounts']);

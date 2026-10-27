@@ -264,8 +264,8 @@ function QueueBoard({ queues }: { queues: QueueItem[] }) {
                 <Link href={q.url} className={`kc-queue-tile d-flex align-items-center gap-3 p-3 b-r-15 h-100 text-reset ${q.count > 0 ? `kc-queue-${q.tone}` : 'kc-queue-calm'}`}>
                   <span className={`h-45 w-45 d-flex-center b-r-12 flex-shrink-0 f-s-20 text-light-${q.count > 0 ? q.tone : 'secondary'}`}><i className={`ti ${q.icon}`}></i></span>
                   <span className="min-w-0 flex-grow-1">
-                    <span className="d-block f-w-600 text-dark text-truncate">{q.label}</span>
-                    <span className="d-block f-s-12 text-secondary text-truncate">{q.hint}</span>
+                    <span className="d-block f-w-600 text-dark kb-clamp-2" title={q.label}>{q.label}</span>
+                    <span className="d-block f-s-12 text-secondary kb-clamp-2" title={q.hint}>{q.hint}</span>
                   </span>
                   <span className={`f-w-700 f-s-22 ${q.count > 0 ? `text-${q.tone}` : 'text-secondary'}`}>{fmt(q.count)}</span>
                 </Link>
@@ -298,7 +298,8 @@ function MyWork({ me, links }: { me: PersonalKpi; links: Workspace['links'] }) {
       <div className="card-body">
         <div className="row g-3 mb-3">
           {me.highlights.map((h) => (
-            <div className="col-6 col-xl-3" key={h.label}>
+            // Ko'rsatkichlar soniga qarab qator to'liq to'ladi (2 ta bo'lsa — yarmi bo'sh qolmaydi)
+            <div className={`col-6 ${me.highlights.length <= 2 ? 'col-xl-6' : me.highlights.length === 3 ? 'col-xl-4' : 'col-xl-3'}`} key={h.label}>
               <MiniStat label={h.label} value={typeof h.value === 'number' ? fmt(h.value) : h.value} icon={`ti ${h.icon}`} tone={h.tone} meta={h.hint} />
             </div>
           ))}

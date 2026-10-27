@@ -184,4 +184,18 @@ return [
         'webhook_secret' => env('TELEGRAM_WEBHOOK_SECRET', ''),
     ],
 
+    // Jamoa boti: yangi buyurtmalar, vazifalar, kunlik xulosa (mijozlar botidan alohida).
+    // Guruh va mavzular guruhda /setup bilan avtomatik saqlanadi; quyidagilar ixtiyoriy.
+    'team_bot' => [
+        'enabled' => env('TEAM_BOT_ENABLED', true),
+        'token' => env('TEAM_BOT_TOKEN', ''),
+        'webhook_secret' => env('TEAM_BOT_WEBHOOK_SECRET', ''),
+        'chat_id' => env('TEAM_BOT_CHAT_ID', ''),
+        'threads' => [
+            'orders' => env('TEAM_BOT_THREAD_ORDERS', ''),
+            'tasks' => env('TEAM_BOT_THREAD_TASKS', ''),
+            'alerts' => env('TEAM_BOT_THREAD_ALERTS', ''),
+        ],
+    ],
+
 ];

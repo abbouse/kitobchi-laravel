@@ -56,6 +56,10 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $tz = 'Asia/Tashkent';
 
+        // Jamoa boti: ertalabki xulosa va kutib qolgan buyurtma/vazifa eslatmalari
+        $schedule->command('team-bot:digest')->dailyAt('09:00')->timezone($tz)->withoutOverlapping();
+        $schedule->command('team-bot:remind')->everyFifteenMinutes()->between('08:00', '22:00')->timezone($tz)->withoutOverlapping();
+
         // O'zpochta bo'limlari (pochta indeksi uchun) — haftada bir yangilanadi
         $schedule->command('postal:sync-uzpost --backfill')
             ->weeklyOn(1, '04:40')->timezone($tz)->withoutOverlapping();

@@ -19,6 +19,7 @@ import { tiIcon } from './utils/icons';
 const nav = [
   { group: 'Asosiy', section: '', icon: 'ti-layout-dashboard', ax: 'ti ti-layout-dashboard', items: [
     { to: '/boshqaruv', match: '/boshqaruv', label: 'Bugun', icon: 'ti-layout-dashboard', perm: null as string | null },
+    { to: '/boshqaruv/tasks', match: '/boshqaruv/tasks', label: 'Vazifalar', icon: 'ti-checklist', perm: null as string | null },
     { to: '/boshqaruv/live', match: '/boshqaruv/live', label: 'Live Dashboard', icon: 'ti-broadcast', badge: 'LIVE', perm: null as string | null },
   ] },
   { group: 'Buyurtmalar', section: 'Savdo', icon: 'ti-receipt', ax: 'ti ti-receipt', items: [

@@ -82,7 +82,7 @@ function ago(iso: string | null) {
 
 function duration(s: number | null) {
   if (s === null || s === undefined) return '—';
-  if (s < 60) return `${s} son`;
+  if (s < 60) return `${s} soniya`;
   const m = Math.round(s / 60);
   return m < 60 ? `${m} daq` : `${Math.floor(m / 60)} soat ${m % 60} daq`;
 }
@@ -208,9 +208,9 @@ export default function Team() {
       <div className="card">
         <div className="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
           <h5 className="mb-0 f-w-600">Xodimlar</h5>
-          <div className="d-flex gap-2 align-items-center">
-            <input type="search" className="form-control form-control-sm" style={{ width: 220 }} placeholder="Ism, rol yoki email" value={q} onChange={(e) => setQ(e.target.value)} />
-            <select className="form-select form-select-sm" style={{ width: 170 }} value={sort} onChange={(e) => setSort(e.target.value as typeof sort)}>
+          <div className="d-flex gap-2 align-items-center flex-wrap flex-grow-1 justify-content-md-end">
+            <input type="search" className="form-control form-control-sm" style={{ width: 220, maxWidth: '100%', flex: '1 1 160px' }} placeholder="Ism, rol yoki email" value={q} onChange={(e) => setQ(e.target.value)} />
+            <select className="form-select form-select-sm" style={{ width: 170, flex: '0 1 170px' }} value={sort} onChange={(e) => setSort(e.target.value as typeof sort)}>
               <option value="actions">Faollik bo‘yicha</option>
               <option value="lastLogin">Oxirgi kirish</option>
               <option value="name">Ism bo‘yicha</option>

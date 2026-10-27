@@ -48,7 +48,7 @@
 .iconoir-wallet::before{mask-image:url('data:image/svg+xml;charset=utf-8,<svg width="24" height="24" stroke-width="1.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="5" width="20" height="14" rx="2" stroke="currentColor"/><path d="M16 12H18M2 9H22" stroke="currentColor" stroke-linecap="round"/></svg>');-webkit-mask-image:url('data:image/svg+xml;charset=utf-8,<svg width="24" height="24" stroke-width="1.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="5" width="20" height="14" rx="2" stroke="currentColor"/><path d="M16 12H18M2 9H22" stroke="currentColor" stroke-linecap="round"/></svg>');}
 .iconoir-xmark::before{mask-image:url('data:image/svg+xml;charset=utf-8,<svg width="24" height="24" stroke-width="1.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6.75827 17.2426L12.0009 12M17.2435 6.75736L12.0009 12M12.0009 12L6.75827 6.75736M12.0009 12L17.2435 17.2426" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg>');-webkit-mask-image:url('data:image/svg+xml;charset=utf-8,<svg width="24" height="24" stroke-width="1.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6.75827 17.2426L12.0009 12M17.2435 6.75736L12.0009 12M12.0009 12L6.75827 6.75736M12.0009 12L17.2435 17.2426" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg>');}
 
-/* tabler-icons 3.31.0 — 263 glif (scripts/tabler_subset.py) */
+/* tabler-icons 3.31.0 — 265 glif (scripts/tabler_subset.py) */
 @font-face{font-family:"tabler-icons";font-style:normal;font-weight:400;font-display:block;src:url("./fonts/tabler-icons.woff2") format("woff2")}
 .ti{font-family:"tabler-icons"!important;speak:none;font-style:normal;font-weight:normal;font-variant:normal;text-transform:none;line-height:1;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
 .ti-activity:before{content:"\ed23"}
@@ -109,6 +109,7 @@
 .ti-chart-histogram:before{content:"\f65c"}
 .ti-chart-line:before{content:"\ea5c"}
 .ti-check:before{content:"\ea5e"}
+.ti-checklist:before{content:"\f074"}
 .ti-checks:before{content:"\ebaa"}
 .ti-chevron-down:before{content:"\ea5f"}
 .ti-chevron-left:before{content:"\ea60"}
@@ -305,6 +306,7 @@
 .ti-user-circle:before{content:"\ef68"}
 .ti-user-minus:before{content:"\eb4a"}
 .ti-user-plus:before{content:"\eb4b"}
+.ti-user-question:before{content:"\f7cf"}
 .ti-users:before{content:"\ebf2"}
 .ti-users-group:before{content:"\fa21"}
 .ti-video:before{content:"\ed22"}

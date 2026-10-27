@@ -17,6 +17,11 @@ class HandleInertiaRequests extends Middleware
 
     public function share(Request $request): array
     {
+        // Boshqaruvda "14 hours ago" emas, "14 soat avval" — diffForHumans o'zbekcha
+        if ($request->is('boshqaruv', 'boshqaruv/*')) {
+            \Carbon\Carbon::setLocale('uz_Latn');
+        }
+
         $admin = Auth::guard('panel')->user();
 
         return array_merge(parent::share($request), [

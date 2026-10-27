@@ -43,6 +43,11 @@ class SoldObserver
      */
     public function created(Sold $order): void
     {
+        // Jamoa Telegram guruhiga "yangi buyurtma" xabari (tranzaksiya tugagach, mahsulotlar yozilib bo'lgach)
+        if (config('services.team_bot.token')) {
+            \App\Jobs\TeamBotSyncOrderJob::dispatch((int) $order->id, true)->afterCommit()->delay(now()->addSeconds(8));
+        }
+
         if (empty(trim((string) $order->buyerWish))) {
             GenerateOrderAiBuyerWishJob::dispatch($order->id)->delay(now()->addMinutes(30));
             Log::info("SoldObserver: buyurtma #{$order->id} uchun 30 daqiqalik AI tilak jobi rejalashtirildi.");
@@ -55,6 +60,11 @@ class SoldObserver
      */
     public function updated(Sold $order): void
     {
+        // Guruhdagi buyurtma xabarini yangilaymiz (holat yoki to'lov o'zgarganda)
+        if (config('services.team_bot.token') && $order->wasChanged(['status', 'status_code', 'paymentStatus', 'payment_status_code'])) {
+            \App\Jobs\TeamBotSyncOrderJob::dispatch((int) $order->id, false)->afterCommit();
+        }
+
         // Bekor qilingan buyurtmadagi "Sovg'a qutisi" keyingi buyurtmaga qaytadi
         if ($order->wasChanged('status_code') && in_array($order->status_code, [OrderStatusCode::CANCELLED->value, OrderStatusCode::RETURNED->value], true)) {
             try {

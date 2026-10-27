@@ -39,6 +39,12 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
         Route::get('/dashboard/export', [AdminController::class, 'exportReport'])->name('dashboard.export');
         Route::get('/live', [AdminController::class, 'live'])->name('live');
         Route::get('/live/data', [AdminController::class, 'liveData'])->name('live.data');
+        // Jamoa vazifalari (Telegram jamoa boti bilan sinxron) — barcha xodimlarga ochiq
+        Route::get('/tasks', [\App\Http\Controllers\Boshqaruv\TeamTaskController::class, 'page'])->name('tasks');
+        Route::post('/tasks', [\App\Http\Controllers\Boshqaruv\TeamTaskController::class, 'store'])->name('tasks.store');
+        Route::patch('/tasks/{task}', [\App\Http\Controllers\Boshqaruv\TeamTaskController::class, 'update'])->name('tasks.update');
+        Route::post('/team-bot/link', [\App\Http\Controllers\Boshqaruv\TeamTaskController::class, 'link'])->name('team-bot.link');
+        Route::post('/team-bot/unlink', [\App\Http\Controllers\Boshqaruv\TeamTaskController::class, 'unlink'])->name('team-bot.unlink');
         // Jamoa KPI: xodimlar faolligi (superadmin, auditor va adminlarni boshqaruvchilar)
         Route::middleware('panel.permission:audit-logs,admins')->group(function () {
             Route::get('/team', [AdminController::class, 'team'])->name('team');
