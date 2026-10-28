@@ -89,17 +89,27 @@ class OtpService
         $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
         $ttl = (int) config('kitobchi_id.otp_ttl', 300);
         $channel = null;
+        $inChat = false;
+        $user = $viaSms ? null : $this->existingUser($phone);
 
-        if (! $viaSms && ($user = $this->existingUser($phone))) {
-            if ($this->app->deliver($user, $code, $name, $ttl)) {
+        if ($user) {
+            $delivered = $this->app->deliver($user, $code, $name, $ttl);
+            if ($delivered === AppCodeChannel::DELIVERED_PUSH) {
                 $channel = 'app';
             }
+            $inChat = $delivered !== null;
         }
         if ($channel === null) {
-            if (! $this->sendSms($phone, $code, $name)) {
+            if ($this->sendSms($phone, $code, $name)) {
+                $channel = 'sms';
+            } elseif ($inChat) {
+                // Push ham, SMS ham yetmadi — lekin kod Kitobchi ilovasidagi chatda turibdi.
+                // Xato qaytarsak chatdagi kod "ishlamaydigan" bo'lib qolardi.
+                Log::warning('kitobchi-id: push and sms failed, code is only in app chat');
+                $channel = 'app';
+            } else {
                 return ['ok' => false, 'error' => 'sms_failed'];
             }
-            $channel = 'sms';
         }
 
         Cache::put($key, [

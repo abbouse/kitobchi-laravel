@@ -69,16 +69,22 @@ class AppCodeChannel
         }
     }
 
+    public const DELIVERED_PUSH = 'push';
+
+    public const DELIVERED_CHAT = 'chat';
+
     /**
      * Kodni chatga yozadi va push yuboradi.
      *
-     * @return bool yetkazildimi (push kamida bitta qurilmaga ketdi)
+     * @return string|null `push` — chatga yozildi va push kamida bitta qurilmaga ketdi;
+     *                     `chat` — chatga yozildi, lekin push yetmadi (kod baribir chatda);
+     *                     null — ilovaga umuman yetkazilmadi.
      */
-    public function deliver(User $user, string $code, string $clientName, int $ttl): bool
+    public function deliver(User $user, string $code, string $clientName, int $ttl): ?string
     {
         $tokens = $this->activeTokens($user);
         if (! $tokens) {
-            return false;
+            return null;
         }
 
         try {
@@ -113,12 +119,12 @@ class AppCodeChannel
         } catch (Throwable $e) {
             Log::warning('kitobchi-id: app delivery failed', ['error' => $e->getMessage()]);
 
-            return false;
+            return null;
         }
 
         $this->broadcast($conversation, $message);
 
-        return $this->push($tokens, $conversation, $code, $clientName);
+        return $this->push($tokens, $conversation, $code, $clientName) ? self::DELIVERED_PUSH : self::DELIVERED_CHAT;
     }
 
     /** Kod tasdiqlangach chatdagi kodni yashirish. */
@@ -231,9 +237,21 @@ class AppCodeChannel
                 ],
             ]));
             $data = method_exists($response, 'getData') ? (array) $response->getData(true) : [];
+            $ok = (bool) ($data['success'] ?? false);
+            if (! $ok) {
+                // Sababini ko'rish uchun: FCM javobi (kod matni log'ga yozilmaydi)
+                Log::warning('kitobchi-id: push not delivered', [
+                    'conversation_id' => $conversation->id,
+                    'tokens' => count($tokens),
+                    'sent' => $data['sent'] ?? null,
+                    'failed' => $data['failed'] ?? null,
+                    'invalid_tokens' => count((array) ($data['invalid_tokens'] ?? [])),
+                    'message' => $data['message'] ?? null,
+                ]);
+            }
 
-            // Hech bir qurilmaga yetmasa — chaqiruvchi SMS ga o'tadi
-            return (bool) ($data['success'] ?? false);
+            // Push yetmasa — chaqiruvchi SMS ham yuboradi (kod chatda baribir turadi)
+            return $ok;
         } catch (Throwable $e) {
             Log::warning('kitobchi-id: push failed', ['error' => $e->getMessage()]);
 

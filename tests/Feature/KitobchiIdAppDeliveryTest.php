@@ -33,6 +33,8 @@ class KitobchiIdAppDeliveryTest extends TestCase
 
     private bool $pushOk = true;
 
+    private bool $smsOk = true;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -134,6 +136,9 @@ class KitobchiIdAppDeliveryTest extends TestCase
 
         $this->mock(SmsService::class, function ($m) {
             $m->shouldReceive('send')->andReturnUsing(function ($phone, $text) {
+                if (! $this->smsOk) {
+                    throw new \RuntimeException('SMS yuborilmadi');
+                }
                 $this->sms[] = $text;
 
                 return ['ok' => true];
@@ -297,6 +302,38 @@ class KitobchiIdAppDeliveryTest extends TestCase
         $this->assertCount(1, $this->pushes);
         $this->assertCount(1, $this->sms);
         $this->browser('GET', '/api/id/authorize/resume?rid='.$rid.'&step=code')->assertSee('SMS orqali 6 xonali', false);
+    }
+
+    public function test_push_and_sms_failure_still_works_with_code_in_app_chat(): void
+    {
+        // Ilova chatiga yozildi, push ham SMS ham yetmadi — native ilova 503 olmasligi,
+        // chatdagi kod bilan kira olishi kerak
+        $this->makeUser();
+        $this->pushOk = false;
+        $this->smsOk = false;
+        $client = $this->client();
+        [, $challenge] = $this->pkce();
+
+        $start = $this->postJson('/api/id/native/start', [
+            'client_id' => $client->client_id, 'phone' => self::PHONE, 'scope' => 'openid profile phone offline_access',
+            'redirect_uri' => self::REDIRECT, 'code_challenge' => $challenge, 'code_challenge_method' => 'S256', 'nonce' => 'nn',
+        ])->assertOk()->assertJson(['channel' => 'app']);
+        $this->assertCount(1, $this->pushes);
+        $this->assertSame([], $this->sms);
+
+        $this->postJson('/api/id/native/verify', ['client_id' => $client->client_id, 'auth_session' => $start->json('auth_session'), 'code' => $this->pushedCode()])
+            ->assertOk()->assertJsonStructure(['authorization_code']);
+    }
+
+    public function test_unknown_phone_sms_failure_returns_503(): void
+    {
+        $this->smsOk = false;
+        $client = $this->client();
+        [, $challenge] = $this->pkce();
+        $this->postJson('/api/id/native/start', [
+            'client_id' => $client->client_id, 'phone' => '998977776655', 'scope' => 'openid',
+            'redirect_uri' => self::REDIRECT, 'code_challenge' => $challenge, 'code_challenge_method' => 'S256', 'nonce' => 'nn',
+        ])->assertStatus(503)->assertJson(['error' => 'delivery_failed']);
     }
 
     public function test_unknown_phone_gets_sms(): void
