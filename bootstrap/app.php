@@ -62,6 +62,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // Guruhdagi buyurtma xabarlari boshqaruv bilan tengmi — 5 daqiqada bir tekshiriladi
         $schedule->command('team-bot:resync')->everyFiveMinutes()->withoutOverlapping();
 
+        // Moliya boti: har kuni kechasi hisobotni yopadigan post, haftalik va oylik hisobotlar
+        $schedule->command('finance-bot:daily-report')->dailyAt('23:00')->timezone($tz)->withoutOverlapping();
+        $schedule->command('finance-bot:weekly-report')->weeklyOn(0, '23:30')->timezone($tz)->withoutOverlapping();
+        $schedule->command('finance-bot:monthly-report')->lastDayOfMonth('23:45')->timezone($tz)->withoutOverlapping();
+
         // O'zpochta bo'limlari (pochta indeksi uchun) — haftada bir yangilanadi
         $schedule->command('postal:sync-uzpost --backfill')
             ->weeklyOn(1, '04:40')->timezone($tz)->withoutOverlapping();

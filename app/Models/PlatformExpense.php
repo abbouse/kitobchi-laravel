@@ -29,6 +29,11 @@ class PlatformExpense extends Model
         'order_id',
         'reference',
         'created_by',
+        'telegram_user_id',
+        'telegram_username',
+        'telegram_name',
+        'telegram_message_id',
+        'source',
     ];
 
     protected $casts = [
@@ -39,6 +44,11 @@ class PlatformExpense extends Model
     public function order()
     {
         return $this->belongsTo(Sold::class, 'order_id');
+    }
+
+    public function creator()
+    {
+        return $this->belongsTo(Admin::class, 'created_by');
     }
 
     public function getCategoryLabelAttribute(): string

@@ -2,10 +2,11 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
-
-class SellerTransaction extends Model
+/**
+ * PlatformExpense modelining o'zbekcha muqobili / aliasi.
+ * platform_expenses jadvali bilan ishlaydi.
+ */
+class Chiqim extends PlatformExpense
 {
-    use HasFactory;
+    protected $table = 'platform_expenses';
 }

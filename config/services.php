@@ -198,4 +198,15 @@ return [
         ],
     ],
 
+    // Moliya / Chiqimlar boti: guruhda yozilgan matnlarni OpenAI orqali tahlil qilib,
+    // chiqim va kirimlarni platform_expenses / platform_incomes ga kiritadi.
+    // Har kuni kechasi kunlik hisobot, har hafta haftalik, har oy oylik hisobot yuboradi.
+    'finance_bot' => [
+        'enabled' => (bool) env('FINANCE_BOT_ENABLED', true),
+        'token' => env('FINANCE_BOT_TOKEN', ''),
+        'webhook_secret' => env('FINANCE_BOT_WEBHOOK_SECRET', ''),
+        'chat_id' => env('FINANCE_BOT_CHAT_ID', ''),
+        'thread_id' => env('FINANCE_BOT_THREAD_ID', null),
+    ],
+
 ];
