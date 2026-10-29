@@ -97,9 +97,11 @@ class FinanceBotService
         if (! $parsed['is_financial']) {
             if ($pending) {
                 // Foydalanuvchiga yana muloyim eslatamiz
-                $this->client->sendMessage($chatId, "Kechirasiz, tushunmadim. Iltimos, xarajat/kirim sababi yoki summasini aniqroq yozing.", [
-                    'reply_parameters' => ['message_id' => $messageId],
-                ]);
+                $params = ['reply_parameters' => ['message_id' => $messageId]];
+                if ($threadId) {
+                    $params['message_thread_id'] = $threadId;
+                }
+                $this->client->sendMessage($chatId, "Kechirasiz, tushunmadim. Iltimos, xarajat/kirim sababi yoki summasini aniqroq yozing.", $params);
             }
             return;
         }
@@ -111,9 +113,12 @@ class FinanceBotService
                     ? "Iltimos, summani (necha so'm) ham yozib yuboring."
                     : "Summani tushundim. Bu nimaga sarflandi yoki qayerdan keldi? Iltimos, sababini yozing.");
 
-            $botResponse = $this->client->sendMessage($chatId, "❓ {$question}", [
-                'reply_parameters' => ['message_id' => $messageId],
-            ]);
+            $params = ['reply_parameters' => ['message_id' => $messageId]];
+            if ($threadId) {
+                $params['message_thread_id'] = $threadId;
+            }
+
+            $botResponse = $this->client->sendMessage($chatId, "❓ {$question}", $params);
 
             $botMsgId = (int) ($botResponse['message_id'] ?? 0);
             $cacheData = [
@@ -144,6 +149,11 @@ class FinanceBotService
         $fullName = trim(($from['first_name'] ?? '') . ' ' . ($from['last_name'] ?? ''));
         $spentAt = Carbon::today()->toDateString();
 
+        $replyParams = ['reply_parameters' => ['message_id' => $messageId]];
+        if ($threadId) {
+            $replyParams['message_thread_id'] = $threadId;
+        }
+
         if ($parsed['type'] === 'expense') {
             // Chiqim (PlatformExpense)
             $expense = PlatformExpense::create([
@@ -170,9 +180,7 @@ class FinanceBotService
                 . "👤 <b>Kiritdi:</b> {$userDisplay}\n"
                 . "📅 <b>Sana:</b> {$spentAt}";
 
-            $this->client->sendMessage($chatId, $replyText, [
-                'reply_parameters' => ['message_id' => $messageId],
-            ]);
+            $this->client->sendMessage($chatId, $replyText, $replyParams);
         } else {
             // Kirim / Foyda (PlatformIncome)
             $income = PlatformIncome::create([
@@ -199,9 +207,7 @@ class FinanceBotService
                 . "👤 <b>Kiritdi:</b> {$userDisplay}\n"
                 . "📅 <b>Sana:</b> {$spentAt}";
 
-            $this->client->sendMessage($chatId, $replyText, [
-                'reply_parameters' => ['message_id' => $messageId],
-            ]);
+            $this->client->sendMessage($chatId, $replyText, $replyParams);
         }
     }
 
