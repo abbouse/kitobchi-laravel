@@ -43,6 +43,37 @@ class FinanceBotService
             }
         }
 
+        // ── Maxsus qulay komandalar: /setup, /start, /hisobot ──────────
+        $lower = mb_strtolower($text);
+        $threadId = $message['message_thread_id'] ?? null;
+
+        if (str_starts_with($lower, '/setup') || str_starts_with($lower, '/start')) {
+            Cache::forever('finance_bot:chat_id', (string) $chatId);
+            if ($threadId) {
+                Cache::forever('finance_bot:thread_id', (int) $threadId);
+            }
+
+            $setupText = "✅ <b>Moliya boti muvaffaqiyatli sozlandi!</b>\n\n"
+                . "Ushbu guruh kassa, chiqim va tushumlar hisob-kitobi uchun asosiy guruh sifatida ulandi.\n"
+                . "📊 <b>Kunlik hisobot:</b> Har kuni kechasi soat 23:00 da aynan shu yerga yuboriladi.\n\n"
+                . "💡 <b>Qanday ishlatiladi?</b>\n"
+                . "• Chiqim: <code>-50000 ofisga suv</code> yoki <code>-25k taksi</code>\n"
+                . "• Kirim/Foyda: <code>120000 buyurtma puli</code> yoki <code>arenda 150 ming</code>\n\n"
+                . "<i>Ortiqcha buyruqlar shart emas, xarajatlarni tabiiy tilda yozsangiz kifoya. Agar biror ma'lumot yetishmasa, o'zim so'rab olaman.</i>";
+
+            $this->client->sendMessage($chatId, $setupText, [
+                'reply_parameters' => ['message_id' => $messageId],
+                'message_thread_id' => $threadId,
+            ]);
+
+            return;
+        }
+
+        if (str_starts_with($lower, '/hisobot') || str_starts_with($lower, '/bugun')) {
+            $this->sendDailyReport((string) $chatId);
+            return;
+        }
+
         $userId = (int) ($from['id'] ?? 0);
         $replyToId = (int) ($message['reply_to_message']['message_id'] ?? 0);
 

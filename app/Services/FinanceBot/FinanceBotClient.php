@@ -34,8 +34,13 @@ class FinanceBotClient
     public function defaultThreadId(): ?int
     {
         $threadId = config('services.finance_bot.thread_id');
+        if ($threadId !== null && $threadId !== '') {
+            return (int) $threadId;
+        }
 
-        return $threadId !== null && $threadId !== '' ? (int) $threadId : null;
+        $cached = Cache::get('finance_bot:thread_id');
+
+        return $cached !== null ? (int) $cached : null;
     }
 
     /**
